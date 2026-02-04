@@ -1,0 +1,221 @@
+## "msgid"s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove "msgid"s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use "mix gettext.extract --merge" or "mix gettext.merge"
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+## Pagination
+msgid "Page %{current} of %{total}"
+msgstr "Page %{current} of %{total}"
+
+msgid "showing %{start}-%{end} of %{total}"
+msgstr "showing %{start}-%{end} of %{total}"
+
+msgid "%{total} items"
+msgstr "%{total} items"
+
+msgid "First page"
+msgstr "First page"
+
+msgid "Previous page"
+msgstr "Previous page"
+
+msgid "Next page"
+msgstr "Next page"
+
+msgid "Last page"
+msgstr "Last page"
+
+msgid "Go to page %{page}"
+msgstr "Go to page %{page}"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:225
+#, elixir-autogen
+msgid "Prev"
+msgstr "Prev"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:235
+#, elixir-autogen
+msgid "Next"
+msgstr "Next"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:227
+#, elixir-autogen
+msgid "Page %{page}"
+msgstr "Page %{page}"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:212
+#, elixir-autogen
+msgid "Load More"
+msgstr "Load More"
+
+#: lib/mishka_gervaz/table/templates/grid.ex:218
+#: lib/mishka_gervaz/table/templates/media_gallery.ex:256
+#: lib/mishka_gervaz/table/templates/shared.ex:210
+#: lib/mishka_gervaz/table/templates/table.ex:202
+#: lib/mishka_gervaz/table/web/renderer.ex:123
+#, elixir-autogen
+msgid "Loading..."
+msgstr "Loading..."
+
+## Filters
+msgid "Clear all"
+msgstr "Clear all"
+
+msgid "Clear filter"
+msgstr "Clear filter"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:94
+#, elixir-autogen
+msgid "Search..."
+msgstr "Search..."
+
+#: lib/mishka_gervaz/table/templates/shared.ex:63
+#, elixir-autogen
+msgid "Select %{field} first"
+msgstr "Select %{field} first"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:66
+#, elixir-autogen
+msgid "Select parent filter first"
+msgstr "Select parent filter first"
+
+msgid "to"
+msgstr "to"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:110
+#, elixir-autogen
+msgid "Select..."
+msgstr "Select..."
+
+msgid "All"
+msgstr "All"
+
+## Filter count (singular/plural)
+msgid "active"
+msgid_plural "active"
+msgstr[0] "%{count} active"
+msgstr[1] "%{count} active"
+
+## States
+#: lib/mishka_gervaz/table/templates/table.ex:191
+#, elixir-autogen
+msgid "No records found"
+msgstr "No records found"
+
+#: lib/mishka_gervaz/table/templates/grid.ex:207
+#, elixir-autogen
+msgid "No items found"
+msgstr "No items found"
+
+#: lib/mishka_gervaz/table/templates/media_gallery.ex:245
+#, elixir-autogen
+msgid "No media files found"
+msgstr "No media files found"
+
+msgid "Error loading data"
+msgstr "Error loading data"
+
+#: lib/mishka_gervaz/table/templates/grid.ex:227
+#: lib/mishka_gervaz/table/templates/table.ex:211
+#, elixir-autogen
+msgid "An error occurred"
+msgstr "An error occurred"
+
+#: lib/mishka_gervaz/table/templates/media_gallery.ex:265
+#, elixir-autogen
+msgid "Failed to load media"
+msgstr "Failed to load media"
+
+#: lib/mishka_gervaz/table/templates/grid.ex:235
+#: lib/mishka_gervaz/table/templates/media_gallery.ex:273
+#: lib/mishka_gervaz/table/templates/table.ex:219
+#, elixir-autogen
+msgid "Retry"
+msgstr "Retry"
+
+## Actions
+msgid "Edit"
+msgstr "Edit"
+
+msgid "View"
+msgstr "View"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:294
+#: lib/mishka_gervaz/table/web/renderer.ex:343
+#, elixir-autogen
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Archive"
+msgstr "Archive"
+
+msgid "Restore"
+msgstr "Restore"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:298
+#: lib/mishka_gervaz/table/web/renderer.ex:346
+#, elixir-autogen
+msgid "Are you sure?"
+msgstr "Are you sure?"
+
+msgid "Confirm"
+msgstr "Confirm"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+## Bulk Actions
+#: lib/mishka_gervaz/table/templates/shared.ex:150
+#, elixir-autogen
+msgid "%{count} selected"
+msgstr "%{count} selected"
+
+#: lib/mishka_gervaz/table/templates/shared.ex:171
+#, elixir-autogen
+msgid "Clear selection"
+msgstr "Clear selection"
+
+msgid "Select all"
+msgstr "Select all"
+
+## Table
+#: lib/mishka_gervaz/table/templates/table.ex:150
+#, elixir-autogen
+msgid "Actions"
+msgstr "Actions"
+
+msgid "No data"
+msgstr "No data"
+
+## Sort
+msgid "Sort ascending"
+msgstr "Sort ascending"
+
+msgid "Sort descending"
+msgstr "Sort descending"
+
+msgid "Clear sort"
+msgstr "Clear sort"
+
+## Item counts (singular/plural)
+#: lib/mishka_gervaz/table/templates/grid.ex:109
+#, elixir-autogen
+msgid "%{count} item"
+msgid_plural "%{count} items"
+msgstr[0] "%{count} item"
+msgstr[1] "%{count} items"
+
+#: lib/mishka_gervaz/table/templates/media_gallery.ex:119
+#, elixir-autogen
+msgid "%{count} file"
+msgid_plural "%{count} files"
+msgstr[0] "%{count} file"
+msgstr[1] "%{count} files"
