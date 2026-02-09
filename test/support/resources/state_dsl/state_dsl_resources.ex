@@ -190,7 +190,7 @@ defmodule MishkaGervaz.Test.StateDsl.PresentationOverrideResource do
       end
 
       state do
-        presentation(MishkaGervaz.Test.StateDsl.CustomPresentation)
+        presentation MishkaGervaz.Test.StateDsl.CustomPresentation
       end
     end
   end
@@ -236,7 +236,7 @@ defmodule MishkaGervaz.Test.StateDsl.UrlSyncOverrideResource do
       end
 
       state do
-        url_sync(MishkaGervaz.Test.StateDsl.CustomUrlSync)
+        url_sync MishkaGervaz.Test.StateDsl.CustomUrlSync
       end
     end
   end
@@ -277,7 +277,7 @@ defmodule MishkaGervaz.Test.StateDsl.AccessOverrideResource do
       end
 
       state do
-        access(MishkaGervaz.Test.StateDsl.CustomAccess)
+        access MishkaGervaz.Test.StateDsl.CustomAccess
       end
     end
   end
@@ -342,9 +342,9 @@ defmodule MishkaGervaz.Test.StateDsl.AllBuildersOverrideResource do
         column MishkaGervaz.Test.StateDsl.CustomColumnBuilder
         filter MishkaGervaz.Test.StateDsl.CustomFilterBuilder
         action MishkaGervaz.Test.StateDsl.CustomActionBuilder
-        presentation(MishkaGervaz.Test.StateDsl.CustomPresentation)
-        url_sync(MishkaGervaz.Test.StateDsl.CustomUrlSync)
-        access(MishkaGervaz.Test.StateDsl.CustomAccess)
+        presentation MishkaGervaz.Test.StateDsl.CustomPresentation
+        url_sync MishkaGervaz.Test.StateDsl.CustomUrlSync
+        access MishkaGervaz.Test.StateDsl.CustomAccess
       end
     end
   end
