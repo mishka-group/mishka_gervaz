@@ -24,21 +24,21 @@ defmodule MishkaGervaz.Test.Resources.BulkActionsResource do
         action :delete do
           confirm "Delete {count} items?"
           event :bulk_delete
-          handler(:parent)
+          handler :parent
         end
 
         action :archive do
           event :bulk_archive
-          handler(:bulk_archive_action)
+          handler :bulk_archive_action
         end
 
         action :export do
           event :bulk_export
-          handler({:master_bulk_export, :tenant_bulk_export})
+          handler {:master_bulk_export, :tenant_bulk_export}
         end
 
         action :custom_fn do
-          handler(fn _selected_ids, _state -> :ok end)
+          handler fn _selected_ids, _state -> :ok end
         end
 
         action :unarchive do
