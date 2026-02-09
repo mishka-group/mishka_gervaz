@@ -122,6 +122,23 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
     end
   end
 
+  describe "FormPost presentation additional keys" do
+    test "template defaults to nil" do
+      config = FormInfo.config(FormPost)
+      assert config.presentation.template == nil
+    end
+
+    test "ui_adapter defaults to nil" do
+      config = FormInfo.config(FormPost)
+      assert config.presentation.ui_adapter == nil
+    end
+
+    test "ui_adapter_opts defaults to empty list" do
+      config = FormInfo.config(FormPost)
+      assert config.presentation.ui_adapter_opts == []
+    end
+  end
+
   describe "info accessors" do
     test "FormInfo.submit/1 returns map" do
       submit = FormInfo.submit(FormPost)

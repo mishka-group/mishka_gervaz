@@ -61,6 +61,18 @@ defmodule MishkaGervaz.Form.DSL.GroupsTest do
       general = Enum.find(groups, &(&1.name == :general))
       assert general.position == :first
     end
+
+    test "visible defaults to true" do
+      groups = FormInfo.groups(FormPost)
+      general = Enum.find(groups, &(&1.name == :general))
+      assert general.visible == true
+    end
+
+    test "restricted defaults to false" do
+      groups = FormInfo.groups(FormPost)
+      general = Enum.find(groups, &(&1.name == :general))
+      assert general.restricted == false
+    end
   end
 
   describe "group UI" do

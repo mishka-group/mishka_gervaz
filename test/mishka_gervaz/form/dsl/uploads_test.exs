@@ -55,6 +55,10 @@ defmodule MishkaGervaz.Form.DSL.UploadsTest do
     test "dropzone_text", %{upload: upload} do
       assert upload.dropzone_text == "Drop image here"
     end
+
+    test "field defaults to nil", %{upload: upload} do
+      assert upload.field == nil
+    end
   end
 
   describe "upload UI" do

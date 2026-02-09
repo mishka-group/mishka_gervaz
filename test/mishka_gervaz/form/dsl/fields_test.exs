@@ -172,6 +172,65 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
     end
   end
 
+  describe "field default values" do
+    test "source defaults to field name" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.source == :title
+    end
+
+    test "visible defaults to true" do
+      field = FormInfo.field(FormPost, :content)
+      assert field.visible == true
+    end
+
+    test "readonly defaults to false" do
+      field = FormInfo.field(FormPost, :content)
+      assert field.readonly == false
+    end
+
+    test "virtual defaults to false" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.virtual == false
+    end
+
+    test "format defaults to nil" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.format == nil
+    end
+
+    test "show_on defaults to nil" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.show_on == nil
+    end
+
+    test "depends_on defaults to nil" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.depends_on == nil
+    end
+
+    test "source defaults to name for content field" do
+      field = FormInfo.field(FormPost, :content)
+      assert field.source == :content
+    end
+  end
+
+  describe "field UI nil defaults" do
+    test "wrapper_class defaults to nil" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.ui.wrapper_class == nil
+    end
+
+    test "autocomplete defaults to nil" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.ui.autocomplete == nil
+    end
+
+    test "extra defaults to empty map" do
+      field = FormInfo.field(FormPost, :title)
+      assert field.ui.extra == %{}
+    end
+  end
+
   describe "inline shorthand syntax" do
     test "WizardForm fields use inline syntax correctly" do
       field = FormInfo.field(WizardForm, :title)

@@ -655,3 +655,105 @@ defmodule MishkaGervaz.Test.Resources.NoMasterCheckForm do
     update_timestamp :updated_at
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.AutoFieldsForm do
+  @moduledoc """
+  Test resource for auto_fields DSL — diverse attributes for auto-discovery testing.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :auto_fields_form_table
+        route "/admin/auto-fields"
+      end
+
+      columns do
+        column :name
+      end
+    end
+
+    form do
+      identity do
+        name :auto_fields_form
+        route "/admin/auto-fields"
+      end
+
+      fields do
+        field :name, :text, required: true
+
+        auto_fields do
+          except [:id, :internal_only]
+          position :end
+
+          defaults required: false, visible: true, readonly: false
+
+          ui_defaults boolean_widget: :checkbox,
+                      textarea_threshold: 255,
+                      number_step: 1,
+                      select_prompt: "Select...",
+                      datetime_format: :medium
+
+          override :age, type: :range, required: true
+
+          override :bio do
+            ui do
+              label "Biography"
+              rows(8)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :name, :string do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :age, :integer do
+      public? true
+    end
+
+    attribute :active, :boolean do
+      default false
+      public? true
+    end
+
+    attribute :bio, :string do
+      public? true
+    end
+
+    attribute :settings, :map do
+      public? true
+    end
+
+    attribute :birthday, :date do
+      public? true
+    end
+
+    attribute :status, :atom do
+      constraints one_of: [:active, :inactive]
+      public? true
+    end
+
+    attribute :internal_only, :string do
+      public? false
+    end
+
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
