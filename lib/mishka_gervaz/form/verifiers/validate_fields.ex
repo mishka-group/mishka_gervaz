@@ -18,8 +18,10 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
   @impl true
   def verify(dsl_state) do
     module = Verifier.get_persisted(dsl_state, :module)
-    entities = Spark.Dsl.Transformer.get_entities(dsl_state, @path)
-    fields = Enum.filter(entities, &match?(%Field{}, &1))
+
+    fields =
+      Spark.Dsl.Transformer.get_entities(dsl_state, @path) |> Enum.filter(&match?(%Field{}, &1))
+
     resource_fields = get_resource_fields(module)
     field_names = Enum.map(fields, & &1.name)
 

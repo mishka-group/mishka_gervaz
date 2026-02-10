@@ -13,10 +13,8 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateIdentity do
 
   @impl true
   def verify(dsl_state) do
-    module = Verifier.get_persisted(dsl_state, :module)
-    name = Verifier.get_option(dsl_state, @path, :name)
-
-    validate_name(name, module)
+    Verifier.get_option(dsl_state, @path, :name)
+    |> validate_name(Verifier.get_persisted(dsl_state, :module))
   end
 
   @spec validate_name(atom() | nil, module()) :: :ok | {:error, Spark.Error.DslError.t()}

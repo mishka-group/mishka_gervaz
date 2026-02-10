@@ -30,9 +30,11 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateSteps do
     step_entities = Spark.Dsl.Transformer.get_entities(dsl_state, @layout_path) |> List.wrap()
     steps = Enum.filter(step_entities, &match?(%Step{}, &1))
 
-    group_entities = Spark.Dsl.Transformer.get_entities(dsl_state, @groups_path) |> List.wrap()
-    groups = Enum.filter(group_entities, &match?(%Group{}, &1))
-    group_names = Enum.map(groups, & &1.name)
+    group_names =
+      Spark.Dsl.Transformer.get_entities(dsl_state, @groups_path)
+      |> List.wrap()
+      |> Enum.filter(&match?(%Group{}, &1))
+      |> Enum.map(& &1.name)
 
     with :ok <- validate_steps_presence(steps, mode, module),
          :ok <- validate_navigation_mode(navigation, mode, module),
