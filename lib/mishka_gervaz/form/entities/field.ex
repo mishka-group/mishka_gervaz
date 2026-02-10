@@ -274,11 +274,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
   """
   def transform(%__MODULE__{} = field) do
     field =
-      field
-      |> extract_ui()
-      |> extract_preload()
-      |> maybe_set_source()
-      |> resolve_type_module()
+      field |> extract_ui() |> extract_preload() |> maybe_set_source() |> resolve_type_module()
 
     {:ok, field}
   end

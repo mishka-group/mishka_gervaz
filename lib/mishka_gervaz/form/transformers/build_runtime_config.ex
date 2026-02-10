@@ -13,13 +13,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   alias Spark.Dsl.Transformer
   import MishkaGervaz.Table.Transformers.Helpers
 
-  alias MishkaGervaz.Form.Entities.{
-    Field,
-    Group,
-    Step,
-    Upload,
-    Submit
-  }
+  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit}
 
   @form_path [:mishka_gervaz, :form]
 
@@ -237,11 +231,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     if preload.always == [] and preload.master == [] and preload.tenant == [] do
       nil
     else
-      %{
-        always: preload.always,
-        master: preload.master,
-        tenant: preload.tenant
-      }
+      %{always: preload.always, master: preload.master, tenant: preload.tenant}
     end
   end
 
@@ -252,14 +242,8 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
   defp build_groups(dsl_state) do
     path = @form_path ++ [:groups]
-    entities = get_entities(dsl_state, path)
-    groups = filter_by_type(entities, Group)
-
-    if groups != [] do
-      Enum.map(groups, &group_to_map/1)
-    else
-      nil
-    end
+    groups = get_entities(dsl_state, path) |> filter_by_type(Group)
+    if groups != [], do: Enum.map(groups, &group_to_map/1), else: nil
   end
 
   defp group_to_map(group) do
@@ -294,11 +278,12 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
   defp build_layout(dsl_state) do
     path = @form_path ++ [:layout]
-    keys = [:columns, :mode, :navigation, :persistence, :responsive]
-    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
 
-    step_entities = get_entities(dsl_state, path)
-    steps = filter_by_type(step_entities, Step)
+    values =
+      [:columns, :mode, :navigation, :persistence, :responsive]
+      |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
+
+    steps = get_entities(dsl_state, path) |> filter_by_type(Step)
 
     has_values = any_set?(Map.values(values)) or steps != []
 
@@ -349,14 +334,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
   defp build_uploads(dsl_state) do
     path = @form_path ++ [:uploads]
-    entities = get_entities(dsl_state, path)
-    uploads = filter_by_type(entities, Upload)
+    uploads = get_entities(dsl_state, path) |> filter_by_type(Upload)
 
-    if uploads != [] do
-      Enum.map(uploads, &upload_to_map/1)
-    else
-      nil
-    end
+    if uploads != [], do: Enum.map(uploads, &upload_to_map/1), else: nil
   end
 
   defp upload_to_map(upload) do

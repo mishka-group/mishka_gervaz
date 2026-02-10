@@ -88,9 +88,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   @spec get_attribute_names(Spark.Dsl.t()) :: [atom()]
   defp get_attribute_names(dsl_state) do
-    dsl_state
-    |> Transformer.get_entities([:attributes])
-    |> Enum.map(& &1.name)
+    dsl_state |> Transformer.get_entities([:attributes]) |> Enum.map(& &1.name)
   rescue
     _ -> []
   end
