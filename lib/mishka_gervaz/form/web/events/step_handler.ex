@@ -122,7 +122,10 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
         if can_jump? and step_exists?(state, target_step) do
           step_states =
             state.step_states
-            |> Map.put(state.current_step, Map.get(state.step_states, state.current_step, :pending))
+            |> Map.put(
+              state.current_step,
+              Map.get(state.step_states, state.current_step, :pending)
+            )
             |> Map.put(target_step, :active)
 
           history = [target_step | state.wizard_history] |> Enum.uniq()

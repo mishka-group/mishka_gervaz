@@ -444,7 +444,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   attr :variant, :atom, default: :default
 
   attr :rest, :global,
-    include: ~w(phx-click phx-target phx-value-id phx-value-event phx-value-values data-confirm disabled)
+    include:
+      ~w(phx-click phx-target phx-value-id phx-value-event phx-value-values data-confirm disabled)
 
   @impl true
   def button(assigns) do
@@ -1375,7 +1376,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:next_label, fn -> "Next" end)
       |> assign_new(:submit_label, fn -> "Submit" end)
       |> assign_new(:phx_target, fn -> nil end)
-      |> assign_new(:class, fn -> "flex items-center justify-between pt-6 border-t border-gray-200" end)
+      |> assign_new(:class, fn ->
+        "flex items-center justify-between pt-6 border-t border-gray-200"
+      end)
 
     ~H"""
     <div class={@class}>
@@ -1407,7 +1410,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           disabled={!@can_advance}
           class={[
             "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm transition-colors",
-            @can_advance && "bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            @can_advance &&
+              "bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
             !@can_advance && "bg-gray-400 cursor-not-allowed"
           ]}
         >
@@ -1433,8 +1437,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div class={@class} phx-drop-target={@upload_ref}>
       <.render_icon name="hero-cloud-arrow-up" class="w-10 h-10 text-gray-400 mb-3" />
       <p class="text-sm text-gray-600">
-        <span class="font-semibold text-blue-600">Click to upload</span>
-        or drag and drop
+        <span class="font-semibold text-blue-600">Click to upload</span> or drag and drop
       </p>
       <p :if={@accept} class="mt-1 text-xs text-gray-500">
         {format_accept(@accept)}
@@ -1525,7 +1528,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:min, fn -> 0 end)
       |> assign_new(:max, fn -> 100 end)
       |> assign_new(:step, fn -> 1 end)
-      |> assign_new(:class, fn -> "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" end)
+      |> assign_new(:class, fn ->
+        "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+      end)
       |> assign_new(:show_value, fn -> false end)
 
     ~H"""
@@ -1539,7 +1544,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         step={@step}
         class={@class}
       />
-      <span :if={@show_value} class="text-sm font-medium text-gray-700 tabular-nums min-w-[3ch] text-right">
+      <span
+        :if={@show_value}
+        class="text-sm font-medium text-gray-700 tabular-nums min-w-[3ch] text-right"
+      >
         {@value}
       </span>
     </div>
@@ -1704,13 +1712,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   defp button_class(:primary),
-    do: "px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+    do:
+      "px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
 
   defp button_class(:danger),
-    do: "px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+    do:
+      "px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
 
   defp button_class(:secondary),
-    do: "px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
+    do:
+      "px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
 
   defp button_class(_), do: "px-3 py-2 text-sm rounded hover:bg-gray-100 transition-colors"
 

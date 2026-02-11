@@ -288,7 +288,7 @@ defmodule MishkaGervaz.Form.Web.State do
       step_group_names =
         groups
         |> Enum.filter(fn g -> g.name in (Map.get(g, :step, nil) |> List.wrap()) end)
-        |> Enum.flat_map(& &1[:fields] || [])
+        |> Enum.flat_map(&(&1[:fields] || []))
 
       if step_group_names == [] do
         fields
@@ -483,7 +483,7 @@ defmodule MishkaGervaz.Form.Web.State do
             static: %{groups: groups, steps: steps, fields: fields}
           }) do
         step_groups = StateHelpers.groups_for_step(groups, steps, step_name)
-        step_field_names = Enum.flat_map(step_groups, &(Map.get(&1, :fields, [])))
+        step_field_names = Enum.flat_map(step_groups, &Map.get(&1, :fields, []))
         field_names = MapSet.new(step_field_names)
 
         if MapSet.size(field_names) == 0 do

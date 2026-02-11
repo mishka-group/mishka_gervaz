@@ -69,7 +69,9 @@ defmodule MishkaGervaz.Form.Web.State.StepBuilder do
 
       The first step starts as `:active`, all others as `:pending`.
       """
-      @spec initial_step_states(list(map())) :: %{atom() => :pending | :active | :completed | :error}
+      @spec initial_step_states(list(map())) :: %{
+              atom() => :pending | :active | :completed | :error
+            }
       def initial_step_states([]), do: %{}
 
       def initial_step_states([first | rest]) do

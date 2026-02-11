@@ -207,7 +207,11 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("remove_nested", %{"field" => field_name, "index" => index}, state, socket) do
-        send(self(), {:remove_nested_field, String.to_existing_atom(field_name), String.to_integer(index)})
+        send(
+          self(),
+          {:remove_nested_field, String.to_existing_atom(field_name), String.to_integer(index)}
+        )
+
         {:noreply, socket}
       rescue
         ArgumentError -> {:noreply, socket}

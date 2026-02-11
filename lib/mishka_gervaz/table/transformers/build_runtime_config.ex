@@ -929,8 +929,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
         quote do
           use MishkaGervaz.UIAdapters.Dynamic,
             site: unquote(Keyword.get(opts, :site, "Global")),
-            fallback:
-              unquote(Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)),
+            fallback: unquote(Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)),
             component_renderer: unquote(Keyword.get(opts, :component_renderer)),
             module_resolver: unquote(Keyword.get(opts, :module_resolver))
         end
@@ -948,8 +947,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       contents =
         quote do
           use MishkaGervaz.Behaviours.UIAdapter,
-            fallback:
-              unquote(Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)),
+            fallback: unquote(Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)),
             components: unquote(Keyword.get(opts, :component_module)),
             nested_components: unquote(Keyword.get(opts, :nested_components, false)),
             module_prefix: unquote(Keyword.get(opts, :module_prefix)),

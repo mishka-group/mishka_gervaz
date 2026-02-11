@@ -91,7 +91,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div>
-      {@ui.field_group(%{label: @group_label, collapsible: @collapsible, open: true, inner_block: render_group_fields(assigns, @group_fields)})}
+      {@ui.field_group(%{
+        label: @group_label,
+        collapsible: @collapsible,
+        open: true,
+        inner_block: render_group_fields(assigns, @group_fields)
+      })}
     </div>
     """
   end
@@ -230,7 +235,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         <% end %>
 
         <%= if not @show_step_nav or last_step?(assigns) do %>
-          <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <button
+            type="submit"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
             {@submit_label}
           </button>
         <% end %>

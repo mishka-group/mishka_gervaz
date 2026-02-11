@@ -221,7 +221,11 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         Phoenix.Component.assign(socket, :form_state, state)
       end
 
-      def handle_async_result({:load_relation, field_name}, {:ok, {:ok, options, has_more?}}, socket) do
+      def handle_async_result(
+            {:load_relation, field_name},
+            {:ok, {:ok, options, has_more?}},
+            socket
+          ) do
         state = socket.assigns.form_state
 
         relation_options =
@@ -235,7 +239,11 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         Phoenix.Component.assign(socket, :form_state, state)
       end
 
-      def handle_async_result({:search_relation, field_name}, {:ok, {:ok, options, has_more?}}, socket) do
+      def handle_async_result(
+            {:search_relation, field_name},
+            {:ok, {:ok, options, has_more?}},
+            socket
+          ) do
         state = socket.assigns.form_state
 
         relation_options =
