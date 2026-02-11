@@ -126,8 +126,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
     ],
     js: [
       type: {:fun, 1},
-      doc:
-        "Optional JS commands to chain onto the button click. `fn record -> JS.exec(...) end`."
+      doc: "Optional JS commands to chain onto the button click. `fn record -> JS.exec(...) end`."
     ],
     render: [
       type: {:or, [{:fun, 1}, {:fun, 2}, {:fun, 3}]},
