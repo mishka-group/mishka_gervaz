@@ -118,7 +118,6 @@ defmodule MishkaGervaz.Table.Behaviours.UIAdapter do
   @doc "Render error state"
   @callback error_state(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
-  # Cell display callbacks for column types
   @doc "Render empty cell value (nil/missing data)"
   @callback cell_empty(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
@@ -140,21 +139,18 @@ defmodule MishkaGervaz.Table.Behaviours.UIAdapter do
   @doc "Render array/list container"
   @callback cell_array(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
-  # Filter components
   @doc "Render filter reset/clear button"
   @callback filter_reset_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
   @doc "Render archive status toggle"
   @callback archive_toggle(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
-  # Bulk action components
   @doc "Render bulk actions bar container"
   @callback bulk_action_bar(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
   @doc "Render individual bulk action button"
   @callback bulk_action_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
-  # Pagination components
   @doc "Render pagination container with page info"
   @callback pagination_container(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 

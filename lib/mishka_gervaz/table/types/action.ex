@@ -75,7 +75,6 @@ defmodule MishkaGervaz.Table.Types.Action do
     end
   end
 
-  # Keep backwards compatibility with list/0
   @doc """
   List all built-in action types.
 

@@ -15,11 +15,14 @@ defmodule MishkaGervaz.Form.Dsl do
   - `MishkaGervaz.Form.Dsl.Uploads` - File upload configuration
   - `MishkaGervaz.Form.Dsl.Presentation` - UI adapter and theming
   - `MishkaGervaz.Form.Dsl.Hooks` - Lifecycle callbacks
+  - `MishkaGervaz.Form.Dsl.State` - State management module overrides
 
   ## Entities
 
   - `MishkaGervaz.Form.Entities.Submit` - Submit/cancel button configuration
   - `MishkaGervaz.Form.Entities.Step` - Wizard/tab step configuration
+  - `MishkaGervaz.Form.Entities.Events` - Event handling module overrides
+  - `MishkaGervaz.Form.Entities.DataLoader` - Data loading module overrides
 
   ## Form Modes
 
@@ -173,6 +176,10 @@ defmodule MishkaGervaz.Form.Dsl do
     Submit
   }
 
+  alias MishkaGervaz.Form.Dsl.State, as: StateDsl
+  alias MishkaGervaz.Form.Dsl.DataLoader, as: DataLoaderDsl
+  alias MishkaGervaz.Form.Dsl.Events, as: EventsDsl
+
   @doc """
   Returns the `form` section definition.
 
@@ -190,10 +197,13 @@ defmodule MishkaGervaz.Form.Dsl do
         Layout.section(),
         Uploads.section(),
         Presentation.section(),
-        Hooks.section()
+        Hooks.section(),
+        StateDsl.section()
       ],
       entities: [
-        Submit.entity()
+        Submit.entity(),
+        DataLoaderDsl.entity(),
+        EventsDsl.entity()
       ]
     }
   end

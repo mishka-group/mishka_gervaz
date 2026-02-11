@@ -20,6 +20,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
   alias Spark.Dsl.Extension
   alias MishkaGervaz.Table.Entities.Pagination
+  alias MishkaGervaz.Table.Behaviours.Template, as: TemplateBehaviour
 
   import MishkaGervaz.Helpers, only: [map_put_if_set: 3, module_to_snake: 1]
 
@@ -126,7 +127,6 @@ defmodule MishkaGervaz.Resource.Info.Table do
     end
   end
 
-  # Apply default prefix from resource module name if not set
   @spec apply_realtime_defaults(map(), module()) :: map()
   defp apply_realtime_defaults(config, resource) do
     case get_in(config, [:realtime, :prefix]) do
@@ -141,8 +141,6 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
   @spec resource_to_prefix(module()) :: String.t()
   defp resource_to_prefix(resource), do: module_to_snake(resource)
-
-  alias MishkaGervaz.Table.Behaviours.Template, as: TemplateBehaviour
 
   @doc """
   Get enabled features for a resource.
@@ -404,7 +402,6 @@ defmodule MishkaGervaz.Resource.Info.Table do
     end)
   end
 
-  # Extract source atom from preload item (atom or {source, alias} tuple)
   @spec extract_preload_source(atom() | {atom(), atom()}) :: atom()
   defp extract_preload_source({source, _alias}), do: source
   defp extract_preload_source(source) when is_atom(source), do: source

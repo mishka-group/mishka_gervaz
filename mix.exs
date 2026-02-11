@@ -40,6 +40,7 @@ defmodule MishkaGervaz.MixProject do
       {:splode, "~> 0.3"},
       {:gettext, "~> 1.0"},
       {:phoenix_live_view, "~> 1.0", optional: true},
+      {:ash_phoenix, "~> 2.3"},
       {:jason, "~> 1.0"},
       {:html_sanitize_ex, "~> 1.4"},
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},

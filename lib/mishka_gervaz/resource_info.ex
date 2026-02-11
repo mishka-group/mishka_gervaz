@@ -20,11 +20,8 @@ defmodule MishkaGervaz.ResourceInfo do
 
   Overlapping functions (config, hooks, detected_preloads, all_preloads,
   stream_name, route, action_for) are available with explicit `table_` or
-  `form_` prefixes. The unprefixed versions delegate to Table for backward
-  compatibility.
+  `form_` prefixes. The unprefixed versions delegate to Table.
   """
-
-  # ── Table delegates (unprefixed — backward compat) ──
 
   defdelegate table_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :config
   defdelegate columns(resource), to: MishkaGervaz.Resource.Info.Table
@@ -47,8 +44,6 @@ defmodule MishkaGervaz.ResourceInfo do
   defdelegate refresh_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :refresh
   defdelegate url_sync_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :url_sync
 
-  # ── Table aliases for overlapping names (explicit prefix) ──
-
   defdelegate table_hooks(resource), to: MishkaGervaz.Resource.Info.Table, as: :hooks
 
   defdelegate table_detected_preloads(resource),
@@ -68,8 +63,6 @@ defmodule MishkaGervaz.ResourceInfo do
   defdelegate table_action_for(resource, type, master?),
     to: MishkaGervaz.Resource.Info.Table,
     as: :action_for
-
-  # ── Form delegates (all prefixed) ──
 
   defdelegate form_config(resource), to: MishkaGervaz.Resource.Info.Form, as: :config
   defdelegate form_fields(resource), to: MishkaGervaz.Resource.Info.Form, as: :fields

@@ -23,8 +23,6 @@ defmodule MishkaGervaz.Resource.Info do
       hooks  = MishkaGervaz.Resource.Info.form_hooks(MyResource)
   """
 
-  # ── Table delegates ──
-
   defdelegate table_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :config
   defdelegate table_columns(resource), to: MishkaGervaz.Resource.Info.Table, as: :columns
   defdelegate table_column(resource, name), to: MishkaGervaz.Resource.Info.Table, as: :column
@@ -101,8 +99,6 @@ defmodule MishkaGervaz.Resource.Info do
   defdelegate table_pagination_ui(resource),
     to: MishkaGervaz.Resource.Info.Table,
     as: :pagination_ui
-
-  # ── Form delegates ──
 
   defdelegate form_config(resource), to: MishkaGervaz.Resource.Info.Form, as: :config
   defdelegate form_fields(resource), to: MishkaGervaz.Resource.Info.Form, as: :fields

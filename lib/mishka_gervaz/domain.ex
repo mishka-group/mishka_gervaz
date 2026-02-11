@@ -1,6 +1,6 @@
 defmodule MishkaGervaz.Domain do
   @moduledoc """
-  Ash Domain extension for MishkaGervaz shared table configuration.
+  Ash Domain extension for MishkaGervaz shared table and form configuration.
 
   Add this extension to your Ash domain to set default table configuration
   that will be inherited by all resources using `MishkaGervaz.Resource`:
@@ -61,15 +61,17 @@ defmodule MishkaGervaz.Domain do
 
   @mishka_gervaz %Spark.Dsl.Section{
     name: :mishka_gervaz,
-    describe: "MishkaGervaz domain configuration for shared table defaults.",
+    describe: "MishkaGervaz domain configuration for shared table and form defaults.",
     sections: [
       MishkaGervaz.Table.Dsl.Defaults.section(),
+      MishkaGervaz.Form.Dsl.DomainDefaults.section(),
       MishkaGervaz.Table.Dsl.Navigation.section()
     ]
   }
 
   @transformers [
-    MishkaGervaz.Table.Transformers.BuildDomainConfig
+    MishkaGervaz.Table.Transformers.BuildDomainConfig,
+    MishkaGervaz.Form.Transformers.BuildDomainConfig
   ]
 
   @verifiers [

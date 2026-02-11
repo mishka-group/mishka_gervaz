@@ -76,11 +76,8 @@ defmodule MishkaGervaz.Resource.Info.Form do
        do: config
 
   defp resolve_default_master_check(config) do
-    # No explicit master_check set — check for persisted default MFA
-    # This mirrors the table behavior: default_master_check(user, :site_id)
-    # where site_id == nil means master user
     update_in(config, [:source, :master_check], fn _ ->
-      fn user -> MishkaGervaz.Table.Defaults.default_master_check(user) end
+      fn user -> MishkaGervaz.Defaults.default_master_check(user) end
     end)
   end
 

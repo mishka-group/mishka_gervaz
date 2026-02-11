@@ -819,7 +819,6 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
-  # Default implementations for direct use
   @doc """
   Main event handler dispatcher.
 
@@ -833,7 +832,6 @@ end
 
 defmodule MishkaGervaz.Table.Web.Events.Default do
   @moduledoc false
-  # Suppress macro-generated pattern match warning from Events macro
   @dialyzer :no_match
   use MishkaGervaz.Table.Web.Events
 end

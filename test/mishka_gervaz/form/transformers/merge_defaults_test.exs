@@ -36,7 +36,7 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaultsTest do
 
       # The default MFA is persisted as a tuple
       assert is_tuple(persisted)
-      assert elem(persisted, 0) == MishkaGervaz.Table.Defaults
+      assert elem(persisted, 0) == MishkaGervaz.Defaults
       assert elem(persisted, 1) == :default_master_check
     end
 

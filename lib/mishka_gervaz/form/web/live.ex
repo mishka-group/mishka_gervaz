@@ -1,0 +1,127 @@
+defmodule MishkaGervaz.Form.Web.Live do
+  @moduledoc """
+  LiveComponent for MishkaGervaz admin forms.
+
+  This is a thin orchestrator that delegates to specialized modules:
+  - `State` - State management
+  - `DataLoader` - Record loading and relation options
+  - `Events` - Event handling
+  - `Renderer` - Template rendering
+
+  ## Usage
+
+  Create mode (new record):
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+      />
+
+  Edit mode (existing record):
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+        record_id={@post_id}
+      />
+
+  ## Required Assigns
+
+  - `id` - Unique component ID
+  - `resource` - Ash resource module with `MishkaGervaz.Resource` extension
+  - `current_user` - Current user for authorization
+
+  ## Optional Assigns
+
+  - `record_id` - ID of record to edit (nil for create mode)
+
+  ## Parent LiveView Integration
+
+  The component sends messages to the parent for certain actions:
+
+      def handle_info({:form_saved, :create, result}, socket), do: ...
+      def handle_info({:form_saved, :update, result}, socket), do: ...
+      def handle_info({:form_cancelled, resource}, socket), do: ...
+      def handle_info({:form_event, event, params}, socket), do: ...
+      def handle_info({:add_nested_field, field_name}, socket), do: ...
+      def handle_info({:remove_nested_field, field_name, index}, socket), do: ...
+  """
+
+  use Phoenix.LiveComponent
+
+  alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
+
+  @impl true
+  def mount(socket) do
+    {:ok,
+     socket
+     |> assign(:form_state, nil)
+     |> assign(:initialized, false)}
+  end
+
+  @impl true
+  def update(assigns, socket) do
+    id = Map.fetch!(assigns, :id)
+    resource = Map.fetch!(assigns, :resource)
+    current_user = Map.get(assigns, :current_user)
+    record_id = Map.get(assigns, :record_id)
+    existing_state = socket.assigns[:form_state]
+
+    socket =
+      if is_nil(existing_state) do
+        state = State.init(id, resource, current_user)
+
+        socket
+        |> assign(:form_state, state)
+        |> assign(:resource, resource)
+        |> assign(:id, id)
+        |> assign(:initialized, true)
+        |> maybe_load_form(state, record_id)
+      else
+        socket
+      end
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def handle_event(event, params, socket) do
+    Events.handle(event, params, socket)
+  end
+
+  @impl true
+  def handle_async(name, result, socket) do
+    socket = DataLoader.Default.handle_async_result(name, result, socket)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def render(assigns) do
+    Renderer.render(assigns)
+  end
+
+  @spec maybe_load_form(
+          Phoenix.LiveView.Socket.t(),
+          State.t(),
+          String.t() | nil
+        ) :: Phoenix.LiveView.Socket.t()
+  defp maybe_load_form(socket, state, nil) do
+    if connected?(socket) do
+      DataLoader.new_record(socket, state)
+    else
+      socket
+    end
+  end
+
+  defp maybe_load_form(socket, state, record_id) do
+    if connected?(socket) do
+      DataLoader.load_record(socket, state, record_id)
+    else
+      socket
+    end
+  end
+end

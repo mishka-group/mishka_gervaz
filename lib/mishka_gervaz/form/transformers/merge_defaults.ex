@@ -127,7 +127,7 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaults do
         Transformer.persist(
           dsl_state,
           :mishka_gervaz_form_default_master_check,
-          {MishkaGervaz.Table.Defaults, :default_master_check, [:site_id]}
+          {MishkaGervaz.Defaults, :default_master_check, [:site_id]}
         )
 
       _ ->

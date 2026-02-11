@@ -395,7 +395,6 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     }
   end
 
-  # Resolve the primary key type for relation filters
   defp resolve_relation_id_type(%{type: :relation} = filter, table_resource) do
     related_resource = resolve_related_resource(filter, table_resource)
 

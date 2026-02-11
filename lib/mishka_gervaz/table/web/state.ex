@@ -1,5 +1,4 @@
 defmodule MishkaGervaz.Table.Web.State do
-  # Suppress MapSet opaque type warnings (dialyzer limitation with opaque types in structs)
   @dialyzer :no_opaque
 
   @moduledoc """
@@ -94,7 +93,6 @@ defmodule MishkaGervaz.Table.Web.State do
 
   import MishkaGervaz.Helpers, only: [module_to_snake: 2]
 
-  # Static configuration - computed once, never changes reference
   defmodule Static do
     @moduledoc """
     Static table configuration that never changes after initialization.
@@ -157,41 +155,30 @@ defmodule MishkaGervaz.Table.Web.State do
           }
   end
 
-  # Dynamic state - changes on user interaction
   defstruct [
-    # Reference to static config (same reference always)
     :static,
-    # User context (set once per session)
     :current_user,
     :master_user?,
     :preload_aliases,
     :supports_archive,
-    # Can change via switch_template
     :template,
-    # Loading state
     :loading,
     :loading_type,
     :has_initial_data?,
     :records_result,
-    # Pagination state
     :page,
     :has_more?,
     :total_count,
     :total_pages,
-    # Filter/sort state
     :filter_values,
     :sort_fields,
     :archive_status,
-    # Dynamic state for relation filters (search/load_more UI state)
     :relation_filter_state,
-    # Selection state
     :selected_ids,
     :excluded_ids,
     :select_all?,
-    # Expansion state
     :expanded_id,
     :expanded_data,
-    # URL state
     :path_params,
     :base_path,
     :preserved_params,
@@ -752,7 +739,6 @@ end
 
 defmodule MishkaGervaz.Table.Web.State.Default do
   @moduledoc false
-  # Suppress MapSet opaque type warnings (dialyzer limitation with opaque types in structs)
   @dialyzer :no_opaque
   use MishkaGervaz.Table.Web.State
 end

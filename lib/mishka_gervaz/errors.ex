@@ -105,8 +105,6 @@ defmodule MishkaGervaz.Errors do
   def extract_error_message(error) when is_binary(error), do: error
   def extract_error_message(error), do: inspect(error)
 
-  # Private helpers
-
   defp humanize_action(action) when is_atom(action) do
     action |> to_string() |> String.replace("_", " ") |> String.capitalize()
   end
