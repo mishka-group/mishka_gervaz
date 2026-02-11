@@ -109,6 +109,7 @@ spark_locals_without_parens = [
   include_nil: 1,
   inline: 1,
   interval: 1,
+  js: 1,
   label: 1,
   label_class: 1,
   last_label: 1,
