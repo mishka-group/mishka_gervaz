@@ -154,8 +154,30 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
   end
 
   describe "cancel event" do
-    test "sends form_cancelled message to parent" do
-      state = build_state()
+    test "resets form state without sending message when no on_cancel hook" do
+      state = build_state(static_opts: [resource: MishkaGervaz.Test.Resources.FormPost])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+
+      updated_state = updated_socket.assigns.form_state
+      assert updated_state.errors == %{}
+      assert updated_state.dirty? == false
+      assert updated_state.mode == :create
+      refute_received {:form_cancelled, _}
+    end
+
+    test "sends form_cancelled message when on_cancel hook is configured" do
+      hook = fn _state -> nil end
+
+      state =
+        build_state(
+          static_opts: [
+            resource: MishkaGervaz.Test.Resources.FormPost,
+            hooks: %{on_cancel: hook}
+          ]
+        )
+
       socket = build_socket(state)
 
       {:noreply, _socket} = Events.handle("cancel", %{}, socket)

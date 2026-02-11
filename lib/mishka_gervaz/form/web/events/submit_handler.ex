@@ -26,7 +26,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
     quote do
       use MishkaGervaz.Form.Web.Events.Builder
 
-      alias MishkaGervaz.Form.Web.State
+      alias MishkaGervaz.Form.Web.{State, DataLoader}
       alias MishkaGervaz.Form.Web.UploadHelpers
 
       @doc """
@@ -77,8 +77,20 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       def after_save(state, result, socket) do
         send(self(), {:form_saved, state.mode, result})
 
-        state = State.update(state, dirty?: false)
-        Phoenix.Component.assign(socket, :form_state, state)
+        reset_state =
+          State.update(state,
+            form: nil,
+            loading: :initial,
+            errors: %{},
+            dirty?: false,
+            existing_files: %{},
+            field_values: %{},
+            relation_options: %{}
+          )
+
+        socket
+        |> Phoenix.Component.assign(:record_id, nil)
+        |> DataLoader.new_record(reset_state)
       end
 
       @spec build_submit_errors(Phoenix.HTML.Form.t()) :: map()

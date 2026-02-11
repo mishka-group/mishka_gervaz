@@ -138,8 +138,12 @@ defmodule MishkaGervaz.Form.Web.Events do
 
       defp do_handle("cancel", _params, state, socket) do
         state = run_hook(state, :on_cancel, [state]) || state
-        send(self(), {:form_cancelled, state.static.resource})
-        {:noreply, socket}
+
+        if has_hook?(state, :on_cancel) do
+          send(self(), {:form_cancelled, state.static.resource})
+        end
+
+        {:noreply, reset_to_create_mode(state, socket)}
       end
 
       defp do_handle("next_step", _params, state, socket) do
@@ -266,6 +270,29 @@ defmodule MishkaGervaz.Form.Web.Events do
         send(self(), {:form_event, event, params})
         {:noreply, socket}
       end
+
+      defp reset_to_create_mode(state, socket) do
+        reset_state =
+          State.update(state,
+            form: nil,
+            loading: :initial,
+            errors: %{},
+            dirty?: false,
+            existing_files: %{},
+            field_values: %{},
+            relation_options: %{}
+          )
+
+        socket
+        |> Phoenix.Component.assign(:record_id, nil)
+        |> DataLoader.new_record(reset_state)
+      end
+
+      defp has_hook?(%{static: %{hooks: hooks}}, name) when is_map(hooks) do
+        is_function(Map.get(hooks, name))
+      end
+
+      defp has_hook?(_, _), do: false
 
       defoverridable handle: 3
     end
