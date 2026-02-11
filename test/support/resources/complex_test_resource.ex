@@ -28,7 +28,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         preload do
           always [:author]
         end
-
       end
 
       columns do
