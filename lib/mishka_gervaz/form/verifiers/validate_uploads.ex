@@ -123,6 +123,13 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateUploads do
     end)
   end
 
+  defp valid_accept_format?(accept) when is_list(accept) do
+    Enum.all?(accept, fn part ->
+      is_binary(part) and
+        (String.starts_with?(part, ".") or String.contains?(part, "/"))
+    end)
+  end
+
   defp valid_accept_format?(accept) when is_binary(accept) do
     accept
     |> String.split(",")

@@ -9,7 +9,7 @@ defmodule MishkaGervaz.Form.Entities.Upload do
   @type t :: %__MODULE__{
           name: atom(),
           field: atom() | nil,
-          accept: String.t() | nil,
+          accept: String.t() | list(String.t()) | nil,
           max_entries: pos_integer(),
           max_file_size: pos_integer(),
           show_preview: boolean(),
@@ -56,8 +56,9 @@ defmodule MishkaGervaz.Form.Entities.Upload do
       doc: "Form field this upload is associated with."
     ],
     accept: [
-      type: :string,
-      doc: "Accepted file types (e.g. \"image/*,.pdf\")."
+      type: {:or, [:string, {:list, :string}]},
+      doc:
+        "Accepted file types. String (e.g. \"image/*,.pdf\") or list (e.g. ~w(.jpg .png .pdf))."
     ],
     max_entries: [
       type: :pos_integer,

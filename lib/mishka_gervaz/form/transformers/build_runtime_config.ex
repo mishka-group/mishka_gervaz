@@ -13,7 +13,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   alias Spark.Dsl.Transformer
   import MishkaGervaz.Table.Transformers.Helpers
 
-  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit}
+  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit, Events}
 
   @form_path [:mishka_gervaz, :form]
 
@@ -38,6 +38,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       submit: build_submit(dsl_state, domain_defaults),
       presentation: build_presentation(dsl_state, domain_defaults),
       hooks: build_hooks(dsl_state),
+      events: build_events(dsl_state),
       detected_preloads:
         Transformer.get_persisted(dsl_state, :mishka_gervaz_form_detected_preloads, []),
       field_order: Transformer.get_persisted(dsl_state, :mishka_gervaz_form_field_order, [])
@@ -487,6 +488,25 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
 
     if any_set?(Map.values(values)), do: values, else: nil
+  end
+
+  defp build_events(dsl_state) do
+    case find_entity(dsl_state, @form_path, Events) do
+      nil ->
+        nil
+
+      entity ->
+        %{
+          module: entity.module,
+          sanitization: entity.sanitization,
+          validation: entity.validation,
+          submit: entity.submit,
+          step: entity.step,
+          upload: entity.upload,
+          relation: entity.relation,
+          hooks: entity.hooks
+        }
+    end
   end
 
   defp maybe_ui(nil, _, _), do: nil

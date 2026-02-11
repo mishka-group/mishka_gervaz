@@ -92,8 +92,14 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   @impl true
   def handle_event(event, params, socket) do
-    Events.handle(event, params, socket)
+    events_module(socket.assigns[:form_state]).handle(event, params, socket)
   end
+
+  defp events_module(%{static: %{config: %{events: %{module: mod}}}})
+       when not is_nil(mod),
+       do: mod
+
+  defp events_module(_), do: Events.Default
 
   @impl true
   def handle_async(name, result, socket) do

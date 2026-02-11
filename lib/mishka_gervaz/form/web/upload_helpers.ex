@@ -22,8 +22,9 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
       iex> parse_accept("image/*,.pdf")
       ["image/*", ".pdf"]
   """
-  @spec parse_accept(String.t() | nil) :: :any | list(String.t())
+  @spec parse_accept(String.t() | list(String.t()) | nil) :: :any | list(String.t())
   def parse_accept(nil), do: :any
+  def parse_accept(accept) when is_list(accept), do: accept
 
   def parse_accept(accept) when is_binary(accept) do
     accept
@@ -110,12 +111,12 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   defp maybe_put_opt(opts, _key, nil, _transform), do: opts
   defp maybe_put_opt(opts, key, value, transform), do: Keyword.put(opts, key, transform.(value))
 
+  defp parse_accept_to_opt(accept) when is_list(accept), do: accept
+
   defp parse_accept_to_opt(accept) when is_binary(accept) do
     accept
     |> String.split(",")
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
-
-  defp parse_accept_to_opt(accept), do: accept
 end
