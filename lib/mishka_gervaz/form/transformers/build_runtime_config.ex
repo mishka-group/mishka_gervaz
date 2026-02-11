@@ -486,7 +486,16 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     ]
 
     values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
+    js = build_js_hooks(dsl_state)
+    values = if js, do: Map.put(values, :js, js), else: values
 
+    if any_set?(Map.values(values)), do: values, else: nil
+  end
+
+  defp build_js_hooks(dsl_state) do
+    path = @form_path ++ [:hooks, :js]
+    keys = [:on_init, :after_save, :on_cancel, :on_error]
+    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
     if any_set?(Map.values(values)), do: values, else: nil
   end
 

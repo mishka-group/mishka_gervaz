@@ -60,8 +60,30 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     ]
   ]
 
+  @js_hooks_schema [
+    on_init: [
+      type: {:fun, 0},
+      doc: "`fn -> %JS{}` - JS commands for phx-mounted on form container."
+    ],
+    after_save: [
+      type: {:fun, 1},
+      doc: "`fn result -> %JS{}` - JS commands after successful save."
+    ],
+    on_cancel: [
+      type: {:fun, 0},
+      doc: "`fn -> %JS{}` - JS commands when form is cancelled."
+    ],
+    on_error: [
+      type: {:fun, 1},
+      doc: "`fn errors -> %JS{}` - JS commands on save error."
+    ]
+  ]
+
   @doc false
   def schema, do: @hooks_schema
+
+  @doc false
+  def js_schema, do: @js_hooks_schema
 
   @doc """
   Returns the hooks section definition.
@@ -70,7 +92,16 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     %Spark.Dsl.Section{
       name: :hooks,
       describe: "Lifecycle callbacks for forms.",
-      schema: @hooks_schema
+      schema: @hooks_schema,
+      sections: [js_section()]
+    }
+  end
+
+  defp js_section do
+    %Spark.Dsl.Section{
+      name: :js,
+      describe: "Client-side JS commands for form lifecycle events.",
+      schema: @js_hooks_schema
     }
   end
 end

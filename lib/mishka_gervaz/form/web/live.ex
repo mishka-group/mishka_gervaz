@@ -80,11 +80,30 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:form_state, state)
         |> assign(:resource, resource)
         |> assign(:id, id)
+        |> assign(:record_id, record_id)
         |> assign(:initialized, true)
         |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)
       else
-        socket
+        if record_id != socket.assigns[:record_id] do
+          updated_state =
+            State.update(existing_state,
+              form: nil,
+              loading: :initial,
+              errors: %{},
+              dirty?: false,
+              existing_files: %{},
+              field_values: %{},
+              relation_options: %{}
+            )
+
+          socket
+          |> assign(:form_state, updated_state)
+          |> assign(:record_id, record_id)
+          |> maybe_load_form(updated_state, record_id)
+        else
+          socket
+        end
       end
 
     {:ok, socket}

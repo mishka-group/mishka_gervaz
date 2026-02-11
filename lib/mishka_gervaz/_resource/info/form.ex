@@ -322,6 +322,19 @@ defmodule MishkaGervaz.Resource.Info.Form do
   end
 
   @doc """
+  Get a JS hook function by name from the form config.
+
+  Returns the function or nil.
+  """
+  @spec js_hook(module(), atom()) :: (... -> Phoenix.LiveView.JS.t()) | nil
+  def js_hook(resource, hook_name) do
+    case hooks(resource) do
+      %{js: %{^hook_name => func}} when is_function(func) -> func
+      _ -> nil
+    end
+  end
+
+  @doc """
   Get detected preloads from field sources.
   """
   @spec detected_preloads(module()) :: [atom()]
@@ -374,6 +387,18 @@ defmodule MishkaGervaz.Resource.Info.Form do
   def route(resource) do
     case config(resource) do
       %{identity: %{route: route}} -> route
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the form identity name as a string, suitable for LiveComponent id.
+  Returns nil if no form identity is configured.
+  """
+  @spec component_id(module()) :: String.t() | nil
+  def component_id(resource) do
+    case config(resource) do
+      %{identity: %{name: name}} when not is_nil(name) -> to_string(name)
       _ -> nil
     end
   end

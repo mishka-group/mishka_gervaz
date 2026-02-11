@@ -228,6 +228,53 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     test "returns empty map for MinimalForm" do
       assert FormInfo.hooks(MinimalForm) == %{}
     end
+
+    test "includes js sub-map for FormPost" do
+      hooks = FormInfo.hooks(FormPost)
+      assert Map.has_key?(hooks, :js)
+      assert is_map(hooks.js)
+    end
+  end
+
+  describe "js_hook/2" do
+    test "returns function for existing JS hook" do
+      func = FormInfo.js_hook(FormPost, :on_init)
+      assert is_function(func)
+    end
+
+    test "returns nil for non-existent JS hook" do
+      result = FormInfo.js_hook(FormPost, :non_existent)
+      assert result == nil
+    end
+
+    test "returns nil for resource without JS hooks" do
+      result = FormInfo.js_hook(MinimalForm, :on_init)
+      assert result == nil
+    end
+
+    test "on_init JS hook returns JS struct" do
+      func = FormInfo.js_hook(FormPost, :on_init)
+      result = func.()
+      assert is_struct(result, Phoenix.LiveView.JS)
+    end
+
+    test "on_cancel JS hook returns JS struct" do
+      func = FormInfo.js_hook(FormPost, :on_cancel)
+      result = func.()
+      assert is_struct(result, Phoenix.LiveView.JS)
+    end
+
+    test "after_save JS hook accepts argument and returns JS struct" do
+      func = FormInfo.js_hook(FormPost, :after_save)
+      result = func.(:ok)
+      assert is_struct(result, Phoenix.LiveView.JS)
+    end
+
+    test "on_error JS hook accepts argument and returns JS struct" do
+      func = FormInfo.js_hook(FormPost, :on_error)
+      result = func.([])
+      assert is_struct(result, Phoenix.LiveView.JS)
+    end
   end
 
   describe "detected_preloads/1" do

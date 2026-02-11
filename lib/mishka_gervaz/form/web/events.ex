@@ -137,6 +137,7 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("cancel", _params, state, socket) do
+        state = run_hook(state, :on_cancel, [state]) || state
         send(self(), {:form_cancelled, state.static.resource})
         {:noreply, socket}
       end

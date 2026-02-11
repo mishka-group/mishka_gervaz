@@ -39,6 +39,7 @@ defmodule MishkaGervaz.Table.Types.Action do
     builtin: %{
       link: Action.Link,
       event: Action.Event,
+      edit: Action.Edit,
       destroy: Action.Destroy,
       update: Action.Update,
       unarchive: Action.Unarchive,

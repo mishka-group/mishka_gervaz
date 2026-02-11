@@ -103,6 +103,42 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
     end
   end
 
+  describe "FormPost JS hooks in config" do
+    test "hooks map contains js key" do
+      config = FormInfo.config(FormPost)
+      assert Map.has_key?(config.hooks, :js)
+    end
+
+    test "js hooks map has all four keys" do
+      config = FormInfo.config(FormPost)
+      js = config.hooks.js
+      assert Map.has_key?(js, :on_init)
+      assert Map.has_key?(js, :after_save)
+      assert Map.has_key?(js, :on_cancel)
+      assert Map.has_key?(js, :on_error)
+    end
+
+    test "js on_init is function/0" do
+      config = FormInfo.config(FormPost)
+      assert is_function(config.hooks.js.on_init, 0)
+    end
+
+    test "js after_save is function/1" do
+      config = FormInfo.config(FormPost)
+      assert is_function(config.hooks.js.after_save, 1)
+    end
+
+    test "js on_cancel is function/0" do
+      config = FormInfo.config(FormPost)
+      assert is_function(config.hooks.js.on_cancel, 0)
+    end
+
+    test "js on_error is function/1" do
+      config = FormInfo.config(FormPost)
+      assert is_function(config.hooks.js.on_error, 1)
+    end
+  end
+
   describe "MinimalForm config" do
     test "groups is nil" do
       config = FormInfo.config(MinimalForm)
@@ -120,6 +156,11 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
     end
 
     test "hooks is nil" do
+      config = FormInfo.config(MinimalForm)
+      assert config.hooks == nil
+    end
+
+    test "js hooks not present when hooks is nil" do
       config = FormInfo.config(MinimalForm)
       assert config.hooks == nil
     end

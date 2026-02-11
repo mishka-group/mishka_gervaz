@@ -175,6 +175,13 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
         on_change(fn _field, _value, state -> state end)
         transform_params(fn params -> params end)
         transform_errors(fn _changeset, errors -> errors end)
+
+        js do
+          on_init(fn -> Phoenix.LiveView.JS.dispatch("form:init") end)
+          after_save(fn _result -> Phoenix.LiveView.JS.dispatch("form:saved") end)
+          on_cancel(fn -> Phoenix.LiveView.JS.dispatch("form:cancelled") end)
+          on_error(fn _errors -> Phoenix.LiveView.JS.dispatch("form:error") end)
+        end
       end
 
       submit do

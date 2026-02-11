@@ -91,6 +91,7 @@ defmodule MishkaGervaz.Table.Web.Events do
       }
 
       alias MishkaGervaz.Resource.Info.Table, as: Info
+      alias MishkaGervaz.Resource.Info.Form, as: FormInfo
       alias MishkaGervaz.Errors
 
       require Ash.Query
@@ -510,12 +511,28 @@ defmodule MishkaGervaz.Table.Web.Events do
                   %{type: :destroy, action: action} when not is_nil(action) ->
                     do_destroy(state, payload, action, socket)
 
+                  %{type: :edit} ->
+                    do_edit(state, payload, socket)
+
                   _ ->
                     send(self(), {:row_action, event_name, payload})
                     {:noreply, socket}
                 end
             end
         end
+      end
+
+      defp do_edit(state, %{"id" => id}, socket) do
+        form_id = FormInfo.component_id(state.static.resource)
+
+        if form_id do
+          Phoenix.LiveView.send_update(MishkaGervaz.Form.Web.Live,
+            id: form_id,
+            record_id: id
+          )
+        end
+
+        {:noreply, socket}
       end
 
       @spec find_row_action_by_event(State.t(), String.t()) :: map() | nil

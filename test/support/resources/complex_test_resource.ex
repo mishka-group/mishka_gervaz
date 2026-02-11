@@ -320,6 +320,29 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
           end
         end
 
+        # Edit type action - sends directly to form component
+        action :edit_form do
+          type :edit
+          visible :active
+
+          ui do
+            label "Edit Form"
+            icon "hero-pencil-square"
+          end
+        end
+
+        # Edit type action with JS hook
+        action :edit_modal do
+          type :edit
+          visible :active
+          js fn _record -> Phoenix.LiveView.JS.exec("data-show-modal", to: "#edit-modal") end
+
+          ui do
+            label "Edit Modal"
+            icon "hero-pencil"
+          end
+        end
+
         # Destroy type action with explicit action - call Ash destroy action directly
         action :remove do
           type :destroy

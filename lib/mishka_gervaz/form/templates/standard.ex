@@ -8,6 +8,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @behaviour MishkaGervaz.Form.Behaviours.Template
   use Phoenix.Component
+  alias Phoenix.LiveView.JS
 
   import MishkaGervaz.Helpers, only: [get_ui_label: 1]
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
@@ -25,8 +26,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :init_js, resolve_js_hook(assigns, :on_init))
+
     ~H"""
-    <div id={@static.id <> "-form-wrapper"}>
+    <div id={@static.id <> "-form-wrapper"} phx-mounted={@init_js}>
       <%= if @state.loading == :loaded and @state.form do %>
         <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
           {render_step_indicator(assigns)}
@@ -207,6 +210,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         do: Map.get(submit, :create_label, "Create"),
         else: Map.get(submit, :update_label, "Update")
 
+    cancel_js =
+      assigns
+      |> resolve_js_hook(:on_cancel)
+      |> JS.push("cancel", target: assigns.myself)
+
     assigns =
       assigns
       |> assign(:submit_label, submit_label)
@@ -214,6 +222,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:show_cancel, Map.get(submit, :show_cancel, true))
       |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
       |> assign(:ui, assigns.static.ui_adapter)
+      |> assign(:cancel_js, cancel_js)
 
     ~H"""
     <div class="mt-6 flex items-center justify-between">
@@ -233,7 +242,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           {@ui.button(%{
             label: @cancel_label,
             variant: :secondary,
-            phx_click: "cancel",
+            phx_click: @cancel_js,
             phx_target: @myself
           })}
         <% end %>
@@ -486,5 +495,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         _ -> {:halt, nil}
       end
     end)
+  end
+
+  defp resolve_js_hook(assigns, hook_name) do
+    case assigns.static[:hooks] do
+      %{js: %{^hook_name => func}} when is_function(func, 0) -> func.()
+      _ -> %JS{}
+    end
   end
 end
