@@ -191,9 +191,32 @@ defmodule MishkaGervaz.Form.Web.Events do
         ArgumentError -> {:noreply, socket}
       end
 
-      defp do_handle("cancel_upload", %{"key" => upload_key, "ref" => ref}, state, socket) do
+      defp do_handle("cancel_upload", %{"key" => upload_key, "ref" => ref}, _state, socket) do
         key_atom = String.to_existing_atom(upload_key)
-        socket = upload_handler().cancel_upload(state, key_atom, ref, socket)
+        socket = upload_handler().cancel_upload(socket.assigns.form_state, key_atom, ref, socket)
+        {:noreply, socket}
+      rescue
+        ArgumentError -> {:noreply, socket}
+      end
+
+      defp do_handle(
+             "delete_existing_file",
+             %{"upload" => upload_name, "file-id" => file_id},
+             state,
+             socket
+           ) do
+        name_atom = String.to_existing_atom(upload_name)
+
+        existing = Map.get(state.existing_files, name_atom, [])
+
+        updated =
+          Enum.reject(existing, fn f ->
+            to_string(f[:id] || f[:filename] || f[:name]) == file_id
+          end)
+
+        existing_files = Map.put(state.existing_files, name_atom, updated)
+        state = State.update(state, existing_files: existing_files, dirty?: true)
+        socket = Phoenix.Component.assign(socket, :form_state, state)
         {:noreply, socket}
       rescue
         ArgumentError -> {:noreply, socket}

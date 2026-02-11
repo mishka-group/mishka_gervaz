@@ -45,8 +45,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     :ok
   end
 
-  # ── DSL Compilation ──────────────────────────────────────────────
-
   describe "DSL compilation — virtual, load, apply stored correctly" do
     test "virtual filter has virtual: true" do
       filter = ResourceInfo.filter(ArticleResource, :tag)
@@ -110,8 +108,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert is_function(filter.apply, 3)
     end
   end
-
-  # ── Apply Function — QueryBuilder ────────────────────────────────
 
   describe "apply function — virtual select filter" do
     test "virtual select filter with apply filters data correctly" do
@@ -359,8 +355,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
   end
 
-  # ── Load Function — RelationLoader ────────────────────────────────
-
   describe "load function — relation filter with custom load" do
     test "custom load function sorts options alphabetically" do
       Ash.create!(TagResource, %{name: "Zebra"})
@@ -452,8 +446,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
   end
 
-  # ── Integration: Apply + Load Together ────────────────────────────
-
   describe "integration — virtual relation filter with load + apply" do
     test "load provides sorted options, apply filters main query" do
       tag1 = Ash.create!(TagResource, %{name: "Zebra"})
@@ -482,8 +474,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert hd(result.results).title == "Article 1"
     end
   end
-
-  # ── Context-Aware Apply ─────────────────────────────────────────
 
   describe "apply function — context-aware with path_params" do
     test "apply uses context.path_params when workspace_version_id is present" do
@@ -538,8 +528,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
   end
 
-  # ── Context-Aware Load ────────────────────────────────────────
-
   describe "load function — context-aware master vs tenant" do
     test "load sorts ascending for master user" do
       Ash.create!(TagResource, %{name: "Zebra"})
@@ -568,8 +556,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert names == ["Zebra", "Apple"]
     end
   end
-
-  # ── Source + Apply Interaction ─────────────────────────────────
 
   describe "source + apply interaction" do
     test "apply takes precedence over source field mapping" do
@@ -600,8 +586,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert hd(result.results).title == "match_me"
     end
   end
-
-  # ── Display Field 2-Arity ─────────────────────────────────────
 
   describe "display_field as 2-arity function" do
     test "master user sees prefixed labels" do
@@ -635,8 +619,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert is_function(filter.display_field, 2)
     end
   end
-
-  # ── Load with Search Mode ─────────────────────────────────────
 
   describe "load with search mode" do
     test "search_options applies custom load and search term" do
@@ -691,8 +673,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert is_function(filter.apply, 3)
     end
   end
-
-  # ── depends_on — Cascading Filter Behavior ──────────────────────
 
   describe "depends_on — DSL config" do
     test "child filter stores depends_on reference" do
@@ -767,8 +747,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
   end
 
-  # ── Bridge Pattern — No-op Apply with Value Consumption ────────
-
   describe "bridge pattern — no-op apply" do
     test "bridge filter's apply returns query unchanged (no filter added)" do
       Ash.create!(ArticleResource, %{title: "A", category: "elixir"})
@@ -835,8 +813,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert "Tag B" in labels
     end
   end
-
-  # ── Multi-Select Bridge — List Values in Context ───────────────
 
   describe "multi-select bridge — list values in apply context" do
     test "list value from multi-select is accessible and filters correctly" do
@@ -909,8 +885,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
       assert result.count == 2
     end
   end
-
-  # ── Edge Cases ────────────────────────────────────────────────────
 
   describe "edge cases" do
     test "virtual filter without filter_values does not affect query" do

@@ -10,6 +10,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   use Phoenix.Component
 
   import MishkaGervaz.Helpers, only: [get_ui_label: 1]
+  import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
+
+  alias MishkaGervaz.Form.Web.UploadHelpers
 
   @impl true
   def name, do: :standard
@@ -35,6 +38,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           phx-change="validate"
           phx-submit="save"
           phx-target={@myself}
+          multipart={has_uploads?(@static)}
         >
           <%= if @state.static.layout_mode == :standard do %>
             {render_groups(assigns)}
@@ -319,9 +323,150 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         options = Map.get(assigns.state.relation_options, field.name, %{})
         ui.search_select(Map.merge(base, %{options: Map.get(options, :options, [])}))
 
+      :file ->
+        render_upload_field(ui, field, assigns)
+
       _ ->
         ui.text_input(Map.put(base, :type, "text"))
     end
+  end
+
+  defp render_upload_field(ui, field, assigns) do
+    upload_config = UploadHelpers.find_upload_for_field(assigns.static, field.name)
+
+    if upload_config do
+      ns_name = namespaced_upload_name(upload_config.name, assigns.static.id)
+      upload_ref = assigns.uploads[ns_name]
+      style = upload_config[:style] || :dropzone
+      existing = Map.get(assigns.state.existing_files, upload_config.name, [])
+
+      upload_assigns =
+        assigns
+        |> assign(:upload_config, upload_config)
+        |> assign(:upload, upload_ref)
+        |> assign(:ns_name, ns_name)
+        |> assign(:style, style)
+        |> assign(:existing_files, existing)
+        |> assign(:ui, ui)
+
+      render_upload_by_style(upload_assigns)
+    else
+      ui.text_input(%{
+        name: field.name,
+        id: "form-#{field.name}",
+        value: "",
+        type: "file"
+      })
+    end
+  end
+
+  defp render_upload_by_style(assigns) do
+    ~H"""
+    <div class="space-y-3">
+      <%= case @style do %>
+        <% :dropzone -> %>
+          <%= if @upload do %>
+            {@ui.upload_dropzone(%{
+              upload_ref: @upload.ref,
+              accept: @upload_config[:accept],
+              max_entries: @upload_config[:max_entries] || 1,
+              inner_block: render_live_file_input(assigns, "sr-only")
+            })}
+          <% end %>
+        <% :file_input -> %>
+          <%= if @upload do %>
+            {@ui.upload_file_input(%{
+              accept: @upload_config[:accept],
+              max_entries: @upload_config[:max_entries] || 1,
+              inner_block: render_live_file_input(assigns, nil)
+            })}
+          <% end %>
+        <% :custom -> %>
+          <%= if @upload do %>
+            {render_live_file_input(assigns, nil)}
+          <% end %>
+      <% end %>
+
+      <%= if @upload do %>
+        {render_upload_entries(assigns)}
+      <% end %>
+
+      <%= if @upload do %>
+        {render_upload_errors(assigns)}
+      <% end %>
+
+      <%= if @existing_files != [] do %>
+        {render_existing_files(assigns)}
+      <% end %>
+    </div>
+    """
+  end
+
+  defp render_live_file_input(assigns, class) do
+    assigns = assign(assigns, :input_class, class)
+
+    ~H"""
+    <.live_file_input upload={@upload} class={@input_class} />
+    """
+  end
+
+  defp render_upload_entries(assigns) do
+    ~H"""
+    <div :if={@upload.entries != []} class="space-y-2">
+      <%= for entry <- @upload.entries do %>
+        <div class="flex items-center gap-2">
+          <div class="flex-1">
+            <%= if entry.progress < 100 do %>
+              {@ui.upload_progress(%{entry: entry})}
+            <% else %>
+              {@ui.upload_preview(%{entry: entry})}
+            <% end %>
+          </div>
+          <button
+            type="button"
+            phx-click="cancel_upload"
+            phx-value-key={@ns_name}
+            phx-value-ref={entry.ref}
+            phx-target={@myself}
+            class="text-gray-400 hover:text-red-500 transition-colors"
+            title="Cancel upload"
+          >
+            <span class="hero-x-mark w-5 h-5"></span>
+          </button>
+        </div>
+
+        <div :for={err <- upload_errors(@upload, entry)} class="text-sm text-red-600">
+          {UploadHelpers.upload_error_to_string(err)}
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp render_upload_errors(assigns) do
+    ~H"""
+    <div :for={err <- upload_errors(@upload)} class="text-sm text-red-600 flex items-center gap-1">
+      <span class="hero-exclamation-circle w-4 h-4 shrink-0"></span>
+      {UploadHelpers.upload_error_to_string(err)}
+    </div>
+    """
+  end
+
+  defp render_existing_files(assigns) do
+    ~H"""
+    <div class="space-y-2">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Existing files</p>
+      <%= for file <- @existing_files do %>
+        {@ui.upload_existing_file(%{
+          file: file,
+          filename: file[:filename] || file[:name] || "File",
+          file_id: file[:id] || file[:filename] || file[:name],
+          upload_name: @upload_config.name,
+          phx_target: @myself
+        })}
+      <% end %>
+    </div>
+    """
   end
 
   defp last_step?(assigns) do

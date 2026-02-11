@@ -146,6 +146,7 @@ defmodule MishkaGervaz.Form.Web.State do
     :field_values,
     :relation_options,
     :upload_state,
+    :existing_files,
     :dirty?
   ]
 
@@ -166,6 +167,7 @@ defmodule MishkaGervaz.Form.Web.State do
           field_values: map(),
           relation_options: map(),
           upload_state: map(),
+          existing_files: %{atom() => list(map())},
           dirty?: boolean()
         }
 
@@ -441,6 +443,7 @@ defmodule MishkaGervaz.Form.Web.State do
           field_values: %{},
           relation_options: %{},
           upload_state: %{},
+          existing_files: %{},
           dirty?: false
         }
       end

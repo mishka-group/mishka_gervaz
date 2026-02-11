@@ -510,7 +510,7 @@ defmodule MishkaGervaz.Test.DataLoader.ArchivableResource do
     data_layer: Ash.DataLayer.Ets
 
   archive do
-    archive_related []
+    archive_related([])
   end
 
   mishka_gervaz do

@@ -15,6 +15,12 @@ defmodule MishkaGervaz.Form.Entities.Upload do
           show_preview: boolean(),
           dropzone_text: String.t() | (-> String.t()) | nil,
           auto_upload: boolean(),
+          style: :dropzone | :file_input | :custom,
+          chunk_size: pos_integer() | nil,
+          chunk_timeout: pos_integer() | nil,
+          external: (map(), Phoenix.LiveView.Socket.t() -> any()) | atom() | nil,
+          writer: atom() | nil,
+          existing: atom() | (map() -> list()) | nil,
           ui: __MODULE__.Ui.t() | nil,
           __spark_metadata__: map() | nil
         }
@@ -29,6 +35,12 @@ defmodule MishkaGervaz.Form.Entities.Upload do
     show_preview: true,
     dropzone_text: nil,
     auto_upload: false,
+    style: :dropzone,
+    chunk_size: nil,
+    chunk_timeout: nil,
+    external: nil,
+    writer: nil,
+    existing: nil,
     ui: nil,
     __spark_metadata__: nil
   ]
@@ -70,6 +82,33 @@ defmodule MishkaGervaz.Form.Entities.Upload do
       type: :boolean,
       default: false,
       doc: "Auto-upload on file selection."
+    ],
+    style: [
+      type: {:in, [:dropzone, :file_input, :custom]},
+      default: :dropzone,
+      doc:
+        "Upload UI style: :dropzone (drag-and-drop), :file_input (standard file picker), :custom (bare live_file_input)."
+    ],
+    chunk_size: [
+      type: :pos_integer,
+      doc: "Bytes per chunk for chunked uploads."
+    ],
+    chunk_timeout: [
+      type: :pos_integer,
+      doc: "Chunk timeout in milliseconds."
+    ],
+    external: [
+      type: {:or, [{:fun, 2}, :atom]},
+      doc: "External uploader module or function (e.g., for S3 direct uploads)."
+    ],
+    writer: [
+      type: :atom,
+      doc: "Custom UploadWriter module for processing upload chunks."
+    ],
+    existing: [
+      type: {:or, [:atom, {:fun, 1}]},
+      doc:
+        "How to extract existing files from a record in edit mode. Atom field name or function receiving the record."
     ]
   ]
 

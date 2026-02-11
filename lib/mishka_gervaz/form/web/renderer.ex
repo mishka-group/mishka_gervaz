@@ -35,6 +35,7 @@ defmodule MishkaGervaz.Form.Web.Renderer do
     |> assign(:static, state.static)
     |> assign(:state, state)
     |> assign_new(:myself, fn -> nil end)
+    |> assign_new(:uploads, fn -> %{} end)
     |> template.render()
   end
 

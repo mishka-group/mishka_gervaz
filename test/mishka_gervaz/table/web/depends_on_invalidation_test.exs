@@ -95,8 +95,6 @@ defmodule MishkaGervaz.Table.Web.DependsOnInvalidationTest do
     :ok
   end
 
-  # ── Helper Unit Tests ─────────────────────────────────────────────
-
   describe "invalidate_dependents/3 — helper unit tests" do
     test "no changes returns original values" do
       state = init_loaded_state(ArticleResource, master_user())
@@ -184,8 +182,6 @@ defmodule MishkaGervaz.Table.Web.DependsOnInvalidationTest do
       refute Map.has_key?(cleaned_fv, :district)
     end
   end
-
-  # ── Filter Event Invalidation ─────────────────────────────────────
 
   describe "filter event — parent change clears child" do
     test "changing region clears city value" do
@@ -275,8 +271,6 @@ defmodule MishkaGervaz.Table.Web.DependsOnInvalidationTest do
     end
   end
 
-  # ── Remove Filter Invalidation ────────────────────────────────────
-
   describe "remove_filter event — clears dependents" do
     test "removing parent clears child" do
       Ash.create!(ArticleResource, %{title: "A", category: "us"})
@@ -315,8 +309,6 @@ defmodule MishkaGervaz.Table.Web.DependsOnInvalidationTest do
       refute Map.has_key?(updated_state.filter_values, :district)
     end
   end
-
-  # ── Relation Filter Invalidation ──────────────────────────────────
 
   describe "relation select — parent clears child" do
     test "selecting bridge_tag clears tag_child" do
@@ -452,8 +444,6 @@ defmodule MishkaGervaz.Table.Web.DependsOnInvalidationTest do
       refute Map.has_key?(updated_state.filter_values, :tag_child)
     end
   end
-
-  # ── Clear All Filters ─────────────────────────────────────────────
 
   describe "clear_filters — no double-processing" do
     test "clear_filters clears everything without errors" do

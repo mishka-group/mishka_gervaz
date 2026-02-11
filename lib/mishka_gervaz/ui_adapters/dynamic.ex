@@ -84,7 +84,25 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     :pagination_page_button,
     :loading_state,
     :template_switcher,
-    :template_switcher_button
+    :template_switcher_button,
+    # Form-only (17)
+    :form_container,
+    :field_wrapper,
+    :field_group,
+    :step_indicator,
+    :step_navigation,
+    :upload_dropzone,
+    :upload_preview,
+    :upload_progress,
+    :upload_file_input,
+    :upload_existing_file,
+    :toggle_input,
+    :range_input,
+    :textarea,
+    :json_editor,
+    :nested_fields,
+    :array_fields,
+    :field_error
   ]
 
   @doc """
@@ -416,6 +434,125 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
   def search_select(assigns) do
     render_component("search_select", assigns, fn assigns ->
       fallback(assigns).search_select(assigns)
+    end)
+  end
+
+  @impl true
+  def form_container(assigns) do
+    render_component("form_container", assigns, fn assigns ->
+      fallback(assigns).form_container(assigns)
+    end)
+  end
+
+  @impl true
+  def field_wrapper(assigns) do
+    render_component("field_wrapper", assigns, fn assigns ->
+      fallback(assigns).field_wrapper(assigns)
+    end)
+  end
+
+  @impl true
+  def field_group(assigns) do
+    render_component("field_group", assigns, fn assigns ->
+      fallback(assigns).field_group(assigns)
+    end)
+  end
+
+  @impl true
+  def step_indicator(assigns) do
+    render_component("step_indicator", assigns, fn assigns ->
+      fallback(assigns).step_indicator(assigns)
+    end)
+  end
+
+  @impl true
+  def step_navigation(assigns) do
+    render_component("step_navigation", assigns, fn assigns ->
+      fallback(assigns).step_navigation(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_dropzone(assigns) do
+    render_component("upload_dropzone", assigns, fn assigns ->
+      fallback(assigns).upload_dropzone(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_preview(assigns) do
+    render_component("upload_preview", assigns, fn assigns ->
+      fallback(assigns).upload_preview(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_progress(assigns) do
+    render_component("upload_progress", assigns, fn assigns ->
+      fallback(assigns).upload_progress(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_file_input(assigns) do
+    render_component("upload_file_input", assigns, fn assigns ->
+      fallback(assigns).upload_file_input(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_existing_file(assigns) do
+    render_component("upload_existing_file", assigns, fn assigns ->
+      fallback(assigns).upload_existing_file(assigns)
+    end)
+  end
+
+  @impl true
+  def toggle_input(assigns) do
+    render_component("toggle_input", assigns, fn assigns ->
+      fallback(assigns).toggle_input(assigns)
+    end)
+  end
+
+  @impl true
+  def range_input(assigns) do
+    render_component("range_input", assigns, fn assigns ->
+      fallback(assigns).range_input(assigns)
+    end)
+  end
+
+  @impl true
+  def textarea(assigns) do
+    render_component("textarea", assigns, fn assigns ->
+      fallback(assigns).textarea(assigns)
+    end)
+  end
+
+  @impl true
+  def json_editor(assigns) do
+    render_component("json_editor", assigns, fn assigns ->
+      fallback(assigns).json_editor(assigns)
+    end)
+  end
+
+  @impl true
+  def nested_fields(assigns) do
+    render_component("nested_fields", assigns, fn assigns ->
+      fallback(assigns).nested_fields(assigns)
+    end)
+  end
+
+  @impl true
+  def array_fields(assigns) do
+    render_component("array_fields", assigns, fn assigns ->
+      fallback(assigns).array_fields(assigns)
+    end)
+  end
+
+  @impl true
+  def field_error(assigns) do
+    render_component("field_error", assigns, fn assigns ->
+      fallback(assigns).field_error(assigns)
     end)
   end
 

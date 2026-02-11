@@ -205,7 +205,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             ) :: Phoenix.LiveView.Socket.t()
       def handle_async_result(:load_record, {:ok, {:ok, form}}, socket) do
         state = socket.assigns.form_state
-        state = State.update(state, form: form, loading: :loaded)
+        existing_files = extract_existing_files(state, form)
+        state = State.update(state, form: form, loading: :loaded, existing_files: existing_files)
         Phoenix.Component.assign(socket, :form_state, state)
       end
 
@@ -263,6 +264,60 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       defp find_field(state, field_name) do
         Enum.find(state.static.fields, &(&1.name == field_name))
       end
+
+      @spec extract_existing_files(State.t(), Phoenix.HTML.Form.t()) :: %{atom() => list(map())}
+      defp extract_existing_files(%{static: %{uploads: uploads}}, form)
+           when is_list(uploads) and uploads != [] do
+        extract_from_record(uploads, form)
+      end
+
+      defp extract_existing_files(_state, _form), do: %{}
+
+      defp extract_from_record(uploads, %{source: %{source: %{data: record}}})
+           when not is_nil(record) do
+        Map.new(uploads, fn upload_config ->
+          files = read_existing_files(upload_config, record)
+          {upload_config.name, normalize_file_list(files)}
+        end)
+      end
+
+      defp extract_from_record(_uploads, _form), do: %{}
+
+      defp read_existing_files(upload_config, record) do
+        case upload_config[:existing] do
+          nil ->
+            field = upload_config[:field] || upload_config.name
+            Map.get(record, field)
+
+          field_name when is_atom(field_name) ->
+            Map.get(record, field_name)
+
+          fun when is_function(fun, 1) ->
+            fun.(record)
+
+          _ ->
+            nil
+        end
+      end
+
+      defp normalize_file_list(nil), do: []
+      defp normalize_file_list(value) when is_binary(value), do: [%{filename: value}]
+
+      defp normalize_file_list(value) when is_list(value),
+        do: Enum.map(value, &normalize_file_info/1)
+
+      defp normalize_file_list(value) when is_map(value), do: [normalize_file_info(value)]
+      defp normalize_file_list(_), do: []
+
+      defp normalize_file_info(%{filename: _} = file), do: file
+      defp normalize_file_info(%{name: name} = file), do: Map.put(file, :filename, name)
+
+      defp normalize_file_info(%{"filename" => filename} = file),
+        do: %{filename: filename, id: file["id"]}
+
+      defp normalize_file_info(%{"name" => name} = file), do: %{filename: name, id: file["id"]}
+      defp normalize_file_info(value) when is_binary(value), do: %{filename: value}
+      defp normalize_file_info(other), do: %{filename: inspect(other)}
 
       defoverridable record_loader: 0,
                      tenant_resolver: 0,

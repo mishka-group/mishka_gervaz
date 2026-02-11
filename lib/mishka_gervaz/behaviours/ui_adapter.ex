@@ -52,8 +52,6 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
       end
   """
 
-  # ── Shared callbacks (14) ──────────────────────────────────────────────
-
   @doc "Render a text input"
   @callback text_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
@@ -95,8 +93,6 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
 
   @doc "Render error state"
   @callback error_state(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  # ── Table-only callbacks (23) ──────────────────────────────────────────
 
   @doc "Render a date range container"
   @callback date_range_container(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
@@ -173,8 +169,6 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   @doc "Render template switcher button"
   @callback template_switcher_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
-  # ── Form-only callbacks (15) ───────────────────────────────────────────
-
   @doc "Render the main form wrapper (phx-change, phx-submit)"
   @callback form_container(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
@@ -219,6 +213,12 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
 
   @doc "Render a field error message display"
   @callback field_error(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc "Render a styled file input (non-dropzone) upload control"
+  @callback upload_file_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc "Render an existing file card with remove button (for edit mode)"
+  @callback upload_existing_file(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
   @optional_callbacks [
     # Table-only optional (23)
@@ -266,11 +266,13 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     json_editor: 1,
     nested_fields: 1,
     array_fields: 1,
-    field_error: 1
+    field_error: 1,
+    upload_file_input: 1,
+    upload_existing_file: 1
   ]
 
   @component_functions [
-    # Shared (14)
+    # Shared
     :text_input,
     :select,
     :multi_select,
@@ -285,7 +287,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :spinner,
     :empty_state,
     :error_state,
-    # Table-only (23)
+    # Table-only
     :date_range_container,
     :nav_link,
     :table,
@@ -311,7 +313,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :loading_state,
     :template_switcher,
     :template_switcher_button,
-    # Form-only (15)
+    # Form-only
     :form_container,
     :field_wrapper,
     :field_group,
@@ -326,7 +328,9 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :json_editor,
     :nested_fields,
     :array_fields,
-    :field_error
+    :field_error,
+    :upload_file_input,
+    :upload_existing_file
   ]
 
   @doc """

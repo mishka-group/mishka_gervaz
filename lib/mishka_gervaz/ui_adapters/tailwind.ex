@@ -15,10 +15,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   import MishkaGervaz.Helpers,
     only: [normalize_options: 1, normalize_selected_values: 1, resolve_label: 1]
 
-  # ══════════════════════════════════════════════════════════════════════
-  # Shared components (14)
-  # ══════════════════════════════════════════════════════════════════════
-
   @impl true
   def text_input(assigns) do
     placeholder =
@@ -554,10 +550,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     """
   end
-
-  # ══════════════════════════════════════════════════════════════════════
-  # Table-only components (23)
-  # ══════════════════════════════════════════════════════════════════════
 
   @doc """
   Render a date range container with two date inputs and separator.
@@ -1224,10 +1216,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
-  # ══════════════════════════════════════════════════════════════════════
-  # Form-only components (15)
-  # ══════════════════════════════════════════════════════════════════════
-
   @impl true
   def form_container(assigns) do
     assigns =
@@ -1676,9 +1664,61 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
-  # ══════════════════════════════════════════════════════════════════════
-  # Private helpers
-  # ══════════════════════════════════════════════════════════════════════
+  @impl true
+  def upload_file_input(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:accept, fn -> nil end)
+      |> assign_new(:max_entries, fn -> 1 end)
+      |> assign_new(:class, fn ->
+        "block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      end)
+
+    ~H"""
+    <div class="space-y-2">
+      <div class={@class}>
+        {render_slot(@inner_block)}
+      </div>
+      <p :if={@accept} class="text-xs text-gray-500">
+        Accepted: {format_accept(@accept)}
+      </p>
+      <p :if={@max_entries > 1} class="text-xs text-gray-500">
+        Up to {@max_entries} files
+      </p>
+    </div>
+    """
+  end
+
+  @impl true
+  def upload_existing_file(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> "flex items-center gap-3 p-3 bg-gray-50 rounded-md group" end)
+      |> assign_new(:filename, fn ->
+        assigns[:file][:filename] || assigns[:file][:name] || "File"
+      end)
+      |> assign_new(:phx_target, fn -> nil end)
+
+    ~H"""
+    <div class={@class}>
+      <.render_icon name="hero-document" class="w-8 h-8 text-gray-400 shrink-0" />
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-gray-900 truncate">{@filename}</p>
+      </div>
+      <button
+        type="button"
+        phx-click="delete_existing_file"
+        phx-value-upload={@upload_name}
+        phx-value-file-id={@file_id}
+        phx-target={@phx_target}
+        class="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+        title="Remove file"
+      >
+        <.render_icon name="hero-x-mark" class="w-5 h-5" />
+      </button>
+    </div>
+    """
+  end
 
   defp selected?(value, selected_set), do: to_string(value) in selected_set
 

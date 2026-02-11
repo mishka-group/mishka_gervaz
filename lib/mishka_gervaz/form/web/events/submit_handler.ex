@@ -20,22 +20,26 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   """
 
   alias MishkaGervaz.Form.Web.State
+  alias MishkaGervaz.Form.Web.UploadHelpers
 
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Form.Web.Events.Builder
 
       alias MishkaGervaz.Form.Web.State
+      alias MishkaGervaz.Form.Web.UploadHelpers
 
       @doc """
       Submit the form for create or update.
 
       Submits the AshPhoenix.Form and handles success/error.
+      Consumes uploaded files and merges them into params before submission.
       """
       @spec submit(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
       def submit(state, params, socket) do
         form_params = transform_params(state, Map.get(params, "form", params))
+        {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
 
         case state.form do
           nil ->
@@ -87,9 +91,53 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         end)
       end
 
+      @spec consume_and_merge_uploads(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
+              {Phoenix.LiveView.Socket.t(), map()}
+      def consume_and_merge_uploads(%{static: %{uploads: uploads}} = state, form_params, socket)
+          when is_list(uploads) and uploads != [] do
+        Enum.reduce(uploads, {socket, form_params}, fn upload_config, {sock, params} ->
+          ns_name = UploadHelpers.namespaced_upload_name(upload_config.name, state.static.id)
+          consume_upload_entries(sock, params, ns_name, upload_config)
+        end)
+      end
+
+      def consume_and_merge_uploads(_state, form_params, socket), do: {socket, form_params}
+
+      defp consume_upload_entries(socket, params, ns_name, upload_config) do
+        registered_uploads = socket.assigns[:uploads] || %{}
+
+        case Map.fetch(registered_uploads, ns_name) do
+          {:ok, _} ->
+            uploaded_files =
+              Phoenix.LiveView.consume_uploaded_entries(socket, ns_name, fn %{path: path},
+                                                                            entry ->
+                {:ok,
+                 %{
+                   path: path,
+                   client_name: entry.client_name,
+                   client_type: entry.client_type,
+                   client_size: entry.client_size
+                 }}
+              end)
+
+            merge_uploaded_files(socket, params, upload_config, uploaded_files)
+
+          :error ->
+            {socket, params}
+        end
+      end
+
+      defp merge_uploaded_files(socket, params, _upload_config, []), do: {socket, params}
+
+      defp merge_uploaded_files(socket, params, upload_config, uploaded_files) do
+        param_key = to_string(upload_config[:field] || upload_config.name)
+        {socket, Map.put(params, param_key, uploaded_files)}
+      end
+
       defoverridable submit: 3,
                      transform_params: 2,
-                     after_save: 3
+                     after_save: 3,
+                     consume_and_merge_uploads: 3
     end
   end
 end

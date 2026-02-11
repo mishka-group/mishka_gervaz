@@ -54,6 +54,7 @@ defmodule MishkaGervaz.Form.Web.Live do
   use Phoenix.LiveComponent
 
   alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
+  alias MishkaGervaz.Form.Web.UploadHelpers
 
   @impl true
   def mount(socket) do
@@ -80,6 +81,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:resource, resource)
         |> assign(:id, id)
         |> assign(:initialized, true)
+        |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)
       else
         socket
@@ -102,6 +104,32 @@ defmodule MishkaGervaz.Form.Web.Live do
   @impl true
   def render(assigns) do
     Renderer.render(assigns)
+  end
+
+  @spec register_uploads(Phoenix.LiveView.Socket.t(), State.t(), String.t()) ::
+          Phoenix.LiveView.Socket.t()
+  defp register_uploads(socket, %{static: %{uploads: uploads}}, id)
+       when is_list(uploads) and uploads != [] do
+    Enum.reduce(uploads, socket, fn upload_config, acc ->
+      name = UploadHelpers.namespaced_upload_name(upload_config.name, id)
+      maybe_allow_upload(acc, name, upload_config, id)
+    end)
+  end
+
+  defp register_uploads(socket, _state, _id), do: socket
+
+  defp maybe_allow_upload(socket, name, upload_config, id) do
+    case socket.assigns[:uploads] do
+      %{^name => _} ->
+        socket
+
+      _ ->
+        Phoenix.LiveView.allow_upload(
+          socket,
+          name,
+          UploadHelpers.build_allow_upload_opts(upload_config, id)
+        )
+    end
   end
 
   @spec maybe_load_form(

@@ -12,6 +12,7 @@ defmodule MishkaGervaz.MixProject do
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
       deps: deps(),
+      aliases: aliases(),
       package: package(),
       docs: docs(),
       dialyzer: dialyzer(),
@@ -70,6 +71,13 @@ defmodule MishkaGervaz.MixProject do
       source_ref: "v#{@version}",
       source_url: @source_url,
       extras: ["README.md", "CHANGELOG.md"]
+    ]
+  end
+
+  defp aliases do
+    [
+      "spark.formatter":
+        "spark.formatter --extensions MishkaGervaz.Resource,MishkaGervaz.Domain"
     ]
   end
 

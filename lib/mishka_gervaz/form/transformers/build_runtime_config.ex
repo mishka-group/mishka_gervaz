@@ -349,6 +349,12 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       show_preview: upload.show_preview,
       dropzone_text: upload.dropzone_text,
       auto_upload: upload.auto_upload,
+      style: upload.style || :dropzone,
+      chunk_size: upload.chunk_size,
+      chunk_timeout: upload.chunk_timeout,
+      external: upload.external,
+      writer: upload.writer,
+      existing: upload.existing,
       ui: maybe_ui(upload.ui, &upload_ui_to_map/1, &has_upload_ui_values?/1)
     }
   end
