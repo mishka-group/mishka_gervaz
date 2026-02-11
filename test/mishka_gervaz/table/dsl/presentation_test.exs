@@ -42,7 +42,7 @@ defmodule MishkaGervaz.DSL.PresentationTest do
 
     test "ui_adapter key is configured" do
       config = ResourceInfo.table_config(Post)
-      assert config.presentation.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert config.presentation.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "ui_adapter_opts key is configured" do
@@ -118,7 +118,7 @@ defmodule MishkaGervaz.DSL.PresentationTest do
     test "ui_adapter defaults to Tailwind in DSL schema" do
       schema = MishkaGervaz.Table.Dsl.Presentation.schema()
       adapter_config = Keyword.get(schema, :ui_adapter)
-      assert Keyword.get(adapter_config, :default) == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert Keyword.get(adapter_config, :default) == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "ui_adapter_opts defaults to empty list in DSL schema" do

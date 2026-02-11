@@ -1,4 +1,4 @@
-defmodule MishkaGervaz.Table.UIAdapters.MediaGallery do
+defmodule MishkaGervaz.UIAdapters.MediaGallery do
   @moduledoc """
   UI adapter for media gallery template.
 
@@ -6,8 +6,8 @@ defmodule MishkaGervaz.Table.UIAdapters.MediaGallery do
   Override only the components that need different appearance in gallery context.
   """
 
-  use MishkaGervaz.Table.Behaviours.UIAdapter,
-    fallback: MishkaGervaz.Table.UIAdapters.Tailwind
+  use MishkaGervaz.Behaviours.UIAdapter,
+    fallback: MishkaGervaz.UIAdapters.Tailwind
 
   attr :label, :string, default: nil
   attr :class, :string, default: nil

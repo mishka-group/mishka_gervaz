@@ -1,4 +1,4 @@
-defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
+defmodule MishkaGervaz.UIAdapters.Dynamic do
   @moduledoc """
   Dynamic UI adapter for database-driven components.
 
@@ -15,7 +15,7 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
           site: "Global",
           component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
           module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
-          fallback: MishkaGervaz.Table.UIAdapters.Tailwind
+          fallback: MishkaGervaz.UIAdapters.Tailwind
         ]
       end
 
@@ -39,11 +39,11 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
   specified fallback adapter (defaults to Tailwind).
   """
 
-  @behaviour MishkaGervaz.Table.Behaviours.UIAdapter
+  @behaviour MishkaGervaz.Behaviours.UIAdapter
   use Phoenix.Component
 
   @default_site "Global"
-  @default_fallback MishkaGervaz.Table.UIAdapters.Tailwind
+  @default_fallback MishkaGervaz.UIAdapters.Tailwind
 
   @component_functions [
     :text_input,
@@ -100,16 +100,16 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
   ## Example
 
       defmodule MyApp.GervazUIAdapter do
-        use MishkaGervaz.Table.UIAdapters.Dynamic,
+        use MishkaGervaz.UIAdapters.Dynamic,
           site: "Global",
           component_renderer: &MyApp.LiveViewHelpers.component/1,
           module_resolver: &MyApp.Compilers.Helpers.module_name/3,
-          fallback: MishkaGervaz.Table.UIAdapters.Tailwind
+          fallback: MishkaGervaz.UIAdapters.Tailwind
       end
   """
   defmacro __using__(opts) do
     site = Keyword.get(opts, :site, "Global")
-    fallback = Keyword.get(opts, :fallback, MishkaGervaz.Table.UIAdapters.Tailwind)
+    fallback = Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)
     component_renderer = Keyword.get(opts, :component_renderer)
     module_resolver = Keyword.get(opts, :module_resolver)
 
@@ -117,13 +117,13 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
       for func <- @component_functions do
         quote do
           def unquote(func)(assigns) do
-            MishkaGervaz.Table.UIAdapters.Dynamic.unquote(func)(inject_config(assigns))
+            MishkaGervaz.UIAdapters.Dynamic.unquote(func)(inject_config(assigns))
           end
         end
       end
 
     quote do
-      @behaviour MishkaGervaz.Table.Behaviours.UIAdapter
+      @behaviour MishkaGervaz.Behaviours.UIAdapter
       use Phoenix.Component
 
       @site unquote(site)
@@ -462,15 +462,15 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
   - `:component_renderer` - Function `(assigns) -> rendered` to render components
   - `:module_resolver` - Function `(id, site, type) -> module()` to resolve module names
   - `:fallback` - The fallback adapter to use when components are not found
-    (default: `MishkaGervaz.Table.UIAdapters.Tailwind`)
+    (default: `MishkaGervaz.UIAdapters.Tailwind`)
 
   ## Example
 
-      assigns = MishkaGervaz.Table.UIAdapters.Dynamic.with_config(assigns,
+      assigns = MishkaGervaz.UIAdapters.Dynamic.with_config(assigns,
         site: "MyApp",
         component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
         module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
-        fallback: MishkaGervaz.Table.UIAdapters.Chelekom
+        fallback: MishkaGervaz.UIAdapters.Chelekom
       )
   """
   def with_config(assigns, opts \\ []) do

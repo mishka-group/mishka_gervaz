@@ -32,7 +32,7 @@ defmodule MishkaGervaz.DSL.DomainTest do
 
     test "default ui_adapter is configured" do
       adapter = DomainInfo.default_ui_adapter(Domain)
-      assert adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert adapter == MishkaGervaz.UIAdapters.Tailwind
     end
   end
 

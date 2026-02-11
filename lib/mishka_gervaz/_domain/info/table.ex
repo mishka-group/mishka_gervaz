@@ -72,7 +72,7 @@ defmodule MishkaGervaz.Domain.Info.Table do
   """
   @spec ui_adapter(module()) :: module()
   def ui_adapter(domain),
-    do: table(domain)[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    do: table(domain)[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
 
   @doc """
   Get the UI adapter options.

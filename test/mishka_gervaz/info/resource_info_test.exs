@@ -714,7 +714,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     test "Post ui_adapter is Tailwind" do
       config = ResourceInfo.table_config(Post)
 
-      assert config.presentation.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert config.presentation.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
   end
 

@@ -38,7 +38,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildDomainConfig do
   defp build_table(dsl_state) do
     %{
       ui_adapter:
-        get_opt(dsl_state, @table_path, :ui_adapter, MishkaGervaz.Table.UIAdapters.Tailwind),
+        get_opt(dsl_state, @table_path, :ui_adapter, MishkaGervaz.UIAdapters.Tailwind),
       ui_adapter_opts: get_opt(dsl_state, @table_path, :ui_adapter_opts, []),
       actor_key: get_opt(dsl_state, @table_path, :actor_key, :current_user),
       master_check: get_opt(dsl_state, @table_path, :master_check),

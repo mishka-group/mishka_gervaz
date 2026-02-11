@@ -11,7 +11,7 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestDomain do
       actor_key :current_admin
       master_check fn user -> user.role == :admin end
       pagination page_size: 25, type: :numbered
-      ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+      ui_adapter MishkaGervaz.UIAdapters.Tailwind
     end
   end
 

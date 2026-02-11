@@ -467,7 +467,7 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         switchable_templates []
         template_options striped: true, bordered: false, hoverable: true
         features [:sort, :filter, :select, :paginate]
-        ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+        ui_adapter MishkaGervaz.UIAdapters.Tailwind
         ui_adapter_opts []
 
         theme do

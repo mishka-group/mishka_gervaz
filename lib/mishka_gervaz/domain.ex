@@ -11,7 +11,7 @@ defmodule MishkaGervaz.Domain do
 
         mishka_gervaz do
           table do
-            ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+            ui_adapter MishkaGervaz.UIAdapters.Tailwind
             actor_key :current_user
             master_check &MyApp.Accounts.master_user?/1
 

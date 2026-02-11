@@ -119,7 +119,7 @@ defmodule MishkaGervaz.Table.Dsl.Defaults do
   @schema [
     ui_adapter: [
       type: :atom,
-      default: MishkaGervaz.Table.UIAdapters.Tailwind,
+      default: MishkaGervaz.UIAdapters.Tailwind,
       doc: "Default UI adapter module."
     ],
     ui_adapter_opts: [

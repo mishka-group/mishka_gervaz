@@ -544,7 +544,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   defp bulk_action_visible?(_, _status, _state), do: true
 
   def render_template_switcher(assigns) do
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
     assigns = assign(assigns, :ui_adapter, ui_adapter)
 
     ~H"""
@@ -1007,7 +1007,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def render_empty_state(assigns) do
     empty_state = assigns[:empty_state] || %{}
     action = Map.get(empty_state, :action) || %{}
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
 
     assigns =
       assigns
@@ -1040,7 +1040,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @spec render_error_state(map()) :: Phoenix.LiveView.Rendered.t()
   def render_error_state(assigns) do
     error_state = assigns[:error_state] || %{}
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
 
     assigns =
       assigns
@@ -1073,7 +1073,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @spec render_loading(map()) :: Phoenix.LiveView.Rendered.t()
   def render_loading(assigns) do
     loading_text = assigns[:loading_text] || dgettext("mishka_gervaz", "Loading...")
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
     loading_style = assigns[:loading_style] || :spinner
 
     assigns =
@@ -1097,7 +1097,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     {column, record, static, state} =
       {assigns.column, assigns.record, assigns[:static], assigns[:state]}
 
-    ui = (static && static.ui_adapter) || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui = (static && static.ui_adapter) || MishkaGervaz.UIAdapters.Tailwind
     value = MishkaGervaz.Table.Behaviours.Template.get_cell_value(record, column)
     formatted_value = apply_format(Map.get(column, :format), state, record, value)
     render_input = build_render_input(column, record, formatted_value, state)

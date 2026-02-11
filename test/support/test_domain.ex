@@ -14,7 +14,7 @@ defmodule MishkaGervaz.Test.Domain do
 
       pagination type: :numbered, page_size: 20
 
-      ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+      ui_adapter MishkaGervaz.UIAdapters.Tailwind
     end
 
     navigation do

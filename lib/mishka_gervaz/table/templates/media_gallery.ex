@@ -598,8 +598,8 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
     end
   end
 
-  defp gallery_ui_adapter(MishkaGervaz.Table.UIAdapters.Tailwind),
-    do: MishkaGervaz.Table.UIAdapters.MediaGallery
+  defp gallery_ui_adapter(MishkaGervaz.UIAdapters.Tailwind),
+    do: MishkaGervaz.UIAdapters.MediaGallery
 
   defp gallery_ui_adapter(user_adapter), do: user_adapter
 end

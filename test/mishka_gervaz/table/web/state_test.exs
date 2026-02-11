@@ -113,7 +113,7 @@ defmodule MishkaGervaz.Table.Web.StateTest do
     test "resolves UI adapter" do
       state = State.init("test-id", User, nil)
 
-      assert state.static.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert state.static.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "resolves template" do
@@ -764,7 +764,7 @@ defmodule MishkaGervaz.Table.Web.StateTest do
     test "resolves to Tailwind by default" do
       state = State.init("test-id", User, nil)
 
-      assert state.static.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert state.static.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "ui_adapter_opts is a list" do

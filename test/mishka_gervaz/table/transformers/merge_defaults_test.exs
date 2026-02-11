@@ -20,7 +20,7 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
     test "resources can override domain defaults" do
       # Post explicitly sets ui_adapter
       config = ResourceInfo.table_config(Post)
-      assert config.presentation.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert config.presentation.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
   end
 

@@ -45,14 +45,14 @@ defmodule MishkaGervaz.Table.Web.State.Presentation do
         Map.get(config, :presentation, %{})
         |> Map.get(:ui_adapter, :tailwind)
         |> case do
-          :tailwind -> MishkaGervaz.Table.UIAdapters.Tailwind
-          :dynamic -> MishkaGervaz.Table.UIAdapters.Dynamic
+          :tailwind -> MishkaGervaz.UIAdapters.Tailwind
+          :dynamic -> MishkaGervaz.UIAdapters.Dynamic
           module when is_atom(module) -> module
         end
       end
 
       @spec resolve_ui_adapter(term()) :: module()
-      def resolve_ui_adapter(_), do: MishkaGervaz.Table.UIAdapters.Tailwind
+      def resolve_ui_adapter(_), do: MishkaGervaz.UIAdapters.Tailwind
 
       @doc """
       Gets UI adapter options from config.

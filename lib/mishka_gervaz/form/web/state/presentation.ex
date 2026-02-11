@@ -36,14 +36,14 @@ defmodule MishkaGervaz.Form.Web.State.Presentation do
         config
         |> get_in([:presentation, :ui_adapter])
         |> case do
-          nil -> MishkaGervaz.Form.UIAdapters.Tailwind
-          :tailwind -> MishkaGervaz.Form.UIAdapters.Tailwind
+          nil -> MishkaGervaz.UIAdapters.Tailwind
+          :tailwind -> MishkaGervaz.UIAdapters.Tailwind
           module when is_atom(module) -> module
         end
       end
 
       @spec resolve_ui_adapter(term()) :: module()
-      def resolve_ui_adapter(_), do: MishkaGervaz.Form.UIAdapters.Tailwind
+      def resolve_ui_adapter(_), do: MishkaGervaz.UIAdapters.Tailwind
 
       @doc """
       Gets UI adapter options from config.

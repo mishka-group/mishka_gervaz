@@ -53,7 +53,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     test "returns defaults with exact ui_adapter" do
       defaults = DomainInfo.defaults(Domain)
 
-      assert defaults.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert defaults.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "returns defaults with actor_key" do
@@ -155,7 +155,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     test "returns exact Tailwind adapter module" do
       adapter = DomainInfo.default_ui_adapter(Domain)
 
-      assert adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert adapter == MishkaGervaz.UIAdapters.Tailwind
     end
   end
 

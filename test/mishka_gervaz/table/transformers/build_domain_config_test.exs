@@ -139,7 +139,7 @@ defmodule MishkaGervaz.Transformers.BuildDomainConfigTest do
 
     test "test domain has ui_adapter" do
       config = DomainInfo.domain_config(Domain)
-      assert config.table.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert config.table.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
   end
 

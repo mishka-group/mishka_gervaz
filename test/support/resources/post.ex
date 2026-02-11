@@ -216,7 +216,7 @@ defmodule MishkaGervaz.Test.Resources.Post do
       error_state message: "Failed to load posts"
 
       presentation do
-        ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+        ui_adapter MishkaGervaz.UIAdapters.Tailwind
         template MishkaGervaz.Table.Templates.Table
       end
 
