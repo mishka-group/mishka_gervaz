@@ -76,8 +76,7 @@ defmodule MishkaGervaz.MixProject do
 
   defp aliases do
     [
-      "spark.formatter":
-        "spark.formatter --extensions MishkaGervaz.Resource,MishkaGervaz.Domain"
+      "spark.formatter": "spark.formatter --extensions MishkaGervaz.Resource,MishkaGervaz.Domain"
     ]
   end
 
