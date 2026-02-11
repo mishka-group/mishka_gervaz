@@ -68,7 +68,62 @@ defmodule MishkaGervaz.Resource.Info.Form do
     config
     |> update_in([:source, :actor_key], fn v -> v || domain_defaults[:actor_key] end)
     |> update_in([:source, :master_check], fn v -> v || domain_defaults[:master_check] end)
+    |> merge_presentation_defaults(domain_defaults)
+    |> merge_submit_defaults(domain_defaults)
+    |> merge_layout_defaults(domain_defaults)
     |> resolve_default_master_check()
+  end
+
+  defp merge_presentation_defaults(config, domain_defaults) do
+    config
+    |> update_in([:presentation, :template], fn v -> v || domain_defaults[:template] end)
+    |> update_in([:presentation, :features], fn v -> v || domain_defaults[:features] end)
+  end
+
+  defp merge_submit_defaults(config, domain_defaults) do
+    case domain_defaults[:submit] do
+      nil ->
+        config
+
+      domain_submit ->
+        update_in(config, [:submit], fn submit ->
+          %{
+            create_label: submit[:create_label] || domain_submit[:create_label] || "Create",
+            update_label: submit[:update_label] || domain_submit[:update_label] || "Update",
+            cancel_label: submit[:cancel_label] || domain_submit[:cancel_label] || "Cancel",
+            show_cancel:
+              if(submit[:show_cancel] != nil,
+                do: submit[:show_cancel],
+                else: domain_submit[:show_cancel]
+              ),
+            position: submit[:position] || domain_submit[:position] || :bottom,
+            ui: submit[:ui]
+          }
+        end)
+    end
+  end
+
+  defp merge_layout_defaults(config, domain_defaults) do
+    case domain_defaults[:layout] do
+      nil ->
+        config
+
+      domain_layout ->
+        case config[:layout] do
+          nil ->
+            config
+
+          layout ->
+            put_in(config, [:layout], %{
+              layout
+              | responsive:
+                  if(layout[:responsive] != nil,
+                    do: layout[:responsive],
+                    else: domain_layout[:responsive]
+                  )
+            })
+        end
+    end
   end
 
   defp resolve_default_master_check(%{source: %{master_check: mc}} = config)

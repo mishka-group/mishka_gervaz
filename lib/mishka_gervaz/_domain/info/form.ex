@@ -84,4 +84,22 @@ defmodule MishkaGervaz.Domain.Info.Form do
   """
   @spec layout(module()) :: map() | nil
   def layout(domain), do: form(domain)[:layout]
+
+  @doc """
+  Get the form template.
+  """
+  @spec template(module()) :: module() | nil
+  def template(domain), do: form(domain)[:template]
+
+  @doc """
+  Get the form features.
+  """
+  @spec features(module()) :: :all | [atom()] | nil
+  def features(domain), do: form(domain)[:features]
+
+  @doc """
+  Get the form submit config.
+  """
+  @spec submit(module()) :: map() | nil
+  def submit(domain), do: form(domain)[:submit]
 end

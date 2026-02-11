@@ -123,9 +123,9 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
   end
 
   describe "FormPost presentation additional keys" do
-    test "template defaults to nil" do
+    test "template inherits domain default when not set on resource" do
       config = FormInfo.config(FormPost)
-      assert config.presentation.template == nil
+      assert config.presentation.template == MishkaGervaz.Form.Templates.Standard
     end
 
     test "ui_adapter defaults to nil" do

@@ -33,9 +33,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       multitenancy: multitenancy,
       fields: build_fields(dsl_state, module),
       groups: build_groups(dsl_state),
-      layout: build_layout(dsl_state),
+      layout: build_layout(dsl_state, domain_defaults),
       uploads: build_uploads(dsl_state),
-      submit: build_submit(dsl_state),
+      submit: build_submit(dsl_state, domain_defaults),
       presentation: build_presentation(dsl_state, domain_defaults),
       hooks: build_hooks(dsl_state),
       detected_preloads:
@@ -276,8 +276,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp build_layout(dsl_state) do
+  defp build_layout(dsl_state, domain_defaults) do
     path = @form_path ++ [:layout]
+    domain_layout = domain_defaults[:layout]
 
     values =
       [:columns, :mode, :navigation, :persistence, :responsive]
@@ -285,15 +286,21 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
     steps = get_entities(dsl_state, path) |> filter_by_type(Step)
 
-    has_values = any_set?(Map.values(values)) or steps != []
+    has_values = any_set?(Map.values(values)) or steps != [] or is_map(domain_layout)
 
     if has_values do
       %{
-        columns: default_if_nil(values.columns, 1),
+        columns: values.columns || (domain_layout && domain_layout[:columns]) || 1,
         mode: default_if_nil(values.mode, :standard),
-        navigation: default_if_nil(values.navigation, :sequential),
-        persistence: default_if_nil(values.persistence, :none),
-        responsive: default_if_nil(values.responsive, true),
+        navigation:
+          values.navigation || (domain_layout && domain_layout[:navigation]) || :sequential,
+        persistence:
+          values.persistence || (domain_layout && domain_layout[:persistence]) || :none,
+        responsive:
+          if(values.responsive != nil,
+            do: values.responsive,
+            else: (domain_layout && domain_layout[:responsive]) || true
+          ),
         steps: if(steps != [], do: Enum.map(steps, &step_to_map/1), else: nil)
       }
     else
@@ -375,15 +382,21 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp build_submit(dsl_state) do
+  defp build_submit(dsl_state, domain_defaults) do
+    domain_submit = domain_defaults[:submit]
+
     case find_entity(dsl_state, @form_path, Submit) do
       nil ->
         %{
-          create_label: "Create",
-          update_label: "Update",
-          cancel_label: "Cancel",
-          show_cancel: true,
-          position: :bottom,
+          create_label: (domain_submit && domain_submit[:create_label]) || "Create",
+          update_label: (domain_submit && domain_submit[:update_label]) || "Update",
+          cancel_label: (domain_submit && domain_submit[:cancel_label]) || "Cancel",
+          show_cancel:
+            if(domain_submit && domain_submit[:show_cancel] != nil,
+              do: domain_submit[:show_cancel],
+              else: true
+            ),
+          position: (domain_submit && domain_submit[:position]) || :bottom,
           ui: nil
         }
 
@@ -420,7 +433,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
     %{
       template: get_opt(dsl_state, path, :template) || domain_defaults[:template],
-      features: get_opt(dsl_state, path, :features),
+      features: get_opt(dsl_state, path, :features) || domain_defaults[:features],
       ui_adapter: get_opt(dsl_state, path, :ui_adapter) || domain_defaults[:ui_adapter],
       ui_adapter_opts: get_opt(dsl_state, path, :ui_adapter_opts) || [],
       theme: build_theme(dsl_state, theme_path, domain_defaults)

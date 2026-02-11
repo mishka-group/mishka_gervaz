@@ -22,4 +22,7 @@ defmodule MishkaGervaz.DomainInfo do
   defdelegate form_actions(domain), to: MishkaGervaz.Domain.Info.Form, as: :actions
   defdelegate form_theme(domain), to: MishkaGervaz.Domain.Info.Form, as: :theme
   defdelegate form_layout(domain), to: MishkaGervaz.Domain.Info.Form, as: :layout
+  defdelegate form_template(domain), to: MishkaGervaz.Domain.Info.Form, as: :template
+  defdelegate form_features(domain), to: MishkaGervaz.Domain.Info.Form, as: :features
+  defdelegate form_submit(domain), to: MishkaGervaz.Domain.Info.Form, as: :submit
 end

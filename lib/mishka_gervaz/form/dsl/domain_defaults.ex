@@ -65,6 +65,11 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
       type: :pos_integer,
       default: 1,
       doc: "Default number of form columns."
+    ],
+    responsive: [
+      type: :boolean,
+      default: true,
+      doc: "Default responsive layout behaviour."
     ]
   ]
 
@@ -86,6 +91,57 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
     master_check: [
       type: {:fun, 1},
       doc: "Default function to check if user is master. `fn user -> boolean`."
+    ],
+    template: [
+      type: :atom,
+      doc: "Default template module for form layout."
+    ],
+    features: [
+      type:
+        {:or,
+         [
+           {:in, [:all]},
+           {:list,
+            {:in,
+             [
+               :validation,
+               :uploads,
+               :groups,
+               :wizard,
+               :autosave,
+               :inline_errors
+             ]}}
+         ]},
+      default: :all,
+      doc: "Default features to enable for forms."
+    ]
+  ]
+
+  @submit_schema [
+    create_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      default: "Create",
+      doc: "Default submit button label for create."
+    ],
+    update_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      default: "Update",
+      doc: "Default submit button label for update."
+    ],
+    cancel_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      default: "Cancel",
+      doc: "Default cancel button label."
+    ],
+    show_cancel: [
+      type: :boolean,
+      default: true,
+      doc: "Default show cancel button."
+    ],
+    position: [
+      type: {:in, [:top, :bottom, :both]},
+      default: :bottom,
+      doc: "Default button position."
     ]
   ]
 
@@ -97,7 +153,8 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
       sections: [
         actions_section(),
         theme_section(),
-        layout_section()
+        layout_section(),
+        submit_section()
       ]
     }
   end
@@ -123,6 +180,14 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
       name: :layout,
       describe: "Default form layout configuration.",
       schema: @layout_schema
+    }
+  end
+
+  defp submit_section do
+    %Spark.Dsl.Section{
+      name: :submit,
+      describe: "Default form submit button configuration.",
+      schema: @submit_schema
     }
   end
 end

@@ -22,8 +22,21 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
   @layout_defaults %{
     navigation: :sequential,
     persistence: :none,
-    columns: 1
+    columns: 1,
+    responsive: true
   }
+
+  @submit_defaults %{
+    create_label: "Create",
+    update_label: "Update",
+    cancel_label: "Cancel",
+    show_cancel: true,
+    position: :bottom
+  }
+
+  @impl true
+  def after?(MishkaGervaz.Table.Transformers.BuildDomainConfig), do: true
+  def after?(_), do: false
 
   @impl true
   @spec transform(Spark.Dsl.t()) :: {:ok, Spark.Dsl.t()}
@@ -43,9 +56,12 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
       ui_adapter_opts: get_opt(dsl_state, @form_path, :ui_adapter_opts, []),
       actor_key: get_opt(dsl_state, @form_path, :actor_key, :current_user),
       master_check: get_opt(dsl_state, @form_path, :master_check),
+      template: get_opt(dsl_state, @form_path, :template),
+      features: get_opt(dsl_state, @form_path, :features, :all),
       actions: build_actions(dsl_state),
       theme: build_section(dsl_state, :theme, @theme_defaults),
-      layout: build_section(dsl_state, :layout, @layout_defaults)
+      layout: build_section(dsl_state, :layout, @layout_defaults),
+      submit: build_section(dsl_state, :submit, @submit_defaults)
     }
   end
 
