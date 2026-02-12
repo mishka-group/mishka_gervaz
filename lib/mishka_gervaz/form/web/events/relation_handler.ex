@@ -49,10 +49,6 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         with {:ok, field_atom, field} <- get_field(params, state),
              {:ok, search_term} <- get_search_term(params, field_atom),
              :ok <- validate_min_chars(search_term, params) do
-          IO.inspect({field_atom, search_term, Map.get(field, :resource)},
-            label: "[Gervaz Form] search"
-          )
-
           relation_mod = DataLoader.Default.relation_loader()
 
           case relation_mod.search_options(field, state, search_term) do
@@ -76,18 +72,16 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
       defp do_handle("focus", params, state, socket) do
         with {:ok, field_atom, field} <- get_field(params, state) do
-          IO.inspect({field_atom, Map.get(field, :resource), state.master_user?},
-            label: "[Gervaz Form] focus"
-          )
-
           selected_options = resolve_selected_options(field, state, field_atom)
           relation_mod = DataLoader.Default.relation_loader()
 
           case relation_mod.load_options(field, state) do
             {:ok, options, has_more?} ->
+              merged = prepend_selected(selected_options, options)
+
               socket =
                 update_relation_state(socket, state, field_atom, %{
-                  options: options,
+                  options: merged,
                   has_more?: has_more?,
                   page: 1
                 }, selected_options: selected_options, dropdown_open?: true)
@@ -155,8 +149,6 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
           state = revalidate_form(state, field_atom, value)
           socket = Phoenix.Component.assign(socket, :form_state, state)
-
-          # Reload dependent fields (e.g., selecting site_id reloads media_category_id)
           socket = reload_dependent_fields(socket, state, field_atom)
 
           {:noreply, socket}
@@ -262,8 +254,6 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         {:noreply, socket}
       end
 
-      # --- Private helpers ---
-
       defp get_field(params, state) do
         field_name = params["filter"] || params["field"]
         field_atom = String.to_existing_atom(field_name)
@@ -329,6 +319,17 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         else
           current_selected
         end
+      end
+
+      defp prepend_selected([], options), do: options
+
+      defp prepend_selected(selected, options) do
+        selected_values = MapSet.new(selected, fn {_, v} -> to_string(v) end)
+
+        filtered =
+          Enum.reject(options, fn {_, v} -> MapSet.member?(selected_values, to_string(v)) end)
+
+        selected ++ filtered
       end
 
       defp toggle_value(current_list, value, true), do: Enum.reject(current_list, &(&1 == value))
@@ -409,7 +410,6 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
             socket
 
           deps ->
-            # Clear dependent field values and relation options before reloading
             cleared_field_values =
               Enum.reduce(deps, state.field_values, fn dep, acc ->
                 Map.delete(acc, dep.name)

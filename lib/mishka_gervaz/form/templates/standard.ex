@@ -8,9 +8,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @behaviour MishkaGervaz.Form.Behaviours.Template
   use Phoenix.Component
+  use MishkaGervaz.Messages
   alias Phoenix.LiveView.JS
 
-  import MishkaGervaz.Helpers, only: [get_ui_label: 1, dynamic_component: 1, resolve_label: 1]
+  import MishkaGervaz.Helpers,
+    only: [
+      get_ui_label: 1,
+      dynamic_component: 1,
+      resolve_label: 1,
+      has_value?: 1,
+      find_by_name: 2,
+      resolve_ui_label: 1
+    ]
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
   alias MishkaGervaz.Form.Web.UploadHelpers
@@ -327,25 +336,78 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     label = assigns.label
     errors = assigns.errors
 
-    assigns =
-      assigns
-      |> assign(:wrapper_label, label)
-      |> assign(:wrapper_errors, errors)
-      |> assign(:wrapper_required, Map.get(field, :required, false))
-      |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
+    if field_disabled?(field, assigns.state) do
+      disabled_prompt = get_disabled_prompt(field, assigns.static.fields)
 
-    ~H"""
-    <.dynamic_component
-      module={@ui}
-      function={:field_wrapper}
-      label={@wrapper_label}
-      errors={@wrapper_errors}
-      required={@wrapper_required}
-    >
-      {@rendered_input}
-    </.dynamic_component>
-    """
+      assigns =
+        assigns
+        |> assign(:wrapper_label, label)
+        |> assign(:wrapper_errors, [])
+        |> assign(:wrapper_required, Map.get(field, :required, false))
+        |> assign(:disabled_prompt, disabled_prompt)
+
+      ~H"""
+      <.dynamic_component
+        module={@ui}
+        function={:field_wrapper}
+        label={@wrapper_label}
+        errors={@wrapper_errors}
+        required={@wrapper_required}
+      >
+        <div class="px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded text-gray-400 cursor-not-allowed">
+          {@disabled_prompt}
+        </div>
+      </.dynamic_component>
+      """
+    else
+      assigns =
+        assigns
+        |> assign(:wrapper_label, label)
+        |> assign(:wrapper_errors, errors)
+        |> assign(:wrapper_required, Map.get(field, :required, false))
+        |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
+
+      ~H"""
+      <.dynamic_component
+        module={@ui}
+        function={:field_wrapper}
+        label={@wrapper_label}
+        errors={@wrapper_errors}
+        required={@wrapper_required}
+      >
+        {@rendered_input}
+      </.dynamic_component>
+      """
+    end
   end
+
+  defp field_disabled?(%{depends_on: nil}, _state), do: false
+
+  defp field_disabled?(%{depends_on: depends_on}, state) do
+    !has_value?(Map.get(state.field_values, depends_on))
+  end
+
+  defp field_disabled?(_, _), do: false
+
+  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_binary(prompt),
+    do: prompt
+
+  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_function(prompt, 0),
+    do: prompt.()
+
+  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields) when not is_nil(depends_on) do
+    parent_label =
+      case find_by_name(all_fields, depends_on) do
+        nil -> nil
+        parent -> resolve_ui_label(parent)
+      end
+
+    field_name = parent_label || Phoenix.Naming.humanize(depends_on)
+    dgettext("mishka_gervaz", "Select %{field} first", field: field_name)
+  end
+
+  defp get_disabled_prompt(_, _),
+    do: dgettext("mishka_gervaz", "Select parent field first")
 
   defp render_input(ui, field, form_field, assigns) do
     type = Map.get(field, :type, :text)
