@@ -35,6 +35,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       dsl_state
       |> resolve_auto_fields(module)
       |> resolve_field_sources()
+      |> resolve_relation_resources(module)
       |> resolve_field_positions()
       |> detect_preloads()
 
@@ -235,6 +236,50 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         acc
       end
     end)
+  end
+
+  @spec resolve_relation_resources(Spark.Dsl.t(), module()) :: Spark.Dsl.t()
+  defp resolve_relation_resources(dsl_state, _module) do
+    entities = get_entities(dsl_state, @fields_path)
+    fields = filter_fields(entities)
+    relationships = get_relationships(dsl_state)
+
+    {updated, changed?} =
+      Enum.map_reduce(fields, false, fn field, changed? ->
+        if field.type == :relation and is_nil(field.resource) do
+          case resolve_related_resource(field, relationships) do
+            nil -> {field, changed?}
+            resource -> {%{field | resource: resource}, true}
+          end
+        else
+          {field, changed?}
+        end
+      end)
+
+    if changed? do
+      dsl_state
+      |> remove_field_entities(fields)
+      |> add_field_entities(updated)
+    else
+      dsl_state
+    end
+  end
+
+  defp resolve_related_resource(field, relationships) do
+    field_name = field.source || field.name
+
+    relationships
+    |> Enum.find(&(&1.source_attribute == field_name))
+    |> case do
+      %{destination: dest} -> dest
+      nil -> nil
+    end
+  end
+
+  defp get_relationships(dsl_state) do
+    Transformer.get_entities(dsl_state, [:relationships])
+  rescue
+    _ -> []
   end
 
   @spec resolve_field_positions(Spark.Dsl.t()) :: Spark.Dsl.t()

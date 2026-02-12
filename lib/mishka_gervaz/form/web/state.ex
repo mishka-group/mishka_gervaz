@@ -429,6 +429,8 @@ defmodule MishkaGervaz.Form.Web.State do
         step_states =
           if layout_mode in [:wizard, :tabs], do: step_mod.initial_step_states(steps), else: %{}
 
+        relation_options = load_static_relation_options(fields, current_user)
+
         %State{
           static: static,
           current_user: current_user,
@@ -441,11 +443,47 @@ defmodule MishkaGervaz.Form.Web.State do
           loading: :initial,
           errors: %{},
           field_values: %{},
-          relation_options: %{},
+          relation_options: relation_options,
           upload_state: %{},
           existing_files: %{},
           dirty?: false
         }
+      end
+
+      @spec load_static_relation_options(list(map()), map() | nil) :: map()
+      defp load_static_relation_options(fields, current_user) do
+        fields
+        |> Enum.filter(fn f ->
+          f.type == :relation and f.resource != nil and (f.mode || :static) == :static
+        end)
+        |> Enum.reduce(%{}, fn field, acc ->
+          case Ash.read(field.resource,
+                 actor: current_user,
+                 authorize?: false,
+                 page: false
+               ) do
+            {:ok, records} ->
+              display_field = field.display_field || :name
+
+              options =
+                Enum.map(records, fn record ->
+                  label = to_string(Map.get(record, display_field, Map.get(record, :id)))
+                  value = to_string(record.id)
+                  {label, value}
+                end)
+
+              Map.put(acc, field.name, %{
+                options: options,
+                has_more?: false,
+                page: 1,
+                selected_options: [],
+                dropdown_open?: false
+              })
+
+            {:error, _reason} ->
+              acc
+          end
+        end)
       end
 
       @spec update(State.t(), keyword() | map()) :: State.t()

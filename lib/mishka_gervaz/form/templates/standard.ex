@@ -407,6 +407,21 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       :json ->
         base |> assign(:function, :json_editor) |> dynamic_component()
 
+      :relation ->
+        alias MishkaGervaz.Form.Types.Field.Relation, as: RelationType
+
+        rel_data = Map.get(assigns.state.relation_options, field.name, %{})
+        current_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+
+        state_assigns = %{
+          form_field: form_field,
+          myself: assigns[:myself],
+          field_values: assigns.state.field_values,
+          current_value: current_value
+        }
+
+        RelationType.render_input(field, rel_data, state_assigns, ui)
+
       :search_select ->
         options = Map.get(assigns.state.relation_options, field.name, %{})
 

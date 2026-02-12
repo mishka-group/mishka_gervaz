@@ -130,7 +130,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       ash_attrs = get_ash_attributes(module)
 
       %{
-        list: Enum.map(fields, &field_to_map(&1, ash_attrs)),
+        list: Enum.map(fields, &field_to_map(&1, ash_attrs, module)),
         order: Transformer.get_persisted(dsl_state, :mishka_gervaz_form_field_order, [])
       }
     else
@@ -148,8 +148,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     _ -> %{}
   end
 
-  defp field_to_map(field, ash_attrs) do
+  defp field_to_map(field, ash_attrs, module) do
     attr = Map.get(ash_attrs, field.name, %{})
+    id_type = resolve_relation_id_type(field, module)
 
     %{
       name: field.name,
@@ -171,7 +172,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       readonly: field.readonly,
       mode: field.mode,
       page_size: field.page_size,
-      load_action: field.load_action,
+      load_action: field.load_action || :read,
       load: field.load,
       apply: field.apply,
       format: field.format,
@@ -186,10 +187,86 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       add_label: field.add_label,
       remove_label: field.remove_label,
       type_module: field.type_module,
+      id_type: id_type,
       ui: maybe_ui(field.ui, &field_ui_to_map/1, &has_field_ui_values?/1),
       preload: maybe_preload(field.preload)
     }
   end
+
+  defp resolve_relation_id_type(%{type: :relation} = field, module) do
+    related_resource = resolve_related_resource(field, module)
+
+    if related_resource do
+      get_primary_key_type(related_resource)
+    else
+      :uuid
+    end
+  end
+
+  defp resolve_relation_id_type(_, _), do: nil
+
+  defp resolve_related_resource(%{resource: resource}, _) when not is_nil(resource), do: resource
+
+  defp resolve_related_resource(%{name: name, source: source}, module)
+       when not is_nil(module) do
+    field_name = source || name
+
+    module
+    |> Ash.Resource.Info.relationships()
+    |> Enum.find(&(&1.source_attribute == field_name))
+    |> case do
+      %{destination: dest} -> dest
+      nil -> nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp resolve_related_resource(_, _), do: nil
+
+  defp get_primary_key_type(resource) do
+    case Ash.Resource.Info.primary_key(resource) do
+      [pk_field | _] ->
+        case Ash.Resource.Info.attribute(resource, pk_field) do
+          %{type: type} -> normalize_id_type(type)
+          _ -> :uuid
+        end
+
+      _ ->
+        :uuid
+    end
+  rescue
+    _ -> :uuid
+  end
+
+  defp normalize_id_type(type) when is_atom(type) do
+    type_string = Atom.to_string(type)
+
+    cond do
+      type == :uuid or type == Ash.Type.UUID ->
+        :uuid
+
+      type == :integer or type == Ash.Type.Integer ->
+        :integer
+
+      type == :string or type == Ash.Type.String ->
+        :string
+
+      String.contains?(type_string, "UUIDv7") or String.contains?(type_string, "UUID7") ->
+        :uuid_v7
+
+      String.contains?(type_string, "UUID") ->
+        :uuid
+
+      String.contains?(type_string, "Integer") ->
+        :integer
+
+      true ->
+        :uuid
+    end
+  end
+
+  defp normalize_id_type(_), do: :uuid
 
   defp has_field_ui_values?(%Field.Ui{} = ui) do
     any_set?([

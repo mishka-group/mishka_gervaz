@@ -164,28 +164,8 @@ defmodule MishkaGervaz.Form.Web.Events do
         ArgumentError -> {:noreply, socket}
       end
 
-      defp do_handle("relation_search", %{"field" => field_name, "query" => query}, state, socket) do
-        field_atom = String.to_existing_atom(field_name)
-        socket = relation_handler().handle_search(state, field_atom, query, socket)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
-      end
-
-      defp do_handle("relation_select", %{"field" => field_name, "value" => value}, state, socket) do
-        field_atom = String.to_existing_atom(field_name)
-        socket = relation_handler().handle_select(state, field_atom, value, socket)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
-      end
-
-      defp do_handle("relation_clear", %{"field" => field_name}, state, socket) do
-        field_atom = String.to_existing_atom(field_name)
-        socket = relation_handler().handle_clear(state, field_atom, socket)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+      defp do_handle("relation_" <> action, params, state, socket) do
+        relation_handler().handle(action, params, state, socket)
       end
 
       defp do_handle("upload_complete", %{"key" => upload_key}, state, socket) do
