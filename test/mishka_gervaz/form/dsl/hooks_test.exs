@@ -80,9 +80,9 @@ defmodule MishkaGervaz.Form.DSL.HooksTest do
       assert is_function(hooks.js.after_save, 1)
     end
 
-    test "js on_cancel is function/0" do
+    test "js on_cancel is function/1" do
       hooks = FormInfo.hooks(FormPost)
-      assert is_function(hooks.js.on_cancel, 0)
+      assert is_function(hooks.js.on_cancel, 1)
     end
 
     test "js on_error is function/1" do
@@ -98,19 +98,19 @@ defmodule MishkaGervaz.Form.DSL.HooksTest do
 
     test "js after_save returns JS struct" do
       hooks = FormInfo.hooks(FormPost)
-      result = hooks.js.after_save.(:ok)
+      result = hooks.js.after_save.(nil)
       assert is_struct(result, Phoenix.LiveView.JS)
     end
 
     test "js on_cancel returns JS struct" do
       hooks = FormInfo.hooks(FormPost)
-      result = hooks.js.on_cancel.()
+      result = hooks.js.on_cancel.(nil)
       assert is_struct(result, Phoenix.LiveView.JS)
     end
 
     test "js on_error returns JS struct" do
       hooks = FormInfo.hooks(FormPost)
-      result = hooks.js.on_error.([])
+      result = hooks.js.on_error.(nil)
       assert is_struct(result, Phoenix.LiveView.JS)
     end
   end
@@ -177,10 +177,10 @@ defmodule MishkaGervaz.Form.DSL.HooksTest do
       assert Keyword.get(config, :type) == {:fun, 1}
     end
 
-    test "js on_cancel is fun/0" do
+    test "js on_cancel is fun/1" do
       schema = MishkaGervaz.Form.Dsl.Hooks.js_schema()
       config = Keyword.get(schema, :on_cancel)
-      assert Keyword.get(config, :type) == {:fun, 0}
+      assert Keyword.get(config, :type) == {:fun, 1}
     end
 
     test "js on_error is fun/1" do

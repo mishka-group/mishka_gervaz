@@ -500,6 +500,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp resolve_js_hook(assigns, hook_name) do
     case assigns.static[:hooks] do
       %{js: %{^hook_name => func}} when is_function(func, 0) -> func.()
+      %{js: %{^hook_name => func}} when is_function(func, 1) -> func.(assigns[:record_id])
       _ -> %JS{}
     end
   end

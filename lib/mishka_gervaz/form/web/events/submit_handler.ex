@@ -54,7 +54,12 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
                 updated_form = Phoenix.Component.to_form(updated_form)
                 errors = build_submit_errors(updated_form)
                 state = State.update(state, form: updated_form, errors: errors)
-                Phoenix.Component.assign(socket, :form_state, state)
+
+                record_id = socket.assigns[:record_id]
+
+                socket
+                |> Phoenix.Component.assign(:form_state, state)
+                |> push_js_hook(state, :on_error, record_id)
             end
         end
       end
@@ -75,7 +80,10 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       @spec after_save(State.t(), struct(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
       def after_save(state, result, socket) do
+        record_id = Map.get(result, :id)
         send(self(), {:form_saved, state.mode, result})
+
+        socket = push_js_hook(socket, state, :after_save, record_id)
 
         reset_state =
           State.update(state,
@@ -144,6 +152,21 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       defp merge_uploaded_files(socket, params, upload_config, uploaded_files) do
         param_key = to_string(upload_config[:field] || upload_config.name)
         {socket, Map.put(params, param_key, uploaded_files)}
+      end
+
+      defp push_js_hook(socket, state, hook_name, record_id) do
+        case state.static do
+          %{hooks: %{js: %{^hook_name => func}}} when is_function(func, 1) ->
+            js = func.(record_id)
+
+            Phoenix.LiveView.push_event(socket, "gervaz:exec-js", %{
+              js: Jason.encode!(js),
+              target: state.static.id <> "-form-wrapper"
+            })
+
+          _ ->
+            socket
+        end
       end
 
       defoverridable submit: 3,

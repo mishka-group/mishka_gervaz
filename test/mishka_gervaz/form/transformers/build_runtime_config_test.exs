@@ -128,9 +128,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
       assert is_function(config.hooks.js.after_save, 1)
     end
 
-    test "js on_cancel is function/0" do
+    test "js on_cancel is function/1" do
       config = FormInfo.config(FormPost)
-      assert is_function(config.hooks.js.on_cancel, 0)
+      assert is_function(config.hooks.js.on_cancel, 1)
     end
 
     test "js on_error is function/1" do

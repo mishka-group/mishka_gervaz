@@ -178,9 +178,9 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
 
         js do
           on_init fn -> Phoenix.LiveView.JS.dispatch("form:init") end
-          after_save fn _result -> Phoenix.LiveView.JS.dispatch("form:saved") end
-          on_cancel fn -> Phoenix.LiveView.JS.dispatch("form:cancelled") end
-          on_error fn _errors -> Phoenix.LiveView.JS.dispatch("form:error") end
+          after_save fn _id -> Phoenix.LiveView.JS.dispatch("form:saved") end
+          on_cancel fn _id -> Phoenix.LiveView.JS.dispatch("form:cancelled") end
+          on_error fn _id -> Phoenix.LiveView.JS.dispatch("form:error") end
         end
       end
 

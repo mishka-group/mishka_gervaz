@@ -260,19 +260,19 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
 
     test "on_cancel JS hook returns JS struct" do
       func = FormInfo.js_hook(FormPost, :on_cancel)
-      result = func.()
+      result = func.(nil)
       assert is_struct(result, Phoenix.LiveView.JS)
     end
 
-    test "after_save JS hook accepts argument and returns JS struct" do
+    test "after_save JS hook returns JS struct" do
       func = FormInfo.js_hook(FormPost, :after_save)
-      result = func.(:ok)
+      result = func.(nil)
       assert is_struct(result, Phoenix.LiveView.JS)
     end
 
-    test "on_error JS hook accepts argument and returns JS struct" do
+    test "on_error JS hook returns JS struct" do
       func = FormInfo.js_hook(FormPost, :on_error)
-      result = func.([])
+      result = func.(nil)
       assert is_struct(result, Phoenix.LiveView.JS)
     end
   end

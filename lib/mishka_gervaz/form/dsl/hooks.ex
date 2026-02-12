@@ -67,15 +67,18 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     ],
     after_save: [
       type: {:fun, 1},
-      doc: "`fn result -> %JS{}` - JS commands after successful save."
+      doc:
+        "`fn record_id -> %JS{}` - JS commands after successful save. Receives saved record ID."
     ],
     on_cancel: [
-      type: {:fun, 0},
-      doc: "`fn -> %JS{}` - JS commands when form is cancelled."
+      type: {:fun, 1},
+      doc:
+        "`fn record_id -> %JS{}` - JS commands when form is cancelled. Receives record ID or nil (create)."
     ],
     on_error: [
       type: {:fun, 1},
-      doc: "`fn errors -> %JS{}` - JS commands on save error."
+      doc:
+        "`fn record_id -> %JS{}` - JS commands on save error. Receives record ID or nil (create)."
     ]
   ]
 
