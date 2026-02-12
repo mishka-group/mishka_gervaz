@@ -10,7 +10,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   use Phoenix.Component
   alias Phoenix.LiveView.JS
 
-  import MishkaGervaz.Helpers, only: [get_ui_label: 1]
+  import MishkaGervaz.Helpers, only: [get_ui_label: 1, dynamic_component: 1, resolve_label: 1]
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
   alias MishkaGervaz.Form.Web.UploadHelpers
@@ -49,6 +49,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_current_step_groups(assigns)}
           <% end %>
 
+          {render_uploads_section(assigns)}
           {render_submit(assigns)}
         </.form>
       <% else %>
@@ -64,7 +65,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div class="flex items-center justify-center p-8">
-      {@ui.spinner(%{size: :lg})}
+      <.dynamic_component module={@ui} function={:spinner} size={:lg} />
     </div>
     """
   end
@@ -98,12 +99,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div>
-      {@ui.field_group(%{
-        label: @group_label,
-        collapsible: @collapsible,
-        open: true,
-        inner_block: render_group_fields(assigns, @group_fields)
-      })}
+      <.dynamic_component
+        module={@ui}
+        function={:field_group}
+        label={@group_label}
+        collapsible={@collapsible}
+        open={true}
+      >
+        {render_group_fields(assigns, @group_fields)}
+      </.dynamic_component>
     </div>
     """
   end
@@ -129,22 +133,29 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div class="mb-6">
-      {@ui.step_indicator(%{steps: @step_data, current: @current_step})}
+      <.dynamic_component module={@ui} function={:step_indicator} steps={@step_data} current={@current_step} />
     </div>
     """
   end
 
   defp render_groups(assigns) do
-    assigns = assign(assigns, :all_groups, assigns.static.groups)
+    groups = assigns.static.groups
 
-    ~H"""
-    <div>
-      <%= for group <- @all_groups do %>
-        <% group_assigns = assign(assigns, :group, group) %>
-        {render_group(group_assigns)}
-      <% end %>
-    </div>
-    """
+    if groups == [] do
+      # No explicit groups — render all fields in a flat layout
+      render_group_fields(assigns, assigns.static.fields)
+    else
+      assigns = assign(assigns, :all_groups, groups)
+
+      ~H"""
+      <div>
+        <%= for group <- @all_groups do %>
+          <% group_assigns = assign(assigns, :group, group) %>
+          {render_group(group_assigns)}
+        <% end %>
+      </div>
+      """
+    end
   end
 
   defp render_current_step_groups(assigns) do
@@ -207,8 +218,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     submit_label =
       if mode == :create,
-        do: Map.get(submit, :create_label, "Create"),
-        else: Map.get(submit, :update_label, "Update")
+        do: resolve_label(Map.get(submit, :create_label, "Create")),
+        else: resolve_label(Map.get(submit, :update_label, "Update"))
 
     cancel_js =
       assigns
@@ -218,7 +229,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns =
       assigns
       |> assign(:submit_label, submit_label)
-      |> assign(:cancel_label, Map.get(submit, :cancel_label, "Cancel"))
+      |> assign(:cancel_label, resolve_label(Map.get(submit, :cancel_label, "Cancel")))
       |> assign(:show_cancel, Map.get(submit, :show_cancel, true))
       |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
       |> assign(:ui, assigns.static.ui_adapter)
@@ -228,23 +239,27 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div class="mt-6 flex items-center justify-between">
       <div class="flex gap-2">
         <%= if @show_step_nav do %>
-          {@ui.step_navigation(%{
-            current_step: @state.current_step,
-            steps: @static.steps,
-            step_states: @state.step_states,
-            myself: @myself
-          })}
+          <.dynamic_component
+            module={@ui}
+            function={:step_navigation}
+            current_step={@state.current_step}
+            steps={@static.steps}
+            step_states={@state.step_states}
+            myself={@myself}
+          />
         <% end %>
       </div>
 
       <div class="flex gap-2">
         <%= if @show_cancel do %>
-          {@ui.button(%{
-            label: @cancel_label,
-            variant: :secondary,
-            phx_click: @cancel_js,
-            phx_target: @myself
-          })}
+          <.dynamic_component
+            module={@ui}
+            function={:button}
+            label={@cancel_label}
+            variant={:secondary}
+            phx_click={@cancel_js}
+            phx_target={@myself}
+          />
         <% end %>
 
         <%= if not @show_step_nav or last_step?(assigns) do %>
@@ -260,6 +275,51 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
+  defp render_uploads_section(assigns) do
+    uploads = assigns.static.uploads
+
+    if is_list(uploads) and uploads != [] do
+      ui = assigns.static.ui_adapter
+      upload_items = build_upload_items(uploads, assigns)
+      assigns = assigns |> assign(:upload_items, upload_items) |> assign(:ui, ui)
+
+      ~H"""
+      <div class="space-y-4 mt-4">
+        <%= for item <- @upload_items do %>
+          <% ua = build_upload_assigns(assigns, item) %>
+          {render_upload_by_style(ua)}
+        <% end %>
+      </div>
+      """
+    else
+      ~H""
+    end
+  end
+
+  defp build_upload_items(uploads, assigns) do
+    Enum.reduce(uploads, [], fn upload_config, acc ->
+      ns_name = namespaced_upload_name(upload_config.name, assigns.static.id)
+      upload_ref = assigns.uploads[ns_name]
+
+      if upload_ref do
+        [%{config: upload_config, ref: upload_ref, ns_name: ns_name} | acc]
+      else
+        acc
+      end
+    end)
+    |> Enum.reverse()
+  end
+
+  defp build_upload_assigns(assigns, item) do
+    assigns
+    |> assign(:upload_config, item.config)
+    |> assign(:upload, item.ref)
+    |> assign(:ns_name, item.ns_name)
+    |> assign(:style, item.config[:style] || :dropzone)
+    |> assign(:existing_files, Map.get(assigns.state.existing_files, item.config.name, []))
+    |> assign(:ui, assigns.static.ui_adapter)
+  end
+
   defp render_field_by_type(assigns) do
     ui = assigns.ui
     field = assigns.field_config
@@ -267,76 +327,99 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     label = assigns.label
     errors = assigns.errors
 
-    wrapper_assigns = %{
-      label: label,
-      field: form_field,
-      errors: errors,
-      required: Map.get(field, :required, false),
-      inner_block: render_input(ui, field, form_field, assigns)
-    }
+    assigns =
+      assigns
+      |> assign(:wrapper_label, label)
+      |> assign(:wrapper_errors, errors)
+      |> assign(:wrapper_required, Map.get(field, :required, false))
+      |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
 
-    ui.field_wrapper(wrapper_assigns)
+    ~H"""
+    <.dynamic_component
+      module={@ui}
+      function={:field_wrapper}
+      label={@wrapper_label}
+      errors={@wrapper_errors}
+      required={@wrapper_required}
+    >
+      {@rendered_input}
+    </.dynamic_component>
+    """
   end
 
   defp render_input(ui, field, form_field, assigns) do
     type = Map.get(field, :type, :text)
 
-    base = %{
-      field: form_field,
-      name: field.name,
-      id: "form-#{field.name}",
-      value: Phoenix.HTML.Form.input_value(assigns.state.form, field.name),
-      placeholder: get_in_map(field, [:ui, :placeholder]),
-      disabled: Map.get(field, :disabled, false)
-    }
+    base =
+      assigns
+      |> assign(:field, form_field)
+      |> assign(:name, field.name)
+      |> assign(:id, "form-#{field.name}")
+      |> assign(:value, Phoenix.HTML.Form.input_value(assigns.state.form, field.name))
+      |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
+      |> assign(:disabled, Map.get(field, :disabled, false))
+      |> assign(:module, ui)
 
     case type do
       t when t in [:text, :email, :password, :url, :tel, :hidden] ->
-        ui.text_input(Map.put(base, :type, to_string(t)))
+        base |> assign(:function, :text_input) |> assign(:type, to_string(t)) |> dynamic_component()
 
       :number ->
-        ui.number_input(base)
+        base |> assign(:function, :number_input) |> dynamic_component()
 
       :textarea ->
-        ui.textarea(base)
+        base |> assign(:function, :textarea) |> dynamic_component()
 
       :select ->
         options = Map.get(field, :options, [])
-        ui.select(Map.put(base, :options, options))
+        base |> assign(:function, :select) |> assign(:options, options) |> dynamic_component()
 
       :multi_select ->
         options = Map.get(field, :options, [])
-        ui.multi_select(Map.put(base, :options, options))
+
+        base
+        |> assign(:function, :multi_select)
+        |> assign(:options, options)
+        |> dynamic_component()
 
       :checkbox ->
-        ui.checkbox(base)
+        base |> assign(:function, :checkbox) |> dynamic_component()
 
       :toggle ->
-        ui.toggle_input(base)
+        base |> assign(:function, :toggle_input) |> dynamic_component()
 
       :date ->
-        ui.date_input(base)
+        base |> assign(:function, :date_input) |> dynamic_component()
 
       :datetime ->
-        ui.datetime_input(base)
+        base |> assign(:function, :datetime_input) |> dynamic_component()
 
       :range ->
         min = get_in_map(field, [:ui, :min]) || 0
         max = get_in_map(field, [:ui, :max]) || 100
-        ui.range_input(Map.merge(base, %{min: min, max: max}))
+
+        base
+        |> assign(:function, :range_input)
+        |> assign(:min, min)
+        |> assign(:max, max)
+        |> dynamic_component()
 
       :json ->
-        ui.json_editor(base)
+        base |> assign(:function, :json_editor) |> dynamic_component()
 
       :search_select ->
         options = Map.get(assigns.state.relation_options, field.name, %{})
-        ui.search_select(Map.merge(base, %{options: Map.get(options, :options, [])}))
+
+        base
+        |> assign(:function, :search_select)
+        |> assign(:options, Map.get(options, :options, []))
+        |> dynamic_component()
 
       :file ->
         render_upload_field(ui, field, assigns)
 
       _ ->
-        ui.text_input(Map.put(base, :type, "text"))
+        base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
     end
   end
 
@@ -360,12 +443,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
       render_upload_by_style(upload_assigns)
     else
-      ui.text_input(%{
-        name: field.name,
-        id: "form-#{field.name}",
-        value: "",
-        type: "file"
-      })
+      assigns
+      |> assign(:module, ui)
+      |> assign(:function, :text_input)
+      |> assign(:name, field.name)
+      |> assign(:id, "form-#{field.name}")
+      |> assign(:value, "")
+      |> assign(:type, "file")
+      |> dynamic_component()
     end
   end
 
@@ -375,20 +460,26 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <%= case @style do %>
         <% :dropzone -> %>
           <%= if @upload do %>
-            {@ui.upload_dropzone(%{
-              upload_ref: @upload.ref,
-              accept: @upload_config[:accept],
-              max_entries: @upload_config[:max_entries] || 1,
-              inner_block: render_live_file_input(assigns, "sr-only")
-            })}
+            <.dynamic_component
+              module={@ui}
+              function={:upload_dropzone}
+              upload_ref={@upload.ref}
+              accept={@upload_config[:accept]}
+              max_entries={@upload_config[:max_entries] || 1}
+            >
+              {render_live_file_input(assigns, "sr-only")}
+            </.dynamic_component>
           <% end %>
         <% :file_input -> %>
           <%= if @upload do %>
-            {@ui.upload_file_input(%{
-              accept: @upload_config[:accept],
-              max_entries: @upload_config[:max_entries] || 1,
-              inner_block: render_live_file_input(assigns, nil)
-            })}
+            <.dynamic_component
+              module={@ui}
+              function={:upload_file_input}
+              accept={@upload_config[:accept]}
+              max_entries={@upload_config[:max_entries] || 1}
+            >
+              {render_live_file_input(assigns, nil)}
+            </.dynamic_component>
           <% end %>
         <% :custom -> %>
           <%= if @upload do %>
@@ -423,12 +514,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     ~H"""
     <div :if={@upload.entries != []} class="space-y-2">
       <%= for entry <- @upload.entries do %>
+        <%!-- entry is used directly in dynamic_component calls below --%>
         <div class="flex items-center gap-2">
           <div class="flex-1">
             <%= if entry.progress < 100 do %>
-              {@ui.upload_progress(%{entry: entry})}
+              <.dynamic_component module={@ui} function={:upload_progress} entry={entry} />
             <% else %>
-              {@ui.upload_preview(%{entry: entry})}
+              <.dynamic_component module={@ui} function={:upload_preview} entry={entry} />
             <% end %>
           </div>
           <button
@@ -466,13 +558,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div class="space-y-2">
       <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Existing files</p>
       <%= for file <- @existing_files do %>
-        {@ui.upload_existing_file(%{
-          file: file,
-          filename: file[:filename] || file[:name] || "File",
-          file_id: file[:id] || file[:filename] || file[:name],
-          upload_name: @upload_config.name,
-          phx_target: @myself
-        })}
+        <.dynamic_component
+          module={@ui}
+          function={:upload_existing_file}
+          file={file}
+          filename={file[:filename] || file[:name] || "File"}
+          file_id={file[:id] || file[:filename] || file[:name]}
+          upload_name={@upload_config.name}
+          phx_target={@myself}
+        />
       <% end %>
     </div>
     """
@@ -498,9 +592,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp resolve_js_hook(assigns, hook_name) do
-    case assigns.static[:hooks] do
+    case assigns.static.hooks do
       %{js: %{^hook_name => func}} when is_function(func, 0) -> func.()
-      %{js: %{^hook_name => func}} when is_function(func, 1) -> func.(assigns[:record_id])
+      %{js: %{^hook_name => func}} when is_function(func, 1) -> func.(Map.get(assigns, :record_id))
       _ -> %JS{}
     end
   end
