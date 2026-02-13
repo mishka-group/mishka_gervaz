@@ -19,7 +19,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       has_value?: 1,
       find_by_name: 2,
       resolve_ui_label: 1,
-      accessible?: 2
+      accessible?: 2,
+      format_filesize: 1
     ]
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
@@ -611,22 +612,44 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     ~H"""
     <div :if={@upload.entries != []} class="space-y-2">
       <%= for entry <- @upload.entries do %>
-        <%!-- entry is used directly in dynamic_component calls below --%>
-        <div class="flex items-center gap-2">
-          <div class="flex-1">
-            <%= if entry.progress < 100 do %>
-              <.dynamic_component module={@ui} function={:upload_progress} entry={entry} />
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+          <%!-- Thumbnail / preview --%>
+          <div class="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+            <%= if String.starts_with?(entry.client_type, "image/") do %>
+              <.live_img_preview entry={entry} class="w-full h-full object-cover" />
             <% else %>
-              <.dynamic_component module={@ui} function={:upload_preview} entry={entry} />
+              <div class="flex items-center justify-center w-full h-full">
+                <span class="hero-document w-6 h-6 text-gray-400"></span>
+              </div>
             <% end %>
           </div>
+
+          <%!-- File info + progress --%>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-900 truncate">{entry.client_name}</p>
+            <%= if entry.progress < 100 do %>
+              <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                <div
+                  class="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                  style={"width: #{entry.progress}%"}
+                />
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">{entry.progress}%</p>
+            <% else %>
+              <p class="text-xs text-gray-500">
+                {format_filesize(entry.client_size)}
+              </p>
+            <% end %>
+          </div>
+
+          <%!-- Cancel button --%>
           <button
             type="button"
             phx-click="cancel_upload"
-            phx-value-key={@ns_name}
+            phx-value-key={@upload_config.name}
             phx-value-ref={entry.ref}
             phx-target={@myself}
-            class="text-gray-400 hover:text-red-500 transition-colors"
+            class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
             title="Cancel upload"
           >
             <span class="hero-x-mark w-5 h-5"></span>

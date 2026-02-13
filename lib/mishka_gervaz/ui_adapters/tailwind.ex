@@ -1548,7 +1548,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
 
     ~H"""
-    <div class={@class} phx-drop-target={@upload_ref}>
+    <label class={@class} phx-drop-target={@upload_ref}>
       <.render_icon name="hero-cloud-arrow-up" class="w-10 h-10 text-gray-400 mb-3" />
       <p class="text-sm text-gray-600">
         <span class="font-semibold text-blue-600">Click to upload</span> or drag and drop
@@ -1560,7 +1560,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         Up to {@max_entries} files
       </p>
       {render_slot(@inner_block)}
-    </div>
+    </label>
     """
   end
 
