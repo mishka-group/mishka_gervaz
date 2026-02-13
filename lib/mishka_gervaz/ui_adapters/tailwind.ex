@@ -159,9 +159,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <%!-- Dropdown options (only show when open) --%>
       <div
-        :if={@dropdown_open? and @display_options != []}
+        :if={@dropdown_open?}
         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
       >
+        <div :if={@display_options == []} class="px-3 py-2 text-sm text-gray-400">
+          No records found
+        </div>
         <button
           :for={{opt_label, opt_value} <- @display_options}
           type="button"
@@ -269,9 +272,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <%!-- Dropdown options (only show when open) --%>
       <div
-        :if={@dropdown_open? and @display_options != []}
+        :if={@dropdown_open?}
         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
       >
+        <div :if={@display_options == []} class="px-3 py-2 text-sm text-gray-400">
+          No records found
+        </div>
         <button
           :for={{opt_label, opt_value} <- @display_options}
           type="button"
@@ -383,9 +389,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <%!-- Dropdown options (only show when open) --%>
       <div
-        :if={@dropdown_open? and @display_options != []}
+        :if={@dropdown_open?}
         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
       >
+        <div :if={@display_options == []} class="px-3 py-2 text-sm text-gray-400">
+          No records found
+        </div>
         <button
           :for={{label, value} <- @display_options}
           type="button"
