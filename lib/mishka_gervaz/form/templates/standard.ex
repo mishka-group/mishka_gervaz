@@ -18,7 +18,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       resolve_label: 1,
       has_value?: 1,
       find_by_name: 2,
-      resolve_ui_label: 1
+      resolve_ui_label: 1,
+      accessible?: 2
     ]
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
@@ -195,6 +196,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp render_group_fields(assigns, fields) do
     columns = assigns.static.layout_columns
+    visible_fields = Enum.filter(fields, &accessible?(&1, assigns.state))
 
     col_class =
       case columns do
@@ -208,7 +210,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns =
       assigns
       |> assign(:col_class, col_class)
-      |> assign(:render_fields, fields)
+      |> assign(:render_fields, visible_fields)
 
     ~H"""
     <div class={@col_class}>
@@ -384,7 +386,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp field_disabled?(%{depends_on: nil}, _state), do: false
 
   defp field_disabled?(%{depends_on: depends_on}, state) do
-    !has_value?(Map.get(state.field_values, depends_on))
+    parent = find_by_name(state.static.fields, depends_on)
+
+    cond do
+      parent && !accessible?(parent, state) -> false
+      true -> !has_value?(Map.get(state.field_values, depends_on))
+    end
   end
 
   defp field_disabled?(_, _), do: false
