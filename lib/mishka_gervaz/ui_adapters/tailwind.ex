@@ -422,11 +422,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @impl true
   def checkbox(assigns) do
-    phx_click = assigns[:"phx-click"]
-    phx_target = assigns[:"phx-target"]
-    phx_value_id = assigns[:"phx-value-id"]
-    checked = assigns[:checked]
-
     label = resolve_label(assigns[:label])
 
     assigns =
@@ -435,14 +430,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> "rounded border-gray-300 text-blue-600 focus:ring-blue-500" end)
       |> assign(:label, label)
       |> assign_new(:icon, fn -> nil end)
-      |> assign(:checked, checked)
-      |> assign(:phx_click, phx_click)
-      |> assign(:phx_target, phx_target)
-      |> assign(:phx_value_id, phx_value_id)
+      |> assign_new(:checked, fn -> false end)
+      |> assign_new(:hidden_input, fn -> false end)
+      |> assign(:phx_click, assigns[:"phx-click"])
+      |> assign(:phx_target, assigns[:"phx-target"])
+      |> assign(:phx_value_id, assigns[:"phx-value-id"])
 
     ~H"""
     <label class="flex items-center gap-2">
       <.render_icon :if={@icon} name={@icon} class="w-4 h-4 text-gray-400" />
+      <input :if={@hidden_input} type="hidden" name={@name} value="false" />
       <input
         type="checkbox"
         id={@id}

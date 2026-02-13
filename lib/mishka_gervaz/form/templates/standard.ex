@@ -445,10 +445,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :checkbox ->
-        base |> assign(:function, :checkbox) |> dynamic_component()
+        form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+
+        base
+        |> assign(:value, "true")
+        |> assign(:checked, form_value in [true, "true"])
+        |> assign(:hidden_input, true)
+        |> assign(:function, :checkbox)
+        |> dynamic_component()
 
       :toggle ->
-        base |> assign(:function, :toggle_input) |> dynamic_component()
+        form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+
+        base
+        |> assign(:value, "true")
+        |> assign(:checked, form_value in [true, "true"])
+        |> assign(:function, :toggle_input)
+        |> dynamic_component()
 
       :date ->
         base |> assign(:function, :date_input) |> dynamic_component()
