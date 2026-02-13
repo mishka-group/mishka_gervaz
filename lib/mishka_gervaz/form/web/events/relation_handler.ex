@@ -54,11 +54,15 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
             case relation_mod.search_options(field, state, search_term) do
               {:ok, options, has_more?} ->
                 socket =
-                  update_relation_state(socket, state, field_atom, %{
-                    options: options,
-                    has_more?: has_more?,
-                    page: 1
-                  }, keep_selected: true, dropdown_open?: true, search_term: search_term)
+                  update_relation_state(
+                    socket,
+                    state,
+                    field_atom,
+                    %{
+                      options: options,
+                      has_more?: has_more?,
+                      page: 1
+                    }, keep_selected: true, dropdown_open?: true, search_term: search_term)
 
                 {:noreply, socket}
 
@@ -75,11 +79,15 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                 merged = prepend_selected(selected_options, options)
 
                 socket =
-                  update_relation_state(socket, state, field_atom, %{
-                    options: merged,
-                    has_more?: has_more?,
-                    page: 1
-                  }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
+                  update_relation_state(
+                    socket,
+                    state,
+                    field_atom,
+                    %{
+                      options: merged,
+                      has_more?: has_more?,
+                      page: 1
+                    }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
 
                 {:noreply, socket}
 
@@ -102,11 +110,15 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
               merged = prepend_selected(selected_options, options)
 
               socket =
-                update_relation_state(socket, state, field_atom, %{
-                  options: merged,
-                  has_more?: has_more?,
-                  page: 1
-                }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
+                update_relation_state(
+                  socket,
+                  state,
+                  field_atom,
+                  %{
+                    options: merged,
+                    has_more?: has_more?,
+                    page: 1
+                  }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
 
               {:noreply, socket}
 
@@ -186,7 +198,9 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
           is_selected = value in current_list
 
           new_list = toggle_value(current_list, value, is_selected)
-          new_selected_options = toggle_selected_option(state, field_atom, value, label, is_selected)
+
+          new_selected_options =
+            toggle_selected_option(state, field_atom, value, label, is_selected)
 
           current_opts = get_current_opts(state, field_atom)
 
@@ -266,11 +280,15 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
               merged = Map.get(current_opts, :options, []) ++ filtered_new
 
               socket =
-                update_relation_state(socket, state, field_atom, %{
-                  options: merged,
-                  has_more?: has_more?,
-                  page: current_page + 1
-                }, keep_selected: true, dropdown_open?: true, search_term: search_term)
+                update_relation_state(
+                  socket,
+                  state,
+                  field_atom,
+                  %{
+                    options: merged,
+                    has_more?: has_more?,
+                    page: current_page + 1
+                  }, keep_selected: true, dropdown_open?: true, search_term: search_term)
 
               {:noreply, socket}
 

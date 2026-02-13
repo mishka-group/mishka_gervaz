@@ -218,7 +218,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     selected_label =
       case Enum.find(selected_options, fn {_, v} -> to_string(v) == to_string(current_value) end) do
-        {label, _} -> label
+        {label, _} ->
+          label
+
         nil ->
           case Enum.find(options, fn {_, v} -> to_string(v) == to_string(current_value) end) do
             {label, _} -> label
@@ -263,7 +265,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           {@selected_label || @placeholder}
         </span>
         <span class="ml-2 text-gray-400">
-          <.render_icon name="hero-chevron-down" class={["w-4 h-4 transition-transform", @dropdown_open? && "rotate-180"]} />
+          <.render_icon
+            name="hero-chevron-down"
+            class={["w-4 h-4 transition-transform", @dropdown_open? && "rotate-180"]}
+          />
         </span>
       </button>
 

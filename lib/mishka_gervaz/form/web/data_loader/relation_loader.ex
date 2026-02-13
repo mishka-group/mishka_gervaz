@@ -254,7 +254,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
         field
       end
 
-      defp resolve_display_field(_field, resource) when is_atom(resource) and not is_nil(resource) do
+      defp resolve_display_field(_field, resource)
+           when is_atom(resource) and not is_nil(resource) do
         attrs = Ash.Resource.Info.attributes(resource)
 
         Enum.find_value([:name, :title, :label], :id, fn name ->

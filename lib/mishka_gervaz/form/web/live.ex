@@ -67,8 +67,8 @@ defmodule MishkaGervaz.Form.Web.Live do
   @impl true
   def update(assigns, socket) do
     id = Map.fetch!(assigns, :id)
-    resource = Map.fetch!(assigns, :resource)
-    current_user = Map.get(assigns, :current_user)
+    resource = Map.get(assigns, :resource) || socket.assigns[:resource]
+    current_user = Map.get(assigns, :current_user) || socket.assigns[:current_user]
     record_id = Map.get(assigns, :record_id)
     existing_state = socket.assigns[:form_state]
 

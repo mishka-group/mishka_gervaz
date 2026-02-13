@@ -49,23 +49,17 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
         actor = Keyword.get(opts, :actor, state.current_user)
 
         read_opts =
-          [action: read_action, actor: actor]
+          [action: read_action, actor: actor, load: preloads]
           |> maybe_add_tenant(tenant)
 
         case Ash.get(resource, record_id, read_opts) do
           {:ok, record} ->
-            record =
-              if preloads != [] do
-                load_opts = if tenant, do: [tenant: tenant, actor: actor], else: [actor: actor]
-                Ash.load!(record, preloads, load_opts)
-              else
-                record
-              end
+            effective_tenant = tenant || resolve_tenant_from_record(resource, record)
 
             build_form(state, record, :update,
               action: update_action,
               actor: actor,
-              tenant: tenant
+              tenant: effective_tenant
             )
 
           {:error, reason} ->
@@ -128,6 +122,13 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       @spec maybe_add_opt(keyword(), atom(), any()) :: keyword()
       defp maybe_add_opt(opts, _key, nil), do: opts
       defp maybe_add_opt(opts, key, value), do: Keyword.put(opts, key, value)
+
+      defp resolve_tenant_from_record(resource, record) do
+        case Ash.Resource.Info.multitenancy_attribute(resource) do
+          nil -> nil
+          attr -> Map.get(record, attr)
+        end
+      end
 
       defoverridable load_for_edit: 2,
                      load_for_edit: 3,

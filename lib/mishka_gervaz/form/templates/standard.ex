@@ -22,6 +22,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       accessible?: 2,
       format_filesize: 1
     ]
+
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
   alias MishkaGervaz.Form.Web.UploadHelpers
@@ -174,7 +175,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div class="mb-6">
-      <.dynamic_component module={@ui} function={:step_indicator} steps={@step_data} current={@current_step} />
+      <.dynamic_component
+        module={@ui}
+        function={:step_indicator}
+        steps={@step_data}
+        current={@current_step}
+      />
     </div>
     """
   end
@@ -483,7 +489,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     case type do
       t when t in [:text, :email, :password, :url, :tel, :hidden] ->
-        base |> assign(:function, :text_input) |> assign(:type, to_string(t)) |> dynamic_component()
+        base
+        |> assign(:function, :text_input)
+        |> assign(:type, to_string(t))
+        |> dynamic_component()
 
       :number ->
         base |> assign(:function, :number_input) |> dynamic_component()
@@ -764,9 +773,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp resolve_js_hook(assigns, hook_name) do
     case assigns.static.hooks do
-      %{js: %{^hook_name => func}} when is_function(func, 0) -> func.()
-      %{js: %{^hook_name => func}} when is_function(func, 1) -> func.(Map.get(assigns, :record_id))
-      _ -> %JS{}
+      %{js: %{^hook_name => func}} when is_function(func, 0) ->
+        func.()
+
+      %{js: %{^hook_name => func}} when is_function(func, 1) ->
+        func.(Map.get(assigns, :record_id))
+
+      _ ->
+        %JS{}
     end
   end
 end
