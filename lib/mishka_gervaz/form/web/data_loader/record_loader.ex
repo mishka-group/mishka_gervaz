@@ -54,7 +54,12 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
 
         case Ash.get(resource, record_id, read_opts) do
           {:ok, record} ->
-            effective_tenant = tenant || resolve_tenant_from_record(resource, record)
+            effective_tenant =
+              if state.master_user? do
+                nil
+              else
+                tenant || resolve_tenant_from_record(resource, record)
+              end
 
             build_form(state, record, :update,
               action: update_action,

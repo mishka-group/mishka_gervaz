@@ -1822,19 +1822,38 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @impl true
   def upload_existing_file(assigns) do
+    file = assigns[:file] || %{}
+
     assigns =
       assigns
-      |> assign_new(:class, fn -> "flex items-center gap-3 p-3 bg-gray-50 rounded-md group" end)
-      |> assign_new(:filename, fn ->
-        assigns[:file][:filename] || assigns[:file][:name] || "File"
+      |> assign_new(:class, fn ->
+        "flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 group"
       end)
+      |> assign_new(:filename, fn -> file[:filename] || file[:name] || "File" end)
+      |> assign_new(:url, fn -> file[:url] end)
+      |> assign_new(:size, fn -> file[:size] end)
+      |> assign_new(:format, fn -> file[:format] end)
+      |> assign_new(:is_image, fn -> image_file?(file) end)
       |> assign_new(:phx_target, fn -> nil end)
 
     ~H"""
     <div class={@class}>
-      <.render_icon name="hero-document" class="w-8 h-8 text-gray-400 shrink-0" />
+      <div class="w-14 h-14 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
+        <%= if @is_image && @url do %>
+          <img src={@url} alt={@filename} class="w-full h-full object-cover" />
+        <% else %>
+          <div class="flex items-center justify-center w-full h-full">
+            <.render_icon name={file_type_icon(@format)} class="w-7 h-7 text-gray-400" />
+          </div>
+        <% end %>
+      </div>
       <div class="min-w-0 flex-1">
         <p class="text-sm font-medium text-gray-900 truncate">{@filename}</p>
+        <p :if={@size || @format} class="text-xs text-gray-500">
+          <span :if={@format}>{@format}</span>
+          <span :if={@size && @format} class="mx-1">&middot;</span>
+          <span :if={@size}>{format_filesize(@size)}</span>
+        </p>
       </div>
       <button
         type="button"
@@ -1842,7 +1861,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-value-upload={@upload_name}
         phx-value-file-id={@file_id}
         phx-target={@phx_target}
-        class="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+        class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
         title="Remove file"
       >
         <.render_icon name="hero-x-mark" class="w-5 h-5" />
@@ -1850,6 +1869,33 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     """
   end
+
+  defp image_file?(%{type: "images"}), do: true
+  defp image_file?(%{type: :images}), do: true
+
+  defp image_file?(%{format: fmt}) when is_binary(fmt) do
+    String.downcase(fmt) in ~w(jpg jpeg png gif webp svg bmp ico tiff)
+  end
+
+  defp image_file?(%{filename: name}) when is_binary(name) do
+    ext = name |> Path.extname() |> String.downcase() |> String.trim_leading(".")
+    ext in ~w(jpg jpeg png gif webp svg bmp ico tiff)
+  end
+
+  defp image_file?(_), do: false
+
+  defp file_type_icon(nil), do: "hero-document"
+  defp file_type_icon(fmt) when is_binary(fmt) do
+    case String.downcase(fmt) do
+      f when f in ~w(pdf) -> "hero-document-text"
+      f when f in ~w(mp4 webm mov avi) -> "hero-film"
+      f when f in ~w(doc docx txt csv) -> "hero-document-text"
+      f when f in ~w(xls xlsx) -> "hero-table-cells"
+      f when f in ~w(ppt pptx) -> "hero-presentation-chart-bar"
+      _ -> "hero-document"
+    end
+  end
+  defp file_type_icon(_), do: "hero-document"
 
   defp selected?(value, selected_set), do: to_string(value) in selected_set
 

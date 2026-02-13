@@ -613,8 +613,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp render_upload_by_style(assigns) do
+    has_new_entries = assigns[:upload] && assigns.upload.entries != []
+    show_existing = assigns.existing_files != [] && !has_new_entries
+
+    assigns =
+      assigns
+      |> assign(:has_new_entries, has_new_entries)
+      |> assign(:show_existing, show_existing)
+
     ~H"""
     <div class="space-y-3">
+      <%= if @show_existing do %>
+        {render_existing_files(assigns)}
+      <% end %>
+
       <%= case @style do %>
         <% :dropzone -> %>
           <%= if @upload do %>
@@ -651,10 +663,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
       <%= if @upload do %>
         {render_upload_errors(assigns)}
-      <% end %>
-
-      <%= if @existing_files != [] do %>
-        {render_existing_files(assigns)}
       <% end %>
     </div>
     """
@@ -736,7 +744,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp render_existing_files(assigns) do
     ~H"""
     <div class="space-y-2">
-      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Existing files</p>
       <%= for file <- @existing_files do %>
         <.dynamic_component
           module={@ui}

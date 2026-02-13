@@ -39,14 +39,22 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               Phoenix.LiveView.Socket.t()
       def submit(state, params, socket) do
         form_params = transform_params(state, Map.get(params, "form", params))
+        params_before_consume = Map.keys(form_params)
         {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
+
+        has_new_uploads? = Map.keys(form_params) != params_before_consume
 
         case state.form do
           nil ->
             socket
 
           form ->
-            result = AshPhoenix.Form.submit(form.source, params: form_params)
+            result =
+              AshPhoenix.Form.submit(form.source,
+                params: form_params,
+                force?: true
+              )
+
             cleanup_temp_uploads(form_params)
 
             case result do
