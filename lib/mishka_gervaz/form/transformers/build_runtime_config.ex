@@ -338,7 +338,8 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   end
 
   defp has_group_ui_values?(%Group.Ui{} = ui) do
-    any_set?([ui.label, ui.icon, ui.description, ui.class, ui.header_class]) or ui.extra != %{}
+    any_set?([ui.label, ui.icon, ui.description, ui.class, ui.header_class, ui.columns]) or
+      ui.extra != %{}
   end
 
   defp has_group_ui_values?(_), do: false
@@ -350,6 +351,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       description: ui.description,
       class: ui.class,
       header_class: ui.header_class,
+      columns: ui.columns,
       extra: ui.extra
     }
   end

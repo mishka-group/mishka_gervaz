@@ -30,7 +30,7 @@ defmodule MishkaGervaz.Form.Web.State.GroupBuilder do
 
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
-      import MishkaGervaz.Helpers, only: [get_ui_label: 1]
+      import MishkaGervaz.Helpers, only: [resolve_ui_label: 1]
 
       @doc """
       Builds groups from config and resource.
@@ -41,7 +41,7 @@ defmodule MishkaGervaz.Form.Web.State.GroupBuilder do
       def build(config, resource) when is_map(config) do
         Info.groups(resource)
         |> Enum.map(fn group ->
-          label = get_ui_label(group)
+          label = resolve_ui_label(group)
           Map.put(group, :resolved_label, label)
         end)
       end

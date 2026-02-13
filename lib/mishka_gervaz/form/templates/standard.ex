@@ -100,27 +100,57 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   @impl true
   def render_group(assigns) do
     group = assigns.group
+    mode = assigns.state.mode
+    group_fields = Map.get(group, :resolved_fields, [])
 
-    assigns =
-      assigns
-      |> assign(:group_label, Map.get(group, :resolved_label, ""))
-      |> assign(:group_fields, Map.get(group, :resolved_fields, []))
-      |> assign(:ui, assigns.static.ui_adapter)
-      |> assign(:collapsible, Map.get(group, :collapsible, false))
+    visible_fields =
+      Enum.filter(group_fields, fn field ->
+        accessible?(field, assigns.state) and show_on_mode?(field, mode)
+      end)
 
-    ~H"""
-    <div>
-      <.dynamic_component
-        module={@ui}
-        function={:field_group}
-        label={@group_label}
-        collapsible={@collapsible}
-        open={true}
-      >
-        {render_group_fields(assigns, @group_fields)}
-      </.dynamic_component>
-    </div>
-    """
+    if visible_fields == [] do
+      ~H""
+    else
+      group_ui = Map.get(group, :ui) || %{}
+      group_class = Map.get(group_ui, :class)
+
+      assigns =
+        assigns
+        |> assign(:group_label, Map.get(group, :resolved_label))
+        |> assign(:group_fields, group_fields)
+        |> assign(:group_columns, Map.get(group_ui, :columns))
+        |> assign(:ui, assigns.static.ui_adapter)
+        |> assign(:collapsible, Map.get(group, :collapsible, false))
+        |> assign(:has_group_class, not is_nil(group_class))
+        |> assign(:group_class, group_class || "")
+
+      ~H"""
+      <div>
+        <%= if @has_group_class do %>
+          <.dynamic_component
+            module={@ui}
+            function={:field_group}
+            label={@group_label}
+            class={@group_class}
+            collapsible={@collapsible}
+            open={true}
+          >
+            {render_group_fields(assigns, @group_fields, @group_columns)}
+          </.dynamic_component>
+        <% else %>
+          <.dynamic_component
+            module={@ui}
+            function={:field_group}
+            label={@group_label}
+            collapsible={@collapsible}
+            open={true}
+          >
+            {render_group_fields(assigns, @group_fields, @group_columns)}
+          </.dynamic_component>
+        <% end %>
+      </div>
+      """
+    end
   end
 
   @impl true
@@ -154,9 +184,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     if groups == [] do
       # No explicit groups — render all fields in a flat layout
-      render_group_fields(assigns, assigns.static.fields)
+      render_group_fields(assigns, assigns.static.fields, nil)
     else
-      assigns = assign(assigns, :all_groups, groups)
+      visible_groups = Enum.filter(groups, &accessible?(&1, assigns.state))
+      assigns = assign(assigns, :all_groups, visible_groups)
 
       ~H"""
       <div>
@@ -177,10 +208,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     step_groups =
       case Enum.find(steps, &(&1.name == current_step)) do
         %{groups: group_names} when is_list(group_names) ->
-          Enum.filter(groups, &(&1.name in group_names))
+          Enum.filter(groups, &(&1.name in group_names and accessible?(&1, assigns.state)))
 
         _ ->
-          groups
+          Enum.filter(groups, &accessible?(&1, assigns.state))
       end
 
     assigns = assign(assigns, :step_groups, step_groups)
@@ -195,17 +226,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  defp render_group_fields(assigns, fields) do
-    columns = assigns.static.layout_columns
-    visible_fields = Enum.filter(fields, &accessible?(&1, assigns.state))
+  defp render_group_fields(assigns, fields, group_columns) do
+    columns = group_columns || assigns.static.layout_columns
+    mode = assigns.state.mode
+
+    visible_fields =
+      Enum.filter(fields, fn field ->
+        accessible?(field, assigns.state) and show_on_mode?(field, mode)
+      end)
 
     col_class =
-      case columns do
-        1 -> "grid grid-cols-1 gap-4"
-        2 -> "grid grid-cols-1 md:grid-cols-2 gap-4"
-        3 -> "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-        4 -> "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-        _ -> "grid grid-cols-1 gap-4"
+      if group_columns do
+        group_col_class(group_columns)
+      else
+        global_col_class(columns)
       end
 
     assigns =
@@ -222,6 +256,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  defp group_col_class(1), do: "grid grid-cols-1 gap-4"
+  defp group_col_class(2), do: "grid grid-cols-1 sm:grid-cols-2 gap-4"
+  defp group_col_class(3), do: "grid grid-cols-1 sm:grid-cols-3 gap-4"
+  defp group_col_class(4), do: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
+  defp group_col_class(_), do: "grid grid-cols-1 gap-4"
+
+  defp global_col_class(1), do: "grid grid-cols-1 gap-4"
+  defp global_col_class(2), do: "grid grid-cols-1 md:grid-cols-2 gap-4"
+  defp global_col_class(3), do: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+  defp global_col_class(4), do: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+  defp global_col_class(_), do: "grid grid-cols-1 gap-4"
 
   defp render_submit(assigns) do
     submit = assigns.static.submit
@@ -383,6 +429,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       """
     end
   end
+
+  defp show_on_mode?(%{show_on: nil}, _mode), do: true
+  defp show_on_mode?(%{show_on: mode}, mode), do: true
+  defp show_on_mode?(%{show_on: _}, _mode), do: false
+  defp show_on_mode?(_, _), do: true
 
   defp field_disabled?(%{depends_on: nil}, _state), do: false
 

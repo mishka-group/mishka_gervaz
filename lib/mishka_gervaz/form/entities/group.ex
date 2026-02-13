@@ -98,6 +98,7 @@ defmodule MishkaGervaz.Form.Entities.Group.Ui do
           description: String.t() | nil,
           class: String.t() | nil,
           header_class: String.t() | nil,
+          columns: 1 | 2 | 3 | 4 | nil,
           extra: map(),
           __spark_metadata__: map() | nil
         }
@@ -107,6 +108,7 @@ defmodule MishkaGervaz.Form.Entities.Group.Ui do
             description: nil,
             class: nil,
             header_class: nil,
+            columns: nil,
             extra: %{},
             __spark_metadata__: nil
 
@@ -130,6 +132,10 @@ defmodule MishkaGervaz.Form.Entities.Group.Ui do
     header_class: [
       type: :string,
       doc: "Group header CSS classes."
+    ],
+    columns: [
+      type: {:in, [1, 2, 3, 4]},
+      doc: "Number of grid columns for this group (overrides global layout columns)."
     ],
     extra: [
       type: :map,
