@@ -290,11 +290,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> resolve_js_hook(:on_cancel)
       |> JS.push("cancel", target: assigns.myself)
 
+    config_show_cancel = Map.get(submit, :show_cancel, true)
+    has_state? = assigns.state.dirty? and assigns.state.field_values != %{}
+
+    show_cancel =
+      config_show_cancel and (mode == :update or has_state?)
+
     assigns =
       assigns
       |> assign(:submit_label, submit_label)
       |> assign(:cancel_label, resolve_label(Map.get(submit, :cancel_label, "Cancel")))
-      |> assign(:show_cancel, Map.get(submit, :show_cancel, true))
+      |> assign(:show_cancel, show_cancel)
       |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
       |> assign(:ui, assigns.static.ui_adapter)
       |> assign(:cancel_js, cancel_js)
@@ -321,6 +327,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             function={:button}
             label={@cancel_label}
             variant={:secondary}
+            type="button"
             phx_click={@cancel_js}
             phx_target={@myself}
           />

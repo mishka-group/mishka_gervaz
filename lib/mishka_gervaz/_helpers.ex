@@ -13,7 +13,23 @@ defmodule MishkaGervaz.Helpers do
   def dynamic_component(assigns) do
     {mod, assigns} = Map.pop(assigns, :module)
     {func, assigns} = Map.pop(assigns, :function)
-    apply(mod, func, [assigns])
+    apply(mod, func, [normalize_html_attrs(assigns)])
+  end
+
+  defp normalize_html_attrs(assigns) do
+    Enum.reduce(assigns, assigns, fn {key, value}, acc when is_atom(key) ->
+      str = Atom.to_string(key)
+
+      if String.starts_with?(str, "phx_") or String.starts_with?(str, "data_") do
+        dashed = str |> String.replace("_", "-") |> String.to_atom()
+        acc |> Map.delete(key) |> Map.put(dashed, value)
+      else
+        acc
+      end
+
+      {_, _}, acc ->
+        acc
+    end)
   end
 
   @doc """
