@@ -46,9 +46,12 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             socket
 
           form ->
-            case AshPhoenix.Form.submit(form.source, params: form_params) do
-              {:ok, result} ->
-                after_save(state, result, socket)
+            result = AshPhoenix.Form.submit(form.source, params: form_params)
+            cleanup_temp_uploads(form_params)
+
+            case result do
+              {:ok, record} ->
+                after_save(state, record, socket)
 
               {:error, updated_form} ->
                 updated_form = Phoenix.Component.to_form(updated_form)
@@ -131,9 +134,17 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             uploaded_files =
               Phoenix.LiveView.consume_uploaded_entries(socket, ns_name, fn %{path: path},
                                                                             entry ->
+                dest =
+                  Path.join(
+                    System.tmp_dir!(),
+                    "gervaz_#{System.unique_integer([:positive])}_#{entry.client_name}"
+                  )
+
+                File.cp!(path, dest)
+
                 {:ok,
                  %{
-                   path: path,
+                   path: dest,
                    client_name: entry.client_name,
                    client_type: entry.client_type,
                    client_size: entry.client_size
@@ -152,6 +163,25 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       defp merge_uploaded_files(socket, params, upload_config, uploaded_files) do
         param_key = to_string(upload_config[:field] || upload_config.name)
         {socket, Map.put(params, param_key, uploaded_files)}
+      end
+
+      defp cleanup_temp_uploads(form_params) do
+        tmp_dir = System.tmp_dir!()
+
+        form_params
+        |> Enum.each(fn
+          {_key, files} when is_list(files) ->
+            Enum.each(files, fn
+              %{path: path} when is_binary(path) ->
+                if String.starts_with?(path, tmp_dir), do: File.rm(path)
+
+              _ ->
+                :ok
+            end)
+
+          _ ->
+            :ok
+        end)
       end
 
       defp push_js_hook(socket, state, hook_name, record_id) do
