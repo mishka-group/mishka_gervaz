@@ -257,17 +257,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  defp group_col_class(1), do: "grid grid-cols-1 gap-4"
-  defp group_col_class(2), do: "grid grid-cols-1 sm:grid-cols-2 gap-4"
-  defp group_col_class(3), do: "grid grid-cols-1 sm:grid-cols-3 gap-4"
-  defp group_col_class(4), do: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
-  defp group_col_class(_), do: "grid grid-cols-1 gap-4"
+  defp group_col_class(1), do: "grid gap-4"
+  defp group_col_class(2), do: "grid sm:grid-cols-2 gap-4"
+  defp group_col_class(3), do: "grid sm:grid-cols-3 gap-4"
+  defp group_col_class(4), do: "grid sm:grid-cols-2 md:grid-cols-4 gap-4"
+  defp group_col_class(_), do: "grid gap-4"
 
-  defp global_col_class(1), do: "grid grid-cols-1 gap-4"
-  defp global_col_class(2), do: "grid grid-cols-1 md:grid-cols-2 gap-4"
-  defp global_col_class(3), do: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-  defp global_col_class(4), do: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-  defp global_col_class(_), do: "grid grid-cols-1 gap-4"
+  defp global_col_class(1), do: "grid gap-4"
+  defp global_col_class(2), do: "grid md:grid-cols-2 gap-4"
+  defp global_col_class(3), do: "grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+  defp global_col_class(4), do: "grid md:grid-cols-2 lg:grid-cols-4 gap-4"
+  defp global_col_class(_), do: "grid gap-4"
 
   defp render_submit(assigns) do
     submit = assigns.static.submit
