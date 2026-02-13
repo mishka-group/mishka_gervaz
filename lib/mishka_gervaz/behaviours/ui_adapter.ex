@@ -64,6 +64,9 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   @doc "Render a single-select with search support"
   @callback search_select(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
+  @doc "Render a single-select with paginated load-more (no search input)"
+  @callback load_more_select(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
   @doc "Render a checkbox"
   @callback checkbox(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
@@ -277,6 +280,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :select,
     :multi_select,
     :search_select,
+    :load_more_select,
     :checkbox,
     :date_input,
     :datetime_input,

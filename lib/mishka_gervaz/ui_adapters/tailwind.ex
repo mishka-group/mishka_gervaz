@@ -117,6 +117,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:filter_name, fn -> assigns[:name] end)
       |> assign_new(:myself, fn -> nil end)
+      |> assign_new(:search_term, fn -> nil end)
 
     ~H"""
     <div
@@ -136,6 +137,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <input
           type="text"
           name={"_search_#{@filter_name}"}
+          value={@search_term || ""}
           placeholder={@placeholder}
           class={[@class, @icon && "pl-9", "w-full"]}
           phx-debounce={@debounce}
@@ -192,6 +194,122 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
+  Single-select dropdown with paginated load-more (no search input).
+
+  Shows a clickable trigger that opens a dropdown with options and a
+  "Load more" button for pagination.
+  """
+  @impl true
+  def load_more_select(assigns) do
+    options = normalize_options(assigns[:options] || [])
+    current_value = assigns[:value] || ""
+    selected_options = normalize_options(assigns[:selected_options] || [])
+
+    display_options =
+      if current_value != "" do
+        all_opts = options ++ selected_options
+        Enum.uniq_by(all_opts, fn {_, v} -> to_string(v) end)
+      else
+        options
+      end
+
+    selected_label =
+      case Enum.find(selected_options, fn {_, v} -> to_string(v) == to_string(current_value) end) do
+        {label, _} -> label
+        nil ->
+          case Enum.find(options, fn {_, v} -> to_string(v) == to_string(current_value) end) do
+            {label, _} -> label
+            nil -> nil
+          end
+      end
+
+    assigns =
+      assigns
+      |> assign(:options, options)
+      |> assign(:display_options, display_options)
+      |> assign(:current_value, current_value)
+      |> assign(:selected_label, selected_label)
+      |> assign_new(:class, fn ->
+        "rounded border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+      end)
+      |> assign_new(:placeholder, fn -> "Select..." end)
+      |> assign_new(:has_more?, fn -> false end)
+      |> assign_new(:loading?, fn -> false end)
+      |> assign_new(:dropdown_open?, fn -> false end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:filter_name, fn -> assigns[:name] end)
+      |> assign_new(:myself, fn -> nil end)
+
+    ~H"""
+    <div
+      class="relative"
+      id={"load-more-select-#{@filter_name}"}
+      phx-click-away="relation_close_dropdown"
+      phx-value-filter={@filter_name}
+      phx-target={@myself}
+    >
+      <%!-- Clickable trigger --%>
+      <button
+        type="button"
+        class={[@class, "w-full text-left flex items-center justify-between cursor-pointer bg-white"]}
+        phx-click="relation_focus"
+        phx-target={@myself}
+        phx-value-filter={@filter_name}
+      >
+        <span class={[!@selected_label && "text-gray-400"]}>
+          {@selected_label || @placeholder}
+        </span>
+        <span class="ml-2 text-gray-400">
+          <.render_icon name="hero-chevron-down" class={["w-4 h-4 transition-transform", @dropdown_open? && "rotate-180"]} />
+        </span>
+      </button>
+
+      <%!-- Hidden input for form submission --%>
+      <input type="hidden" name={@name} value={@current_value} />
+
+      <%!-- Dropdown options (only show when open) --%>
+      <div
+        :if={@dropdown_open? and @display_options != []}
+        class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+      >
+        <button
+          :for={{opt_label, opt_value} <- @display_options}
+          type="button"
+          class={[
+            "w-full px-3 py-2 text-left text-sm hover:bg-gray-100",
+            to_string(@current_value) == to_string(opt_value) && "bg-blue-50 text-blue-700"
+          ]}
+          phx-click="relation_select"
+          phx-target={@myself}
+          phx-value-filter={@filter_name}
+          phx-value-id={opt_value}
+          phx-value-label={opt_label}
+        >
+          {opt_label}
+        </button>
+
+        <button
+          :if={@has_more?}
+          type="button"
+          phx-click="relation_load_more"
+          phx-target={@myself}
+          phx-value-filter={@filter_name}
+          class="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-100 border-t border-gray-100"
+        >
+          Load more...
+        </button>
+      </div>
+
+      <%!-- Loading spinner --%>
+      <span
+        :if={@loading?}
+        class="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"
+      />
+    </div>
+    """
+  end
+
+  @doc """
   Multi-select dropdown with search support for relation filters.
 
   Shows a searchable dropdown where users can select multiple items.
@@ -223,6 +341,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:filter_name, fn -> assigns[:name] end)
       |> assign_new(:myself, fn -> nil end)
+      |> assign_new(:search_term, fn -> nil end)
 
     ~H"""
     <div
@@ -242,6 +361,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <input
           type="text"
           name={"_search_#{@filter_name}"}
+          value={@search_term || ""}
           placeholder={@placeholder}
           class={[@class, @icon && "pl-9", "w-full"]}
           phx-debounce={@debounce}

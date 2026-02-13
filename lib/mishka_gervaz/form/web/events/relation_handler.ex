@@ -47,23 +47,45 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
       defp do_handle("search", params, state, socket) do
         with {:ok, field_atom, field} <- get_field(params, state),
-             {:ok, search_term} <- get_search_term(params, field_atom),
-             :ok <- validate_min_chars(search_term, params) do
-          relation_mod = DataLoader.Default.relation_loader()
+             {:ok, search_term} <- get_search_term(params, field_atom) do
+          if validate_min_chars(search_term, params) == :ok do
+            relation_mod = DataLoader.Default.relation_loader()
 
-          case relation_mod.search_options(field, state, search_term) do
-            {:ok, options, has_more?} ->
-              socket =
-                update_relation_state(socket, state, field_atom, %{
-                  options: options,
-                  has_more?: has_more?,
-                  page: 1
-                }, keep_selected: true, dropdown_open?: true)
+            case relation_mod.search_options(field, state, search_term) do
+              {:ok, options, has_more?} ->
+                socket =
+                  update_relation_state(socket, state, field_atom, %{
+                    options: options,
+                    has_more?: has_more?,
+                    page: 1
+                  }, keep_selected: true, dropdown_open?: true, search_term: search_term)
 
-              {:noreply, socket}
+                {:noreply, socket}
 
-            {:error, _reason} ->
-              {:noreply, socket}
+              {:error, _reason} ->
+                {:noreply, socket}
+            end
+          else
+            # Search cleared (below min_chars) — reload initial options like focus
+            selected_options = resolve_selected_options(field, state, field_atom)
+            relation_mod = DataLoader.Default.relation_loader()
+
+            case relation_mod.load_options(field, state) do
+              {:ok, options, has_more?} ->
+                merged = prepend_selected(selected_options, options)
+
+                socket =
+                  update_relation_state(socket, state, field_atom, %{
+                    options: merged,
+                    has_more?: has_more?,
+                    page: 1
+                  }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
+
+                {:noreply, socket}
+
+              {:error, _reason} ->
+                {:noreply, socket}
+            end
           end
         else
           _ -> {:noreply, socket}
@@ -84,7 +106,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                   options: merged,
                   has_more?: has_more?,
                   page: 1
-                }, selected_options: selected_options, dropdown_open?: true)
+                }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
 
               {:noreply, socket}
 
@@ -227,18 +249,28 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         with {:ok, field_atom, field} <- get_field(params, state) do
           current_opts = get_current_opts(state, field_atom)
           current_page = Map.get(current_opts, :page, 1)
+          search_term = Map.get(current_opts, :search_term)
           relation_mod = DataLoader.Default.relation_loader()
 
-          case relation_mod.load_options(field, state, page: current_page + 1) do
+          result =
+            if search_term do
+              relation_mod.search_options(field, state, search_term, page: current_page + 1)
+            else
+              relation_mod.load_options(field, state, page: current_page + 1)
+            end
+
+          case result do
             {:ok, options, has_more?} ->
-              merged = Map.get(current_opts, :options, []) ++ options
+              selected_options = Map.get(current_opts, :selected_options, [])
+              filtered_new = reject_selected(selected_options, options)
+              merged = Map.get(current_opts, :options, []) ++ filtered_new
 
               socket =
                 update_relation_state(socket, state, field_atom, %{
                   options: merged,
                   has_more?: has_more?,
                   page: current_page + 1
-                }, keep_selected: true, dropdown_open?: true)
+                }, keep_selected: true, dropdown_open?: true, search_term: search_term)
 
               {:noreply, socket}
 
@@ -322,14 +354,13 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
       end
 
       defp prepend_selected([], options), do: options
+      defp prepend_selected(selected, options), do: selected ++ reject_selected(selected, options)
 
-      defp prepend_selected(selected, options) do
+      defp reject_selected([], options), do: options
+
+      defp reject_selected(selected, options) do
         selected_values = MapSet.new(selected, fn {_, v} -> to_string(v) end)
-
-        filtered =
-          Enum.reject(options, fn {_, v} -> MapSet.member?(selected_values, to_string(v)) end)
-
-        selected ++ filtered
+        Enum.reject(options, fn {_, v} -> MapSet.member?(selected_values, to_string(v)) end)
       end
 
       defp toggle_value(current_list, value, true), do: Enum.reject(current_list, &(&1 == value))
@@ -386,13 +417,21 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
         dropdown_open? = Keyword.get(opts, :dropdown_open?, true)
 
+        search_term =
+          if Keyword.has_key?(opts, :search_term) do
+            Keyword.get(opts, :search_term)
+          else
+            Map.get(current_opts, :search_term)
+          end
+
         relation_options =
           Map.put(state.relation_options, field_atom, %{
             options: result.options,
             has_more?: result.has_more?,
             page: result.page,
             selected_options: selected_options,
-            dropdown_open?: dropdown_open?
+            dropdown_open?: dropdown_open?,
+            search_term: search_term
           })
 
         state = State.update(state, relation_options: relation_options)

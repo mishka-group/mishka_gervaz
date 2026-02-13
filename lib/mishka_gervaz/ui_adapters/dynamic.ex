@@ -438,6 +438,13 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
   end
 
   @impl true
+  def load_more_select(assigns) do
+    render_component("load_more_select", assigns, fn assigns ->
+      fallback(assigns).load_more_select(assigns)
+    end)
+  end
+
+  @impl true
   def form_container(assigns) do
     render_component("form_container", assigns, fn assigns ->
       fallback(assigns).form_container(assigns)
