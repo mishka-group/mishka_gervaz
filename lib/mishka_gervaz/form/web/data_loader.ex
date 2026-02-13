@@ -206,8 +206,19 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       def handle_async_result(:load_record, {:ok, {:ok, form}}, socket) do
         state = socket.assigns.form_state
         existing_files = extract_existing_files(state, form)
-        state = State.update(state, form: form, loading: :loaded, existing_files: existing_files)
-        Phoenix.Component.assign(socket, :form_state, state)
+        field_values = extract_dependency_values(state, form)
+
+        state =
+          State.update(state,
+            form: form,
+            loading: :loaded,
+            existing_files: existing_files,
+            field_values: field_values
+          )
+
+        socket
+        |> Phoenix.Component.assign(:form_state, state)
+        |> load_dependent_relations(state)
       end
 
       def handle_async_result(:load_record, {:ok, {:error, _reason}}, socket) do
@@ -318,6 +329,56 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       defp normalize_file_info(%{"name" => name} = file), do: %{filename: name, id: file["id"]}
       defp normalize_file_info(value) when is_binary(value), do: %{filename: value}
       defp normalize_file_info(other), do: %{filename: inspect(other)}
+
+      @spec extract_dependency_values(State.t(), Phoenix.HTML.Form.t()) :: map()
+      defp extract_dependency_values(state, form) do
+        record =
+          case form do
+            %{source: %{source: %{data: data}}} when not is_nil(data) -> data
+            _ -> nil
+          end
+
+        if is_nil(record) do
+          %{}
+        else
+          dependency_names =
+            state.static.fields
+            |> Enum.map(& &1.depends_on)
+            |> Enum.reject(&is_nil/1)
+            |> Enum.uniq()
+
+          relation_names =
+            state.static.fields
+            |> Enum.filter(&(&1.type == :relation))
+            |> Enum.map(& &1.name)
+
+          (dependency_names ++ relation_names)
+          |> Enum.uniq()
+          |> Enum.reduce(%{}, fn field_name, acc ->
+            value = Map.get(record, field_name)
+
+            case value do
+              nil -> acc
+              "" -> acc
+              _ -> Map.put(acc, field_name, value)
+            end
+          end)
+        end
+      end
+
+      @spec load_dependent_relations(Phoenix.LiveView.Socket.t(), State.t()) ::
+              Phoenix.LiveView.Socket.t()
+      defp load_dependent_relations(socket, state) do
+        state.static.fields
+        |> Enum.filter(fn field ->
+          field.depends_on != nil and
+            Map.has_key?(state.field_values, field.depends_on) and
+            field.type == :relation
+        end)
+        |> Enum.reduce(socket, fn field, acc ->
+          load_relation_options(acc, state, field.name)
+        end)
+      end
 
       defoverridable record_loader: 0,
                      tenant_resolver: 0,
