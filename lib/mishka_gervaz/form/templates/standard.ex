@@ -350,22 +350,34 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     uploads = assigns.static.uploads
 
     if is_list(uploads) and uploads != [] do
-      ui = assigns.static.ui_adapter
-      upload_items = build_upload_items(uploads, assigns)
-      assigns = assigns |> assign(:upload_items, upload_items) |> assign(:ui, ui)
+      inline_names =
+        assigns.static.fields
+        |> Enum.filter(fn f -> f.type == :upload end)
+        |> MapSet.new(fn f -> f.name end)
 
-      ~H"""
-      <div class="space-y-4 mt-4">
-        <%= for item <- @upload_items do %>
-          <% ua = build_upload_assigns(assigns, item) %>
-          {render_upload_by_style(ua)}
-        <% end %>
-      </div>
-      """
+      remaining = Enum.reject(uploads, fn u -> u.name in inline_names end)
+
+      if remaining == [] do
+        ~H""
+      else
+        ui = assigns.static.ui_adapter
+        upload_items = build_upload_items(remaining, assigns)
+        assigns = assigns |> assign(:upload_items, upload_items) |> assign(:ui, ui)
+
+        ~H"""
+        <div class="space-y-4 mt-4">
+          <%= for item <- @upload_items do %>
+            <% ua = build_upload_assigns(assigns, item) %>
+            {render_upload_by_style(ua)}
+          <% end %>
+        </div>
+        """
+      end
     else
       ~H""
     end
   end
+
 
   defp build_upload_items(uploads, assigns) do
     Enum.reduce(uploads, [], fn upload_config, acc ->
@@ -581,6 +593,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :file ->
+        render_upload_field(ui, field, assigns)
+
+      :upload ->
         render_upload_field(ui, field, assigns)
 
       _ ->

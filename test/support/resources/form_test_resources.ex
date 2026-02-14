@@ -764,3 +764,90 @@ defmodule MishkaGervaz.Test.Resources.AutoFieldsForm do
     update_timestamp :updated_at
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.UploadFieldForm do
+  @moduledoc """
+  Test resource for the upload field type — inline upload positioning.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :upload_field_form_table
+        route "/admin/upload-field"
+      end
+
+      columns do
+        column :title
+      end
+    end
+
+    form do
+      identity do
+        name :upload_field_form
+        route "/admin/upload-field"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :title, :text, required: true
+        field :cover, :upload
+        field :content, :textarea
+      end
+
+      groups do
+        group :main do
+          fields [:title, :cover, :content]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      uploads do
+        upload :cover do
+          accept "image/*"
+          max_entries 1
+          max_file_size 5_000_000
+        end
+      end
+
+      submit do
+        create_label "Create"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :title, :string do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :content, :string do
+      public? true
+    end
+
+    create_timestamp :inserted_at
+  end
+end

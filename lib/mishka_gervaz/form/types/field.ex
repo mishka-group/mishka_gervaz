@@ -29,7 +29,8 @@ defmodule MishkaGervaz.Form.Types.Field do
       file: {Field.File, []},
       hidden: {Field.Hidden, []},
       toggle: {Field.Toggle, []},
-      range: {Field.Range, []}
+      range: {Field.Range, []},
+      upload: {Field.Upload, []}
     },
     default: Field.Text
 end

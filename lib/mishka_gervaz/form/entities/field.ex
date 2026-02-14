@@ -113,7 +113,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :file,
     :hidden,
     :toggle,
-    :range
+    :range,
+    :upload
   ]
 
   @opt_schema [
@@ -274,12 +275,20 @@ defmodule MishkaGervaz.Form.Entities.Field do
   """
   def transform(%__MODULE__{} = field) do
     field =
-      field |> extract_ui() |> extract_preload() |> maybe_set_source() |> resolve_type_module()
+      field
+      |> maybe_set_virtual()
+      |> extract_ui()
+      |> extract_preload()
+      |> maybe_set_source()
+      |> resolve_type_module()
 
     {:ok, field}
   end
 
   def transform(field), do: {:ok, field}
+
+  defp maybe_set_virtual(%{type: :upload} = field), do: %{field | virtual: true}
+  defp maybe_set_virtual(field), do: field
 
   defp extract_ui(%{ui: [ui | _]} = field), do: %{field | ui: ui}
   defp extract_ui(%{ui: ui} = field) when is_struct(ui), do: field
