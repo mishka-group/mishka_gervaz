@@ -17,15 +17,16 @@ defmodule MishkaGervaz.Helpers do
   end
 
   defp normalize_html_attrs(assigns) do
-    Enum.reduce(assigns, assigns, fn {key, value}, acc when is_atom(key) ->
-      str = Atom.to_string(key)
+    Enum.reduce(assigns, assigns, fn
+      {key, value}, acc when is_atom(key) ->
+        str = Atom.to_string(key)
 
-      if String.starts_with?(str, "phx_") or String.starts_with?(str, "data_") do
-        dashed = str |> String.replace("_", "-") |> String.to_atom()
-        acc |> Map.delete(key) |> Map.put(dashed, value)
-      else
-        acc
-      end
+        if String.starts_with?(str, "phx_") or String.starts_with?(str, "data_") do
+          dashed = str |> String.replace("_", "-") |> String.to_atom()
+          acc |> Map.delete(key) |> Map.put(dashed, value)
+        else
+          acc
+        end
 
       {_, _}, acc ->
         acc
