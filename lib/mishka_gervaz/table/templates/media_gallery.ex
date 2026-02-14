@@ -326,7 +326,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
     column = assigns.column
     record = assigns.record
 
-    image_url = get_column_value(column, record, assigns.state)
+    image_url = get_column_value(column, record, assigns.state) |> cache_bust_url(record)
     is_image = is_image_url?(image_url)
 
     assigns =
@@ -422,11 +422,23 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   defp is_image_url?("data:image/" <> _), do: true
 
   defp is_image_url?(url) when is_binary(url) do
-    ext = url |> String.downcase() |> Path.extname()
+    path = url |> String.split("?") |> List.first()
+    ext = path |> String.downcase() |> Path.extname()
     ext in ~w(.jpg .jpeg .png .gif .webp .svg)
   end
 
   defp is_image_url?(_), do: false
+
+  defp cache_bust_url(nil, _record), do: nil
+
+  defp cache_bust_url(url, record) when is_binary(url) do
+    case Map.get(record, :updated_at) do
+      %DateTime{} = dt -> url <> "?v=#{DateTime.to_unix(dt)}"
+      _ -> url
+    end
+  end
+
+  defp cache_bust_url(url, _record), do: url
 
   defp file_type_icon(assigns) do
     assigns = assign(assigns, :icon_name, get_file_icon_from_url(assigns.url))
