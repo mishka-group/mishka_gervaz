@@ -1885,6 +1885,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp image_file?(_), do: false
 
   defp file_type_icon(nil), do: "hero-document"
+
   defp file_type_icon(fmt) when is_binary(fmt) do
     case String.downcase(fmt) do
       f when f in ~w(pdf) -> "hero-document-text"
@@ -1895,6 +1896,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       _ -> "hero-document"
     end
   end
+
   defp file_type_icon(_), do: "hero-document"
 
   defp selected?(value, selected_set), do: to_string(value) in selected_set
