@@ -62,7 +62,11 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                       options: options,
                       has_more?: has_more?,
                       page: 1
-                    }, keep_selected: true, dropdown_open?: true, search_term: search_term)
+                    },
+                    keep_selected: true,
+                    dropdown_open?: true,
+                    search_term: search_term
+                  )
 
                 {:noreply, socket}
 
@@ -87,7 +91,11 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                       options: merged,
                       has_more?: has_more?,
                       page: 1
-                    }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
+                    },
+                    selected_options: selected_options,
+                    dropdown_open?: true,
+                    search_term: nil
+                  )
 
                 {:noreply, socket}
 
@@ -118,7 +126,11 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                     options: merged,
                     has_more?: has_more?,
                     page: 1
-                  }, selected_options: selected_options, dropdown_open?: true, search_term: nil)
+                  },
+                  selected_options: selected_options,
+                  dropdown_open?: true,
+                  search_term: nil
+                )
 
               {:noreply, socket}
 
@@ -288,7 +300,11 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                     options: merged,
                     has_more?: has_more?,
                     page: current_page + 1
-                  }, keep_selected: true, dropdown_open?: true, search_term: search_term)
+                  },
+                  keep_selected: true,
+                  dropdown_open?: true,
+                  search_term: search_term
+                )
 
               {:noreply, socket}
 
