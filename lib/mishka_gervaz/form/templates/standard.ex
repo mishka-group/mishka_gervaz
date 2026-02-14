@@ -291,7 +291,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> JS.push("cancel", target: assigns.myself)
 
     config_show_cancel = Map.get(submit, :show_cancel, true)
-    has_state? = assigns.state.dirty? and assigns.state.field_values != %{}
+    has_state? = assigns.state.dirty?
 
     show_cancel =
       config_show_cancel and (mode == :update or has_state?)
@@ -377,7 +377,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       ~H""
     end
   end
-
 
   defp build_upload_items(uploads, assigns) do
     Enum.reduce(uploads, [], fn upload_config, acc ->

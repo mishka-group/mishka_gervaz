@@ -73,6 +73,8 @@ defmodule MishkaGervaz.Form.Web.Events do
         HookRunner
       }
 
+      alias MishkaGervaz.Form.Web.UploadHelpers
+
       @spec sanitization_handler() :: module()
       defp sanitization_handler, do: SanitizationHandler.Default
 
@@ -252,6 +254,8 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp reset_to_create_mode(state, socket) do
+        socket = cancel_pending_uploads(state, socket)
+
         reset_state =
           State.update(state,
             form: nil,
@@ -260,12 +264,32 @@ defmodule MishkaGervaz.Form.Web.Events do
             dirty?: false,
             existing_files: %{},
             field_values: %{},
-            relation_options: %{}
+            relation_options: %{},
+            upload_state: %{}
           )
 
         socket
         |> Phoenix.Component.assign(:record_id, nil)
         |> DataLoader.new_record(reset_state)
+      end
+
+      defp cancel_pending_uploads(state, socket) do
+        uploads = state.static.uploads || []
+        component_id = state.static.id
+
+        Enum.reduce(uploads, socket, fn upload_config, acc ->
+          ns_name = UploadHelpers.namespaced_upload_name(upload_config.name, component_id)
+
+          case acc.assigns[:uploads][ns_name] do
+            %{entries: entries} when entries != [] ->
+              Enum.reduce(entries, acc, fn entry, inner_acc ->
+                Phoenix.LiveView.cancel_upload(inner_acc, ns_name, entry.ref)
+              end)
+
+            _ ->
+              acc
+          end
+        end)
       end
 
       defp has_hook?(%{static: %{hooks: hooks}}, name) when is_map(hooks) do
