@@ -1779,6 +1779,64 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @impl true
+  def string_list_input(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:items, fn -> [] end)
+      |> assign_new(:field_name, fn -> "" end)
+      |> assign_new(:add_label, fn -> "+ Add" end)
+      |> assign_new(:remove_label, fn -> "Remove" end)
+      |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:phx_target, fn -> nil end)
+      |> assign_new(:class, fn -> "space-y-2" end)
+      |> assign_new(:input_class, fn ->
+        "flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+      end)
+      |> assign(:items_with_index, Enum.with_index(assigns[:items] || []))
+
+    ~H"""
+    <div id={"string-list-#{@field_name}"} class={@class}>
+      <%!-- Hidden input ensures field present in params when list is empty --%>
+      <input type="hidden" name={"form[#{@field_name}][]"} value="" />
+
+      <%= for {item, idx} <- @items_with_index do %>
+        <div class="flex items-center gap-2" id={"string-list-#{@field_name}-#{idx}"}>
+          <input
+            type="text"
+            name={"form[#{@field_name}][]"}
+            value={item}
+            placeholder={@placeholder}
+            class={@input_class}
+          />
+          <button
+            type="button"
+            phx-click="remove_list_item"
+            phx-value-field={@field_name}
+            phx-value-index={idx}
+            phx-target={@phx_target}
+            class="inline-flex items-center p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+            title={@remove_label}
+          >
+            <.render_icon name="hero-x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+      <% end %>
+
+      <button
+        type="button"
+        phx-click="add_list_item"
+        phx-value-field={@field_name}
+        phx-target={@phx_target}
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+      >
+        <.render_icon name="hero-plus" class="w-4 h-4" />
+        {@add_label}
+      </button>
+    </div>
+    """
+  end
+
+  @impl true
   def field_error(assigns) do
     assigns =
       assigns

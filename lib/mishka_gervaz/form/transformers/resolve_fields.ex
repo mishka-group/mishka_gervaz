@@ -34,6 +34,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     dsl_state =
       dsl_state
       |> resolve_auto_fields(module)
+      |> resolve_explicit_field_types()
       |> resolve_field_sources()
       |> resolve_relation_resources(module)
       |> resolve_field_positions()
@@ -210,6 +211,33 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     Enum.reduce(fields, dsl_state, fn field, acc ->
       Transformer.add_entity(acc, @fields_path, field, type: :append)
     end)
+  end
+
+  @spec resolve_explicit_field_types(Spark.Dsl.t()) :: Spark.Dsl.t()
+  defp resolve_explicit_field_types(dsl_state) do
+    fields = filter_fields(get_entities(dsl_state, @fields_path))
+    ash_attrs = get_ash_attributes(dsl_state)
+    ui_defaults = %AutoFields.UiDefaults{}
+
+    {updated, changed?} =
+      Enum.map_reduce(fields, false, fn field, changed? ->
+        if is_nil(field.type) do
+          ash_attr = Map.get(ash_attrs, field.source || field.name)
+          detected = infer_field_type(ash_attr, ui_defaults)
+          type_module = MishkaGervaz.Form.Types.Field.get_or_passthrough(detected)
+          {%{field | type: detected, type_module: type_module}, true}
+        else
+          {field, changed?}
+        end
+      end)
+
+    if changed? do
+      dsl_state
+      |> remove_field_entities(fields)
+      |> add_field_entities(updated)
+    else
+      dsl_state
+    end
   end
 
   @spec resolve_field_sources(Spark.Dsl.t()) :: Spark.Dsl.t()

@@ -159,11 +159,13 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("goto_step", %{"step" => step_name}, state, socket) do
-        step_atom = String.to_existing_atom(step_name)
-        socket = step_handler().goto_step(state, step_atom, socket)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+        if MishkaGervaz.Helpers.known_name?(step_name, state, :steps) do
+          step_atom = String.to_existing_atom(step_name)
+          socket = step_handler().goto_step(state, step_atom, socket)
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
       end
 
       defp do_handle("relation_" <> action, params, state, socket) do
@@ -171,19 +173,23 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("upload_complete", %{"key" => upload_key}, state, socket) do
-        key_atom = String.to_existing_atom(upload_key)
-        socket = upload_handler().handle_upload(state, key_atom, socket)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+        if MishkaGervaz.Helpers.known_name?(upload_key, state, :uploads) do
+          key_atom = String.to_existing_atom(upload_key)
+          socket = upload_handler().handle_upload(state, key_atom, socket)
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
       end
 
-      defp do_handle("cancel_upload", %{"key" => upload_key, "ref" => ref}, _state, socket) do
-        key_atom = String.to_existing_atom(upload_key)
-        socket = upload_handler().cancel_upload(socket.assigns.form_state, key_atom, ref, socket)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+      defp do_handle("cancel_upload", %{"key" => upload_key, "ref" => ref}, state, socket) do
+        if MishkaGervaz.Helpers.known_name?(upload_key, state, :uploads) do
+          key_atom = String.to_existing_atom(upload_key)
+          socket = upload_handler().cancel_upload(state, key_atom, ref, socket)
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
       end
 
       defp do_handle(
@@ -192,60 +198,135 @@ defmodule MishkaGervaz.Form.Web.Events do
              state,
              socket
            ) do
-        name_atom = String.to_existing_atom(upload_name)
+        if MishkaGervaz.Helpers.known_name?(upload_name, state, :uploads) do
+          name_atom = String.to_existing_atom(upload_name)
 
-        existing = Map.get(state.existing_files, name_atom, [])
+          existing = Map.get(state.existing_files, name_atom, [])
 
-        updated =
-          Enum.reject(existing, fn f ->
-            to_string(f[:id] || f[:filename] || f[:name]) == file_id
-          end)
+          updated =
+            Enum.reject(existing, fn f ->
+              to_string(f[:id] || f[:filename] || f[:name]) == file_id
+            end)
 
-        existing_files = Map.put(state.existing_files, name_atom, updated)
-        state = State.update(state, existing_files: existing_files, dirty?: true)
-        socket = Phoenix.Component.assign(socket, :form_state, state)
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+          existing_files = Map.put(state.existing_files, name_atom, updated)
+          state = State.update(state, existing_files: existing_files, dirty?: true)
+          socket = Phoenix.Component.assign(socket, :form_state, state)
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
       end
 
       defp do_handle("add_nested", %{"field" => field_name}, state, socket) do
-        send(self(), {:add_nested_field, String.to_existing_atom(field_name)})
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          send(self(), {:add_nested_field, String.to_existing_atom(field_name)})
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
       end
 
       defp do_handle("remove_nested", %{"field" => field_name, "index" => index}, state, socket) do
-        send(
-          self(),
-          {:remove_nested_field, String.to_existing_atom(field_name), String.to_integer(index)}
-        )
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          send(
+            self(),
+            {:remove_nested_field, String.to_existing_atom(field_name), String.to_integer(index)}
+          )
 
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
+      end
+
+      defp do_handle("add_list_item", %{"field" => field_name}, state, socket) do
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          case state.form do
+            nil ->
+              {:noreply, socket}
+
+            form ->
+              current_params = AshPhoenix.Form.params(form.source)
+              new_list = List.wrap(Map.get(current_params, field_name, [])) ++ [""]
+              new_params = Map.put(current_params, field_name, new_list)
+
+              validated =
+                form.source |> AshPhoenix.Form.validate(new_params) |> Phoenix.Component.to_form()
+
+              state =
+                validation_handler().build_errors(validated)
+                |> then(&State.update(state, form: validated, errors: &1, dirty?: true))
+
+              socket = Phoenix.Component.assign(socket, :form_state, state)
+              {:noreply, socket}
+          end
+        else
+          {:noreply, socket}
+        end
+      end
+
+      defp do_handle(
+             "remove_list_item",
+             %{"field" => field_name, "index" => index_str},
+             state,
+             socket
+           ) do
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          index = String.to_integer(index_str)
+
+          case state.form do
+            nil ->
+              {:noreply, socket}
+
+            form ->
+              current_params = AshPhoenix.Form.params(form.source)
+
+              new_params =
+                List.wrap(Map.get(current_params, field_name, []))
+                |> List.delete_at(index)
+                |> then(&Map.put(current_params, field_name, &1))
+
+              validated =
+                form.source
+                |> AshPhoenix.Form.validate(new_params)
+                |> Phoenix.Component.to_form()
+
+              state =
+                validation_handler().build_errors(validated)
+                |> then(&State.update(state, form: validated, errors: &1, dirty?: true))
+
+              socket = Phoenix.Component.assign(socket, :form_state, state)
+              {:noreply, socket}
+          end
+        else
+          {:noreply, socket}
+        end
       end
 
       defp do_handle("field_change", %{"field" => field_name, "value" => value}, state, socket) do
-        field_atom = String.to_existing_atom(field_name)
-        field_values = Map.put(state.field_values, field_atom, value)
-        state = State.update(state, field_values: field_values, dirty?: true)
-        socket = Phoenix.Component.assign(socket, :form_state, state)
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          field_atom = String.to_existing_atom(field_name)
 
-        dependent_fields =
-          Enum.filter(state.static.fields, fn f ->
-            Map.get(f, :depends_on) == field_atom
-          end)
+          state =
+            Map.put(state.field_values, field_atom, value)
+            |> then(&State.update(state, field_values: &1, dirty?: true))
 
-        socket =
-          Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
-            DataLoader.load_relation_options(acc, state, dep_field.name)
-          end)
+          socket = Phoenix.Component.assign(socket, :form_state, state)
 
-        {:noreply, socket}
-      rescue
-        ArgumentError -> {:noreply, socket}
+          dependent_fields =
+            Enum.filter(state.static.fields, fn f ->
+              Map.get(f, :depends_on) == field_atom
+            end)
+
+          socket =
+            Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
+              DataLoader.load_relation_options(acc, state, dep_field.name)
+            end)
+
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
       end
 
       defp do_handle(event, params, _state, socket) do

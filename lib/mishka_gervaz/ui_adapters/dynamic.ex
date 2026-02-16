@@ -102,7 +102,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     :json_editor,
     :nested_fields,
     :array_fields,
-    :field_error
+    :field_error,
+    :string_list_input
   ]
 
   @doc """
@@ -560,6 +561,13 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
   def field_error(assigns) do
     render_component("field_error", assigns, fn assigns ->
       fallback(assigns).field_error(assigns)
+    end)
+  end
+
+  @impl true
+  def string_list_input(assigns) do
+    render_component("string_list_input", assigns, fn assigns ->
+      fallback(assigns).string_list_input(assigns)
     end)
   end
 

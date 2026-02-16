@@ -765,6 +765,117 @@ defmodule MishkaGervaz.Test.Resources.AutoFieldsForm do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.StringListForm do
+  @moduledoc """
+  Test resource for string_list field type and auto-type detection.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :string_list_form_table
+        route "/admin/string-list"
+      end
+
+      columns do
+        column :title
+      end
+    end
+
+    form do
+      identity do
+        name :string_list_form
+        route "/admin/string-list"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :title, :text, required: true
+
+        field :tags, :string_list do
+          add_label "+ Add Tag"
+          remove_label "Remove"
+
+          ui do
+            label "Tags"
+            placeholder "Enter a tag"
+          end
+        end
+
+        field :origins do
+          add_label fn -> "Add Origin" end
+
+          ui do
+            label "Origins"
+            placeholder "https://example.com"
+          end
+        end
+      end
+
+      groups do
+        group :main do
+          fields [:title, :tags, :origins]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        create_label "Create"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    read :master_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :tenant_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :title, :string do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :tags, {:array, :string} do
+      default []
+      public? true
+    end
+
+    attribute :origins, {:array, :string} do
+      default []
+      public? true
+    end
+
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.UploadFieldForm do
   @moduledoc """
   Test resource for the upload field type — inline upload positioning.

@@ -597,6 +597,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       :upload ->
         render_upload_field(ui, field, assigns)
 
+      :string_list ->
+        render_string_list_input(ui, field, form_field, assigns)
+
       _ ->
         base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
     end
@@ -631,6 +634,27 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:type, "file")
       |> dynamic_component()
     end
+  end
+
+  defp render_string_list_input(ui, field, _form_field, assigns) do
+    items =
+      case Phoenix.HTML.Form.input_value(assigns.state.form, field.name) do
+        list when is_list(list) -> list
+        nil -> []
+        "" -> []
+        value when is_binary(value) -> [value]
+      end
+
+    assigns
+    |> assign(:module, ui)
+    |> assign(:function, :string_list_input)
+    |> assign(:items, items)
+    |> assign(:field_name, to_string(field.name))
+    |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
+    |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
+    |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
+    |> assign(:phx_target, assigns[:myself])
+    |> dynamic_component()
   end
 
   defp render_upload_by_style(assigns) do

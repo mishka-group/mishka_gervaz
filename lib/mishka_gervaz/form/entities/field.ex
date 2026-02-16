@@ -59,7 +59,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :name,
     :__identifier__,
     :source,
-    type: :text,
+    type: nil,
     required: false,
     visible: true,
     show_on: nil,
@@ -125,9 +125,14 @@ defmodule MishkaGervaz.Form.Entities.Field do
     ],
     type: [
       type:
-        {:or, [{:in, @builtin_field_types}, {:behaviour, MishkaGervaz.Form.Behaviours.FieldType}]},
-      default: :text,
-      doc: "Field type. Built-in atom or custom module implementing FieldType behaviour."
+        {:or,
+         [
+           {:in, [nil | @builtin_field_types]},
+           {:behaviour, MishkaGervaz.Form.Behaviours.FieldType}
+         ]},
+      default: nil,
+      doc:
+        "Field type. Built-in atom, custom module implementing FieldType behaviour, or nil for auto-detection from Ash attribute."
     ],
     source: [
       type: :atom,
@@ -256,12 +261,14 @@ defmodule MishkaGervaz.Form.Entities.Field do
       doc: "Fields for array_of_maps entries."
     ],
     add_label: [
-      type: :string,
-      doc: "Label for add button in array/nested fields."
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "Label for add button in array/nested/string_list fields. String or `fn -> gettext(...) end`."
     ],
     remove_label: [
-      type: :string,
-      doc: "Label for remove button in array/nested fields."
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "Label for remove button in array/nested/string_list fields. String or `fn -> gettext(...) end`."
     ]
   ]
 

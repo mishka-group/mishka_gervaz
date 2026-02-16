@@ -214,6 +214,9 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   @doc "Render a container for array-of-maps fields"
   @callback array_fields(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
+  @doc "Render a dynamic string list input with add/remove buttons"
+  @callback string_list_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
   @doc "Render a field error message display"
   @callback field_error(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
@@ -271,7 +274,8 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     array_fields: 1,
     field_error: 1,
     upload_file_input: 1,
-    upload_existing_file: 1
+    upload_existing_file: 1,
+    string_list_input: 1
   ]
 
   @component_functions [
@@ -334,7 +338,8 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :array_fields,
     :field_error,
     :upload_file_input,
-    :upload_existing_file
+    :upload_existing_file,
+    :string_list_input
   ]
 
   @doc """
