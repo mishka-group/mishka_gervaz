@@ -16,7 +16,9 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
         ]
       }
 
-      state = build_state(existing_files: existing)
+      state =
+        build_state(existing_files: existing, static_opts: [uploads: [upload_config(:cover)]])
+
       socket = build_socket(state)
 
       {:noreply, updated_socket} =
@@ -43,7 +45,9 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
         ]
       }
 
-      state = build_state(existing_files: existing)
+      state =
+        build_state(existing_files: existing, static_opts: [uploads: [upload_config(:cover)]])
+
       socket = build_socket(state)
 
       {:noreply, updated_socket} =
@@ -63,7 +67,9 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
         avatar: [%{name: "profile.png"}]
       }
 
-      state = build_state(existing_files: existing)
+      state =
+        build_state(existing_files: existing, static_opts: [uploads: [upload_config(:avatar)]])
+
       socket = build_socket(state)
 
       {:noreply, updated_socket} =
@@ -78,7 +84,14 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
 
     test "sets dirty? to true" do
       existing = %{cover: [%{id: "file-1", filename: "photo.jpg"}]}
-      state = build_state(existing_files: existing, dirty?: false)
+
+      state =
+        build_state(
+          existing_files: existing,
+          dirty?: false,
+          static_opts: [uploads: [upload_config(:cover)]]
+        )
+
       socket = build_socket(state)
 
       {:noreply, updated_socket} =
@@ -92,7 +105,9 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
     end
 
     test "handles empty list for upload key" do
-      state = build_state(existing_files: %{cover: []})
+      state =
+        build_state(existing_files: %{cover: []}, static_opts: [uploads: [upload_config(:cover)]])
+
       socket = build_socket(state)
 
       {:noreply, updated_socket} =
@@ -106,7 +121,7 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
     end
 
     test "handles missing upload key in existing_files" do
-      state = build_state(existing_files: %{})
+      state = build_state(existing_files: %{}, static_opts: [uploads: [upload_config(:cover)]])
       socket = build_socket(state)
 
       {:noreply, updated_socket} =
@@ -125,7 +140,12 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
         avatar: [%{id: "a1", filename: "avatar.png"}]
       }
 
-      state = build_state(existing_files: existing)
+      state =
+        build_state(
+          existing_files: existing,
+          static_opts: [uploads: [upload_config(:cover), upload_config(:avatar)]]
+        )
+
       socket = build_socket(state)
 
       {:noreply, updated_socket} =

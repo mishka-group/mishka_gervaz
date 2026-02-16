@@ -113,16 +113,18 @@ defmodule MishkaGervaz.Form.Web.Events do
       @spec do_handle(String.t(), map(), State.t(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
       defp do_handle("validate", params, state, socket) do
-        params = sanitize_params(params)
+        params = sanitize_params(params) |> strip_empty_list_values()
 
         run_hook(state, :before_validate, [params, state])
+
+        state = clear_list_field_values(state)
 
         socket = validation_handler().validate(state, params, socket)
         {:noreply, socket}
       end
 
       defp do_handle("save", params, state, socket) do
-        params = sanitize_params(params)
+        params = sanitize_params(params) |> strip_empty_list_values()
 
         case run_hook(state, :before_save, [params, state]) do
           {:halt, _reason} ->
@@ -246,17 +248,16 @@ defmodule MishkaGervaz.Form.Web.Events do
               {:noreply, socket}
 
             form ->
-              current_params = AshPhoenix.Form.params(form.source)
-              new_list = List.wrap(Map.get(current_params, field_name, [])) ++ [""]
-              new_params = Map.put(current_params, field_name, new_list)
+              field_atom = String.to_existing_atom(field_name)
 
-              validated =
-                form.source |> AshPhoenix.Form.validate(new_params) |> Phoenix.Component.to_form()
+              current_items =
+                form
+                |> Phoenix.HTML.Form.input_value(field_atom)
+                |> List.wrap()
+                |> Enum.reject(&(is_nil(&1) or &1 == ""))
 
-              state =
-                validation_handler().build_errors(validated)
-                |> then(&State.update(state, form: validated, errors: &1, dirty?: true))
-
+              field_values = Map.put(state.field_values, field_atom, current_items ++ [""])
+              state = State.update(state, field_values: field_values, dirty?: true)
               socket = Phoenix.Component.assign(socket, :form_state, state)
               {:noreply, socket}
           end
@@ -279,21 +280,32 @@ defmodule MishkaGervaz.Form.Web.Events do
               {:noreply, socket}
 
             form ->
-              current_params = AshPhoenix.Form.params(form.source)
+              field_atom = String.to_existing_atom(field_name)
 
-              new_params =
-                List.wrap(Map.get(current_params, field_name, []))
-                |> List.delete_at(index)
-                |> then(&Map.put(current_params, field_name, &1))
+              current_items = get_list_items(form, field_atom, state.field_values)
+              new_items = List.delete_at(current_items, index)
+
+              valid_items = Enum.reject(new_items, &(is_nil(&1) or &1 == ""))
+              current_params = AshPhoenix.Form.params(form.source)
+              new_params = Map.put(current_params, field_name, valid_items)
 
               validated =
                 form.source
                 |> AshPhoenix.Form.validate(new_params)
                 |> Phoenix.Component.to_form()
 
+              field_values = Map.put(state.field_values, field_atom, new_items)
+
               state =
                 validation_handler().build_errors(validated)
-                |> then(&State.update(state, form: validated, errors: &1, dirty?: true))
+                |> then(
+                  &State.update(state,
+                    form: validated,
+                    errors: &1,
+                    field_values: field_values,
+                    dirty?: true
+                  )
+                )
 
               socket = Phoenix.Component.assign(socket, :form_state, state)
               {:noreply, socket}
@@ -378,6 +390,41 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp has_hook?(_, _), do: false
+
+      defp get_list_items(form, field_atom, field_values) do
+        case Map.get(field_values, field_atom) do
+          list when is_list(list) ->
+            list
+
+          _ ->
+            form
+            |> Phoenix.HTML.Form.input_value(field_atom)
+            |> List.wrap()
+            |> Enum.reject(&is_nil/1)
+        end
+      end
+
+      defp strip_empty_list_values(%{"form" => form_params} = params) when is_map(form_params) do
+        cleaned =
+          Map.new(form_params, fn
+            {k, v} when is_list(v) -> {k, Enum.reject(v, &(&1 == ""))}
+            entry -> entry
+          end)
+
+        Map.put(params, "form", cleaned)
+      end
+
+      defp strip_empty_list_values(params), do: params
+
+      defp clear_list_field_values(state) do
+        cleared = Map.reject(state.field_values, fn {_k, v} -> is_list(v) end)
+
+        if map_size(cleared) != map_size(state.field_values) do
+          State.update(state, field_values: cleared)
+        else
+          state
+        end
+      end
 
       defoverridable handle: 3
     end

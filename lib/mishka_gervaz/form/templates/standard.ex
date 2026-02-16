@@ -638,11 +638,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp render_string_list_input(ui, field, _form_field, assigns) do
     items =
-      case Phoenix.HTML.Form.input_value(assigns.state.form, field.name) do
-        list when is_list(list) -> list
-        nil -> []
-        "" -> []
-        value when is_binary(value) -> [value]
+      case Map.get(assigns.state.field_values, field.name) do
+        list when is_list(list) ->
+          list
+
+        _ ->
+          case Phoenix.HTML.Form.input_value(assigns.state.form, field.name) do
+            list when is_list(list) -> Enum.reject(list, &is_nil/1)
+            nil -> []
+            "" -> []
+            value when is_binary(value) -> [value]
+          end
       end
 
     assigns
@@ -653,7 +659,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
     |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
     |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
-    |> assign(:phx_target, assigns[:myself])
+    |> assign(:target, assigns[:myself])
     |> dynamic_component()
   end
 

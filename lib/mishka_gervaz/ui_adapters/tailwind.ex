@@ -1787,7 +1787,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:add_label, fn -> "+ Add" end)
       |> assign_new(:remove_label, fn -> "Remove" end)
       |> assign_new(:placeholder, fn -> nil end)
-      |> assign_new(:phx_target, fn -> nil end)
+      |> assign_new(:target, fn -> nil end)
       |> assign_new(:class, fn -> "space-y-2" end)
       |> assign_new(:input_class, fn ->
         "flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -1813,7 +1813,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             phx-click="remove_list_item"
             phx-value-field={@field_name}
             phx-value-index={idx}
-            phx-target={@phx_target}
+            phx-target={@target}
             class="inline-flex items-center p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
             title={@remove_label}
           >
@@ -1826,7 +1826,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="button"
         phx-click="add_list_item"
         phx-value-field={@field_name}
-        phx-target={@phx_target}
+        phx-target={@target}
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
       >
         <.render_icon name="hero-plus" class="w-4 h-4" />
