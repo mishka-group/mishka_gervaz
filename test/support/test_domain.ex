@@ -56,6 +56,7 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.AutoColumnsResource
     resource MishkaGervaz.Test.Resources.ArchivableResource
     resource MishkaGervaz.Test.Resources.FormPost
+    resource MishkaGervaz.Test.Resources.NestedForm
     allow_unregistered? true
   end
 end

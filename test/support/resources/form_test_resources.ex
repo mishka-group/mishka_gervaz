@@ -1,3 +1,140 @@
+defmodule MishkaGervaz.Test.Resources.TestEmbed do
+  @moduledoc false
+  use Ash.Resource, data_layer: :embedded
+
+  attributes do
+    attribute :name, :string, allow_nil?: false, public?: true
+    attribute :value, :string, public?: true
+    attribute :count, :integer, public?: true
+    attribute :active, :boolean, public?: true
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.SingleEmbed do
+  @moduledoc false
+  use Ash.Resource, data_layer: :embedded
+
+  attributes do
+    attribute :street, :string, allow_nil?: false, public?: true
+    attribute :city, :string, allow_nil?: false, public?: true
+    attribute :zip, :string, public?: true
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.NestedForm do
+  @moduledoc """
+  Test resource for nested/embedded form fields.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :nested_form_table
+        route "/admin/nested"
+      end
+
+      columns do
+        column :title
+      end
+    end
+
+    form do
+      identity do
+        name :nested_form
+        route "/admin/nested"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :title, :text do
+          required true
+        end
+
+        field :items do
+          add_label "+ Add Item"
+          remove_label "Remove"
+        end
+
+        field :address do
+        end
+
+        field :tags, :nested do
+          nested_fields [
+            %{name: :name, type: :text, label: "Tag Name"},
+            %{name: :value, type: :textarea, label: "Tag Value"}
+          ]
+          add_label "+ Add Tag"
+        end
+      end
+
+      groups do
+        group :main do
+          fields [:title, :items, :address, :tags]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        create_label "Create"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    read :master_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :tenant_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :title, :string do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :items, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    attribute :address, MishkaGervaz.Test.Resources.SingleEmbed do
+      public? true
+    end
+
+    attribute :tags, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.FormPost do
   @moduledoc """
   Test resource for the form DSL — standard form with full DSL coverage.

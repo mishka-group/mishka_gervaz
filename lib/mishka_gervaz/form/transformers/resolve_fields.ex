@@ -111,6 +111,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       options = maybe_infer_options(final_type, override_options, ash_attr)
       nested_fields = maybe_infer_nested_fields(final_type, [], ash_attr)
 
+      ui =
+        if final_type == :nested and nested_fields != [] do
+          nested_mode = detect_nested_mode(ash_attr)
+          base_ui = normalize_ui(override && override.ui)
+          %{base_ui | extra: Map.put(base_ui.extra || %{}, :nested_mode, nested_mode)}
+        else
+          override && override.ui
+        end
+
       %Field{
         name: attr_name,
         source: attr_name,
@@ -121,7 +130,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         visible: default_if_nil(override && override.visible, defaults.visible),
         readonly: default_if_nil(override && override.readonly, defaults.readonly),
         format: override && override.format,
-        ui: override && override.ui
+        ui: ui
       }
     end)
   end
@@ -176,6 +185,9 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
       match?({:array, _}, type) ->
         infer_array_type(type)
+
+      is_atom(type) and type != nil and Ash.Type.embedded_type?(type) ->
+        :nested
 
       true ->
         :text
@@ -254,20 +266,35 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
             options = maybe_infer_options(detected, field.options, ash_attr)
             nested_fields = maybe_infer_nested_fields(detected, field.nested_fields, ash_attr)
 
+            ui =
+              if detected == :nested and nested_fields != [] do
+                nested_mode = detect_nested_mode(ash_attr)
+                base_ui = normalize_ui(field.ui)
+                %{base_ui | extra: Map.put(base_ui.extra || %{}, :nested_mode, nested_mode)}
+              else
+                field.ui
+              end
+
             {%{
                field
                | type: detected,
                  type_module: type_module,
                  options: options,
-                 nested_fields: nested_fields
+                 nested_fields: nested_fields,
+                 ui: ui
              }, true}
 
           field.type == :nested and field.nested_fields == [] ->
             nested_fields = maybe_infer_nested_fields(:nested, [], ash_attr)
 
-            if nested_fields != [],
-              do: {%{field | nested_fields: nested_fields}, true},
-              else: {field, changed?}
+            if nested_fields != [] do
+              nested_mode = detect_nested_mode(ash_attr)
+              ui = normalize_ui(field.ui)
+              ui = %{ui | extra: Map.put(ui.extra || %{}, :nested_mode, nested_mode)}
+              {%{field | nested_fields: nested_fields, ui: ui}, true}
+            else
+              {field, changed?}
+            end
 
           field.type == :select and is_nil(field.options) ->
             options = extract_one_of_options(ash_attr)
@@ -293,20 +320,49 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   @spec maybe_infer_nested_fields(atom(), list(), map() | nil) :: list()
   defp maybe_infer_nested_fields(:nested, [], %{type: {:array, type}}) when is_atom(type) do
-    if Ash.Type.embedded_type?(type) do
-      type
-      |> Ash.Resource.Info.attributes()
-      |> Enum.filter(& &1.public?)
-      |> Enum.reject(&(&1.name in [:id, :inserted_at, :updated_at]))
-      |> Enum.map(& &1.name)
-    else
-      []
-    end
+    infer_nested_fields_from_embedded(type)
+  end
+
+  defp maybe_infer_nested_fields(:nested, [], %{type: type}) when is_atom(type) do
+    if Ash.Type.embedded_type?(type), do: infer_nested_fields_from_embedded(type), else: []
   rescue
     _ -> []
   end
 
   defp maybe_infer_nested_fields(_, existing, _), do: existing
+
+  defp infer_nested_fields_from_embedded(type) do
+    ui_defaults = %AutoFields.UiDefaults{}
+
+    type
+    |> Ash.Resource.Info.attributes()
+    |> Enum.filter(& &1.public?)
+    |> Enum.reject(&(&1.name in [:id, :inserted_at, :updated_at]))
+    |> Enum.map(fn attr ->
+      sub_type = infer_field_type(%{type: attr.type, constraints: attr.constraints}, ui_defaults)
+
+      label = attr.name |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
+      %{
+        name: attr.name,
+        type: sub_type,
+        label: label,
+        placeholder: label,
+        required: !attr.allow_nil?
+      }
+    end)
+  rescue
+    _ -> []
+  end
+
+  defp detect_nested_mode(%{type: {:array, _}}), do: :array
+  defp detect_nested_mode(_), do: :single
+
+  defp normalize_ui(%Field.Ui{} = ui), do: ui
+  defp normalize_ui(nil), do: %Field.Ui{}
+  defp normalize_ui([]), do: %Field.Ui{}
+  defp normalize_ui([ui | _]) when is_struct(ui, Field.Ui), do: ui
+  defp normalize_ui(_), do: %Field.Ui{}
 
   @spec extract_one_of_options(map() | nil) :: list() | nil
   defp extract_one_of_options(nil), do: nil

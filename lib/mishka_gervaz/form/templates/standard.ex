@@ -682,12 +682,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp render_nested_input(_ui, field, _form_field, assigns) do
     nested_fields = Map.get(field, :nested_fields, [])
     form_path = assigns.state.form.name <> "[#{field.name}]"
+    nested_mode = get_in_map(field, [:ui, :extra, :nested_mode]) || :array
 
     assigns =
       assigns
       |> assign(:nested_field, field)
       |> assign(:nested_fields, nested_fields)
       |> assign(:form_path, form_path)
+      |> assign(:nested_mode, nested_mode)
       |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
       |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
       |> assign(:target, assigns[:myself])
@@ -698,49 +700,113 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         <div class="border rounded bg-gray-50 p-3">
           <div class="flex justify-between items-start mb-2">
             <span class="text-sm font-medium text-gray-600">
-              {Phoenix.Naming.humanize(@nested_field.name)} {nested_form.index + 1}
+              <%= if @nested_mode == :array do %>
+                {Phoenix.Naming.humanize(@nested_field.name)} {nested_form.index + 1}
+              <% else %>
+                {Phoenix.Naming.humanize(@nested_field.name)}
+              <% end %>
             </span>
-            <button
-              type="button"
-              phx-click="remove_nested"
-              phx-value-path={nested_form.name}
-              phx-target={@target}
-              class="text-red-600 hover:text-red-800 text-sm"
-            >
-              {@remove_label}
-            </button>
+            <%= if @nested_mode == :array do %>
+              <button
+                type="button"
+                phx-click="remove_nested"
+                phx-value-path={nested_form.name}
+                phx-target={@target}
+                class="text-red-600 hover:text-red-800 text-sm"
+              >
+                {@remove_label}
+              </button>
+            <% end %>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <%= for sub_field <- @nested_fields do %>
-              <% sub_field_name = if is_atom(sub_field), do: sub_field, else: sub_field.field %>
-              <% sub_label = Phoenix.Naming.humanize(sub_field_name) %>
-              <% sub_type = if is_map(sub_field), do: Map.get(sub_field, :type, "text"), else: "text" %>
+              <% {sub_name, sub_label, sub_type, sub_required, sub_placeholder} = extract_sub_field_info(sub_field) %>
               <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">{sub_label}</label>
-                <input
-                  type={to_string(sub_type)}
-                  name={nested_form[sub_field_name].name}
-                  id={nested_form[sub_field_name].id}
-                  value={nested_form[sub_field_name].value}
-                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                />
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                  {sub_label}
+                  <%= if sub_required do %>
+                    <span class="text-red-500">*</span>
+                  <% end %>
+                </label>
+                <%= case sub_type do %>
+                  <% :textarea -> %>
+                    <textarea
+                      name={nested_form[sub_name].name}
+                      id={nested_form[sub_name].id}
+                      placeholder={sub_placeholder}
+                      rows="3"
+                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    >{nested_form[sub_name].value}</textarea>
+                  <% :checkbox -> %>
+                    <input type="hidden" name={nested_form[sub_name].name} value="false" />
+                    <input
+                      type="checkbox"
+                      name={nested_form[sub_name].name}
+                      id={nested_form[sub_name].id}
+                      value="true"
+                      checked={nested_form[sub_name].value in [true, "true"]}
+                      class="rounded border-gray-300"
+                    />
+                  <% :number -> %>
+                    <input
+                      type="number"
+                      name={nested_form[sub_name].name}
+                      id={nested_form[sub_name].id}
+                      value={nested_form[sub_name].value}
+                      placeholder={sub_placeholder}
+                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                  <% _ -> %>
+                    <input
+                      type="text"
+                      name={nested_form[sub_name].name}
+                      id={nested_form[sub_name].id}
+                      value={nested_form[sub_name].value}
+                      placeholder={sub_placeholder}
+                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                <% end %>
               </div>
             <% end %>
           </div>
         </div>
       </.inputs_for>
 
-      <button
-        type="button"
-        phx-click="add_nested"
-        phx-value-path={@form_path}
-        phx-target={@target}
-        class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
-      >
-        {@add_label}
-      </button>
+      <%= if @nested_mode == :array do %>
+        <button
+          type="button"
+          phx-click="add_nested"
+          phx-value-path={@form_path}
+          phx-target={@target}
+          class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+        >
+          {@add_label}
+        </button>
+      <% end %>
     </div>
     """
+  end
+
+  defp extract_sub_field_info(sub_field) when is_atom(sub_field) do
+    label = Phoenix.Naming.humanize(sub_field)
+    {sub_field, label, :text, false, label}
+  end
+
+  defp extract_sub_field_info(%{name: name} = sub_field) do
+    label = Map.get(sub_field, :label) || Phoenix.Naming.humanize(name)
+    type = Map.get(sub_field, :type, :text)
+    required = Map.get(sub_field, :required, false)
+    placeholder = Map.get(sub_field, :placeholder) || label
+    {name, label, type, required, placeholder}
+  end
+
+  defp extract_sub_field_info(sub_field) when is_map(sub_field) do
+    name = Map.get(sub_field, :field, Map.get(sub_field, :name))
+    label = Map.get(sub_field, :label) || Phoenix.Naming.humanize(name)
+    type = Map.get(sub_field, :type, :text)
+    required = Map.get(sub_field, :required, false)
+    placeholder = Map.get(sub_field, :placeholder) || label
+    {name, label, type, required, placeholder}
   end
 
   defp render_upload_by_style(assigns) do
