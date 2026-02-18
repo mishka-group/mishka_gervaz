@@ -106,10 +106,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       ash_attr = Map.get(ash_attrs, attr_name)
       detected_type = infer_field_type(ash_attr, ui_defaults)
 
+      final_type = (override && override.type) || detected_type
+      override_options = if override, do: Map.get(override, :options), else: nil
+      options = maybe_infer_options(final_type, override_options, ash_attr)
+
       %Field{
         name: attr_name,
         source: attr_name,
-        type: (override && override.type) || detected_type,
+        type: final_type,
+        options: options,
         required: default_if_nil(override && override.required, defaults.required),
         visible: default_if_nil(override && override.visible, defaults.visible),
         readonly: default_if_nil(override && override.readonly, defaults.readonly),
@@ -161,6 +166,9 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       type == Ash.Type.UUID or type == Ash.Type.UUIDv7 ->
         :hidden
 
+      type == Ash.Type.Atom ->
+        infer_atom_type(constraints)
+
       type == Ash.Type.String ->
         infer_string_type(constraints, ui_defaults)
 
@@ -171,6 +179,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         :text
     end
   end
+
+  @spec infer_atom_type(keyword() | nil) :: atom()
+  defp infer_atom_type(nil), do: :text
+
+  defp infer_atom_type(constraints) when is_list(constraints) do
+    if Keyword.has_key?(constraints, :one_of), do: :select, else: :text
+  end
+
+  defp infer_atom_type(_), do: :text
 
   @spec infer_string_type(keyword() | nil, AutoFields.UiDefaults.t()) :: atom()
   defp infer_string_type(nil, _), do: :text
@@ -221,13 +238,21 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
     {updated, changed?} =
       Enum.map_reduce(fields, false, fn field, changed? ->
-        if is_nil(field.type) do
-          ash_attr = Map.get(ash_attrs, field.source || field.name)
-          detected = infer_field_type(ash_attr, ui_defaults)
-          type_module = MishkaGervaz.Form.Types.Field.get_or_passthrough(detected)
-          {%{field | type: detected, type_module: type_module}, true}
-        else
-          {field, changed?}
+        ash_attr = Map.get(ash_attrs, field.source || field.name)
+
+        cond do
+          is_nil(field.type) ->
+            detected = infer_field_type(ash_attr, ui_defaults)
+            type_module = MishkaGervaz.Form.Types.Field.get_or_passthrough(detected)
+            options = maybe_infer_options(detected, field.options, ash_attr)
+            {%{field | type: detected, type_module: type_module, options: options}, true}
+
+          field.type == :select and is_nil(field.options) ->
+            options = extract_one_of_options(ash_attr)
+            if options, do: {%{field | options: options}, true}, else: {field, changed?}
+
+          true ->
+            {field, changed?}
         end
       end)
 
@@ -239,6 +264,28 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       dsl_state
     end
   end
+
+  @spec maybe_infer_options(atom(), list() | nil, map() | nil) :: list() | nil
+  defp maybe_infer_options(:select, nil, ash_attr), do: extract_one_of_options(ash_attr)
+  defp maybe_infer_options(_type, existing, _ash_attr), do: existing
+
+  @spec extract_one_of_options(map() | nil) :: list() | nil
+  defp extract_one_of_options(nil), do: nil
+
+  defp extract_one_of_options(%{constraints: constraints}) when is_list(constraints) do
+    case Keyword.get(constraints, :one_of) do
+      nil ->
+        nil
+
+      values when is_list(values) ->
+        Enum.map(values, fn val ->
+          label = val |> to_string() |> String.replace("_", " ") |> String.capitalize()
+          {label, val}
+        end)
+    end
+  end
+
+  defp extract_one_of_options(_), do: nil
 
   @spec resolve_field_sources(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp resolve_field_sources(dsl_state) do

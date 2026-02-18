@@ -224,10 +224,10 @@ defmodule MishkaGervaz.Form.DSL.AutoFieldsTest do
       assert field.type == :date
     end
 
-    test "atom attribute (with one_of) becomes text" do
-      # Ash.Type.Atom with one_of does NOT trigger :select — only Ash.Type.String with one_of does
+    test "atom attribute (with one_of) becomes select with auto-populated options" do
       field = FormInfo.field(AutoFieldsForm, :status)
-      assert field.type == :text
+      assert field.type == :select
+      assert field.options == [{"Active", :active}, {"Inactive", :inactive}]
     end
 
     test "datetime timestamps become datetime" do
