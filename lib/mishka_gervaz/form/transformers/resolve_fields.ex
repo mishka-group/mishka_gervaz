@@ -109,12 +109,14 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       final_type = (override && override.type) || detected_type
       override_options = if override, do: Map.get(override, :options), else: nil
       options = maybe_infer_options(final_type, override_options, ash_attr)
+      nested_fields = maybe_infer_nested_fields(final_type, [], ash_attr)
 
       %Field{
         name: attr_name,
         source: attr_name,
         type: final_type,
         options: options,
+        nested_fields: nested_fields,
         required: default_if_nil(override && override.required, defaults.required),
         visible: default_if_nil(override && override.visible, defaults.visible),
         readonly: default_if_nil(override && override.readonly, defaults.readonly),
@@ -205,6 +207,11 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   @spec infer_array_type({:array, any()}) :: atom()
   defp infer_array_type({:array, Ash.Type.String}), do: :string_list
   defp infer_array_type({:array, :string}), do: :string_list
+
+  defp infer_array_type({:array, type}) when is_atom(type) do
+    if Ash.Type.embedded_type?(type), do: :nested, else: :json
+  end
+
   defp infer_array_type(_), do: :json
 
   @spec remove_all_field_entities(Spark.Dsl.t(), [struct()]) :: Spark.Dsl.t()
@@ -245,7 +252,22 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
             detected = infer_field_type(ash_attr, ui_defaults)
             type_module = MishkaGervaz.Form.Types.Field.get_or_passthrough(detected)
             options = maybe_infer_options(detected, field.options, ash_attr)
-            {%{field | type: detected, type_module: type_module, options: options}, true}
+            nested_fields = maybe_infer_nested_fields(detected, field.nested_fields, ash_attr)
+
+            {%{
+               field
+               | type: detected,
+                 type_module: type_module,
+                 options: options,
+                 nested_fields: nested_fields
+             }, true}
+
+          field.type == :nested and field.nested_fields == [] ->
+            nested_fields = maybe_infer_nested_fields(:nested, [], ash_attr)
+
+            if nested_fields != [],
+              do: {%{field | nested_fields: nested_fields}, true},
+              else: {field, changed?}
 
           field.type == :select and is_nil(field.options) ->
             options = extract_one_of_options(ash_attr)
@@ -268,6 +290,23 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   @spec maybe_infer_options(atom(), list() | nil, map() | nil) :: list() | nil
   defp maybe_infer_options(:select, nil, ash_attr), do: extract_one_of_options(ash_attr)
   defp maybe_infer_options(_type, existing, _ash_attr), do: existing
+
+  @spec maybe_infer_nested_fields(atom(), list(), map() | nil) :: list()
+  defp maybe_infer_nested_fields(:nested, [], %{type: {:array, type}}) when is_atom(type) do
+    if Ash.Type.embedded_type?(type) do
+      type
+      |> Ash.Resource.Info.attributes()
+      |> Enum.filter(& &1.public?)
+      |> Enum.reject(&(&1.name in [:id, :inserted_at, :updated_at]))
+      |> Enum.map(& &1.name)
+    else
+      []
+    end
+  rescue
+    _ -> []
+  end
+
+  defp maybe_infer_nested_fields(_, existing, _), do: existing
 
   @spec extract_one_of_options(map() | nil) :: list() | nil
   defp extract_one_of_options(nil), do: nil

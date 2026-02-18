@@ -25,5 +25,19 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
   def parse_params(_, _config), do: []
 
   @impl true
+  def sanitize(value, _config) when is_list(value) do
+    Enum.map(value, fn
+      item when is_binary(item) -> item |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+      item -> item
+    end)
+  end
+
+  def sanitize(value, _config) when is_binary(value) do
+    value |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+  end
+
+  def sanitize(value, _config), do: value
+
+  @impl true
   def default_ui, do: %{type: :string_list}
 end

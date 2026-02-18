@@ -96,8 +96,19 @@ defmodule MishkaGervaz.Form.Web.Events do
       @spec hook_runner() :: module()
       defp hook_runner, do: HookRunner.Default
 
-      @spec sanitize_params(map()) :: map()
-      defp sanitize_params(params), do: sanitization_handler().sanitize_params(params)
+      @spec sanitize_params(map(), list()) :: map()
+      defp sanitize_params(params, fields) do
+        case params do
+          %{"form" => form_params} = p when is_map(form_params) ->
+            sanitized =
+              MishkaGervaz.Form.Web.Events.Builder.sanitize_typed_params(fields, form_params)
+
+            Map.put(p, "form", sanitized)
+
+          _ ->
+            sanitization_handler().sanitize_params(params)
+        end
+      end
 
       @spec run_hook(State.t(), atom(), list()) :: any()
       defp run_hook(state, hook_name, args) do
@@ -113,7 +124,7 @@ defmodule MishkaGervaz.Form.Web.Events do
       @spec do_handle(String.t(), map(), State.t(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
       defp do_handle("validate", params, state, socket) do
-        params = sanitize_params(params) |> strip_empty_list_values()
+        params = sanitize_params(params, state.static.fields) |> strip_empty_list_values()
 
         run_hook(state, :before_validate, [params, state])
 
@@ -124,7 +135,7 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("save", params, state, socket) do
-        params = sanitize_params(params) |> strip_empty_list_values()
+        params = sanitize_params(params, state.static.fields) |> strip_empty_list_values()
 
         case run_hook(state, :before_save, [params, state]) do
           {:halt, _reason} ->
@@ -338,6 +349,40 @@ defmodule MishkaGervaz.Form.Web.Events do
           {:noreply, socket}
         else
           {:noreply, socket}
+        end
+      end
+
+      defp do_handle("add_nested", %{"path" => path}, state, socket) do
+        case state.form do
+          nil ->
+            {:noreply, socket}
+
+          form ->
+            updated =
+              form.source
+              |> AshPhoenix.Form.add_form(path)
+              |> Phoenix.Component.to_form()
+
+            errors = validation_handler().build_errors(updated)
+            state = State.update(state, form: updated, errors: errors, dirty?: true)
+            {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
+        end
+      end
+
+      defp do_handle("remove_nested", %{"path" => path}, state, socket) do
+        case state.form do
+          nil ->
+            {:noreply, socket}
+
+          form ->
+            updated =
+              form.source
+              |> AshPhoenix.Form.remove_form(path)
+              |> Phoenix.Component.to_form()
+
+            errors = validation_handler().build_errors(updated)
+            state = State.update(state, form: updated, errors: errors, dirty?: true)
+            {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
         end
       end
 

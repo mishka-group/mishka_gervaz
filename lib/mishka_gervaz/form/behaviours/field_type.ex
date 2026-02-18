@@ -56,9 +56,17 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   @callback parse_params(raw_value :: any(), config :: map()) :: any()
 
   @doc """
+  Sanitize a raw parameter value for this field type.
+
+  Called before validation/submission. Text fields strip HTML tags,
+  textarea/json/nested fields pass through unchanged.
+  """
+  @callback sanitize(value :: any(), config :: map()) :: any()
+
+  @doc """
   Return default UI configuration for this field type.
   """
   @callback default_ui() :: map()
 
-  @optional_callbacks [validate: 2, parse_params: 2, default_ui: 0]
+  @optional_callbacks [validate: 2, parse_params: 2, sanitize: 2, default_ui: 0]
 end

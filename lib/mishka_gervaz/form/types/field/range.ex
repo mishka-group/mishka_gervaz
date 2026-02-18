@@ -17,5 +17,8 @@ defmodule MishkaGervaz.Form.Types.Field.Range do
   def parse_params(value, _config), do: value
 
   @impl true
+  def sanitize(value, _config), do: value
+
+  @impl true
   def default_ui, do: %{type: :range}
 end

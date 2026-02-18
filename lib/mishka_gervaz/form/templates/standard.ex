@@ -498,8 +498,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     base =
       assigns
       |> assign(:field, form_field)
-      |> assign(:name, field.name)
-      |> assign(:id, "form-#{field.name}")
+      |> assign(:name, form_field.name)
+      |> assign(:id, form_field.id)
       |> assign(:value, Phoenix.HTML.Form.input_value(assigns.state.form, field.name))
       |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
       |> assign(:disabled, Map.get(field, :disabled, false))
@@ -566,7 +566,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :json ->
-        base |> assign(:function, :json_editor) |> dynamic_component()
+        raw_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+
+        json_value =
+          case raw_value do
+            v when is_map(v) or is_list(v) -> Jason.encode!(v, pretty: true)
+            v when is_binary(v) -> v
+            nil -> ""
+            v -> inspect(v)
+          end
+
+        base
+        |> assign(:value, json_value)
+        |> assign(:function, :json_editor)
+        |> dynamic_component()
 
       :relation ->
         alias MishkaGervaz.Form.Types.Field.Relation, as: RelationType
@@ -592,20 +605,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :file ->
-        render_upload_field(ui, field, assigns)
+        render_upload_field(ui, field, form_field, assigns)
 
       :upload ->
-        render_upload_field(ui, field, assigns)
+        render_upload_field(ui, field, form_field, assigns)
 
       :string_list ->
         render_string_list_input(ui, field, form_field, assigns)
+
+      :nested ->
+        render_nested_input(ui, field, form_field, assigns)
 
       _ ->
         base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
     end
   end
 
-  defp render_upload_field(ui, field, assigns) do
+  defp render_upload_field(ui, field, form_field, assigns) do
     upload_config = UploadHelpers.find_upload_for_field(assigns.static, field.name)
 
     if upload_config do
@@ -628,8 +644,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns
       |> assign(:module, ui)
       |> assign(:function, :text_input)
-      |> assign(:name, field.name)
-      |> assign(:id, "form-#{field.name}")
+      |> assign(:name, form_field.name)
+      |> assign(:id, form_field.id)
       |> assign(:value, "")
       |> assign(:type, "file")
       |> dynamic_component()
@@ -661,6 +677,70 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
     |> assign(:target, assigns[:myself])
     |> dynamic_component()
+  end
+
+  defp render_nested_input(_ui, field, _form_field, assigns) do
+    nested_fields = Map.get(field, :nested_fields, [])
+    form_path = assigns.state.form.name <> "[#{field.name}]"
+
+    assigns =
+      assigns
+      |> assign(:nested_field, field)
+      |> assign(:nested_fields, nested_fields)
+      |> assign(:form_path, form_path)
+      |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
+      |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
+      |> assign(:target, assigns[:myself])
+
+    ~H"""
+    <div class="space-y-3">
+      <.inputs_for :let={nested_form} field={@state.form[@nested_field.name]}>
+        <div class="border rounded bg-gray-50 p-3">
+          <div class="flex justify-between items-start mb-2">
+            <span class="text-sm font-medium text-gray-600">
+              {Phoenix.Naming.humanize(@nested_field.name)} {nested_form.index + 1}
+            </span>
+            <button
+              type="button"
+              phx-click="remove_nested"
+              phx-value-path={nested_form.name}
+              phx-target={@target}
+              class="text-red-600 hover:text-red-800 text-sm"
+            >
+              {@remove_label}
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <%= for sub_field <- @nested_fields do %>
+              <% sub_field_name = if is_atom(sub_field), do: sub_field, else: sub_field.field %>
+              <% sub_label = Phoenix.Naming.humanize(sub_field_name) %>
+              <% sub_type = if is_map(sub_field), do: Map.get(sub_field, :type, "text"), else: "text" %>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">{sub_label}</label>
+                <input
+                  type={to_string(sub_type)}
+                  name={nested_form[sub_field_name].name}
+                  id={nested_form[sub_field_name].id}
+                  value={nested_form[sub_field_name].value}
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </.inputs_for>
+
+      <button
+        type="button"
+        phx-click="add_nested"
+        phx-value-path={@form_path}
+        phx-target={@target}
+        class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+      >
+        {@add_label}
+      </button>
+    </div>
+    """
   end
 
   defp render_upload_by_style(assigns) do

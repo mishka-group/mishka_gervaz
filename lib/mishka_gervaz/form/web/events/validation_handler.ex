@@ -36,13 +36,22 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       @spec validate(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
       def validate(state, params, socket) do
-        form_params = Map.get(params, "form", params)
+        incoming = Map.get(params, "form", params)
 
         case state.form do
           nil ->
             socket
 
           form ->
+            form_params =
+              form.source
+              |> AshPhoenix.Form.params()
+              |> Map.merge(incoming)
+              |> merge_relation_field_values(state)
+              |> then(
+                &MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(state.static.fields, &1)
+              )
+
             validated =
               form.source
               |> AshPhoenix.Form.validate(form_params)
@@ -66,6 +75,17 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
           Enum.reduce(opts, msg, fn {key, value}, acc ->
             String.replace(acc, "%{#{key}}", to_string(value))
           end)
+        end)
+      end
+
+      defp merge_relation_field_values(params, state) do
+        state.static.fields
+        |> Enum.filter(&(&1.type == :relation))
+        |> Enum.reduce(params, fn field, acc ->
+          case Map.get(state.field_values, field.name) do
+            v when v not in [nil, ""] -> Map.put(acc, to_string(field.name), v)
+            _ -> acc
+          end
         end)
       end
 

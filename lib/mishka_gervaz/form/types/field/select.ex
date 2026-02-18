@@ -17,5 +17,9 @@ defmodule MishkaGervaz.Form.Types.Field.Select do
   def parse_params(value, _config), do: value
 
   @impl true
+  def sanitize(value, _config) when is_binary(value), do: String.trim(value)
+  def sanitize(value, _config), do: value
+
+  @impl true
   def default_ui, do: %{type: :select}
 end

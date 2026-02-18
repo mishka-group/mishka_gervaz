@@ -38,11 +38,23 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       @spec submit(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
       def submit(state, params, socket) do
-        form_params = transform_params(state, Map.get(params, "form", params))
-        params_before_consume = Map.keys(form_params)
-        {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
+        incoming = Map.get(params, "form", params)
 
-        has_new_uploads? = Map.keys(form_params) != params_before_consume
+        form_params =
+          case state.form do
+            nil ->
+              incoming
+
+            form ->
+              form.source
+              |> AshPhoenix.Form.params()
+              |> Map.merge(incoming)
+              |> merge_relation_field_values(state)
+          end
+
+        form_params = transform_params(state, form_params)
+
+        {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
 
         case state.form do
           nil ->
@@ -81,7 +93,9 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       Override this to add computed fields, strip unwanted params, etc.
       """
       @spec transform_params(State.t(), map()) :: map()
-      def transform_params(_state, params), do: params
+      def transform_params(state, params) do
+        MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(state.static.fields, params)
+      end
 
       @doc """
       Handle post-save logic.
@@ -205,6 +219,17 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           _ ->
             socket
         end
+      end
+
+      defp merge_relation_field_values(params, state) do
+        state.static.fields
+        |> Enum.filter(&(&1.type == :relation))
+        |> Enum.reduce(params, fn field, acc ->
+          case Map.get(state.field_values, field.name) do
+            v when v not in [nil, ""] -> Map.put(acc, to_string(field.name), v)
+            _ -> acc
+          end
+        end)
       end
 
       defoverridable submit: 3,

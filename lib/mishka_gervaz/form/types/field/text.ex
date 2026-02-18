@@ -17,5 +17,12 @@ defmodule MishkaGervaz.Form.Types.Field.Text do
   def parse_params(value, _config), do: value
 
   @impl true
+  def sanitize(value, _config) when is_binary(value) do
+    value |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+  end
+
+  def sanitize(value, _config), do: value
+
+  @impl true
   def default_ui, do: %{type: :text}
 end
