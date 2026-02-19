@@ -27,7 +27,8 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
 
     with :ok <- validate_field_references(fields, resource_fields, module),
          :ok <- validate_depends_on(fields, field_names, module),
-         :ok <- validate_virtual_fields(fields, module) do
+         :ok <- validate_virtual_fields(fields, module),
+         :ok <- validate_nested_field_placement(fields, module) do
       :ok
     end
   end
@@ -111,6 +112,35 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
                   virtual true
                   resource MyApp.SomeResource
                 end
+            """
+          )}}
+      else
+        {:cont, :ok}
+      end
+    end)
+  end
+
+  @spec validate_nested_field_placement([Field.t()], module()) ::
+          :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_nested_field_placement(fields, module) do
+    alias MishkaGervaz.Form.Entities.NestedField
+
+    Enum.reduce_while(fields, :ok, fn field, :ok ->
+      has_nested_entities? =
+        is_list(field.nested_fields) and
+          Enum.any?(field.nested_fields, &is_struct(&1, NestedField))
+
+      if has_nested_entities? and field.type not in [:nested, nil] do
+        {:halt,
+         {:error,
+          Spark.Error.DslError.exception(
+            module: module,
+            path: @path ++ [field.name],
+            message: """
+            `nested_field` is only allowed inside fields with type `:nested`.
+
+            Field `#{field.name}` has type `#{inspect(field.type)}`.
+            Either change the type to `:nested` or remove the nested_field entries.
             """
           )}}
       else

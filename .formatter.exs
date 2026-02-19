@@ -135,6 +135,8 @@ spark_locals_without_parens = [
   module: 1,
   name: 1,
   navigation: 1,
+  nested_field: 2,
+  nested_field: 3,
   nested_fields: 1,
   next_label: 1,
   number_step: 1,

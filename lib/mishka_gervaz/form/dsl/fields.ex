@@ -6,6 +6,7 @@ defmodule MishkaGervaz.Form.Dsl.Fields do
   """
 
   alias MishkaGervaz.Form.Entities.Field
+  alias MishkaGervaz.Form.Entities.NestedField
   alias MishkaGervaz.Form.Entities.AutoFields
 
   defp field_ui_entity do
@@ -30,6 +31,32 @@ defmodule MishkaGervaz.Form.Dsl.Fields do
     }
   end
 
+  defp nested_field_ui_entity do
+    %Spark.Dsl.Entity{
+      name: :ui,
+      describe: "UI/presentation configuration for the nested sub-field.",
+      target: NestedField.Ui,
+      schema: NestedField.Ui.opt_schema(),
+      singleton_entity_keys: [:ui],
+      transform: {NestedField.Ui, :transform, []}
+    }
+  end
+
+  defp nested_field_entity do
+    %Spark.Dsl.Entity{
+      name: :nested_field,
+      describe: "Define a sub-field within a nested/embedded form field.",
+      target: NestedField,
+      args: [:name, :type],
+      identifier: :name,
+      schema: NestedField.opt_schema(),
+      entities: [
+        ui: [nested_field_ui_entity()]
+      ],
+      transform: {NestedField, :transform, []}
+    }
+  end
+
   defp field_entity do
     %Spark.Dsl.Entity{
       name: :field,
@@ -40,7 +67,8 @@ defmodule MishkaGervaz.Form.Dsl.Fields do
       schema: Field.opt_schema(),
       entities: [
         ui: [field_ui_entity()],
-        preload: [field_preload_entity()]
+        preload: [field_preload_entity()],
+        _nested_field_entities: [nested_field_entity()]
       ],
       transform: {Field, :transform, []}
     }

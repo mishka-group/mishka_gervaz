@@ -15,6 +15,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   alias Spark.Dsl.Transformer
   alias MishkaGervaz.Form.Entities.Field
+  alias MishkaGervaz.Form.Entities.NestedField
   alias MishkaGervaz.Form.Entities.AutoFields
   import MishkaGervaz.Table.Transformers.Helpers
 
@@ -284,8 +285,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
                  ui: ui
              }, true}
 
-          field.type == :nested and field.nested_fields == [] ->
-            nested_fields = maybe_infer_nested_fields(:nested, [], ash_attr)
+          field.type == :nested ->
+            nested_fields = maybe_infer_nested_fields(:nested, field.nested_fields, ash_attr)
 
             if nested_fields != [] do
               nested_mode = detect_nested_mode(ash_attr)
@@ -319,17 +320,31 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   defp maybe_infer_options(_type, existing, _ash_attr), do: existing
 
   @spec maybe_infer_nested_fields(atom(), list(), map() | nil) :: list()
-  defp maybe_infer_nested_fields(:nested, [], %{type: {:array, type}}) when is_atom(type) do
+  defp maybe_infer_nested_fields(:nested, existing, ash_attr) do
+    explicit = Enum.filter(existing, &is_struct(&1, NestedField))
+    maps = Enum.filter(existing, &(is_map(&1) and not is_struct(&1)))
+    inferred = infer_from_embedded_type(ash_attr)
+
+    cond do
+      explicit != [] -> merge_nested_fields(explicit, inferred)
+      maps != [] -> maps
+      true -> inferred
+    end
+  end
+
+  defp maybe_infer_nested_fields(_, existing, _), do: existing
+
+  defp infer_from_embedded_type(%{type: {:array, type}}) when is_atom(type) do
     infer_nested_fields_from_embedded(type)
   end
 
-  defp maybe_infer_nested_fields(:nested, [], %{type: type}) when is_atom(type) do
+  defp infer_from_embedded_type(%{type: type}) when is_atom(type) do
     if Ash.Type.embedded_type?(type), do: infer_nested_fields_from_embedded(type), else: []
   rescue
     _ -> []
   end
 
-  defp maybe_infer_nested_fields(_, existing, _), do: existing
+  defp infer_from_embedded_type(_), do: []
 
   defp infer_nested_fields_from_embedded(type) do
     ui_defaults = %AutoFields.UiDefaults{}
@@ -340,7 +355,6 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     |> Enum.reject(&(&1.name in [:id, :inserted_at, :updated_at]))
     |> Enum.map(fn attr ->
       sub_type = infer_field_type(%{type: attr.type, constraints: attr.constraints}, ui_defaults)
-
       label = attr.name |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
       %{
@@ -354,6 +368,53 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   rescue
     _ -> []
   end
+
+  defp merge_nested_fields(explicit, inferred) do
+    explicit_names = MapSet.new(explicit, & &1.name)
+
+    resolved =
+      Enum.map(explicit, fn nf ->
+        base = Enum.find(inferred, &(&1.name == nf.name))
+        resolve_nested_field(nf, base)
+      end)
+
+    remaining =
+      Enum.reject(inferred, &(&1.name in explicit_names))
+
+    resolved ++ remaining
+  end
+
+  defp resolve_nested_field(%NestedField{} = nf, base) do
+    ui = nf.ui
+    base_type = if base, do: base.type, else: :text
+    base_label = if base, do: base.label, else: humanize_name(nf.name)
+    base_required = if base, do: base.required, else: false
+
+    %{
+      name: nf.name,
+      type: nf.type || base_type,
+      label: (ui && resolve_label_value(ui.label)) || base_label,
+      placeholder: (ui && ui.placeholder) || (ui && resolve_label_value(ui.label)) || base_label,
+      required: if(is_nil(nf.required), do: base_required, else: nf.required),
+      visible: nf.visible,
+      readonly: nf.readonly,
+      default: nf.default,
+      options: nf.options,
+      rows: ui && ui.rows,
+      class: ui && ui.class,
+      span: ui && ui.span,
+      description: ui && ui.description
+    }
+  end
+
+  defp humanize_name(name) do
+    name |> to_string() |> String.replace("_", " ") |> String.capitalize()
+  end
+
+  defp resolve_label_value(nil), do: nil
+  defp resolve_label_value(f) when is_function(f, 0), do: f
+  defp resolve_label_value(s) when is_binary(s), do: s
+  defp resolve_label_value(_), do: nil
 
   defp detect_nested_mode(%{type: {:array, _}}), do: :array
   defp detect_nested_mode(_), do: :single

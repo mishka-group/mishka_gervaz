@@ -275,6 +275,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp global_col_class(4), do: "grid md:grid-cols-2 lg:grid-cols-4 gap-4"
   defp global_col_class(_), do: "grid gap-4"
 
+  defp nested_span_class(nil), do: nil
+  defp nested_span_class(1), do: "col-span-1"
+  defp nested_span_class(2), do: "col-span-2"
+  defp nested_span_class(3), do: "col-span-3"
+  defp nested_span_class(4), do: "col-span-4"
+  defp nested_span_class(_), do: nil
+
   defp render_submit(assigns) do
     submit = assigns.static.submit
     mode = assigns.state.mode
@@ -690,8 +697,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:nested_fields, nested_fields)
       |> assign(:form_path, form_path)
       |> assign(:nested_mode, nested_mode)
-      |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
-      |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
+      |> assign(:add_label, resolve_nested_label(field, :add_label, "+ Add"))
+      |> assign(:remove_label, resolve_nested_label(field, :remove_label, "Remove"))
       |> assign(:target, assigns[:myself])
 
     ~H"""
@@ -720,53 +727,104 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <%= for sub_field <- @nested_fields do %>
-              <% {sub_name, sub_label, sub_type, sub_required, sub_placeholder} = extract_sub_field_info(sub_field) %>
-              <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">
-                  {sub_label}
-                  <%= if sub_required do %>
-                    <span class="text-red-500">*</span>
+              <% sf = extract_sub_field_info(sub_field) %>
+              <%= if sf.visible do %>
+                <% base_class = "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                <% input_class = if(sf.class, do: "#{base_class} #{sf.class}", else: base_class) %>
+                <div class={nested_span_class(sf.span)}>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">
+                    {sf.label}
+                    <%= if sf.required do %>
+                      <span class="text-red-500">*</span>
+                    <% end %>
+                  </label>
+                  <%= case sf.type do %>
+                    <% :textarea -> %>
+                      <textarea
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        placeholder={sf.placeholder}
+                        rows={sf.rows || 3}
+                        disabled={sf.readonly}
+                        class={input_class}
+                      >{nested_form[sf.name].value}</textarea>
+                    <% t when t in [:checkbox, :toggle] -> %>
+                      <input type="hidden" name={nested_form[sf.name].name} value="false" />
+                      <input
+                        type="checkbox"
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        value="true"
+                        checked={nested_form[sf.name].value in [true, "true"]}
+                        disabled={sf.readonly}
+                        class="rounded border-gray-300"
+                      />
+                    <% :number -> %>
+                      <input
+                        type="number"
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        value={nested_form[sf.name].value}
+                        placeholder={sf.placeholder}
+                        disabled={sf.readonly}
+                        class={input_class}
+                      />
+                    <% :date -> %>
+                      <input
+                        type="date"
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        value={nested_form[sf.name].value}
+                        disabled={sf.readonly}
+                        class={input_class}
+                      />
+                    <% :datetime -> %>
+                      <input
+                        type="datetime-local"
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        value={nested_form[sf.name].value}
+                        disabled={sf.readonly}
+                        class={input_class}
+                      />
+                    <% :hidden -> %>
+                      <input
+                        type="hidden"
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        value={nested_form[sf.name].value}
+                      />
+                    <% :select -> %>
+                      <select
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        disabled={sf.readonly}
+                        class={input_class}
+                      >
+                        <option value="">{sf.placeholder}</option>
+                        <%= for opt <- sf.options || [] do %>
+                          <% {opt_label, opt_val} = if is_tuple(opt), do: opt, else: {opt, opt} %>
+                          <option
+                            value={opt_val}
+                            selected={to_string(opt_val) == to_string(nested_form[sf.name].value)}
+                          >
+                            {opt_label}
+                          </option>
+                        <% end %>
+                      </select>
+                    <% _ -> %>
+                      <input
+                        type="text"
+                        name={nested_form[sf.name].name}
+                        id={nested_form[sf.name].id}
+                        value={nested_form[sf.name].value}
+                        placeholder={sf.placeholder}
+                        disabled={sf.readonly}
+                        class={input_class}
+                      />
                   <% end %>
-                </label>
-                <%= case sub_type do %>
-                  <% :textarea -> %>
-                    <textarea
-                      name={nested_form[sub_name].name}
-                      id={nested_form[sub_name].id}
-                      placeholder={sub_placeholder}
-                      rows="3"
-                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    >{nested_form[sub_name].value}</textarea>
-                  <% :checkbox -> %>
-                    <input type="hidden" name={nested_form[sub_name].name} value="false" />
-                    <input
-                      type="checkbox"
-                      name={nested_form[sub_name].name}
-                      id={nested_form[sub_name].id}
-                      value="true"
-                      checked={nested_form[sub_name].value in [true, "true"]}
-                      class="rounded border-gray-300"
-                    />
-                  <% :number -> %>
-                    <input
-                      type="number"
-                      name={nested_form[sub_name].name}
-                      id={nested_form[sub_name].id}
-                      value={nested_form[sub_name].value}
-                      placeholder={sub_placeholder}
-                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  <% _ -> %>
-                    <input
-                      type="text"
-                      name={nested_form[sub_name].name}
-                      id={nested_form[sub_name].id}
-                      value={nested_form[sub_name].value}
-                      placeholder={sub_placeholder}
-                      class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                <% end %>
-              </div>
+                </div>
+              <% end %>
             <% end %>
           </div>
         </div>
@@ -789,24 +847,72 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp extract_sub_field_info(sub_field) when is_atom(sub_field) do
     label = Phoenix.Naming.humanize(sub_field)
-    {sub_field, label, :text, false, label}
+
+    %{
+      name: sub_field,
+      label: label,
+      type: :text,
+      required: false,
+      placeholder: label,
+      options: nil,
+      rows: nil,
+      class: nil,
+      span: nil,
+      visible: true,
+      readonly: false
+    }
   end
 
-  defp extract_sub_field_info(%{name: name} = sub_field) do
-    label = Map.get(sub_field, :label) || Phoenix.Naming.humanize(name)
-    type = Map.get(sub_field, :type, :text)
-    required = Map.get(sub_field, :required, false)
-    placeholder = Map.get(sub_field, :placeholder) || label
-    {name, label, type, required, placeholder}
+  defp extract_sub_field_info(%{name: name} = sf) do
+    label = resolve_callable(Map.get(sf, :label)) || Phoenix.Naming.humanize(name)
+    type = Map.get(sf, :type, :text)
+
+    %{
+      name: name,
+      label: label,
+      type: type,
+      required: Map.get(sf, :required, false),
+      placeholder: resolve_callable(Map.get(sf, :placeholder)) || label,
+      options: Map.get(sf, :options),
+      rows: Map.get(sf, :rows),
+      class: Map.get(sf, :class),
+      span: Map.get(sf, :span) || auto_span(type),
+      visible: Map.get(sf, :visible, true),
+      readonly: Map.get(sf, :readonly, false)
+    }
   end
 
-  defp extract_sub_field_info(sub_field) when is_map(sub_field) do
-    name = Map.get(sub_field, :field, Map.get(sub_field, :name))
-    label = Map.get(sub_field, :label) || Phoenix.Naming.humanize(name)
-    type = Map.get(sub_field, :type, :text)
-    required = Map.get(sub_field, :required, false)
-    placeholder = Map.get(sub_field, :placeholder) || label
-    {name, label, type, required, placeholder}
+  defp extract_sub_field_info(sf) when is_map(sf) do
+    name = Map.get(sf, :field, Map.get(sf, :name))
+    label = resolve_callable(Map.get(sf, :label)) || Phoenix.Naming.humanize(name)
+    type = Map.get(sf, :type, :text)
+
+    %{
+      name: name,
+      label: label,
+      type: type,
+      required: Map.get(sf, :required, false),
+      placeholder: resolve_callable(Map.get(sf, :placeholder)) || label,
+      options: Map.get(sf, :options),
+      rows: Map.get(sf, :rows),
+      class: Map.get(sf, :class),
+      span: Map.get(sf, :span) || auto_span(type),
+      visible: Map.get(sf, :visible, true),
+      readonly: Map.get(sf, :readonly, false)
+    }
+  end
+
+  defp auto_span(:textarea), do: 2
+  defp auto_span(:json), do: 2
+  defp auto_span(_), do: nil
+
+  defp resolve_callable(f) when is_function(f, 0), do: f.()
+  defp resolve_callable(v), do: v
+
+  defp resolve_nested_label(field, key, default) do
+    ui_val = get_in_map(field, [:ui, key])
+    field_val = Map.get(field, key)
+    resolve_label(ui_val) || resolve_label(field_val) || default
   end
 
   defp render_upload_by_style(assigns) do

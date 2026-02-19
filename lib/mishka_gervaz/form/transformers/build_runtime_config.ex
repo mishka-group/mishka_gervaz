@@ -280,7 +280,10 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       ui.span,
       ui.rows,
       ui.step,
-      ui.autocomplete
+      ui.autocomplete,
+      ui.add_label,
+      ui.remove_label,
+      ui.disabled_prompt
     ]) or ui.extra != %{}
   end
 
@@ -299,6 +302,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       rows: ui.rows,
       step: ui.step,
       autocomplete: ui.autocomplete,
+      add_label: ui.add_label,
+      remove_label: ui.remove_label,
+      disabled_prompt: ui.disabled_prompt,
       extra: ui.extra
     }
   end

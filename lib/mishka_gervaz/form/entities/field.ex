@@ -87,6 +87,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     max: nil,
     min_chars: nil,
     nested_fields: [],
+    _nested_field_entities: [],
     array_fields: [],
     add_label: nil,
     remove_label: nil,
@@ -286,6 +287,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
       |> maybe_set_virtual()
       |> extract_ui()
       |> extract_preload()
+      |> extract_nested_field_entities()
+      |> promote_ui_labels()
       |> maybe_set_source()
       |> resolve_type_module()
 
@@ -304,6 +307,25 @@ defmodule MishkaGervaz.Form.Entities.Field do
   defp extract_preload(%{preload: [preload | _]} = field), do: %{field | preload: preload}
   defp extract_preload(%{preload: preload} = field) when is_struct(preload), do: field
   defp extract_preload(field), do: field
+
+  defp extract_nested_field_entities(%{_nested_field_entities: entities} = field)
+       when is_list(entities) and entities != [] do
+    %{field | nested_fields: entities, _nested_field_entities: []}
+  end
+
+  defp extract_nested_field_entities(field), do: field
+
+  defp promote_ui_labels(%{ui: %{add_label: _, remove_label: _} = ui} = field) do
+    field
+    |> maybe_promote(:add_label, ui.add_label)
+    |> maybe_promote(:remove_label, ui.remove_label)
+  end
+
+  defp promote_ui_labels(field), do: field
+
+  defp maybe_promote(field, key, ui_val) do
+    if ui_val && !Map.get(field, key), do: Map.put(field, key, ui_val), else: field
+  end
 
   defp maybe_set_source(%{source: nil, name: name} = field), do: %{field | source: name}
   defp maybe_set_source(field), do: field
@@ -336,6 +358,9 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
           rows: integer() | nil,
           step: number() | nil,
           autocomplete: String.t() | nil,
+          add_label: String.t() | (-> String.t()) | nil,
+          remove_label: String.t() | (-> String.t()) | nil,
+          disabled_prompt: String.t() | (-> String.t()) | nil,
           extra: map(),
           __spark_metadata__: map() | nil
         }
@@ -351,6 +376,9 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
             rows: nil,
             step: nil,
             autocomplete: nil,
+            add_label: nil,
+            remove_label: nil,
+            disabled_prompt: nil,
             extra: %{},
             __spark_metadata__: nil
 
@@ -398,6 +426,20 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
     autocomplete: [
       type: :string,
       doc: "HTML autocomplete attribute value."
+    ],
+    add_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "Label for add button in array/nested/string_list fields. String or `fn -> gettext(...) end`."
+    ],
+    remove_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "Label for remove button in array/nested/string_list fields. String or `fn -> gettext(...) end`."
+    ],
+    disabled_prompt: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Prompt text shown when field is disabled."
     ],
     extra: [
       type: :map,

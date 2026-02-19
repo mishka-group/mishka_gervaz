@@ -23,7 +23,7 @@ end
 
 defmodule MishkaGervaz.Test.Resources.NestedForm do
   @moduledoc """
-  Test resource for nested/embedded form fields.
+  Test resource for nested/embedded form fields — auto-infer + map-based nested_fields.
   """
   use Ash.Resource,
     domain: MishkaGervaz.Test.Domain,
@@ -63,19 +63,26 @@ defmodule MishkaGervaz.Test.Resources.NestedForm do
           required true
         end
 
-        field :items do
-          add_label "+ Add Item"
-          remove_label "Remove"
+        # Auto-infer all sub-fields from TestEmbed, add_label in ui do
+        field :items, :nested do
+          ui do
+            label "Items"
+            add_label "+ Add Item"
+            remove_label "Remove"
+          end
         end
 
+        # Auto-infer from SingleEmbed (single, not array)
         field :address do
         end
 
+        # Explicit map-based nested_fields (backward compat)
         field :tags, :nested do
           nested_fields [
             %{name: :name, type: :text, label: "Tag Name"},
             %{name: :value, type: :textarea, label: "Tag Value"}
           ]
+
           add_label "+ Add Tag"
         end
       end
@@ -126,6 +133,180 @@ defmodule MishkaGervaz.Test.Resources.NestedForm do
     end
 
     attribute :tags, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.NestedDslForm do
+  @moduledoc """
+  Test resource for nested_field DSL entity — explicit overrides with ui do blocks.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :nested_dsl_form_table
+        route "/admin/nested-dsl"
+      end
+
+      columns do
+        column :title
+      end
+    end
+
+    form do
+      identity do
+        name :nested_dsl_form
+        route "/admin/nested-dsl"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :title, :text, required: true
+
+        # nested_field DSL entities with overrides
+        field :items, :nested do
+          ui do
+            label "Custom Items"
+            add_label "+ Add Custom Item"
+            remove_label "Remove Item"
+          end
+
+          # Override :name — custom label and placeholder
+          nested_field :name do
+            ui do
+              label "Item Name"
+              placeholder "e.g. Widget"
+            end
+          end
+
+          # Override :count — type auto-detected as :number
+          nested_field :count do
+            required true
+
+            ui do
+              label "Quantity"
+              placeholder "0"
+            end
+          end
+
+          # Override :active — hidden from form
+          nested_field :active do
+            visible false
+          end
+
+          # :value not listed — auto-inferred from embed
+        end
+
+        # Single embed with nested_field overrides
+        field :address, :nested do
+          ui do
+            label "Address"
+          end
+
+          nested_field :street do
+            ui do
+              label "Street Address"
+              placeholder "123 Main St"
+              span 2
+            end
+          end
+
+          nested_field :zip do
+            ui do
+              placeholder "e.g. 90210"
+            end
+          end
+
+          # :city not listed — auto-inferred
+        end
+
+        # nested_field with type override (text -> textarea)
+        field :notes, :nested do
+          ui do
+            label "Notes"
+            add_label "+ Add Note"
+          end
+
+          nested_field :name, :text do
+            required true
+
+            ui do
+              label "Note Title"
+              placeholder "Title..."
+            end
+          end
+
+          nested_field :value, :textarea do
+            ui do
+              label "Note Content"
+              placeholder "Write your note..."
+              rows 6
+              class "font-mono text-sm"
+            end
+          end
+        end
+      end
+
+      groups do
+        group :main do
+          fields [:title, :items, :address, :notes]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        create_label "Create"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    read :master_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :tenant_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :title, :string, allow_nil?: false, public?: true
+
+    attribute :items, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    attribute :address, MishkaGervaz.Test.Resources.SingleEmbed, public?: true
+
+    attribute :notes, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
       default []
       public? true
     end
