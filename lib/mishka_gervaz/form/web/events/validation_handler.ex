@@ -43,23 +43,30 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
             socket
 
           form ->
-            form_params =
-              form.source
-              |> AshPhoenix.Form.params()
-              |> Map.merge(incoming)
-              |> merge_relation_field_values(state)
-              |> then(
-                &MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(state.static.fields, &1)
-              )
+            if not state.dirty? and not form.source.submitted_once? do
+              socket
+            else
+              form_params =
+                form.source
+                |> AshPhoenix.Form.params()
+                |> Map.merge(incoming)
+                |> merge_relation_field_values(state)
+                |> then(
+                  &MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(
+                    state.static.fields,
+                    &1
+                  )
+                )
 
-            validated =
-              form.source
-              |> AshPhoenix.Form.validate(form_params)
-              |> Phoenix.Component.to_form()
+              validated =
+                form.source
+                |> AshPhoenix.Form.validate(form_params)
+                |> Phoenix.Component.to_form()
 
-            errors = build_errors(validated)
-            state = State.update(state, form: validated, errors: errors, dirty?: true)
-            Phoenix.Component.assign(socket, :form_state, state)
+              errors = build_errors(validated)
+              state = State.update(state, form: validated, errors: errors, dirty?: true)
+              Phoenix.Component.assign(socket, :form_state, state)
+            end
         end
       end
 
