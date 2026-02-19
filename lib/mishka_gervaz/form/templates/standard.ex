@@ -729,7 +729,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             <%= for sub_field <- @nested_fields do %>
               <% sf = extract_sub_field_info(sub_field) %>
               <%= if sf.visible do %>
-                <% base_class = "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                <% base_class =
+                  "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
                 <% input_class = if(sf.class, do: "#{base_class} #{sf.class}", else: base_class) %>
                 <div class={nested_span_class(sf.span)}>
                   <label class="block text-xs font-medium text-gray-500 mb-1">
