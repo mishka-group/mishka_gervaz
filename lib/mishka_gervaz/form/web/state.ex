@@ -472,6 +472,8 @@ defmodule MishkaGervaz.Form.Web.State do
                   {label, value}
                 end)
 
+              options = prepend_nil_option(options, field.include_nil)
+
               Map.put(acc, field.name, %{
                 options: options,
                 has_more?: false,
@@ -484,6 +486,14 @@ defmodule MishkaGervaz.Form.Web.State do
               acc
           end
         end)
+      end
+
+      defp prepend_nil_option(options, nil), do: options
+      defp prepend_nil_option(options, false), do: options
+      defp prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
+
+      defp prepend_nil_option(options, label) when is_binary(label) do
+        [{label, "__nil__"} | options]
       end
 
       @spec update(State.t(), keyword() | map()) :: State.t()

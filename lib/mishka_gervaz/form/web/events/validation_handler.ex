@@ -43,30 +43,32 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
             socket
 
           form ->
-            if not state.dirty? and not form.source.submitted_once? do
-              socket
-            else
-              form_params =
-                form.source
-                |> AshPhoenix.Form.params()
-                |> Map.merge(incoming)
-                |> merge_relation_field_values(state)
-                |> then(
-                  &MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(
-                    state.static.fields,
-                    &1
-                  )
+            form_params =
+              form.source
+              |> AshPhoenix.Form.params()
+              |> Map.merge(incoming)
+              |> merge_relation_field_values(state)
+              |> then(
+                &MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(
+                  state.static.fields,
+                  &1
                 )
+              )
 
-              validated =
-                form.source
-                |> AshPhoenix.Form.validate(form_params)
-                |> Phoenix.Component.to_form()
+            validated =
+              form.source
+              |> AshPhoenix.Form.validate(form_params)
+              |> Phoenix.Component.to_form()
 
-              errors = build_errors(validated)
-              state = State.update(state, form: validated, errors: errors, dirty?: true)
-              Phoenix.Component.assign(socket, :form_state, state)
-            end
+            show_errors? = form.source.submitted_once? or form.source.type != :create
+
+            errors =
+              if show_errors?,
+                do: build_errors(validated),
+                else: %{}
+
+            state = State.update(state, form: validated, errors: errors, dirty?: true)
+            Phoenix.Component.assign(socket, :form_state, state)
         end
       end
 

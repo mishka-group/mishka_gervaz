@@ -269,7 +269,13 @@ defmodule MishkaGervaz.Form.Web.Events do
                 |> AshPhoenix.Form.validate(new_params)
                 |> Phoenix.Component.to_form()
 
-              errors = validation_handler().build_errors(validated)
+              show_errors? = form.source.submitted_once? or form.source.type != :create
+
+              errors =
+                if show_errors?,
+                  do: validation_handler().build_errors(validated),
+                  else: %{}
+
               state = State.update(state, form: validated, errors: errors, dirty?: true)
               {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
           end
@@ -307,7 +313,13 @@ defmodule MishkaGervaz.Form.Web.Events do
                 |> AshPhoenix.Form.validate(new_params)
                 |> Phoenix.Component.to_form()
 
-              errors = validation_handler().build_errors(validated)
+              show_errors? = form.source.submitted_once? or form.source.type != :create
+
+              errors =
+                if show_errors?,
+                  do: validation_handler().build_errors(validated),
+                  else: %{}
+
               state = State.update(state, form: validated, errors: errors, dirty?: true)
               {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
           end
@@ -503,7 +515,13 @@ defmodule MishkaGervaz.Form.Web.Events do
               |> AshPhoenix.Form.add_form(path)
               |> Phoenix.Component.to_form()
 
-            errors = validation_handler().build_errors(updated)
+            show_errors? = form.source.submitted_once? or form.source.type != :create
+
+            errors =
+              if show_errors?,
+                do: validation_handler().build_errors(updated),
+                else: %{}
+
             state = State.update(state, form: updated, errors: errors, dirty?: true)
             {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
         end
@@ -520,7 +538,13 @@ defmodule MishkaGervaz.Form.Web.Events do
               |> AshPhoenix.Form.remove_form(path)
               |> Phoenix.Component.to_form()
 
-            errors = validation_handler().build_errors(updated)
+            show_errors? = form.source.submitted_once? or form.source.type != :create
+
+            errors =
+              if show_errors?,
+                do: validation_handler().build_errors(updated),
+                else: %{}
+
             state = State.update(state, form: updated, errors: errors, dirty?: true)
             {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
         end

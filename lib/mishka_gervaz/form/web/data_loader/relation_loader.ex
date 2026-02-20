@@ -185,7 +185,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case Ash.read(query, opts) do
           {:ok, records} ->
-            options = build_options(records, display_field)
+            options = build_options(records, display_field, field[:include_nil])
             {:ok, options, false}
 
           {:error, reason} ->
@@ -213,17 +213,19 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
         opts = [action: action, actor: actor, authorize?: false, page: page_opts]
         opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
 
+        include_nil = if page == 1, do: field[:include_nil], else: false
+
         case Ash.read(query, opts) do
           {:ok, %{results: records}} ->
             has_more? = length(records) > page_size
             actual = if has_more?, do: Enum.take(records, page_size), else: records
-            options = build_options(actual, display_field)
+            options = build_options(actual, display_field, include_nil)
             {:ok, options, has_more?}
 
           {:ok, records} when is_list(records) ->
             has_more? = length(records) > page_size
             actual = if has_more?, do: Enum.take(records, page_size), else: records
-            options = build_options(actual, display_field)
+            options = build_options(actual, display_field, include_nil)
             {:ok, options, has_more?}
 
           {:error, reason} ->
@@ -233,10 +235,21 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
       # --- Helpers ---
 
-      defp build_options(records, display_field) do
-        Enum.map(records, fn record ->
-          {get_display_value(record, display_field), to_string(record.id)}
-        end)
+      defp build_options(records, display_field, include_nil \\ false) do
+        base =
+          Enum.map(records, fn record ->
+            {get_display_value(record, display_field), to_string(record.id)}
+          end)
+
+        prepend_nil_option(base, include_nil)
+      end
+
+      defp prepend_nil_option(options, nil), do: options
+      defp prepend_nil_option(options, false), do: options
+      defp prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
+
+      defp prepend_nil_option(options, label) when is_binary(label) do
+        [{label, "__nil__"} | options]
       end
 
       defp get_display_value(record, display_field) when is_atom(display_field) do

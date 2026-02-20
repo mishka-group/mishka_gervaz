@@ -417,23 +417,31 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
             state
 
           form ->
+            param_value = if value == "__nil__", do: nil, else: value
+
             form_params =
               form.source
               |> AshPhoenix.Form.params()
-              |> Map.put(to_string(field_atom), value)
+              |> Map.put(to_string(field_atom), param_value)
 
             validated =
               form.source
               |> AshPhoenix.Form.validate(form_params)
               |> Phoenix.Component.to_form()
 
+            show_errors? = form.source.submitted_once? or form.source.type != :create
+
             errors =
-              validated.errors
-              |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
-                Enum.reduce(opts, msg, fn {key, val}, acc ->
-                  String.replace(acc, "%{#{key}}", to_string(val))
+              if show_errors? do
+                validated.errors
+                |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
+                  Enum.reduce(opts, msg, fn {key, val}, acc ->
+                    String.replace(acc, "%{#{key}}", to_string(val))
+                  end)
                 end)
-              end)
+              else
+                %{}
+              end
 
             State.update(state, form: validated, errors: errors)
         end
