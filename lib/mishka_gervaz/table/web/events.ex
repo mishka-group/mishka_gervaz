@@ -705,6 +705,7 @@ defmodule MishkaGervaz.Table.Web.Events do
       end
 
       defp do_handle("close_expanded", _params, state, socket) do
+        old_expanded_id = state.expanded_id
         state = State.update(state, expanded_id: nil, expanded_data: nil)
 
         socket =
@@ -713,6 +714,14 @@ defmodule MishkaGervaz.Table.Web.Events do
             id: "#{state.static.id}-expanded-tbody"
           })
           |> Phoenix.Component.assign(:table_state, state)
+
+        socket =
+          if old_expanded_id do
+            get_record(state, old_expanded_id, state.archive_status)
+            |> then(&safe_stream_reinsert(socket, state, &1))
+          else
+            socket
+          end
 
         {:noreply, socket}
       end

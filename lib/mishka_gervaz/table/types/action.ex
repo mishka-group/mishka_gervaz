@@ -44,7 +44,8 @@ defmodule MishkaGervaz.Table.Types.Action do
       update: Action.Update,
       unarchive: Action.Unarchive,
       permanent_destroy: Action.PermanentDestroy,
-      row_click: Action.RowClick
+      row_click: Action.RowClick,
+      accordion: Action.Accordion
     },
     default: Action.Event
 
