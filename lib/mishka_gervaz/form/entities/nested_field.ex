@@ -16,7 +16,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     :select,
     :hidden,
     :toggle,
-    :range
+    :range,
+    :json
   ]
 
   @type t :: %__MODULE__{

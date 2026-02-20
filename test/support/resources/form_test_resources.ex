@@ -1280,3 +1280,125 @@ defmodule MishkaGervaz.Test.Resources.UploadFieldForm do
     create_timestamp :inserted_at
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
+  @moduledoc false
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :constrained_map_form_table
+        route "/admin/constrained-map"
+      end
+
+      columns do
+        column :title
+      end
+    end
+
+    form do
+      identity do
+        name :constrained_map_form
+        route "/admin/constrained-map"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :title, :text, required: true
+
+        field :slots, :nested do
+          ui do
+            label "Slots"
+            add_label "+ Add Slot"
+            remove_label "Remove"
+          end
+
+          nested_field :name do
+            required true
+
+            ui do
+              label "Name"
+              placeholder "Slot name"
+            end
+          end
+
+          nested_field :opts, :json do
+            ui do
+              label "Options"
+              placeholder ~s({"key": "value"})
+            end
+          end
+        end
+      end
+
+      groups do
+        group :main do
+          fields [:title, :slots]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        create_label "Create"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    read :master_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :tenant_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :title, :string do
+      allow_nil? false
+      public? true
+    end
+
+    attribute :slots, {:array, :map} do
+      default []
+      public? true
+
+      constraints items: [
+                    fields: [
+                      name: [
+                        type: :string,
+                        allow_nil?: false
+                      ],
+                      opts: [
+                        type: :map,
+                        allow_nil?: true
+                      ]
+                    ]
+                  ]
+    end
+
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end

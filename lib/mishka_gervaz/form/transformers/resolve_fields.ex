@@ -115,8 +115,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       ui =
         if final_type == :nested and nested_fields != [] do
           nested_mode = detect_nested_mode(ash_attr)
+          nested_source = detect_nested_source(ash_attr)
           base_ui = normalize_ui(override && override.ui)
-          %{base_ui | extra: Map.put(base_ui.extra || %{}, :nested_mode, nested_mode)}
+
+          extra =
+            (base_ui.extra || %{})
+            |> Map.put(:nested_mode, nested_mode)
+            |> Map.put(:nested_source, nested_source)
+
+          %{base_ui | extra: extra}
         else
           override && override.ui
         end
@@ -173,7 +180,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         :datetime
 
       type == Ash.Type.Map ->
-        :json
+        if has_constrained_fields?(constraints), do: :nested, else: :json
 
       type == Ash.Type.UUID or type == Ash.Type.UUIDv7 ->
         :hidden
@@ -183,6 +190,9 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
       type == Ash.Type.String ->
         infer_string_type(constraints, ui_defaults)
+
+      is_array_of_constrained_maps?(type, constraints) ->
+        :nested
 
       match?({:array, _}, type) ->
         infer_array_type(type)
@@ -227,6 +237,22 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   defp infer_array_type(_), do: :json
 
+  defp is_array_of_constrained_maps?({:array, type}, constraints)
+       when type in [Ash.Type.Map, :map] do
+    has_constrained_fields?(constraints)
+  end
+
+  defp is_array_of_constrained_maps?(_, _), do: false
+
+  defp has_constrained_fields?(constraints) when is_list(constraints) do
+    case Keyword.get(constraints, :items) do
+      items when is_list(items) -> Keyword.has_key?(items, :fields)
+      _ -> false
+    end
+  end
+
+  defp has_constrained_fields?(_), do: false
+
   @spec remove_all_field_entities(Spark.Dsl.t(), [struct()]) :: Spark.Dsl.t()
   defp remove_all_field_entities(dsl_state, entities) do
     Enum.reduce(entities, dsl_state, fn entity, acc ->
@@ -270,8 +296,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
             ui =
               if detected == :nested and nested_fields != [] do
                 nested_mode = detect_nested_mode(ash_attr)
+                nested_source = detect_nested_source(ash_attr)
                 base_ui = normalize_ui(field.ui)
-                %{base_ui | extra: Map.put(base_ui.extra || %{}, :nested_mode, nested_mode)}
+
+                extra =
+                  (base_ui.extra || %{})
+                  |> Map.put(:nested_mode, nested_mode)
+                  |> Map.put(:nested_source, nested_source)
+
+                %{base_ui | extra: extra}
               else
                 field.ui
               end
@@ -290,8 +323,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
             if nested_fields != [] do
               nested_mode = detect_nested_mode(ash_attr)
+              nested_source = detect_nested_source(ash_attr)
               ui = normalize_ui(field.ui)
-              ui = %{ui | extra: Map.put(ui.extra || %{}, :nested_mode, nested_mode)}
+
+              extra =
+                (ui.extra || %{})
+                |> Map.put(:nested_mode, nested_mode)
+                |> Map.put(:nested_source, nested_source)
+
+              ui = %{ui | extra: extra}
               {%{field | nested_fields: nested_fields, ui: ui}, true}
             else
               {field, changed?}
@@ -334,6 +374,15 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   defp maybe_infer_nested_fields(_, existing, _), do: existing
 
+  defp infer_from_embedded_type(%{type: {:array, type}, constraints: constraints})
+       when type in [Ash.Type.Map, :map] do
+    infer_nested_fields_from_constrained_map(constraints)
+  end
+
+  defp infer_from_embedded_type(%{type: Ash.Type.Map, constraints: constraints}) do
+    infer_nested_fields_from_constrained_map(constraints)
+  end
+
   defp infer_from_embedded_type(%{type: {:array, type}}) when is_atom(type) do
     infer_nested_fields_from_embedded(type)
   end
@@ -369,19 +418,45 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     _ -> []
   end
 
-  defp merge_nested_fields(explicit, inferred) do
-    explicit_names = MapSet.new(explicit, & &1.name)
+  defp infer_nested_fields_from_constrained_map(constraints) when is_list(constraints) do
+    with items when is_list(items) <- Keyword.get(constraints, :items),
+         fields when is_list(fields) <- Keyword.get(items, :fields) do
+      Enum.map(fields, fn {field_name, field_config} ->
+        field_type = Keyword.get(field_config, :type, :string)
+        sub_type = constraint_type_to_field_type(field_type)
+        label = humanize_name(field_name)
 
-    resolved =
-      Enum.map(explicit, fn nf ->
-        base = Enum.find(inferred, &(&1.name == nf.name))
-        resolve_nested_field(nf, base)
+        %{
+          name: field_name,
+          type: sub_type,
+          ash_type: field_type,
+          label: label,
+          placeholder: label,
+          required: !Keyword.get(field_config, :allow_nil?, true)
+        }
       end)
+    else
+      _ -> []
+    end
+  end
 
-    remaining =
-      Enum.reject(inferred, &(&1.name in explicit_names))
+  defp infer_nested_fields_from_constrained_map(_), do: []
 
-    resolved ++ remaining
+  defp constraint_type_to_field_type(:string), do: :text
+  defp constraint_type_to_field_type(:integer), do: :number
+  defp constraint_type_to_field_type(:float), do: :number
+  defp constraint_type_to_field_type(:decimal), do: :number
+  defp constraint_type_to_field_type(:boolean), do: :checkbox
+  defp constraint_type_to_field_type(:date), do: :date
+  defp constraint_type_to_field_type(:map), do: :json
+  defp constraint_type_to_field_type({:array, _}), do: :json
+  defp constraint_type_to_field_type(_), do: :text
+
+  defp merge_nested_fields(explicit, inferred) do
+    Enum.map(explicit, fn nf ->
+      base = Enum.find(inferred, &(&1.name == nf.name))
+      resolve_nested_field(nf, base)
+    end)
   end
 
   defp resolve_nested_field(%NestedField{} = nf, base) do
@@ -389,10 +464,12 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     base_type = if base, do: base.type, else: :text
     base_label = if base, do: base.label, else: humanize_name(nf.name)
     base_required = if base, do: base.required, else: false
+    base_ash_type = if base, do: Map.get(base, :ash_type), else: nil
 
     %{
       name: nf.name,
       type: nf.type || base_type,
+      ash_type: base_ash_type,
       label: (ui && resolve_label_value(ui.label)) || base_label,
       placeholder: (ui && ui.placeholder) || (ui && resolve_label_value(ui.label)) || base_label,
       required: if(is_nil(nf.required), do: base_required, else: nf.required),
@@ -418,6 +495,14 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   defp detect_nested_mode(%{type: {:array, _}}), do: :array
   defp detect_nested_mode(_), do: :single
+
+  defp detect_nested_source(%{type: {:array, type}}) when type in [Ash.Type.Map, :map],
+    do: :constrained_map
+
+  defp detect_nested_source(%{type: type}) when type in [Ash.Type.Map, :map],
+    do: :constrained_map
+
+  defp detect_nested_source(_), do: :embedded
 
   defp normalize_ui(%Field.Ui{} = ui), do: ui
   defp normalize_ui(nil), do: %Field.Ui{}

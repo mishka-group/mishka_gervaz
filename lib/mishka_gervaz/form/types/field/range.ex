@@ -11,6 +11,15 @@ defmodule MishkaGervaz.Form.Types.Field.Range do
   end
 
   @impl true
+  def validate(value, _config) when is_number(value), do: {:ok, value}
+
+  def validate(value, _config) when is_binary(value) and value != "" do
+    case Float.parse(value) do
+      {_, _} -> {:ok, value}
+      :error -> {:error, "must be a number"}
+    end
+  end
+
   def validate(value, _config), do: {:ok, value}
 
   @impl true

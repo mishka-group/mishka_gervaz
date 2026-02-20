@@ -271,12 +271,10 @@ defmodule MishkaGervaz.Form.Types.Field.NestedTest do
       assert sub.visible == false
     end
 
-    test "auto-inferred :value sub-field is present (not overridden)" do
+    test "auto-inferred :value sub-field is excluded when explicit nested_fields exist" do
       field = FormInfo.field(NestedDslForm, :items)
       sub = Enum.find(field.nested_fields, &(&1.name == :value))
-      assert sub != nil
-      assert sub.type == :text
-      assert sub.label == "Value"
+      assert sub == nil
     end
 
     test "items field has nested_mode :array" do
@@ -299,10 +297,10 @@ defmodule MishkaGervaz.Form.Types.Field.NestedTest do
   # NestedDslForm: nested_field entity overrides on single embed (address)
   # ---------------------------------------------------------------------------
   describe "NestedDslForm: nested_field entity overrides (address)" do
-    test "address is :nested with sub-fields" do
+    test "address is :nested with only explicit sub-fields" do
       field = FormInfo.field(NestedDslForm, :address)
       assert field.type == :nested
-      assert length(field.nested_fields) == 3
+      assert length(field.nested_fields) == 2
     end
 
     test "street has custom label, placeholder, and span" do
@@ -319,13 +317,10 @@ defmodule MishkaGervaz.Form.Types.Field.NestedTest do
       assert sub.placeholder == "e.g. 90210"
     end
 
-    test "city is auto-inferred (not overridden)" do
+    test "city is excluded when explicit nested_fields exist" do
       field = FormInfo.field(NestedDslForm, :address)
       sub = Enum.find(field.nested_fields, &(&1.name == :city))
-      assert sub != nil
-      assert sub.label == "City"
-      assert sub.type == :text
-      assert sub.required == true
+      assert sub == nil
     end
 
     test "address nested_mode is :single" do
@@ -362,23 +357,13 @@ defmodule MishkaGervaz.Form.Types.Field.NestedTest do
       assert sub.class == "font-mono text-sm"
     end
 
-    test "notes auto-inferred sub-fields (count, active) are included" do
+    test "notes only contains explicitly declared sub-fields" do
       field = FormInfo.field(NestedDslForm, :notes)
       names = Enum.map(field.nested_fields, & &1.name)
-      assert :count in names
-      assert :active in names
-    end
-
-    test "notes auto-inferred :count retains number type" do
-      field = FormInfo.field(NestedDslForm, :notes)
-      sub = Enum.find(field.nested_fields, &(&1.name == :count))
-      assert sub.type == :number
-    end
-
-    test "notes auto-inferred :active retains checkbox type" do
-      field = FormInfo.field(NestedDslForm, :notes)
-      sub = Enum.find(field.nested_fields, &(&1.name == :active))
-      assert sub.type == :checkbox
+      assert :name in names
+      assert :value in names
+      refute :count in names
+      refute :active in names
     end
 
     test "notes has add_label from ui do block" do
@@ -448,8 +433,8 @@ defmodule MishkaGervaz.Form.Types.Field.NestedTest do
 
     test "explicit nested_field without placeholder falls back to label" do
       field = FormInfo.field(NestedDslForm, :address)
-      city = Enum.find(field.nested_fields, &(&1.name == :city))
-      assert city.placeholder == city.label
+      zip = Enum.find(field.nested_fields, &(&1.name == :zip))
+      assert zip.placeholder == "e.g. 90210"
     end
 
     test "explicit nested_field with placeholder uses that" do

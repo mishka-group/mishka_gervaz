@@ -11,6 +11,13 @@ defmodule MishkaGervaz.Form.Types.Field.Date do
   end
 
   @impl true
+  def validate(value, _config) when is_binary(value) and value != "" do
+    case Date.from_iso8601(value) do
+      {:ok, _} -> {:ok, value}
+      {:error, _} -> {:error, "must be a valid date"}
+    end
+  end
+
   def validate(value, _config), do: {:ok, value}
 
   @impl true

@@ -286,13 +286,11 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
   end
 
   describe "add_nested event" do
-    test "sends add_nested_field message" do
+    test "returns noreply when form is nil" do
       state = build_state()
       socket = build_socket(state)
 
       {:noreply, _socket} = Events.handle("add_nested", %{"field" => "title"}, socket)
-
-      assert_received {:add_nested_field, :title}
     end
 
     test "handles non-existing atom gracefully" do
@@ -305,24 +303,24 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
   end
 
   describe "remove_nested event" do
-    test "sends remove_nested_field message with parsed index" do
+    test "returns noreply when form is nil" do
       state = build_state()
       socket = build_socket(state)
 
       {:noreply, _socket} =
         Events.handle("remove_nested", %{"field" => "title", "index" => "2"}, socket)
-
-      assert_received {:remove_nested_field, :title, 2}
     end
 
-    test "parses index as integer" do
+    test "handles non-existing atom gracefully" do
       state = build_state()
       socket = build_socket(state)
 
       {:noreply, _socket} =
-        Events.handle("remove_nested", %{"field" => "title", "index" => "0"}, socket)
-
-      assert_received {:remove_nested_field, :title, 0}
+        Events.handle(
+          "remove_nested",
+          %{"field" => "nonexistent_nested_xyz_99", "index" => "0"},
+          socket
+        )
     end
   end
 

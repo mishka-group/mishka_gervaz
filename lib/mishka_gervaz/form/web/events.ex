@@ -124,7 +124,11 @@ defmodule MishkaGervaz.Form.Web.Events do
       @spec do_handle(String.t(), map(), State.t(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
       defp do_handle("validate", params, state, socket) do
-        params = sanitize_params(params, state.static.fields) |> strip_empty_list_values()
+        params =
+          params
+          |> sanitize_params(state.static.fields)
+          |> strip_empty_list_values()
+          |> decode_constrained_map_params(state.static.fields)
 
         run_hook(state, :before_validate, [params, state])
 
@@ -135,7 +139,12 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("save", params, state, socket) do
-        params = sanitize_params(params, state.static.fields) |> strip_empty_list_values()
+        params =
+          params
+          |> sanitize_params(state.static.fields)
+          |> strip_empty_list_values()
+          |> decode_constrained_map_params(state.static.fields)
+          |> strip_empty_constrained_entries(state.static.fields)
 
         case run_hook(state, :before_save, [params, state]) do
           {:halt, _reason} ->
@@ -232,8 +241,38 @@ defmodule MishkaGervaz.Form.Web.Events do
 
       defp do_handle("add_nested", %{"field" => field_name}, state, socket) do
         if MishkaGervaz.Helpers.known_name?(field_name, state) do
-          send(self(), {:add_nested_field, String.to_existing_atom(field_name)})
-          {:noreply, socket}
+          case state.form do
+            nil ->
+              {:noreply, socket}
+
+            form ->
+              field_def = Enum.find(state.static.fields, &(to_string(&1.name) == field_name))
+              json_subs = if field_def, do: json_sub_field_names(field_def), else: MapSet.new()
+
+              current_params = AshPhoenix.Form.params(form.source)
+              current_entries = get_constrained_map_entries(current_params, field_name, form)
+              next_idx = to_string(length(current_entries))
+              new_entry = %{}
+
+              updated_map =
+                current_entries
+                |> Enum.with_index()
+                |> Map.new(fn {entry, i} ->
+                  {to_string(i), decode_constrained_entry(entry, json_subs)}
+                end)
+                |> Map.put(next_idx, new_entry)
+
+              new_params = Map.put(current_params, field_name, updated_map)
+
+              validated =
+                form.source
+                |> AshPhoenix.Form.validate(new_params)
+                |> Phoenix.Component.to_form()
+
+              errors = validation_handler().build_errors(validated)
+              state = State.update(state, form: validated, errors: errors, dirty?: true)
+              {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
+          end
         else
           {:noreply, socket}
         end
@@ -241,16 +280,117 @@ defmodule MishkaGervaz.Form.Web.Events do
 
       defp do_handle("remove_nested", %{"field" => field_name, "index" => index}, state, socket) do
         if MishkaGervaz.Helpers.known_name?(field_name, state) do
-          send(
-            self(),
-            {:remove_nested_field, String.to_existing_atom(field_name), String.to_integer(index)}
-          )
+          case state.form do
+            nil ->
+              {:noreply, socket}
 
-          {:noreply, socket}
+            form ->
+              field_def = Enum.find(state.static.fields, &(to_string(&1.name) == field_name))
+              json_subs = if field_def, do: json_sub_field_names(field_def), else: MapSet.new()
+
+              idx = String.to_integer(index)
+              current_params = AshPhoenix.Form.params(form.source)
+              current_entries = get_constrained_map_entries(current_params, field_name, form)
+              new_entries = List.delete_at(current_entries, idx)
+
+              reindexed =
+                new_entries
+                |> Enum.with_index()
+                |> Map.new(fn {entry, i} ->
+                  {to_string(i), decode_constrained_entry(entry, json_subs)}
+                end)
+
+              new_params = Map.put(current_params, field_name, reindexed)
+
+              validated =
+                form.source
+                |> AshPhoenix.Form.validate(new_params)
+                |> Phoenix.Component.to_form()
+
+              errors = validation_handler().build_errors(validated)
+              state = State.update(state, form: validated, errors: errors, dirty?: true)
+              {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
+          end
         else
           {:noreply, socket}
         end
       end
+
+      defp get_constrained_map_entries(params, field_name, form) do
+        key_exists? = Map.has_key?(params, field_name)
+
+        from_params =
+          case Map.get(params, field_name) do
+            map when is_map(map) and not is_struct(map) ->
+              map
+              |> Enum.sort_by(fn {k, _} ->
+                case Integer.parse(to_string(k)) do
+                  {n, _} -> n
+                  :error -> 0
+                end
+              end)
+              |> Enum.map(&elem(&1, 1))
+
+            list when is_list(list) ->
+              list
+
+            _ ->
+              []
+          end
+
+        if from_params != [] do
+          Enum.map(from_params, &decode_json_sub_fields/1)
+        else
+          if key_exists? do
+            []
+          else
+            field_atom =
+              try do
+                String.to_existing_atom(field_name)
+              rescue
+                _ -> nil
+              end
+
+            case field_atom && Map.get(form.data || %{}, field_atom) do
+              list when is_list(list) and list != [] ->
+                Enum.map(list, &stringify_map_keys/1)
+
+              _ ->
+                []
+            end
+          end
+        end
+      end
+
+      defp stringify_map_keys(map) when is_map(map) and not is_struct(map) do
+        Map.new(map, fn {k, v} -> {to_string(k), v} end)
+      end
+
+      defp stringify_map_keys(other), do: other
+
+      defp decode_json_sub_fields(entry) when is_map(entry) do
+        Map.new(entry, fn {k, v} ->
+          {k, maybe_decode_json(v)}
+        end)
+      end
+
+      defp decode_json_sub_fields(other), do: other
+
+      defp maybe_decode_json(v) when is_binary(v) do
+        trimmed = String.trim(v)
+
+        if (String.starts_with?(trimmed, "{") and String.ends_with?(trimmed, "}")) or
+             (String.starts_with?(trimmed, "[") and String.ends_with?(trimmed, "]")) do
+          case Jason.decode(trimmed) do
+            {:ok, decoded} -> decoded
+            _ -> v
+          end
+        else
+          v
+        end
+      end
+
+      defp maybe_decode_json(v), do: v
 
       defp do_handle("add_list_item", %{"field" => field_name}, state, socket) do
         if MishkaGervaz.Helpers.known_name?(field_name, state) do
@@ -470,6 +610,132 @@ defmodule MishkaGervaz.Form.Web.Events do
           state
         end
       end
+
+      defp decode_constrained_map_params(%{"form" => form_params} = params, fields)
+           when is_map(form_params) do
+        constrained_fields = get_constrained_fields(fields)
+
+        decoded =
+          Enum.reduce(constrained_fields, form_params, fn field, acc ->
+            field_name = to_string(field.name)
+            json_sub_fields = json_sub_field_names(field)
+
+            case Map.get(acc, field_name) do
+              entries when is_map(entries) and not is_struct(entries) ->
+                decoded_entries =
+                  Map.new(entries, fn {idx, entry} ->
+                    {idx, decode_constrained_entry(entry, json_sub_fields)}
+                  end)
+
+                Map.put(acc, field_name, decoded_entries)
+
+              _ ->
+                acc
+            end
+          end)
+
+        Map.put(params, "form", decoded)
+      end
+
+      defp decode_constrained_map_params(params, _fields), do: params
+
+      defp strip_empty_constrained_entries(%{"form" => form_params} = params, fields)
+           when is_map(form_params) do
+        constrained_fields = get_constrained_fields(fields)
+
+        cleaned =
+          Enum.reduce(constrained_fields, form_params, fn field, acc ->
+            field_name = to_string(field.name)
+
+            case Map.get(acc, field_name) do
+              entries when is_map(entries) and not is_struct(entries) ->
+                cleaned_entries =
+                  entries
+                  |> Enum.reject(fn {_idx, entry} -> empty_entry?(entry) end)
+                  |> Enum.with_index()
+                  |> Map.new(fn {{_old_idx, entry}, new_idx} ->
+                    {to_string(new_idx), entry}
+                  end)
+
+                Map.put(acc, field_name, cleaned_entries)
+
+              _ ->
+                acc
+            end
+          end)
+
+        Map.put(params, "form", cleaned)
+      end
+
+      defp strip_empty_constrained_entries(params, _fields), do: params
+
+      defp get_constrained_fields(fields) do
+        Enum.filter(fields, fn f ->
+          f.type == :nested and
+            get_in(f, [Access.key(:ui), Access.key(:extra, %{})])
+            |> Map.get(:nested_source) == :constrained_map
+        end)
+      end
+
+      defp json_sub_field_names(field) do
+        (Map.get(field, :nested_fields) || [])
+        |> Enum.filter(fn nf -> nf.type == :json end)
+        |> Enum.map(fn nf -> to_string(nf.name) end)
+        |> MapSet.new()
+      end
+
+      defp decode_constrained_entry(entry, json_sub_fields) when is_map(entry) do
+        Map.new(entry, fn {k, v} ->
+          if k in json_sub_fields do
+            {k, decode_json_value(v)}
+          else
+            {k, empty_string_to_nil(v)}
+          end
+        end)
+      end
+
+      defp decode_constrained_entry(entry, _), do: entry
+
+      defp empty_string_to_nil(""), do: nil
+
+      defp empty_string_to_nil(v) when is_binary(v) do
+        if String.trim(v) == "", do: nil, else: v
+      end
+
+      defp empty_string_to_nil(v), do: v
+
+      defp decode_json_value(""), do: nil
+
+      defp decode_json_value(v) when is_binary(v) do
+        trimmed = String.trim(v)
+
+        if (String.starts_with?(trimmed, "{") and String.ends_with?(trimmed, "}")) or
+             (String.starts_with?(trimmed, "[") and String.ends_with?(trimmed, "]")) do
+          case Jason.decode(trimmed) do
+            {:ok, decoded} -> decoded
+            _ -> v
+          end
+        else
+          v
+        end
+      end
+
+      defp decode_json_value(v), do: v
+
+      defp empty_entry?(entry) when is_map(entry) do
+        Enum.all?(entry, fn {_k, v} -> blank_value?(v) end)
+      end
+
+      defp empty_entry?(_), do: true
+
+      defp blank_value?(nil), do: true
+      defp blank_value?(""), do: true
+
+      defp blank_value?(v) when is_binary(v) do
+        String.trim(v) == ""
+      end
+
+      defp blank_value?(_), do: false
 
       defoverridable handle: 3
     end

@@ -11,6 +11,14 @@ defmodule MishkaGervaz.Form.Types.Field.DateTime do
   end
 
   @impl true
+  def validate(value, _config) when is_binary(value) and value != "" do
+    cond do
+      match?({:ok, _}, NaiveDateTime.from_iso8601(value)) -> {:ok, value}
+      match?({:ok, _, _}, DateTime.from_iso8601(value)) -> {:ok, value}
+      true -> {:error, "must be a valid date and time"}
+    end
+  end
+
   def validate(value, _config), do: {:ok, value}
 
   @impl true
