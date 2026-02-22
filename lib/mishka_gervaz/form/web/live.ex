@@ -164,7 +164,12 @@ defmodule MishkaGervaz.Form.Web.Live do
         ) :: Phoenix.LiveView.Socket.t()
   defp maybe_load_form(socket, state, nil) do
     if connected?(socket) do
-      DataLoader.new_record(socket, state)
+      if State.Helpers.mode_allowed?(state.static.source, :create, state) do
+        DataLoader.new_record(socket, state)
+      else
+        denied_state = State.update(state, loading: :denied)
+        Phoenix.Component.assign(socket, :form_state, denied_state)
+      end
     else
       socket
     end
@@ -172,7 +177,12 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   defp maybe_load_form(socket, state, record_id) do
     if connected?(socket) do
-      DataLoader.load_record(socket, state, record_id)
+      if State.Helpers.mode_allowed?(state.static.source, :update, state) do
+        DataLoader.load_record(socket, state, record_id)
+      else
+        denied_state = State.update(state, loading: :denied)
+        Phoenix.Component.assign(socket, :form_state, denied_state)
+      end
     else
       socket
     end

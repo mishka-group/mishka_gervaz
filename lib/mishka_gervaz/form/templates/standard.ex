@@ -42,30 +42,33 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div id={@static.id <> "-form-wrapper"} phx-mounted={@init_js}>
-      <%= if @state.loading == :loaded and @state.form do %>
-        <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
-          {render_step_indicator(assigns)}
-        <% end %>
-
-        <.form
-          for={@state.form}
-          id={@static.id <> "-form"}
-          phx-change="validate"
-          phx-submit="save"
-          phx-target={@myself}
-          multipart={has_uploads?(@static)}
-        >
-          <%= if @state.static.layout_mode == :standard do %>
-            {render_groups(assigns)}
-          <% else %>
-            {render_current_step_groups(assigns)}
+      <%= cond do %>
+        <% @state.loading == :denied -> %>
+          <%!-- access denied: form not available for this user/mode --%>
+        <% @state.loading == :loaded and @state.form -> %>
+          <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
+            {render_step_indicator(assigns)}
           <% end %>
 
-          {render_uploads_section(assigns)}
-          {render_submit(assigns)}
-        </.form>
-      <% else %>
-        {render_loading(assigns)}
+          <.form
+            for={@state.form}
+            id={@static.id <> "-form"}
+            phx-change="validate"
+            phx-submit="save"
+            phx-target={@myself}
+            multipart={has_uploads?(@static)}
+          >
+            <%= if @state.static.layout_mode == :standard do %>
+              {render_groups(assigns)}
+            <% else %>
+              {render_current_step_groups(assigns)}
+            <% end %>
+
+            {render_uploads_section(assigns)}
+            {render_submit(assigns)}
+          </.form>
+        <% true -> %>
+          {render_loading(assigns)}
       <% end %>
     </div>
     """
@@ -509,7 +512,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:id, form_field.id)
       |> assign(:value, Phoenix.HTML.Form.input_value(assigns.state.form, field.name))
       |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
-      |> assign(:disabled, Map.get(field, :disabled, false))
+      |> assign(:disabled, evaluate_readonly(field, assigns.state))
       |> assign(:module, ui)
 
     case type do
@@ -1266,6 +1269,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp resolve_callable(f) when is_function(f, 0), do: f.()
   defp resolve_callable(v), do: v
+
+  defp evaluate_readonly(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
+  defp evaluate_readonly(%{readonly: val}, _state) when is_boolean(val), do: val
+  defp evaluate_readonly(_, _state), do: false
 
   defp resolve_nested_label(field, key, default) do
     ui_val = get_in_map(field, [:ui, key])

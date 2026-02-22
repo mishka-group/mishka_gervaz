@@ -53,6 +53,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           end
 
         form_params = transform_params(state, form_params)
+        form_params = drop_protected_fields(state, form_params)
 
         {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
 
@@ -232,6 +233,31 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           end
         end)
       end
+
+      @spec drop_protected_fields(State.t(), map()) :: map()
+      defp drop_protected_fields(state, params) do
+        state.static.fields
+        |> Enum.reduce(params, fn field, acc ->
+          field_key = to_string(field.name)
+
+          cond do
+            field_restricted?(field, state) -> Map.delete(acc, field_key)
+            field_readonly?(field, state) -> Map.delete(acc, field_key)
+            true -> acc
+          end
+        end)
+      end
+
+      defp field_restricted?(%{restricted: true}, %{master_user?: false}), do: true
+
+      defp field_restricted?(%{restricted: f}, state) when is_function(f, 1),
+        do: not f.(state)
+
+      defp field_restricted?(_, _), do: false
+
+      defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
+      defp field_readonly?(%{readonly: true}, _), do: true
+      defp field_readonly?(_, _), do: false
 
       defoverridable submit: 3,
                      transform_params: 2,

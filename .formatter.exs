@@ -1,6 +1,7 @@
 spark_locals_without_parens = [
   accept: 1,
   access: 1,
+  access: 2,
   action: 1,
   action: 2,
   action_icon: 1,

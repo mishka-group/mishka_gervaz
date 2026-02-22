@@ -86,8 +86,28 @@ defmodule MishkaGervaz.Form.Dsl.Source do
     master_check: [
       type: {:fun, 1},
       doc: "Function returning true for master users. `fn user -> boolean`"
+    ],
+    restricted: [
+      type: {:or, [:boolean, {:fun, 1}]},
+      default: false,
+      doc:
+        "Restrict all form modes to master users. Boolean or `fn state -> boolean end`."
     ]
   ]
+
+  alias MishkaGervaz.Form.Entities.Access, as: AccessEntity
+
+  defp access_entity do
+    %Spark.Dsl.Entity{
+      name: :access,
+      describe: "Per-mode access control rule.",
+      target: AccessEntity,
+      args: [:mode],
+      identifier: :mode,
+      schema: AccessEntity.opt_schema(),
+      transform: {AccessEntity, :transform, []}
+    }
+  end
 
   @doc false
   def schema, do: @source_schema
@@ -103,6 +123,9 @@ defmodule MishkaGervaz.Form.Dsl.Source do
       sections: [
         actions_section(),
         preload_section()
+      ],
+      entities: [
+        access_entity()
       ]
     }
   end

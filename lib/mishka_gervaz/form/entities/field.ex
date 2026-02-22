@@ -29,7 +29,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
             | (struct(), map() -> String.t())
             | nil,
           search_field: atom() | nil,
-          readonly: boolean(),
+          readonly: boolean() | (map() -> boolean()),
           mode: :static | :load_more | :search | :search_multi,
           page_size: pos_integer(),
           load_action: atom() | nil,
@@ -198,9 +198,9 @@ defmodule MishkaGervaz.Form.Entities.Field do
       doc: "Field to search on for autocomplete."
     ],
     readonly: [
-      type: :boolean,
+      type: {:or, [:boolean, {:fun, 1}]},
       default: false,
-      doc: "Render as read-only."
+      doc: "Render as read-only. Boolean or `fn state -> boolean end`."
     ],
     mode: [
       type: {:in, [:static, :load_more, :search, :search_multi]},

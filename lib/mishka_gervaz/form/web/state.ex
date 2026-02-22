@@ -88,6 +88,7 @@ defmodule MishkaGervaz.Form.Web.State do
       :resource,
       :stream_name,
       :config,
+      :source,
       :fields,
       :field_order,
       :groups,
@@ -112,6 +113,7 @@ defmodule MishkaGervaz.Form.Web.State do
             resource: module(),
             stream_name: atom(),
             config: map(),
+            source: map() | nil,
             fields: list(map()),
             field_order: list(atom()),
             groups: list(map()),
@@ -150,7 +152,7 @@ defmodule MishkaGervaz.Form.Web.State do
     :dirty?
   ]
 
-  @type loading_status :: :initial | :loading | :loaded | :error
+  @type loading_status :: :initial | :loading | :loaded | :error | :denied
   @type form_mode :: :create | :update
 
   @type t :: %__MODULE__{
@@ -315,6 +317,29 @@ defmodule MishkaGervaz.Form.Web.State do
     def resolve_access(_resource) do
       MishkaGervaz.Form.Web.State.Access.Default
     end
+
+    @spec mode_allowed?(map() | nil, atom(), map()) :: boolean()
+    def mode_allowed?(nil, _mode, _state), do: true
+
+    def mode_allowed?(source, mode, state) do
+      cond do
+        rule = get_in(source, [:access_rules, mode]) ->
+          cond do
+            rule[:restricted] -> state.master_user?
+            is_function(rule[:condition], 1) -> rule.condition.(state)
+            true -> true
+          end
+
+        source[:restricted] == true ->
+          state.master_user?
+
+        is_function(source[:restricted], 1) ->
+          not source.restricted.(state)
+
+        true ->
+          true
+      end
+    end
   end
 
   defmacro __using__(opts) do
@@ -404,6 +429,7 @@ defmodule MishkaGervaz.Form.Web.State do
           resource: resource,
           stream_name: stream_name,
           config: config,
+          source: config[:source],
           fields: fields,
           field_order: field_order,
           groups: groups,

@@ -13,7 +13,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   alias Spark.Dsl.Transformer
   import MishkaGervaz.Table.Transformers.Helpers
 
-  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit, Events}
+  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit, Events, Access}
 
   @form_path [:mishka_gervaz, :form]
 
@@ -109,7 +109,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
         always: get_opt(dsl_state, preload_path, :always, []),
         master: get_opt(dsl_state, preload_path, :master, []),
         tenant: get_opt(dsl_state, preload_path, :tenant, [])
-      }
+      },
+      restricted: get_opt(dsl_state, source_path, :restricted) || false,
+      access_rules: build_access_rules(dsl_state, source_path)
     }
   end
 
@@ -119,6 +121,15 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   defp default_action(:update, _), do: :update
   defp default_action(:read, %{enabled: true}), do: {:master_get, :read}
   defp default_action(:read, _), do: :read
+
+  defp build_access_rules(dsl_state, source_path) do
+    dsl_state
+    |> get_entities(source_path)
+    |> filter_by_type(Access)
+    |> Map.new(fn rule ->
+      {rule.mode, %{restricted: rule.restricted, condition: rule.condition}}
+    end)
+  end
 
   defp build_fields(dsl_state, module) do
     path = @form_path ++ [:fields]
