@@ -90,8 +90,7 @@ defmodule MishkaGervaz.Form.Dsl.Source do
     restricted: [
       type: {:or, [:boolean, {:fun, 1}]},
       default: false,
-      doc:
-        "Restrict all form modes to master users. Boolean or `fn state -> boolean end`."
+      doc: "Restrict all form modes to master users. Boolean or `fn state -> boolean end`."
     ]
   ]
 

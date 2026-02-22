@@ -22,7 +22,6 @@ defmodule MishkaGervaz.Form.DSL.AccessControlTest do
       config = FormInfo.config(RestrictedCreateForm)
       assert config.source.access_rules == %{}
     end
-
   end
 
   describe "source restricted: fn" do
@@ -81,7 +80,6 @@ defmodule MishkaGervaz.Form.DSL.AccessControlTest do
       config = FormInfo.config(AccessPerModeForm)
       assert config.source.restricted == false
     end
-
   end
 
   describe "defaults when no access control set" do
