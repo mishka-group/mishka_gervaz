@@ -20,6 +20,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     :json
   ]
 
+  @type position :: integer() | :first | :last | {:before, atom()} | {:after, atom()}
+
   @type t :: %__MODULE__{
           name: atom(),
           type: atom() | nil,
@@ -28,6 +30,7 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
           readonly: boolean(),
           default: any(),
           options: list() | nil,
+          position: position() | nil,
           ui: __MODULE__.Ui.t() | nil,
           __spark_metadata__: map() | nil
         }
@@ -41,6 +44,7 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     readonly: false,
     default: nil,
     options: nil,
+    position: nil,
     ui: nil,
     __spark_metadata__: nil
   ]
@@ -77,6 +81,11 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     options: [
       type: {:list, :any},
       doc: "Options for select-type sub-fields."
+    ],
+    position: [
+      type: :any,
+      doc:
+        "Position in the nested field list (integer, :first, :last, {:before, :field}, {:after, :field})."
     ]
   ]
 

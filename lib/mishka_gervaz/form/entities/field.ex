@@ -45,6 +45,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
           min: integer() | nil,
           max: integer() | nil,
           min_chars: integer() | nil,
+          auto_fields: boolean(),
           nested_fields: list(),
           array_fields: list(),
           add_label: String.t() | nil,
@@ -86,6 +87,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     min: nil,
     max: nil,
     min_chars: nil,
+    auto_fields: false,
     nested_fields: [],
     _nested_field_entities: [],
     array_fields: [],
@@ -250,6 +252,12 @@ defmodule MishkaGervaz.Form.Entities.Field do
     min_chars: [
       type: :integer,
       doc: "Minimum characters before search triggers."
+    ],
+    auto_fields: [
+      type: :boolean,
+      default: false,
+      doc:
+        "When true with explicit nested_field entries, auto-detect remaining fields from the resource and merge with overrides."
     ],
     nested_fields: [
       type: {:list, :any},

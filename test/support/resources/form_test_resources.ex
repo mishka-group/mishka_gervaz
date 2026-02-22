@@ -1402,3 +1402,234 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
     update_timestamp :updated_at
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.AutoNestedFieldsForm do
+  @moduledoc """
+  Test resource for auto_fields option — override specific sub-fields
+  while keeping all auto-detected ones.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :auto_fields_table
+        route "/admin/auto-nested"
+      end
+
+      columns do
+        column :title
+      end
+    end
+
+    form do
+      identity do
+        name :auto_fields_form
+        route "/admin/auto-nested"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :title, :text, required: true
+
+        # auto_fields true: override :name only, keep :value, :count, :active
+        field :items, :nested do
+          auto_fields(true)
+
+          ui do
+            label "Items"
+            add_label "+ Add Item"
+          end
+
+          nested_field :name do
+            ui do
+              label "Custom Item Name"
+              placeholder "Enter name..."
+            end
+          end
+        end
+
+        # auto_fields true on single embed: override :street only, keep :city and :zip
+        field :address, :nested do
+          auto_fields(true)
+
+          ui do
+            label "Address"
+          end
+
+          nested_field :street, :textarea do
+            ui do
+              label "Full Street Address"
+              placeholder "123 Main St, Apt 4"
+              rows 3
+              span 2
+            end
+          end
+        end
+
+        # auto_fields true with position overrides
+        field :positioned_items, :nested do
+          auto_fields(true)
+
+          ui do
+            label "Positioned Items"
+          end
+
+          nested_field :name do
+            position :last
+
+            ui do
+              label "Name (Last)"
+            end
+          end
+
+          nested_field :active do
+            position :first
+
+            ui do
+              label "Active (First)"
+            end
+          end
+        end
+
+        # auto_fields true with integer position
+        field :integer_pos_items, :nested do
+          auto_fields(true)
+
+          nested_field :count do
+            position 0
+
+            ui do
+              label "Count (pos 0)"
+            end
+          end
+
+          nested_field :active do
+            position 1
+
+            ui do
+              label "Active (pos 1)"
+            end
+          end
+        end
+
+        # auto_fields true with {:before, :field} and {:after, :field}
+        field :relative_pos_items, :nested do
+          auto_fields(true)
+
+          nested_field :active do
+            position {:before, :value}
+
+            ui do
+              label "Active (before value)"
+            end
+          end
+
+          nested_field :count do
+            position {:after, :name}
+
+            ui do
+              label "Count (after name)"
+            end
+          end
+        end
+
+        # auto_fields false (default): override :name only, others excluded
+        field :notes, :nested do
+          ui do
+            label "Notes"
+            add_label "+ Add Note"
+          end
+
+          nested_field :name do
+            ui do
+              label "Note Title"
+            end
+          end
+        end
+      end
+
+      groups do
+        group :main do
+          fields [
+            :title,
+            :items,
+            :address,
+            :positioned_items,
+            :integer_pos_items,
+            :relative_pos_items,
+            :notes
+          ]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        create_label "Create"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    read :master_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :tenant_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :title, :string, allow_nil?: false, public?: true
+
+    attribute :items, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    attribute :address, MishkaGervaz.Test.Resources.SingleEmbed, public?: true
+
+    attribute :positioned_items, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    attribute :integer_pos_items, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    attribute :relative_pos_items, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    attribute :notes, {:array, MishkaGervaz.Test.Resources.TestEmbed} do
+      default []
+      public? true
+    end
+
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end

@@ -110,7 +110,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       final_type = (override && override.type) || detected_type
       override_options = if override, do: Map.get(override, :options), else: nil
       options = maybe_infer_options(final_type, override_options, ash_attr)
-      nested_fields = maybe_infer_nested_fields(final_type, [], ash_attr)
+      nested_fields = maybe_infer_nested_fields(final_type, [], ash_attr, false)
 
       ui =
         if final_type == :nested and nested_fields != [] do
@@ -291,7 +291,14 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
             detected = infer_field_type(ash_attr, ui_defaults)
             type_module = MishkaGervaz.Form.Types.Field.get_or_passthrough(detected)
             options = maybe_infer_options(detected, field.options, ash_attr)
-            nested_fields = maybe_infer_nested_fields(detected, field.nested_fields, ash_attr)
+
+            nested_fields =
+              maybe_infer_nested_fields(
+                detected,
+                field.nested_fields,
+                ash_attr,
+                field.auto_fields
+              )
 
             ui =
               if detected == :nested and nested_fields != [] do
@@ -319,7 +326,13 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
              }, true}
 
           field.type == :nested ->
-            nested_fields = maybe_infer_nested_fields(:nested, field.nested_fields, ash_attr)
+            nested_fields =
+              maybe_infer_nested_fields(
+                :nested,
+                field.nested_fields,
+                ash_attr,
+                field.auto_fields
+              )
 
             if nested_fields != [] do
               nested_mode = detect_nested_mode(ash_attr)
@@ -359,20 +372,20 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   defp maybe_infer_options(:select, nil, ash_attr), do: extract_one_of_options(ash_attr)
   defp maybe_infer_options(_type, existing, _ash_attr), do: existing
 
-  @spec maybe_infer_nested_fields(atom(), list(), map() | nil) :: list()
-  defp maybe_infer_nested_fields(:nested, existing, ash_attr) do
+  @spec maybe_infer_nested_fields(atom(), list(), map() | nil, boolean()) :: list()
+  defp maybe_infer_nested_fields(:nested, existing, ash_attr, auto_fields) do
     explicit = Enum.filter(existing, &is_struct(&1, NestedField))
     maps = Enum.filter(existing, &(is_map(&1) and not is_struct(&1)))
     inferred = infer_from_embedded_type(ash_attr)
 
     cond do
-      explicit != [] -> merge_nested_fields(explicit, inferred)
+      explicit != [] -> merge_nested_fields(explicit, inferred, auto_fields)
       maps != [] -> maps
       true -> inferred
     end
   end
 
-  defp maybe_infer_nested_fields(_, existing, _), do: existing
+  defp maybe_infer_nested_fields(_, existing, _, _), do: existing
 
   defp infer_from_embedded_type(%{type: {:array, type}, constraints: constraints})
        when type in [Ash.Type.Map, :map] do
@@ -452,11 +465,75 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   defp constraint_type_to_field_type({:array, _}), do: :json
   defp constraint_type_to_field_type(_), do: :text
 
-  defp merge_nested_fields(explicit, inferred) do
-    Enum.map(explicit, fn nf ->
-      base = Enum.find(inferred, &(&1.name == nf.name))
-      resolve_nested_field(nf, base)
-    end)
+  defp merge_nested_fields(explicit, inferred, auto_fields) do
+    explicit_map = Map.new(explicit, &{&1.name, &1})
+
+    if auto_fields do
+      # Replace in-place: walk inferred order, apply overrides where they exist
+      merged =
+        Enum.map(inferred, fn inf ->
+          case Map.get(explicit_map, inf.name) do
+            nil -> inf
+            nf -> resolve_nested_field(nf, inf)
+          end
+        end)
+
+      # Add any explicit fields not found in inferred (e.g. virtual nested fields)
+      inferred_names = MapSet.new(inferred, & &1.name)
+
+      extra =
+        explicit
+        |> Enum.reject(fn nf -> MapSet.member?(inferred_names, nf.name) end)
+        |> Enum.map(fn nf -> resolve_nested_field(nf, nil) end)
+
+      apply_nested_positions(merged ++ extra)
+    else
+      Enum.map(explicit, fn nf ->
+        base = Enum.find(inferred, &(&1.name == nf.name))
+        resolve_nested_field(nf, base)
+      end)
+    end
+  end
+
+  defp apply_nested_positions(fields) do
+    has_positions? = Enum.any?(fields, fn f -> Map.get(f, :position) != nil end)
+
+    if has_positions? do
+      {firsts, rest} = Enum.split_with(fields, &(Map.get(&1, :position) == :first))
+      {lasts, rest} = Enum.split_with(rest, &(Map.get(&1, :position) == :last))
+      {positioned, normal} = Enum.split_with(rest, &(Map.get(&1, :position) != nil))
+
+      result =
+        positioned
+        |> Enum.sort_by(fn f ->
+          case Map.get(f, :position) do
+            n when is_integer(n) -> {0, n}
+            _ -> {1, 0}
+          end
+        end)
+        |> Enum.reduce(normal, fn field, acc ->
+          case Map.get(field, :position) do
+            n when is_integer(n) ->
+              List.insert_at(acc, min(n, length(acc)), field)
+
+            {:before, target} ->
+              case Enum.find_index(acc, &(&1.name == target)) do
+                nil -> acc ++ [field]
+                idx -> List.insert_at(acc, idx, field)
+              end
+
+            {:after, target} ->
+              case Enum.find_index(acc, &(&1.name == target)) do
+                nil -> acc ++ [field]
+                idx -> List.insert_at(acc, idx + 1, field)
+              end
+          end
+        end)
+
+      firsts ++ result ++ lasts
+    else
+      fields
+    end
   end
 
   defp resolve_nested_field(%NestedField{} = nf, base) do
@@ -480,7 +557,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       rows: ui && ui.rows,
       class: ui && ui.class,
       span: ui && ui.span,
-      description: ui && ui.description
+      description: ui && ui.description,
+      position: nf.position
     }
   end
 
