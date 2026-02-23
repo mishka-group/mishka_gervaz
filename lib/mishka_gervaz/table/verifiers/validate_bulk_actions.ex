@@ -14,14 +14,18 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateBulkActions do
 
   @impl true
   def verify(dsl_state) do
-    actions =
-      dsl_state
-      |> Verifier.get_entities(@path)
-      |> List.wrap()
-      |> Enum.filter(&match?(%BulkAction{}, &1))
+    if is_nil(Verifier.get_option(dsl_state, [:mishka_gervaz, :table, :identity], :route)) do
+      :ok
+    else
+      actions =
+        dsl_state
+        |> Verifier.get_entities(@path)
+        |> List.wrap()
+        |> Enum.filter(&match?(%BulkAction{}, &1))
 
-    (Verifier.get_option(dsl_state, @path, :enabled) != nil or actions != [])
-    |> validate_at_least_one_action(actions, dsl_state)
+      (Verifier.get_option(dsl_state, @path, :enabled) != nil or actions != [])
+      |> validate_at_least_one_action(actions, dsl_state)
+    end
   end
 
   @spec validate_at_least_one_action(boolean(), list(), Spark.Dsl.t()) ::

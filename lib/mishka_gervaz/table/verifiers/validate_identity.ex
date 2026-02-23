@@ -12,13 +12,30 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateIdentity do
   alias Spark.Dsl.Verifier
   @path [:mishka_gervaz, :table, :identity]
 
+  @table_entity_paths [
+    [:mishka_gervaz, :table, :columns],
+    [:mishka_gervaz, :table, :row_actions],
+    [:mishka_gervaz, :table, :filters],
+    [:mishka_gervaz, :table, :bulk_actions]
+  ]
+
   @impl true
   def verify(dsl_state) do
-    module = Verifier.get_persisted(dsl_state, :module)
     name = Verifier.get_option(dsl_state, @path, :name)
     route = Verifier.get_option(dsl_state, @path, :route)
 
-    validate_identity(name, route, module)
+    if is_nil(route) and not has_table_entities?(dsl_state) do
+      :ok
+    else
+      module = Verifier.get_persisted(dsl_state, :module)
+      validate_identity(name, route, module)
+    end
+  end
+
+  defp has_table_entities?(dsl_state) do
+    Enum.any?(@table_entity_paths, fn path ->
+      dsl_state |> Verifier.get_entities(path) |> List.wrap() |> Enum.any?()
+    end)
   end
 
   @spec validate_identity(atom() | nil, String.t() | nil, module()) ::

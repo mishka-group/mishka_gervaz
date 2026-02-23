@@ -17,14 +17,18 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
 
   @impl true
   def verify(dsl_state) do
-    module = Verifier.get_persisted(dsl_state, :module)
-    entities = Spark.Dsl.Transformer.get_entities(dsl_state, @path)
-    columns = Enum.filter(entities, &match?(%Column{}, &1))
-    fields = get_resource_fields(module)
-
-    with :ok <- validate_columns_exist(columns, module),
-         :ok <- validate_static_columns(columns, fields, module) do
+    if is_nil(Verifier.get_option(dsl_state, [:mishka_gervaz, :table, :identity], :route)) do
       :ok
+    else
+      module = Verifier.get_persisted(dsl_state, :module)
+      entities = Spark.Dsl.Transformer.get_entities(dsl_state, @path)
+      columns = Enum.filter(entities, &match?(%Column{}, &1))
+      fields = get_resource_fields(module)
+
+      with :ok <- validate_columns_exist(columns, module),
+           :ok <- validate_static_columns(columns, fields, module) do
+        :ok
+      end
     end
   end
 

@@ -28,6 +28,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:phx_debounce, fn -> 300 end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
       |> assign(:placeholder, placeholder)
 
     ~H"""
@@ -42,7 +43,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         name={@name}
         value={@value}
         placeholder={@placeholder}
-        class={[@class, @icon && "pl-9"]}
+        disabled={@disabled}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
         phx-debounce={@phx_debounce}
       />
     </div>
@@ -61,6 +63,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:prompt, fn -> "All" end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -69,7 +72,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         name={@icon}
         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
       />
-      <select name={@name} class={[@class, @icon && "pl-9"]}>
+      <select
+        name={@name}
+        disabled={@disabled}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+      >
         <option :if={@prompt} value="">{@prompt}</option>
         <%= for {label, value} <- @options do %>
           <option value={value} selected={to_string(@value) == to_string(value)}>
@@ -449,6 +456,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign(:phx_click, assigns[:"phx-click"])
       |> assign(:phx_target, assigns[:"phx-target"])
       |> assign(:phx_value_id, assigns[:"phx-value-id"])
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <label class="flex items-center gap-2">
@@ -460,7 +468,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         name={@name}
         value={@value}
         checked={@checked}
-        class={@class}
+        disabled={@disabled}
+        class={[@class, @disabled && "cursor-not-allowed"]}
         phx-click={@phx_click}
         phx-target={@phx_target}
         phx-value-id={@phx_value_id}
@@ -481,6 +490,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:min, fn -> nil end)
       |> assign_new(:max, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -496,7 +506,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         min={@min}
         max={@max}
-        class={[@class, @icon && "pl-9"]}
+        disabled={@disabled}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
       />
     </div>
     """
@@ -510,6 +521,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
       end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -522,7 +534,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="datetime-local"
         name={@name}
         value={@value}
-        class={[@class, @icon && "pl-9"]}
+        disabled={@disabled}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
       />
     </div>
     """
@@ -542,6 +555,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:min, fn -> nil end)
       |> assign_new(:max, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -558,7 +572,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         min={@min}
         max={@max}
         step={@step}
-        class={[@class, @icon && "pl-9"]}
+        disabled={@disabled}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
       />
     </div>
     """
@@ -1651,6 +1666,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
       end)
       |> assign_new(:show_value, fn -> false end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <div class="flex items-center gap-3">
@@ -1661,7 +1677,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         min={@min}
         max={@max}
         step={@step}
-        class={@class}
+        disabled={@disabled}
+        class={[@class, @disabled && "cursor-not-allowed"]}
       />
       <span
         :if={@show_value}
@@ -1683,13 +1700,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:rows, fn -> 4 end)
       |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <textarea
       name={@name}
       placeholder={@placeholder}
       rows={@rows}
-      class={@class}
+      disabled={@disabled}
+      class={[@class, @disabled && "bg-gray-100 cursor-not-allowed"]}
       phx-debounce={@phx_debounce}
     >{@value}</textarea>
     """
@@ -1703,12 +1722,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         "w-full rounded-md border-gray-300 px-3 py-2 text-sm font-mono shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
       end)
       |> assign_new(:rows, fn -> 8 end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <textarea
       name={@name}
       rows={@rows}
-      class={@class}
+      disabled={@disabled}
+      class={[@class, @disabled && "bg-gray-100 cursor-not-allowed"]}
       spellcheck="false"
     >{@value}</textarea>
     """
@@ -1789,6 +1810,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:target, fn -> nil end)
       |> assign_new(:class, fn -> "space-y-2" end)
+      |> assign_new(:disabled, fn -> false end)
       |> assign_new(:input_class, fn ->
         "flex-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
       end)
@@ -1806,9 +1828,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             name={"form[#{@field_name}][]"}
             value={item}
             placeholder={@placeholder}
-            class={@input_class}
+            disabled={@disabled}
+            class={[@input_class, @disabled && "bg-gray-100 cursor-not-allowed"]}
           />
           <button
+            :if={!@disabled}
             type="button"
             phx-click="remove_list_item"
             phx-value-field={@field_name}
@@ -1823,6 +1847,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <% end %>
 
       <button
+        :if={!@disabled}
         type="button"
         phx-click="add_list_item"
         phx-value-field={@field_name}
