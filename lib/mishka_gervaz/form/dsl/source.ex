@@ -99,9 +99,9 @@ defmodule MishkaGervaz.Form.Dsl.Source do
   defp access_entity do
     %Spark.Dsl.Entity{
       name: :access,
-      describe: "Per-mode access control rule.",
+      describe: "Access control rule. Per-mode or global gate.",
       target: AccessEntity,
-      args: [:mode],
+      args: [{:optional, :mode}, {:optional, :condition}],
       identifier: :mode,
       schema: AccessEntity.opt_schema(),
       transform: {AccessEntity, :transform, []}

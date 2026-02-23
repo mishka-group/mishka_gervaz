@@ -1,15 +1,23 @@
 defmodule MishkaGervaz.Form.Entities.Access do
   @moduledoc """
-  Entity struct for per-mode access control in form source configuration.
+  Entity struct for access control in form source configuration.
 
-  Defines access rules for specific form modes (create/update), allowing
-  restriction to master users or custom condition functions.
+  Supports three calling styles:
+
+      # Style A: per-mode with keyword opts
+      access :create, restricted: true
+
+      # Style B: per-mode with condition function
+      access :create, fn state -> state.master_user? end
+
+      # Style C: global gate function (fn/2 goes into mode position)
+      access fn mode, state -> mode == :update or state.master_user? end
   """
 
   @type t :: %__MODULE__{
-          mode: :create | :update,
+          mode: :create | :update | (atom(), map() -> boolean()),
           restricted: boolean(),
-          condition: (map() -> boolean()) | nil,
+          condition: (map() -> boolean()) | (atom(), map() -> boolean()) | nil,
           __identifier__: term(),
           __spark_metadata__: map() | nil
         }
@@ -22,9 +30,8 @@ defmodule MishkaGervaz.Form.Entities.Access do
 
   @opt_schema [
     mode: [
-      type: {:in, [:create, :update]},
-      required: true,
-      doc: "Form mode to control."
+      type: {:or, [{:in, [:create, :update]}, {:fun, 2}]},
+      doc: "Form mode (:create | :update) or global gate `fn mode, state -> boolean end`."
     ],
     restricted: [
       type: :boolean,
@@ -32,8 +39,8 @@ defmodule MishkaGervaz.Form.Entities.Access do
       doc: "Restrict this mode to master users."
     ],
     condition: [
-      type: {:fun, 1},
-      doc: "Custom condition. `fn state -> boolean end`."
+      type: {:or, [{:fun, 1}, {:fun, 2}]},
+      doc: "Condition function. `fn state -> boolean end` or `fn mode, state -> boolean end`."
     ]
   ]
 

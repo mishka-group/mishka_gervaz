@@ -330,6 +330,9 @@ defmodule MishkaGervaz.Form.Web.State do
             true -> true
           end
 
+        is_function(source[:access_gate], 2) ->
+          source.access_gate.(mode, state)
+
         source[:restricted] == true ->
           state.master_user?
 

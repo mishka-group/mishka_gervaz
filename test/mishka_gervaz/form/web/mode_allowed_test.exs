@@ -81,6 +81,37 @@ defmodule MishkaGervaz.Form.Web.ModeAllowedTest do
     end
   end
 
+  describe "mode_allowed? with access_gate fn/2 (style C)" do
+    test "global gate controls both modes" do
+      gate = fn mode, state ->
+        case mode do
+          :create -> state.master_user?
+          :update -> true
+        end
+      end
+
+      source = %{restricted: false, access_rules: %{}, access_gate: gate}
+
+      refute Helpers.mode_allowed?(source, :create, @tenant_state)
+      assert Helpers.mode_allowed?(source, :create, @master_state)
+      assert Helpers.mode_allowed?(source, :update, @tenant_state)
+      assert Helpers.mode_allowed?(source, :update, @master_state)
+    end
+
+    test "per-mode rules take priority over global gate" do
+      gate = fn _mode, _state -> false end
+
+      source = %{
+        restricted: false,
+        access_rules: %{create: %{restricted: false, condition: nil}},
+        access_gate: gate
+      }
+
+      assert Helpers.mode_allowed?(source, :create, @tenant_state)
+      refute Helpers.mode_allowed?(source, :update, @tenant_state)
+    end
+  end
+
   describe "mode_allowed? with no access control" do
     test "allows everything" do
       source = %{restricted: false, access_rules: %{}}

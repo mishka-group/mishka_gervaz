@@ -111,7 +111,8 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
         tenant: get_opt(dsl_state, preload_path, :tenant, [])
       },
       restricted: get_opt(dsl_state, source_path, :restricted) || false,
-      access_rules: build_access_rules(dsl_state, source_path)
+      access_rules: build_access_rules(dsl_state, source_path),
+      access_gate: build_access_gate(dsl_state, source_path)
     }
   end
 
@@ -126,9 +127,21 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     dsl_state
     |> get_entities(source_path)
     |> filter_by_type(Access)
+    |> Enum.filter(&is_atom(&1.mode))
     |> Map.new(fn rule ->
       {rule.mode, %{restricted: rule.restricted, condition: rule.condition}}
     end)
+  end
+
+  defp build_access_gate(dsl_state, source_path) do
+    dsl_state
+    |> get_entities(source_path)
+    |> filter_by_type(Access)
+    |> Enum.find(&is_function(&1.mode, 2))
+    |> case do
+      %{mode: gate} when is_function(gate, 2) -> gate
+      _ -> nil
+    end
   end
 
   defp build_fields(dsl_state, module) do
