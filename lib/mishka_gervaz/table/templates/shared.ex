@@ -994,9 +994,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def action_visible?(%{visible: false}, _record, _state), do: false
   def action_visible?(_, _record, _state), do: true
 
-  defp action_authorized?(%{restricted: true}, record, state) do
-    MishkaGervaz.Table.Web.State.can_modify_record?(state, record)
-  end
+  defp action_authorized?(%{restricted: true}, _record, %{master_user?: master?}), do: master?
 
   defp action_authorized?(_, _record, _state), do: true
 
