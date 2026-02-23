@@ -9,7 +9,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
   alias MishkaGervaz.Test.Resources.{
     FormPost,
     WizardForm,
-    MinimalForm
+    MinimalForm,
+    SubmitOptionsForm,
+    NoButtonsForm
   }
 
   describe "FormPost config has all top-level keys" do
@@ -172,9 +174,76 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
 
     test "submit has defaults" do
       config = FormInfo.config(MinimalForm)
-      assert config.submit.create_label == "Create"
-      assert config.submit.update_label == "Update"
-      assert config.submit.cancel_label == "Cancel"
+      assert config.submit.create.label == "Create"
+      assert config.submit.update.label == "Update"
+      assert config.submit.cancel.label == "Cancel"
+    end
+
+    test "submit default buttons have disabled false" do
+      config = FormInfo.config(MinimalForm)
+      assert config.submit.create.disabled == false
+      assert config.submit.update.disabled == false
+      assert config.submit.cancel.disabled == false
+    end
+
+    test "submit default buttons have restricted false" do
+      config = FormInfo.config(MinimalForm)
+      assert config.submit.create.restricted == false
+      assert config.submit.update.restricted == false
+      assert config.submit.cancel.restricted == false
+    end
+
+    test "submit default buttons have visible true" do
+      config = FormInfo.config(MinimalForm)
+      assert config.submit.create.visible == true
+      assert config.submit.update.visible == true
+      assert config.submit.cancel.visible == true
+    end
+  end
+
+  describe "SubmitOptionsForm per-button config" do
+    test "create button inline options" do
+      config = FormInfo.config(SubmitOptionsForm)
+      assert config.submit.create.label == "Create Item"
+      assert config.submit.create.disabled == false
+      assert config.submit.create.restricted == true
+      assert config.submit.create.visible == true
+    end
+
+    test "update button block syntax with functions" do
+      config = FormInfo.config(SubmitOptionsForm)
+      assert config.submit.update.label == "Save Item"
+      assert is_function(config.submit.update.disabled, 1)
+      assert is_function(config.submit.update.restricted, 1)
+      assert is_function(config.submit.update.visible, 1)
+    end
+
+    test "cancel button inline with visible false" do
+      config = FormInfo.config(SubmitOptionsForm)
+      assert config.submit.cancel.label == "Go Back"
+      assert config.submit.cancel.visible == false
+      assert config.submit.cancel.disabled == false
+      assert config.submit.cancel.restricted == false
+    end
+
+    test "position is :top" do
+      config = FormInfo.config(SubmitOptionsForm)
+      assert config.submit.position == :top
+    end
+  end
+
+  describe "NoButtonsForm empty submit block" do
+    test "all buttons are nil" do
+      config = FormInfo.config(NoButtonsForm)
+      assert config.submit.create == nil
+      assert config.submit.update == nil
+      assert config.submit.cancel == nil
+    end
+
+    test "position and ui still present" do
+      config = FormInfo.config(NoButtonsForm)
+      assert config.submit.position == :bottom
+      assert config.submit.ui == nil
     end
   end
 end

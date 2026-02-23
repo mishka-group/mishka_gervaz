@@ -30,7 +30,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
     create_label: "Create",
     update_label: "Update",
     cancel_label: "Cancel",
-    show_cancel: true,
     position: :bottom
   }
 

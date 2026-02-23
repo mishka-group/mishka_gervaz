@@ -23,10 +23,9 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       uploads: Keyword.get(opts, :uploads, []),
       submit:
         Keyword.get(opts, :submit, %{
-          create_label: "Create",
-          update_label: "Update",
-          cancel_label: "Cancel",
-          show_cancel: true,
+          create: %{label: "Create", disabled: false, restricted: false, visible: true},
+          update: %{label: "Update", disabled: false, restricted: false, visible: true},
+          cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
           position: :bottom
         }),
       hooks: Keyword.get(opts, :hooks, %{}),

@@ -88,19 +88,35 @@ defmodule MishkaGervaz.Resource.Info.Form do
       domain_submit ->
         update_in(config, [:submit], fn submit ->
           %{
-            create_label: submit[:create_label] || domain_submit[:create_label] || "Create",
-            update_label: submit[:update_label] || domain_submit[:update_label] || "Update",
-            cancel_label: submit[:cancel_label] || domain_submit[:cancel_label] || "Cancel",
-            show_cancel:
-              if(submit[:show_cancel] != nil,
-                do: submit[:show_cancel],
-                else: domain_submit[:show_cancel]
+            create:
+              merge_button_defaults(
+                submit[:create],
+                domain_submit[:create_label],
+                "Create"
+              ),
+            update:
+              merge_button_defaults(
+                submit[:update],
+                domain_submit[:update_label],
+                "Update"
+              ),
+            cancel:
+              merge_button_defaults(
+                submit[:cancel],
+                domain_submit[:cancel_label],
+                "Cancel"
               ),
             position: submit[:position] || domain_submit[:position] || :bottom,
             ui: submit[:ui]
           }
         end)
     end
+  end
+
+  defp merge_button_defaults(nil, _domain_label, _fallback), do: nil
+
+  defp merge_button_defaults(button, domain_label, fallback) when is_map(button) do
+    %{button | label: button[:label] || domain_label || fallback}
   end
 
   defp merge_layout_defaults(config, domain_defaults) do
@@ -196,10 +212,9 @@ defmodule MishkaGervaz.Resource.Info.Form do
 
       _ ->
         %{
-          create_label: "Create",
-          update_label: "Update",
-          cancel_label: "Cancel",
-          show_cancel: true,
+          create: %{label: "Create", disabled: false, restricted: false, visible: true},
+          update: %{label: "Update", disabled: false, restricted: false, visible: true},
+          cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
           position: :bottom,
           ui: nil
         }

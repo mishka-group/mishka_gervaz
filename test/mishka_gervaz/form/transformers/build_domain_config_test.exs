@@ -138,11 +138,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfigTest do
       config = DomainInfo.domain_config(Domain)
       assert config.form.submit.cancel_label == "Cancel"
     end
-
-    test "submit contains show_cancel with default" do
-      config = DomainInfo.domain_config(Domain)
-      assert config.form.submit.show_cancel == true
-    end
   end
 
   describe "test domain specific values" do

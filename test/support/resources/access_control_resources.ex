@@ -372,7 +372,7 @@ defmodule MishkaGervaz.Test.Resources.ReadonlyFnForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end

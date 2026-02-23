@@ -77,7 +77,15 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               {:error, updated_form} ->
                 updated_form = Phoenix.Component.to_form(updated_form)
                 errors = build_submit_errors(updated_form)
-                state = State.update(state, form: updated_form, errors: errors)
+                field_names = MapSet.new(state.static.fields, & &1.name)
+                form_errors = extract_form_level_errors(updated_form, field_names)
+
+                state =
+                  State.update(state,
+                    form: updated_form,
+                    errors: errors,
+                    form_errors: form_errors
+                  )
 
                 record_id = socket.assigns[:record_id]
 
@@ -116,6 +124,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             form: nil,
             loading: :initial,
             errors: %{},
+            form_errors: [],
             dirty?: false,
             existing_files: %{},
             field_values: %{},
@@ -131,6 +140,17 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       defp build_submit_errors(form) do
         form.errors
         |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
+          Enum.reduce(opts, msg, fn {key, value}, acc ->
+            String.replace(acc, "%{#{key}}", to_string(value))
+          end)
+        end)
+      end
+
+      @spec extract_form_level_errors(Phoenix.HTML.Form.t(), MapSet.t()) :: list(String.t())
+      defp extract_form_level_errors(form, field_names) do
+        form.errors
+        |> Enum.reject(fn {field, _} -> MapSet.member?(field_names, field) end)
+        |> Enum.map(fn {_field, {msg, opts}} ->
           Enum.reduce(opts, msg, fn {key, value}, acc ->
             String.replace(acc, "%{#{key}}", to_string(value))
           end)

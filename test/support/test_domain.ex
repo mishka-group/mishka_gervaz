@@ -58,6 +58,8 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.FormPost
     resource MishkaGervaz.Test.Resources.NestedForm
     resource MishkaGervaz.Test.Resources.NestedDslForm
+    resource MishkaGervaz.Test.Resources.SubmitOptionsForm
+    resource MishkaGervaz.Test.Resources.NoButtonsForm
     allow_unregistered? true
   end
 end

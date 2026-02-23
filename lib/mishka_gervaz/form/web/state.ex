@@ -145,6 +145,7 @@ defmodule MishkaGervaz.Form.Web.State do
     :form,
     :loading,
     :errors,
+    :form_errors,
     :field_values,
     :relation_options,
     :upload_state,
@@ -166,6 +167,7 @@ defmodule MishkaGervaz.Form.Web.State do
           form: Phoenix.HTML.Form.t() | nil,
           loading: loading_status(),
           errors: map(),
+          form_errors: list(String.t()),
           field_values: map(),
           relation_options: map(),
           upload_state: map(),
@@ -269,10 +271,9 @@ defmodule MishkaGervaz.Form.Web.State do
 
         _ ->
           %{
-            create_label: "Create",
-            update_label: "Update",
-            cancel_label: "Cancel",
-            show_cancel: true,
+            create: %{label: "Create", disabled: false, restricted: false, visible: true},
+            update: %{label: "Update", disabled: false, restricted: false, visible: true},
+            cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
             position: :bottom,
             ui: nil
           }
@@ -471,6 +472,7 @@ defmodule MishkaGervaz.Form.Web.State do
           form: nil,
           loading: :initial,
           errors: %{},
+          form_errors: [],
           field_values: %{},
           relation_options: relation_options,
           upload_state: %{},

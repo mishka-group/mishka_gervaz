@@ -8,7 +8,9 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
 
   alias MishkaGervaz.Test.Resources.{
     FormPost,
-    MinimalForm
+    MinimalForm,
+    SubmitOptionsForm,
+    NoButtonsForm
   }
 
   describe "FormPost presentation" do
@@ -44,24 +46,24 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
   end
 
   describe "FormPost submit" do
-    test "create_label" do
+    test "create button label" do
       submit = FormInfo.submit(FormPost)
-      assert submit.create_label == "Create Post"
+      assert submit.create.label == "Create Post"
     end
 
-    test "update_label" do
+    test "update button label" do
       submit = FormInfo.submit(FormPost)
-      assert submit.update_label == "Save Post"
+      assert submit.update.label == "Save Post"
     end
 
-    test "cancel_label" do
+    test "cancel button label" do
       submit = FormInfo.submit(FormPost)
-      assert submit.cancel_label == "Discard"
+      assert submit.cancel.label == "Discard"
     end
 
-    test "show_cancel" do
+    test "cancel button exists (replaces show_cancel)" do
       submit = FormInfo.submit(FormPost)
-      assert submit.show_cancel == true
+      assert submit.cancel != nil
     end
 
     test "position" do
@@ -91,24 +93,26 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
   end
 
   describe "MinimalForm submit defaults" do
-    test "create_label defaults to Create" do
+    test "create button label defaults to Create" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.create_label == "Create"
+      assert submit.create.label == "Create"
     end
 
-    test "update_label defaults to Update" do
+    test "update button label defaults to Update" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.update_label == "Update"
+      assert submit.update.label == "Update"
     end
 
-    test "cancel_label defaults to Cancel" do
+    test "cancel button label defaults to Cancel" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.cancel_label == "Cancel"
+      assert submit.cancel.label == "Cancel"
     end
 
-    test "show_cancel defaults to true" do
+    test "all buttons present by default" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.show_cancel == true
+      assert submit.create != nil
+      assert submit.update != nil
+      assert submit.cancel != nil
     end
 
     test "position defaults to :bottom" do
@@ -136,6 +140,134 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
     test "ui_adapter_opts defaults to empty list" do
       config = FormInfo.config(FormPost)
       assert config.presentation.ui_adapter_opts == []
+    end
+  end
+
+  describe "SubmitOptionsForm per-button options (inline + block)" do
+    test "create button label" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.create.label == "Create Item"
+    end
+
+    test "create button disabled is false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.create.disabled == false
+    end
+
+    test "create button restricted is true (inline)" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.create.restricted == true
+    end
+
+    test "create button visible defaults to true" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.create.visible == true
+    end
+
+    test "update button label (block syntax)" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.update.label == "Save Item"
+    end
+
+    test "update button disabled is function" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert is_function(submit.update.disabled, 1)
+    end
+
+    test "update button restricted is function" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert is_function(submit.update.restricted, 1)
+    end
+
+    test "update button visible is function" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert is_function(submit.update.visible, 1)
+    end
+
+    test "update button disabled function returns false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.update.disabled.(%{}) == false
+    end
+
+    test "update button restricted function returns false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.update.restricted.(%{}) == false
+    end
+
+    test "update button visible function returns true" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.update.visible.(%{}) == true
+    end
+
+    test "cancel button label (inline)" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.cancel.label == "Go Back"
+    end
+
+    test "cancel button visible is false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.cancel.visible == false
+    end
+
+    test "cancel button disabled defaults to false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.cancel.disabled == false
+    end
+
+    test "cancel button restricted defaults to false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.cancel.restricted == false
+    end
+
+    test "position is :top" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.position == :top
+    end
+  end
+
+  describe "NoButtonsForm — empty submit block" do
+    test "all buttons are nil" do
+      submit = FormInfo.submit(NoButtonsForm)
+      assert submit.create == nil
+      assert submit.update == nil
+      assert submit.cancel == nil
+    end
+
+    test "position still works" do
+      submit = FormInfo.submit(NoButtonsForm)
+      assert submit.position == :bottom
+    end
+
+    test "ui is nil" do
+      submit = FormInfo.submit(NoButtonsForm)
+      assert submit.ui == nil
+    end
+  end
+
+  describe "FormPost default button options" do
+    test "create button disabled defaults to false" do
+      submit = FormInfo.submit(FormPost)
+      assert submit.create.disabled == false
+    end
+
+    test "create button restricted defaults to false" do
+      submit = FormInfo.submit(FormPost)
+      assert submit.create.restricted == false
+    end
+
+    test "create button visible defaults to true" do
+      submit = FormInfo.submit(FormPost)
+      assert submit.create.visible == true
+    end
+
+    test "update button disabled defaults to false" do
+      submit = FormInfo.submit(FormPost)
+      assert submit.update.disabled == false
+    end
+
+    test "cancel button disabled defaults to false" do
+      submit = FormInfo.submit(FormPost)
+      assert submit.cancel.disabled == false
     end
   end
 

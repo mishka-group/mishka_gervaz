@@ -498,28 +498,48 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     case find_entity(dsl_state, @form_path, Submit) do
       nil ->
         %{
-          create_label: (domain_submit && domain_submit[:create_label]) || "Create",
-          update_label: (domain_submit && domain_submit[:update_label]) || "Update",
-          cancel_label: (domain_submit && domain_submit[:cancel_label]) || "Cancel",
-          show_cancel:
-            if(domain_submit && domain_submit[:show_cancel] != nil,
-              do: domain_submit[:show_cancel],
-              else: true
-            ),
+          create: %{
+            label: (domain_submit && domain_submit[:create_label]) || "Create",
+            disabled: false,
+            restricted: false,
+            visible: true
+          },
+          update: %{
+            label: (domain_submit && domain_submit[:update_label]) || "Update",
+            disabled: false,
+            restricted: false,
+            visible: true
+          },
+          cancel: %{
+            label: (domain_submit && domain_submit[:cancel_label]) || "Cancel",
+            disabled: false,
+            restricted: false,
+            visible: true
+          },
           position: (domain_submit && domain_submit[:position]) || :bottom,
           ui: nil
         }
 
       entity ->
         %{
-          create_label: entity.create_label,
-          update_label: entity.update_label,
-          cancel_label: entity.cancel_label,
-          show_cancel: entity.show_cancel,
+          create: button_to_map(entity.create, domain_submit, :create_label, "Create"),
+          update: button_to_map(entity.update, domain_submit, :update_label, "Update"),
+          cancel: button_to_map(entity.cancel, domain_submit, :cancel_label, "Cancel"),
           position: entity.position,
           ui: maybe_ui(entity.ui, &submit_ui_to_map/1, &has_submit_ui_values?/1)
         }
     end
+  end
+
+  defp button_to_map(nil, _domain_submit, _domain_key, _fallback), do: nil
+
+  defp button_to_map(%Submit.Button{} = btn, domain_submit, domain_key, fallback) do
+    %{
+      label: btn.label || (domain_submit && domain_submit[domain_key]) || fallback,
+      disabled: btn.disabled,
+      restricted: btn.restricted,
+      visible: btn.visible
+    }
   end
 
   defp has_submit_ui_values?(%Submit.Ui{} = ui) do

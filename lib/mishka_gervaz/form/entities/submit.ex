@@ -1,50 +1,84 @@
+defmodule MishkaGervaz.Form.Entities.Submit.Button do
+  @moduledoc """
+  Entity struct for a single submit/cancel button configuration.
+
+  Each button (create, update, cancel) is an independent entity with its own
+  `label`, `disabled`, `restricted`, and `visible` options.
+  """
+
+  @type t :: %__MODULE__{
+          label: String.t() | (-> String.t()) | nil,
+          disabled: boolean() | (map() -> boolean()),
+          restricted: boolean() | (map() -> boolean()),
+          visible: boolean() | (map() -> boolean()),
+          __spark_metadata__: map() | nil
+        }
+
+  defstruct label: nil,
+            disabled: false,
+            restricted: false,
+            visible: true,
+            __spark_metadata__: nil
+
+  @opt_schema [
+    label: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Button label. String or zero-arity function."
+    ],
+    disabled: [
+      type: {:or, [:boolean, {:fun, 1}]},
+      default: false,
+      doc: "Disable button. Boolean or `fn state -> boolean end`."
+    ],
+    restricted: [
+      type: {:or, [:boolean, {:fun, 1}]},
+      default: false,
+      doc: "Master-only visibility. Boolean or `fn state -> boolean end`."
+    ],
+    visible: [
+      type: {:or, [:boolean, {:fun, 1}]},
+      default: true,
+      doc: "Button visibility. Boolean or `fn state -> boolean end`."
+    ]
+  ]
+
+  @doc false
+  def opt_schema, do: @opt_schema
+
+  def transform(button), do: {:ok, button}
+end
+
 defmodule MishkaGervaz.Form.Entities.Submit do
   @moduledoc """
   Entity struct for form submit button configuration.
 
   This module defines the struct and schema for submit buttons, following Ash's
   entity pattern with `opt_schema` and `transform/1`.
+
+  Each button (create, update, cancel) is an independent entity. If no `submit`
+  block is defined, all 3 buttons render with domain/fallback defaults. If a
+  `submit` block exists but no buttons are defined inside it, no buttons render.
   """
 
+  alias __MODULE__.Button
+
   @type t :: %__MODULE__{
-          create_label: String.t() | (-> String.t()),
-          update_label: String.t() | (-> String.t()),
-          cancel_label: String.t() | (-> String.t()),
-          show_cancel: boolean(),
+          create: Button.t() | nil,
+          update: Button.t() | nil,
+          cancel: Button.t() | nil,
           position: :top | :bottom | :both,
           ui: __MODULE__.Ui.t() | nil,
           __spark_metadata__: map() | nil
         }
 
-  defstruct create_label: "Create",
-            update_label: "Update",
-            cancel_label: "Cancel",
-            show_cancel: true,
+  defstruct create: nil,
+            update: nil,
+            cancel: nil,
             position: :bottom,
             ui: nil,
             __spark_metadata__: nil
 
   @opt_schema [
-    create_label: [
-      type: {:or, [:string, {:fun, 0}]},
-      default: "Create",
-      doc: "Submit button label for create."
-    ],
-    update_label: [
-      type: {:or, [:string, {:fun, 0}]},
-      default: "Update",
-      doc: "Submit button label for update."
-    ],
-    cancel_label: [
-      type: {:or, [:string, {:fun, 0}]},
-      default: "Cancel",
-      doc: "Cancel button label."
-    ],
-    show_cancel: [
-      type: :boolean,
-      default: true,
-      doc: "Show cancel button."
-    ],
     position: [
       type: {:in, [:top, :bottom, :both]},
       default: :bottom,
@@ -58,17 +92,27 @@ defmodule MishkaGervaz.Form.Entities.Submit do
   @doc """
   Transform the submit after DSL compilation.
 
-  Extracts the nested ui entity from the list wrapper.
+  Extracts nested entities from list wrappers.
   """
   def transform(%__MODULE__{} = submit) do
-    {:ok, extract_ui(submit)}
+    {:ok,
+     submit
+     |> extract_singleton(:ui)
+     |> extract_singleton(:create)
+     |> extract_singleton(:update)
+     |> extract_singleton(:cancel)}
   end
 
   def transform(submit), do: {:ok, submit}
 
-  defp extract_ui(%{ui: [ui | _]} = submit), do: %{submit | ui: ui}
-  defp extract_ui(%{ui: ui} = submit) when is_struct(ui), do: submit
-  defp extract_ui(submit), do: submit
+  defp extract_singleton(submit, key) do
+    case Map.get(submit, key) do
+      [value | _] -> Map.put(submit, key, value)
+      [] -> Map.put(submit, key, nil)
+      value when is_struct(value) -> submit
+      _ -> submit
+    end
+  end
 end
 
 defmodule MishkaGervaz.Form.Entities.Submit.Ui do

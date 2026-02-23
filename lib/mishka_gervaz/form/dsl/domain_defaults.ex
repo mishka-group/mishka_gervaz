@@ -133,11 +133,6 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
       default: "Cancel",
       doc: "Default cancel button label."
     ],
-    show_cancel: [
-      type: :boolean,
-      default: true,
-      doc: "Default show cancel button."
-    ],
     position: [
       type: {:in, [:top, :bottom, :both]},
       default: :bottom,

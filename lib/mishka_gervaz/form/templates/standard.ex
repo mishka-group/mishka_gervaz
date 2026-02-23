@@ -57,6 +57,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-target={@myself}
             multipart={has_uploads?(@static)}
           >
+            <%= if @state.form_errors != [] do %>
+              <div class="mb-4 rounded-md bg-red-50 p-4">
+                <div class="flex">
+                  <div class="text-sm text-red-700">
+                    <p :for={err <- @state.form_errors}>{err}</p>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
             <%= if @state.static.layout_mode == :standard do %>
               {render_groups(assigns)}
             <% else %>
@@ -287,29 +297,44 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp render_submit(assigns) do
     submit = assigns.static.submit
     mode = assigns.state.mode
+    state = assigns.state
     layout_mode = assigns.static.layout_mode
 
+    submit_button = if mode == :create, do: submit[:create], else: submit[:update]
+    cancel_button = submit[:cancel]
+
+    show_submit =
+      submit_button != nil and
+        evaluate_button_visible(submit_button, state) and
+        not evaluate_button_restricted(submit_button, state)
+
+    show_cancel =
+      cancel_button != nil and
+        evaluate_button_visible(cancel_button, state) and
+        not evaluate_button_restricted(cancel_button, state)
+
     submit_label =
-      if mode == :create,
-        do: resolve_label(Map.get(submit, :create_label, "Create")),
-        else: resolve_label(Map.get(submit, :update_label, "Update"))
+      if show_submit, do: resolve_label(submit_button[:label]) || "Submit", else: ""
+
+    cancel_label =
+      if show_cancel, do: resolve_label(cancel_button[:label]) || "Cancel", else: ""
+
+    submit_disabled = show_submit and evaluate_button_disabled(submit_button, state)
+    cancel_disabled = show_cancel and evaluate_button_disabled(cancel_button, state)
 
     cancel_js =
       assigns
       |> resolve_js_hook(:on_cancel)
       |> JS.push("cancel", target: assigns.myself)
 
-    config_show_cancel = Map.get(submit, :show_cancel, true)
-    has_state? = assigns.state.dirty?
-
-    show_cancel =
-      config_show_cancel and (mode == :update or has_state?)
-
     assigns =
       assigns
       |> assign(:submit_label, submit_label)
-      |> assign(:cancel_label, resolve_label(Map.get(submit, :cancel_label, "Cancel")))
+      |> assign(:cancel_label, cancel_label)
+      |> assign(:show_submit, show_submit)
       |> assign(:show_cancel, show_cancel)
+      |> assign(:submit_disabled, submit_disabled)
+      |> assign(:cancel_disabled, cancel_disabled)
       |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
       |> assign(:ui, assigns.static.ui_adapter)
       |> assign(:cancel_js, cancel_js)
@@ -337,15 +362,24 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             label={@cancel_label}
             variant={:secondary}
             type="button"
+            disabled={@cancel_disabled}
             phx_click={@cancel_js}
             phx_target={@myself}
           />
         <% end %>
 
-        <%= if not @show_step_nav or last_step?(assigns) do %>
+        <%= if @show_submit and (not @show_step_nav or last_step?(assigns)) do %>
           <button
             type="submit"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={@submit_disabled}
+            class={[
+              "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white",
+              if(@submit_disabled,
+                do: "bg-gray-400 cursor-not-allowed",
+                else:
+                  "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              )
+            ]}
           >
             {@submit_label}
           </button>
@@ -681,6 +715,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:function, :string_list_input)
     |> assign(:items, items)
     |> assign(:field_name, to_string(field.name))
+    |> assign(:disabled, evaluate_readonly(field, assigns.state))
     |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
     |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
     |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
@@ -702,6 +737,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     nested_fields = Map.get(field, :nested_fields, [])
     form_path = assigns.state.form.name <> "[#{field.name}]"
     nested_mode = get_in_map(field, [:ui, :extra, :nested_mode]) || :array
+    parent_readonly = evaluate_readonly(field, assigns.state)
 
     assigns =
       assigns
@@ -709,6 +745,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:nested_fields, nested_fields)
       |> assign(:form_path, form_path)
       |> assign(:nested_mode, nested_mode)
+      |> assign(:parent_readonly, parent_readonly)
       |> assign(:add_label, resolve_nested_label(field, :add_label, "+ Add"))
       |> assign(:remove_label, resolve_nested_label(field, :remove_label, "Remove"))
       |> assign(:target, assigns[:myself])
@@ -725,7 +762,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
                 {Phoenix.Naming.humanize(@nested_field.name)}
               <% end %>
             </span>
-            <%= if @nested_mode == :array do %>
+            <%= if @nested_mode == :array and not @parent_readonly do %>
               <button
                 type="button"
                 phx-click="remove_nested"
@@ -739,14 +776,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <%= for sub_field <- @nested_fields do %>
-              <% sf = extract_sub_field_info(sub_field) %>
+              <% sf = extract_sub_field_info(sub_field, @parent_readonly, @state) %>
               {render_nested_sub_field(assigns, nested_form, sf)}
             <% end %>
           </div>
         </div>
       </.inputs_for>
 
-      <%= if @nested_mode == :array do %>
+      <%= if @nested_mode == :array and not @parent_readonly do %>
         <button
           type="button"
           phx-click="add_nested"
@@ -766,6 +803,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     nested_mode = get_in_map(field, [:ui, :extra, :nested_mode]) || :array
     entries = get_map_entries(field.name, assigns.state.form)
     form_name = assigns.state.form.name
+    parent_readonly = evaluate_readonly(field, assigns.state)
 
     submitted_once =
       assigns.state.form != nil and assigns.state.form.source != nil and
@@ -778,6 +816,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:nested_field, field)
       |> assign(:nested_fields, nested_fields)
       |> assign(:nested_mode, nested_mode)
+      |> assign(:parent_readonly, parent_readonly)
       |> assign(:entries, entries)
       |> assign(:form_name, form_name)
       |> assign(:error_mode, error_mode)
@@ -794,7 +833,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             <span class="text-sm font-medium text-gray-600">
               {Phoenix.Naming.humanize(@nested_field.name)} {idx + 1}
             </span>
-            <%= if @nested_mode == :array do %>
+            <%= if @nested_mode == :array and not @parent_readonly do %>
               <button
                 type="button"
                 phx-click="remove_nested"
@@ -809,7 +848,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <%= for sub_field <- @nested_fields do %>
-              <% sf = extract_sub_field_info(sub_field) %>
+              <% sf = extract_sub_field_info(sub_field, @parent_readonly, @state) %>
               <% sf_errors = Map.get(entry_errors, sf.name, []) %>
               {render_constrained_sub_field(assigns, sf, idx, entry, sf_errors)}
             <% end %>
@@ -817,7 +856,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         </div>
       <% end %>
 
-      <%= if @nested_mode == :array do %>
+      <%= if @nested_mode == :array and not @parent_readonly do %>
         <button
           type="button"
           phx-click="add_nested"
@@ -1202,7 +1241,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp encode_json_value(nil), do: ""
   defp encode_json_value(v), do: inspect(v)
 
-  defp extract_sub_field_info(sub_field) when is_atom(sub_field) do
+  defp extract_sub_field_info(sub_field),
+    do: extract_sub_field_info(sub_field, false, nil)
+
+  defp extract_sub_field_info(sub_field, parent_readonly, _state) when is_atom(sub_field) do
     label = Phoenix.Naming.humanize(sub_field)
 
     %{
@@ -1217,11 +1259,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       class: nil,
       span: nil,
       visible: true,
-      readonly: false
+      readonly: parent_readonly
     }
   end
 
-  defp extract_sub_field_info(%{name: name} = sf) do
+  defp extract_sub_field_info(%{name: name} = sf, parent_readonly, state) do
     label = resolve_callable(Map.get(sf, :label)) || Phoenix.Naming.humanize(name)
     type = Map.get(sf, :type, :text)
 
@@ -1237,11 +1279,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       class: Map.get(sf, :class),
       span: Map.get(sf, :span) || auto_span(type),
       visible: Map.get(sf, :visible, true),
-      readonly: Map.get(sf, :readonly, false)
+      readonly: parent_readonly or resolve_sub_readonly(Map.get(sf, :readonly, false), state)
     }
   end
 
-  defp extract_sub_field_info(sf) when is_map(sf) do
+  defp extract_sub_field_info(sf, parent_readonly, state) when is_map(sf) do
     name = Map.get(sf, :field, Map.get(sf, :name))
     label = resolve_callable(Map.get(sf, :label)) || Phoenix.Naming.humanize(name)
     type = Map.get(sf, :type, :text)
@@ -1258,7 +1300,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       class: Map.get(sf, :class),
       span: Map.get(sf, :span) || auto_span(type),
       visible: Map.get(sf, :visible, true),
-      readonly: Map.get(sf, :readonly, false)
+      readonly: parent_readonly or resolve_sub_readonly(Map.get(sf, :readonly, false), state)
     }
   end
 
@@ -1272,6 +1314,34 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp evaluate_readonly(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
   defp evaluate_readonly(%{readonly: val}, _state) when is_boolean(val), do: val
   defp evaluate_readonly(_, _state), do: false
+
+  defp resolve_sub_readonly(f, state) when is_function(f, 1) and not is_nil(state), do: f.(state)
+  defp resolve_sub_readonly(val, _state) when is_boolean(val), do: val
+  defp resolve_sub_readonly(_, _state), do: false
+
+  defp evaluate_button_disabled(button, state) do
+    case button[:disabled] do
+      f when is_function(f, 1) -> f.(state)
+      val when is_boolean(val) -> val
+      _ -> false
+    end
+  end
+
+  defp evaluate_button_visible(button, state) do
+    case button[:visible] do
+      f when is_function(f, 1) -> f.(state)
+      val when is_boolean(val) -> val
+      _ -> true
+    end
+  end
+
+  defp evaluate_button_restricted(button, state) do
+    case button[:restricted] do
+      f when is_function(f, 1) -> f.(state)
+      true -> not state.master_user?
+      _ -> false
+    end
+  end
 
   defp resolve_nested_label(field, key, default) do
     ui_val = get_in_map(field, [:ui, key])

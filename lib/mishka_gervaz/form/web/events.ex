@@ -139,35 +139,50 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("save", params, state, socket) do
-        params =
-          params
-          |> sanitize_params(state.static.fields)
-          |> strip_empty_list_values()
-          |> decode_constrained_map_params(state.static.fields)
-          |> strip_empty_constrained_entries(state.static.fields)
+        submit_button =
+          if state.mode == :create,
+            do: state.static.submit[:create],
+            else: state.static.submit[:update]
 
-        case run_hook(state, :before_save, [params, state]) do
-          {:halt, _reason} ->
-            {:noreply, socket}
+        if submit_button_allowed?(submit_button, state) do
+          params =
+            params
+            |> sanitize_params(state.static.fields)
+            |> strip_empty_list_values()
+            |> decode_constrained_map_params(state.static.fields)
+            |> strip_empty_constrained_entries(state.static.fields)
 
-          {:cont, modified_params} ->
-            socket = submit_handler().submit(state, modified_params, socket)
-            {:noreply, socket}
+          case run_hook(state, :before_save, [params, state]) do
+            {:halt, _reason} ->
+              {:noreply, socket}
 
-          _ ->
-            socket = submit_handler().submit(state, params, socket)
-            {:noreply, socket}
+            {:cont, modified_params} ->
+              socket = submit_handler().submit(state, modified_params, socket)
+              {:noreply, socket}
+
+            _ ->
+              socket = submit_handler().submit(state, params, socket)
+              {:noreply, socket}
+          end
+        else
+          {:noreply, socket}
         end
       end
 
       defp do_handle("cancel", _params, state, socket) do
-        state = run_hook(state, :on_cancel, [state]) || state
+        cancel_button = state.static.submit[:cancel]
 
-        if has_hook?(state, :on_cancel) do
-          send(self(), {:form_cancelled, state.static.resource})
+        if submit_button_allowed?(cancel_button, state) do
+          state = run_hook(state, :on_cancel, [state]) || state
+
+          if has_hook?(state, :on_cancel) do
+            send(self(), {:form_cancelled, state.static.resource})
+          end
+
+          {:noreply, reset_to_create_mode(state, socket)}
+        else
+          {:noreply, socket}
         end
-
-        {:noreply, reset_to_create_mode(state, socket)}
       end
 
       defp do_handle("next_step", _params, state, socket) do
@@ -599,6 +614,34 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp has_hook?(_, _), do: false
+
+      @spec submit_button_allowed?(map() | nil, State.t()) :: boolean()
+      defp submit_button_allowed?(nil, _state), do: false
+
+      defp submit_button_allowed?(button, state) do
+        visible =
+          case button[:visible] do
+            f when is_function(f, 1) -> f.(state)
+            val when is_boolean(val) -> val
+            _ -> true
+          end
+
+        restricted =
+          case button[:restricted] do
+            f when is_function(f, 1) -> f.(state)
+            true -> not state.master_user?
+            _ -> false
+          end
+
+        disabled =
+          case button[:disabled] do
+            f when is_function(f, 1) -> f.(state)
+            val when is_boolean(val) -> val
+            _ -> false
+          end
+
+        visible and not restricted and not disabled
+      end
 
       defp get_list_items(form, field_atom, field_values) do
         case Map.get(field_values, field_atom) do

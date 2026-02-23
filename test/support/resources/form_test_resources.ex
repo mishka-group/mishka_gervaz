@@ -98,7 +98,7 @@ defmodule MishkaGervaz.Test.Resources.NestedForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end
@@ -277,7 +277,7 @@ defmodule MishkaGervaz.Test.Resources.NestedDslForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end
@@ -503,10 +503,9 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
       end
 
       submit do
-        create_label "Create Post"
-        update_label "Save Post"
-        cancel_label "Discard"
-        show_cancel true
+        create label: "Create Post"
+        update label: "Save Post"
+        cancel label: "Discard"
         position :bottom
 
         ui do
@@ -683,7 +682,7 @@ defmodule MishkaGervaz.Test.Resources.WizardForm do
       end
 
       submit do
-        create_label "Finish"
+        create label: "Finish"
       end
     end
   end
@@ -1154,7 +1153,7 @@ defmodule MishkaGervaz.Test.Resources.StringListForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end
@@ -1256,7 +1255,7 @@ defmodule MishkaGervaz.Test.Resources.UploadFieldForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end
@@ -1355,7 +1354,7 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end
@@ -1580,7 +1579,7 @@ defmodule MishkaGervaz.Test.Resources.AutoNestedFieldsForm do
       end
 
       submit do
-        create_label "Create"
+        create label: "Create"
       end
     end
   end
@@ -1629,6 +1628,114 @@ defmodule MishkaGervaz.Test.Resources.AutoNestedFieldsForm do
       public? true
     end
 
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.SubmitOptionsForm do
+  @moduledoc """
+  Test resource for per-button submit options: disabled, restricted, visible.
+  Uses both inline and block syntax.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :submit_options_form
+        route "/admin/submit-options"
+      end
+
+      fields do
+        field :title, :text
+      end
+
+      groups do
+        group :main do
+          fields [:title]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        create label: "Create Item", disabled: false, restricted: true
+
+        update do
+          label "Save Item"
+          disabled fn _state -> false end
+          restricted fn _state -> false end
+          visible fn _state -> true end
+        end
+
+        cancel label: "Go Back", visible: false
+
+        position :top
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.NoButtonsForm do
+  @moduledoc """
+  Test resource with empty submit block — no buttons should render.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :no_buttons_form
+        route "/admin/no-buttons"
+      end
+
+      fields do
+        field :title, :text
+      end
+
+      groups do
+        group :main do
+          fields [:title]
+
+          ui do
+            label "Main"
+          end
+        end
+      end
+
+      submit do
+        position :bottom
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end

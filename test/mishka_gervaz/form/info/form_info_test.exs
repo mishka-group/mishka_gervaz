@@ -11,7 +11,9 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     WizardForm,
     TabsForm,
     MinimalForm,
-    NoMasterCheckForm
+    NoMasterCheckForm,
+    SubmitOptionsForm,
+    NoButtonsForm
   }
 
   describe "config/1" do
@@ -95,17 +97,17 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
   describe "submit/1" do
     test "returns map with custom labels for FormPost" do
       submit = FormInfo.submit(FormPost)
-      assert submit.create_label == "Create Post"
-      assert submit.update_label == "Save Post"
-      assert submit.cancel_label == "Discard"
+      assert submit.create.label == "Create Post"
+      assert submit.update.label == "Save Post"
+      assert submit.cancel.label == "Discard"
     end
 
     test "returns map with defaults for MinimalForm" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.create_label == "Create"
-      assert submit.update_label == "Update"
-      assert submit.cancel_label == "Cancel"
-      assert submit.show_cancel == true
+      assert submit.create.label == "Create"
+      assert submit.update.label == "Update"
+      assert submit.cancel.label == "Cancel"
+      assert submit.cancel != nil
       assert submit.position == :bottom
     end
   end
@@ -335,6 +337,47 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
 
     test "returns nil for MinimalForm" do
       assert FormInfo.route(MinimalForm) == nil
+    end
+  end
+
+  describe "component_id/1" do
+    test "returns string for FormPost" do
+      assert FormInfo.component_id(FormPost) == "form_post"
+    end
+
+    test "returns string for SubmitOptionsForm" do
+      assert FormInfo.component_id(SubmitOptionsForm) == "submit_options_form"
+    end
+  end
+
+  describe "submit/1 per-button structure" do
+    test "SubmitOptionsForm create button has restricted true" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.create.restricted == true
+    end
+
+    test "SubmitOptionsForm update button has function-based options" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert is_function(submit.update.disabled, 1)
+      assert is_function(submit.update.restricted, 1)
+      assert is_function(submit.update.visible, 1)
+    end
+
+    test "SubmitOptionsForm cancel button visible is false" do
+      submit = FormInfo.submit(SubmitOptionsForm)
+      assert submit.cancel.visible == false
+    end
+
+    test "NoButtonsForm all buttons are nil" do
+      submit = FormInfo.submit(NoButtonsForm)
+      assert submit.create == nil
+      assert submit.update == nil
+      assert submit.cancel == nil
+    end
+
+    test "NoButtonsForm still has position" do
+      submit = FormInfo.submit(NoButtonsForm)
+      assert submit.position == :bottom
     end
   end
 end

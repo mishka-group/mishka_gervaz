@@ -361,4 +361,371 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
         )
     end
   end
+
+  describe "save event — submit button server-side enforcement" do
+    test "save blocked when create button is nil" do
+      submit = %{create: nil, update: nil, cancel: nil, position: :bottom}
+      state = build_state(mode: :create, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.mode == :create
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked when create button disabled is true" do
+      submit = %{
+        create: %{label: "Create", disabled: true, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :create, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked when create button disabled is function returning true" do
+      submit = %{
+        create: %{
+          label: "Create",
+          disabled: fn _state -> true end,
+          restricted: false,
+          visible: true
+        },
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :create, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked when create button visible is false" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: false},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :create, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked when create button visible function returns false" do
+      submit = %{
+        create: %{
+          label: "Create",
+          disabled: false,
+          restricted: false,
+          visible: fn _s -> false end
+        },
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :create, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked when create button restricted true and user not master" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: true, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :create, master_user?: false, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save allowed when create button restricted true and user IS master" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: true, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state =
+        build_state(
+          mode: :create,
+          master_user?: true,
+          static_opts: [submit: submit, resource: MishkaGervaz.Test.Resources.FormPost]
+        )
+
+      socket = build_socket(state)
+
+      {:noreply, _updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+    end
+
+    test "save blocked when restricted function returns true" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: fn _s -> true end, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :create, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked on update mode when update button is disabled" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: true, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :update, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked on update mode when update button not visible" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: false},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :update, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save blocked on update mode when update button is nil" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: nil,
+        cancel: nil,
+        position: :bottom
+      }
+
+      state = build_state(mode: :update, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save uses update button when mode is update, not create button" do
+      submit = %{
+        create: %{label: "Create", disabled: true, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state =
+        build_state(
+          mode: :update,
+          static_opts: [submit: submit, resource: MishkaGervaz.Test.Resources.FormPost]
+        )
+
+      socket = build_socket(state)
+
+      {:noreply, _updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+    end
+
+    test "save blocked when update button disabled via function based on state" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{
+          label: "Update",
+          disabled: fn state -> not state.master_user? end,
+          restricted: false,
+          visible: true
+        },
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(mode: :update, master_user?: false, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+    end
+
+    test "save allowed when update button disabled function returns false" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{
+          label: "Update",
+          disabled: fn _state -> false end,
+          restricted: false,
+          visible: true
+        },
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state =
+        build_state(
+          mode: :update,
+          static_opts: [submit: submit, resource: MishkaGervaz.Test.Resources.FormPost]
+        )
+
+      socket = build_socket(state)
+
+      {:noreply, _updated_socket} = Events.handle("save", %{"form" => %{}}, socket)
+    end
+  end
+
+  describe "cancel event — submit button server-side enforcement" do
+    test "cancel blocked when cancel button is nil" do
+      submit = %{create: nil, update: nil, cancel: nil, position: :bottom}
+      state = build_state(static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state.dirty? == false
+      assert updated_socket.assigns.form_state.mode == :create
+    end
+
+    test "cancel blocked when cancel button disabled is true" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: true, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state == state
+    end
+
+    test "cancel blocked when cancel button visible is false" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: false},
+        position: :bottom
+      }
+
+      state = build_state(static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state == state
+    end
+
+    test "cancel blocked when cancel button restricted true and user not master" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: true, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(master_user?: false, static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state == state
+    end
+
+    test "cancel allowed when cancel button restricted true and user IS master" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: true, visible: true},
+        position: :bottom
+      }
+
+      state =
+        build_state(
+          master_user?: true,
+          static_opts: [submit: submit, resource: MishkaGervaz.Test.Resources.FormPost]
+        )
+
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      refute updated_socket.assigns.form_state == state
+    end
+
+    test "cancel blocked when cancel disabled function returns true" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: fn _s -> true end, restricted: false, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state == state
+    end
+
+    test "cancel blocked when cancel visible function returns false" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{
+          label: "Cancel",
+          disabled: false,
+          restricted: false,
+          visible: fn _s -> false end
+        },
+        position: :bottom
+      }
+
+      state = build_state(static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state == state
+    end
+
+    test "cancel blocked when cancel restricted function returns true" do
+      submit = %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: fn _s -> true end, visible: true},
+        position: :bottom
+      }
+
+      state = build_state(static_opts: [submit: submit])
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("cancel", %{}, socket)
+      assert updated_socket.assigns.form_state == state
+    end
+  end
 end

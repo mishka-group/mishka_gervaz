@@ -102,8 +102,8 @@ defmodule MishkaGervaz.Form.Dsl do
       end
 
       submit do
-        create_label "Create"
-        update_label "Save"
+        create label: "Create"
+        update label: "Save"
       end
     end
   end
