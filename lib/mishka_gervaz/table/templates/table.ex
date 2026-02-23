@@ -25,7 +25,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
   use MishkaGervaz.Messages
 
   import MishkaGervaz.Helpers,
-    only: [resolve_label: 1, dynamic_component: 1, get_visible_columns: 2]
+    only: [resolve_label: 1, dynamic_component: 1, get_visible_columns: 2, accessible?: 2]
 
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.JS
@@ -63,7 +63,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
         static.bulk_actions != [] and
         Shared.has_visible_bulk_actions?(static.bulk_actions, state.archive_status)
 
-    show_filters = static.filters != [] and :filter in features
+    accessible_filters = Enum.filter(static.filters, &accessible?(&1, state))
+
+    show_filters =
+      (accessible_filters != [] or state.supports_archive) and :filter in features
+
     show_pagination = :paginate in features
     show_bulk_actions = :bulk_actions in features and show_checkboxes
 
@@ -74,6 +78,9 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
     show_expand = :expand in features and has_accordion_action
 
+    show_actions =
+      Shared.has_user_visible_actions?(static.row_actions, static.row_action_dropdowns, state)
+
     assigns =
       assigns
       |> assign(:show_checkboxes, show_checkboxes)
@@ -82,6 +89,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:show_bulk_actions, show_bulk_actions)
       |> assign(:show_template_switcher, show_template_switcher)
       |> assign(:show_expand, show_expand)
+      |> assign(:show_actions, show_actions)
       |> assign(:features, features)
 
     ~H"""
@@ -124,6 +132,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
               state={@state}
               show_checkboxes={@show_checkboxes}
               show_expand={@show_expand}
+              show_actions={@show_actions}
               features={@features}
               myself={@myself}
             />
@@ -150,6 +159,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
                 state={@state}
                 show_checkboxes={@show_checkboxes}
                 show_expand={@show_expand}
+                show_actions={@show_actions}
                 myself={@myself}
               />
             </tbody>
@@ -166,7 +176,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
                 <td
                   colspan={
                     length(get_visible_columns(@static.columns, @state)) +
-                      if(@show_expand, do: 1, else: 0) + if(@show_checkboxes, do: 1, else: 0) + 1
+                      if(@show_expand, do: 1, else: 0) + if(@show_checkboxes, do: 1, else: 0) +
+                      if(@show_actions, do: 1, else: 0)
                   }
                   class="px-6 py-4"
                 >
@@ -266,7 +277,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           </div>
         </th>
         <th
-          :if={@static.row_actions != [] or @static.row_action_dropdowns not in [nil, []]}
+          :if={@show_actions}
           class="w-24 px-4 py-3 text-right"
         >
           {dgettext("mishka_gervaz", "Actions")}
@@ -405,7 +416,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         <Shared.render_cell column={column} record={@record} static={@static} state={@state} />
       </td>
       <td
-        :if={@filtered_row_actions != [] or @static.row_action_dropdowns not in [nil, []]}
+        :if={@show_actions}
         class="px-4 py-3 text-right"
       >
         <Shared.render_row_actions

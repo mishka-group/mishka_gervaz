@@ -36,7 +36,8 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   use MishkaGervaz.Table.Behaviours.Template
   use MishkaGervaz.Messages
 
-  import MishkaGervaz.Helpers, only: [dynamic_component: 1, get_visible_columns: 2]
+  import MishkaGervaz.Helpers,
+    only: [dynamic_component: 1, get_visible_columns: 2, accessible?: 2]
 
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.JS
@@ -75,7 +76,11 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
         static.bulk_actions != [] and
         Shared.has_visible_bulk_actions?(static.bulk_actions, state.archive_status)
 
-    show_filters = static.filters != [] and :filter in features
+    accessible_filters = Enum.filter(static.filters, &accessible?(&1, state))
+
+    show_filters =
+      (accessible_filters != [] or state.supports_archive) and :filter in features
+
     show_pagination = :paginate in features
     show_bulk_actions = :bulk_actions in features and show_checkboxes
 

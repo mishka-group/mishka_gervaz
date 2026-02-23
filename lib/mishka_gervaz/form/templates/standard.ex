@@ -41,10 +41,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns = assign(assigns, :init_js, resolve_js_hook(assigns, :on_init))
 
     ~H"""
-    <div id={@static.id <> "-form-wrapper"} phx-mounted={@init_js}>
+    <div id={@static.id <> "-form-wrapper"} phx-mounted={@init_js} hidden={@state.loading == :denied}>
       <%= cond do %>
         <% @state.loading == :denied -> %>
-          <%!-- access denied: form not available for this user/mode --%>
         <% @state.loading == :loaded and @state.form -> %>
           <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
             {render_step_indicator(assigns)}

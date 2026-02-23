@@ -999,6 +999,39 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   defp action_authorized?(_, _record, _state), do: true
 
   @doc """
+  Checks if any row actions or dropdowns are potentially visible for the current user.
+
+  Used by templates to decide whether to render the Actions column header.
+  Does not evaluate per-record visibility functions — only checks `restricted` and
+  boolean/atom `visible` values.
+  """
+  @spec has_user_visible_actions?(list(), list() | nil, map()) :: boolean()
+  def has_user_visible_actions?(row_actions, dropdowns, state) do
+    action_available? = fn action ->
+      not (action[:restricted] == true and not state.master_user?) and
+        action[:visible] != false and
+        action[:type] != :accordion
+    end
+
+    has_actions = Enum.any?(row_actions, action_available?)
+
+    has_dropdowns =
+      case dropdowns do
+        items when is_list(items) and items != [] ->
+          Enum.any?(items, fn dropdown ->
+            Enum.any?(Map.get(dropdown, :items, []), fn item ->
+              item[:type] == :separator or action_available?.(item)
+            end)
+          end)
+
+        _ ->
+          false
+      end
+
+    has_actions or has_dropdowns
+  end
+
+  @doc """
   Renders the empty state with configurable message, icon, and action.
   """
   @spec render_empty_state(map()) :: Phoenix.LiveView.Rendered.t()
