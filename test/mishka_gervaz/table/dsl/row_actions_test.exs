@@ -287,6 +287,60 @@ defmodule MishkaGervaz.DSL.RowActionsTest do
     end
   end
 
+  describe "edit type actions" do
+    test "edit action has correct type" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_form)
+      assert action.type == :edit
+    end
+
+    test "edit action has :active visibility" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_form)
+      assert action.visible == :active
+    end
+
+    test "edit action ui configuration" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_form)
+      ui = get_ui(action)
+      assert ui.label == "Edit Form"
+      assert ui.icon == "hero-pencil-square"
+    end
+
+    test "edit action with js hook has function" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_modal)
+      assert is_function(action.js, 1)
+    end
+
+    test "edit action js hook returns JS struct" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_modal)
+      result = action.js.(%{id: "test-123"})
+      assert is_struct(result, Phoenix.LiveView.JS)
+    end
+
+    test "edit action without js has nil js field" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_form)
+      assert action.js == nil
+    end
+
+    test "edit action resolves type_module to Action.Edit" do
+      action = ResourceInfo.row_action(ComplexTestResource, :edit_form)
+      assert action.type_module == MishkaGervaz.Table.Types.Action.Edit
+    end
+  end
+
+  describe "js field on row actions" do
+    test "js is in opt_schema" do
+      schema = MishkaGervaz.Table.Entities.RowAction.opt_schema()
+      js_config = Keyword.get(schema, :js)
+      assert js_config != nil
+      assert Keyword.get(js_config, :type) == {:fun, 1}
+    end
+
+    test "non-edit actions have nil js by default" do
+      action = ResourceInfo.row_action(ComplexTestResource, :show)
+      assert action.js == nil
+    end
+  end
+
   describe "RowAction entity defaults" do
     test "restricted defaults to false in opt_schema" do
       schema = MishkaGervaz.Table.Entities.RowAction.opt_schema()
@@ -298,6 +352,11 @@ defmodule MishkaGervaz.DSL.RowActionsTest do
       schema = MishkaGervaz.Table.Entities.RowAction.opt_schema()
       visible_config = Keyword.get(schema, :visible)
       assert Keyword.get(visible_config, :default) == :active
+    end
+
+    test "target is no longer in opt_schema" do
+      schema = MishkaGervaz.Table.Entities.RowAction.opt_schema()
+      assert Keyword.get(schema, :target) == nil
     end
   end
 

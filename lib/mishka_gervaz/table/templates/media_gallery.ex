@@ -36,7 +36,8 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   use MishkaGervaz.Table.Behaviours.Template
   use MishkaGervaz.Messages
 
-  import MishkaGervaz.Helpers, only: [dynamic_component: 1, get_visible_columns: 2]
+  import MishkaGervaz.Helpers,
+    only: [dynamic_component: 1, get_visible_columns: 2, accessible?: 2]
 
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.JS
@@ -75,7 +76,11 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
         static.bulk_actions != [] and
         Shared.has_visible_bulk_actions?(static.bulk_actions, state.archive_status)
 
-    show_filters = static.filters != [] and :filter in features
+    accessible_filters = Enum.filter(static.filters, &accessible?(&1, state))
+
+    show_filters =
+      (accessible_filters != [] or state.supports_archive) and :filter in features
+
     show_pagination = :paginate in features
     show_bulk_actions = :bulk_actions in features and show_checkboxes
 
@@ -326,7 +331,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
     column = assigns.column
     record = assigns.record
 
-    image_url = get_column_value(column, record, assigns.state)
+    image_url = get_column_value(column, record, assigns.state) |> cache_bust_url(record)
     is_image = is_image_url?(image_url)
 
     assigns =
@@ -422,11 +427,23 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   defp is_image_url?("data:image/" <> _), do: true
 
   defp is_image_url?(url) when is_binary(url) do
-    ext = url |> String.downcase() |> Path.extname()
+    path = url |> String.split("?") |> List.first()
+    ext = path |> String.downcase() |> Path.extname()
     ext in ~w(.jpg .jpeg .png .gif .webp .svg)
   end
 
   defp is_image_url?(_), do: false
+
+  defp cache_bust_url(nil, _record), do: nil
+
+  defp cache_bust_url(url, record) when is_binary(url) do
+    case Map.get(record, :updated_at) do
+      %DateTime{} = dt -> url <> "?v=#{DateTime.to_unix(dt)}"
+      _ -> url
+    end
+  end
+
+  defp cache_bust_url(url, _record), do: url
 
   defp file_type_icon(assigns) do
     assigns = assign(assigns, :icon_name, get_file_icon_from_url(assigns.url))
@@ -598,8 +615,8 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
     end
   end
 
-  defp gallery_ui_adapter(MishkaGervaz.Table.UIAdapters.Tailwind),
-    do: MishkaGervaz.Table.UIAdapters.MediaGallery
+  defp gallery_ui_adapter(MishkaGervaz.UIAdapters.Tailwind),
+    do: MishkaGervaz.UIAdapters.MediaGallery
 
   defp gallery_ui_adapter(user_adapter), do: user_adapter
 end

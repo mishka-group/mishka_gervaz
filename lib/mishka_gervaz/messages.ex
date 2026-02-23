@@ -56,7 +56,6 @@ defmodule MishkaGervaz.Messages do
       # With config-based backend
       use MishkaGervaz.Messages
   """
-  # Default backend from config (evaluated at mishka_gervaz compile time)
   @default_backend Application.compile_env(:mishka_gervaz, :gettext_backend, MishkaGervaz.Gettext)
 
   defmacro __using__(opts) do

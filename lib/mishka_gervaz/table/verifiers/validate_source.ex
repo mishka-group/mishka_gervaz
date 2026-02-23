@@ -21,6 +21,14 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
 
   @impl true
   def verify(dsl_state) do
+    if is_nil(Verifier.get_option(dsl_state, [:mishka_gervaz, :table, :identity], :route)) do
+      :ok
+    else
+      do_verify(dsl_state)
+    end
+  end
+
+  defp do_verify(dsl_state) do
     with module <- Verifier.get_persisted(dsl_state, :module),
          :ok <- validate_archive_section(dsl_state, module),
          :ok <- validate_realtime_prefix(dsl_state, module),

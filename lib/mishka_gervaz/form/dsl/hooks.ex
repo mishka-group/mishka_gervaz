@@ -1,0 +1,110 @@
+defmodule MishkaGervaz.Form.Dsl.Hooks do
+  @moduledoc """
+  Hooks section DSL definition for form configuration.
+
+  Defines lifecycle callbacks for form events.
+
+  ## Example
+
+      hooks do
+        before_save fn params, state ->
+          # Transform params before saving
+          Map.put(params, "processed", true)
+        end
+
+        after_save fn result, state ->
+          # Side effects after save
+          Logger.info("Saved: \#{inspect(result)}")
+          state
+        end
+      end
+  """
+
+  @hooks_schema [
+    on_init: [
+      type: {:fun, 2},
+      doc: "`fn form, state -> form` - After form initialization."
+    ],
+    before_save: [
+      type: {:fun, 2},
+      doc:
+        "`fn params, state -> params | {:halt, state}` - Before save. Return {:halt, state} to cancel."
+    ],
+    after_save: [
+      type: {:fun, 2},
+      doc: "`fn result, state -> state` - After successful save."
+    ],
+    on_error: [
+      type: {:fun, 2},
+      doc: "`fn form, state -> state` - On save error."
+    ],
+    on_cancel: [
+      type: {:fun, 1},
+      doc: "`fn state -> state` - When form is cancelled."
+    ],
+    on_validate: [
+      type: {:fun, 2},
+      doc: "`fn params, state -> params` - On form validate event."
+    ],
+    on_change: [
+      type: {:fun, 3},
+      doc: "`fn field, value, state -> state | {:halt, state}` - On individual field change."
+    ],
+    transform_params: [
+      type: {:fun, 1},
+      doc: "`fn params -> params` - Transform params before action."
+    ],
+    transform_errors: [
+      type: {:fun, 2},
+      doc: "`fn changeset, errors -> errors` - Transform error messages."
+    ]
+  ]
+
+  @js_hooks_schema [
+    on_init: [
+      type: {:fun, 0},
+      doc: "`fn -> %JS{}` - JS commands for phx-mounted on form container."
+    ],
+    after_save: [
+      type: {:fun, 1},
+      doc:
+        "`fn record_id -> %JS{}` - JS commands after successful save. Receives saved record ID."
+    ],
+    on_cancel: [
+      type: {:fun, 1},
+      doc:
+        "`fn record_id -> %JS{}` - JS commands when form is cancelled. Receives record ID or nil (create)."
+    ],
+    on_error: [
+      type: {:fun, 1},
+      doc:
+        "`fn record_id -> %JS{}` - JS commands on save error. Receives record ID or nil (create)."
+    ]
+  ]
+
+  @doc false
+  def schema, do: @hooks_schema
+
+  @doc false
+  def js_schema, do: @js_hooks_schema
+
+  @doc """
+  Returns the hooks section definition.
+  """
+  def section do
+    %Spark.Dsl.Section{
+      name: :hooks,
+      describe: "Lifecycle callbacks for forms.",
+      schema: @hooks_schema,
+      sections: [js_section()]
+    }
+  end
+
+  defp js_section do
+    %Spark.Dsl.Section{
+      name: :js,
+      describe: "Client-side JS commands for form lifecycle events.",
+      schema: @js_hooks_schema
+    }
+  end
+end

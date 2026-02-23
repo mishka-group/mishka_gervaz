@@ -14,7 +14,25 @@ defmodule MishkaGervaz.Test.Domain do
 
       pagination type: :numbered, page_size: 20
 
-      ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+      ui_adapter MishkaGervaz.UIAdapters.Tailwind
+    end
+
+    form do
+      actor_key :current_user
+      master_check fn user -> user && user.role == :admin end
+      template MishkaGervaz.Form.Templates.Standard
+      features :all
+      ui_adapter MishkaGervaz.UIAdapters.Tailwind
+
+      layout do
+        responsive true
+      end
+
+      submit do
+        create_label "Save"
+        update_label "Save Changes"
+        position :bottom
+      end
     end
 
     navigation do
@@ -37,6 +55,11 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.MinimalResource
     resource MishkaGervaz.Test.Resources.AutoColumnsResource
     resource MishkaGervaz.Test.Resources.ArchivableResource
+    resource MishkaGervaz.Test.Resources.FormPost
+    resource MishkaGervaz.Test.Resources.NestedForm
+    resource MishkaGervaz.Test.Resources.NestedDslForm
+    resource MishkaGervaz.Test.Resources.SubmitOptionsForm
+    resource MishkaGervaz.Test.Resources.NoButtonsForm
     allow_unregistered? true
   end
 end

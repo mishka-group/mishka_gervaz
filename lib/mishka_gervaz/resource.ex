@@ -68,14 +68,18 @@ defmodule MishkaGervaz.Resource do
     name: :mishka_gervaz,
     describe: "MishkaGervaz admin UI DSL configuration.",
     sections: [
-      MishkaGervaz.Table.Dsl.section()
+      MishkaGervaz.Table.Dsl.section(),
+      MishkaGervaz.Form.Dsl.section()
     ]
   }
 
   @transformers [
     MishkaGervaz.Table.Transformers.MergeDefaults,
     MishkaGervaz.Table.Transformers.ResolveColumns,
-    MishkaGervaz.Table.Transformers.BuildRuntimeConfig
+    MishkaGervaz.Table.Transformers.BuildRuntimeConfig,
+    MishkaGervaz.Form.Transformers.MergeDefaults,
+    MishkaGervaz.Form.Transformers.ResolveFields,
+    MishkaGervaz.Form.Transformers.BuildRuntimeConfig
   ]
 
   @verifiers [
@@ -84,7 +88,13 @@ defmodule MishkaGervaz.Resource do
     MishkaGervaz.Table.Verifiers.ValidateColumns,
     MishkaGervaz.Table.Verifiers.ValidateFilters,
     MishkaGervaz.Table.Verifiers.ValidateRowActions,
-    MishkaGervaz.Table.Verifiers.ValidateBulkActions
+    MishkaGervaz.Table.Verifiers.ValidateBulkActions,
+    MishkaGervaz.Form.Verifiers.ValidateIdentity,
+    MishkaGervaz.Form.Verifiers.ValidateSource,
+    MishkaGervaz.Form.Verifiers.ValidateFields,
+    MishkaGervaz.Form.Verifiers.ValidateGroups,
+    MishkaGervaz.Form.Verifiers.ValidateSteps,
+    MishkaGervaz.Form.Verifiers.ValidateUploads
   ]
 
   use Spark.Dsl.Extension,

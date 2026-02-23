@@ -145,18 +145,18 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
       """
     ],
     ui_adapter: [
-      type: {:or, [:atom, {:behaviour, MishkaGervaz.Table.Behaviours.UIAdapter}]},
-      default: MishkaGervaz.Table.UIAdapters.Tailwind,
+      type: {:or, [:atom, {:behaviour, MishkaGervaz.Behaviours.UIAdapter}]},
+      default: MishkaGervaz.UIAdapters.Tailwind,
       doc: """
       UI adapter module for rendering components.
 
       Built-in adapters:
-      - `MishkaGervaz.Table.UIAdapters.Tailwind` - Plain Tailwind CSS (default)
+      - `MishkaGervaz.UIAdapters.Tailwind` - Plain Tailwind CSS (default)
 
-      Create custom adapter with `use MishkaGervaz.Table.Behaviours.UIAdapter`:
+      Create custom adapter with `use MishkaGervaz.Behaviours.UIAdapter`:
 
           defmodule MyAppWeb.UIAdapter do
-            use MishkaGervaz.Table.Behaviours.UIAdapter,
+            use MishkaGervaz.Behaviours.UIAdapter,
               components: MyAppWeb.Components  # Auto-override from your components
 
             # Or manually override specific functions:
@@ -180,7 +180,7 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
           When specified, generates a dynamic adapter at compile time that uses
           your components with Tailwind as fallback.
 
-        * `:fallback` - Fallback adapter module. Defaults to `MishkaGervaz.Table.UIAdapters.Tailwind`.
+        * `:fallback` - Fallback adapter module. Defaults to `MishkaGervaz.UIAdapters.Tailwind`.
 
         * `:nested_components` - If true, uses nested module pattern (e.g., `Components.Button.button/1`).
           Automatically set to true when Chelekom adapter is selected.

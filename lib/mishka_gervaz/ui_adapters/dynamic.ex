@@ -1,4 +1,4 @@
-defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
+defmodule MishkaGervaz.UIAdapters.Dynamic do
   @moduledoc """
   Dynamic UI adapter for database-driven components.
 
@@ -15,7 +15,7 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
           site: "Global",
           component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
           module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
-          fallback: MishkaGervaz.Table.UIAdapters.Tailwind
+          fallback: MishkaGervaz.UIAdapters.Tailwind
         ]
       end
 
@@ -39,11 +39,11 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
   specified fallback adapter (defaults to Tailwind).
   """
 
-  @behaviour MishkaGervaz.Table.Behaviours.UIAdapter
+  @behaviour MishkaGervaz.Behaviours.UIAdapter
   use Phoenix.Component
 
   @default_site "Global"
-  @default_fallback MishkaGervaz.Table.UIAdapters.Tailwind
+  @default_fallback MishkaGervaz.UIAdapters.Tailwind
 
   @component_functions [
     :text_input,
@@ -84,7 +84,26 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
     :pagination_page_button,
     :loading_state,
     :template_switcher,
-    :template_switcher_button
+    :template_switcher_button,
+    # Form-only (17)
+    :form_container,
+    :field_wrapper,
+    :field_group,
+    :step_indicator,
+    :step_navigation,
+    :upload_dropzone,
+    :upload_preview,
+    :upload_progress,
+    :upload_file_input,
+    :upload_existing_file,
+    :toggle_input,
+    :range_input,
+    :textarea,
+    :json_editor,
+    :nested_fields,
+    :array_fields,
+    :field_error,
+    :string_list_input
   ]
 
   @doc """
@@ -100,16 +119,16 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
   ## Example
 
       defmodule MyApp.GervazUIAdapter do
-        use MishkaGervaz.Table.UIAdapters.Dynamic,
+        use MishkaGervaz.UIAdapters.Dynamic,
           site: "Global",
           component_renderer: &MyApp.LiveViewHelpers.component/1,
           module_resolver: &MyApp.Compilers.Helpers.module_name/3,
-          fallback: MishkaGervaz.Table.UIAdapters.Tailwind
+          fallback: MishkaGervaz.UIAdapters.Tailwind
       end
   """
   defmacro __using__(opts) do
     site = Keyword.get(opts, :site, "Global")
-    fallback = Keyword.get(opts, :fallback, MishkaGervaz.Table.UIAdapters.Tailwind)
+    fallback = Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)
     component_renderer = Keyword.get(opts, :component_renderer)
     module_resolver = Keyword.get(opts, :module_resolver)
 
@@ -117,13 +136,13 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
       for func <- @component_functions do
         quote do
           def unquote(func)(assigns) do
-            MishkaGervaz.Table.UIAdapters.Dynamic.unquote(func)(inject_config(assigns))
+            MishkaGervaz.UIAdapters.Dynamic.unquote(func)(inject_config(assigns))
           end
         end
       end
 
     quote do
-      @behaviour MishkaGervaz.Table.Behaviours.UIAdapter
+      @behaviour MishkaGervaz.Behaviours.UIAdapter
       use Phoenix.Component
 
       @site unquote(site)
@@ -419,6 +438,139 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
     end)
   end
 
+  @impl true
+  def load_more_select(assigns) do
+    render_component("load_more_select", assigns, fn assigns ->
+      fallback(assigns).load_more_select(assigns)
+    end)
+  end
+
+  @impl true
+  def form_container(assigns) do
+    render_component("form_container", assigns, fn assigns ->
+      fallback(assigns).form_container(assigns)
+    end)
+  end
+
+  @impl true
+  def field_wrapper(assigns) do
+    render_component("field_wrapper", assigns, fn assigns ->
+      fallback(assigns).field_wrapper(assigns)
+    end)
+  end
+
+  @impl true
+  def field_group(assigns) do
+    render_component("field_group", assigns, fn assigns ->
+      fallback(assigns).field_group(assigns)
+    end)
+  end
+
+  @impl true
+  def step_indicator(assigns) do
+    render_component("step_indicator", assigns, fn assigns ->
+      fallback(assigns).step_indicator(assigns)
+    end)
+  end
+
+  @impl true
+  def step_navigation(assigns) do
+    render_component("step_navigation", assigns, fn assigns ->
+      fallback(assigns).step_navigation(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_dropzone(assigns) do
+    render_component("upload_dropzone", assigns, fn assigns ->
+      fallback(assigns).upload_dropzone(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_preview(assigns) do
+    render_component("upload_preview", assigns, fn assigns ->
+      fallback(assigns).upload_preview(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_progress(assigns) do
+    render_component("upload_progress", assigns, fn assigns ->
+      fallback(assigns).upload_progress(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_file_input(assigns) do
+    render_component("upload_file_input", assigns, fn assigns ->
+      fallback(assigns).upload_file_input(assigns)
+    end)
+  end
+
+  @impl true
+  def upload_existing_file(assigns) do
+    render_component("upload_existing_file", assigns, fn assigns ->
+      fallback(assigns).upload_existing_file(assigns)
+    end)
+  end
+
+  @impl true
+  def toggle_input(assigns) do
+    render_component("toggle_input", assigns, fn assigns ->
+      fallback(assigns).toggle_input(assigns)
+    end)
+  end
+
+  @impl true
+  def range_input(assigns) do
+    render_component("range_input", assigns, fn assigns ->
+      fallback(assigns).range_input(assigns)
+    end)
+  end
+
+  @impl true
+  def textarea(assigns) do
+    render_component("textarea", assigns, fn assigns ->
+      fallback(assigns).textarea(assigns)
+    end)
+  end
+
+  @impl true
+  def json_editor(assigns) do
+    render_component("json_editor", assigns, fn assigns ->
+      fallback(assigns).json_editor(assigns)
+    end)
+  end
+
+  @impl true
+  def nested_fields(assigns) do
+    render_component("nested_fields", assigns, fn assigns ->
+      fallback(assigns).nested_fields(assigns)
+    end)
+  end
+
+  @impl true
+  def array_fields(assigns) do
+    render_component("array_fields", assigns, fn assigns ->
+      fallback(assigns).array_fields(assigns)
+    end)
+  end
+
+  @impl true
+  def field_error(assigns) do
+    render_component("field_error", assigns, fn assigns ->
+      fallback(assigns).field_error(assigns)
+    end)
+  end
+
+  @impl true
+  def string_list_input(assigns) do
+    render_component("string_list_input", assigns, fn assigns ->
+      fallback(assigns).string_list_input(assigns)
+    end)
+  end
+
   defp render_component(component_name, assigns, fallback_fn) do
     renderer = Map.get(assigns, :__component_renderer__)
     resolver = Map.get(assigns, :__module_resolver__)
@@ -462,15 +614,15 @@ defmodule MishkaGervaz.Table.UIAdapters.Dynamic do
   - `:component_renderer` - Function `(assigns) -> rendered` to render components
   - `:module_resolver` - Function `(id, site, type) -> module()` to resolve module names
   - `:fallback` - The fallback adapter to use when components are not found
-    (default: `MishkaGervaz.Table.UIAdapters.Tailwind`)
+    (default: `MishkaGervaz.UIAdapters.Tailwind`)
 
   ## Example
 
-      assigns = MishkaGervaz.Table.UIAdapters.Dynamic.with_config(assigns,
+      assigns = MishkaGervaz.UIAdapters.Dynamic.with_config(assigns,
         site: "MyApp",
         component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
         module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
-        fallback: MishkaGervaz.Table.UIAdapters.Chelekom
+        fallback: MishkaGervaz.UIAdapters.Chelekom
       )
   """
   def with_config(assigns, opts \\ []) do

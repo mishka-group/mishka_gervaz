@@ -80,8 +80,6 @@ defmodule MishkaGervaz.Table.Dsl.Source do
     }
   end
 
-  # Archive schema with inline action options - NO defaults so we can detect if section is defined
-  # Actions are defined inline instead of in a nested section to avoid path conflicts
   @archive_schema [
     enabled: [
       type: :boolean,

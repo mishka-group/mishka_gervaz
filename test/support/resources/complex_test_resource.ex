@@ -9,14 +9,12 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
 
   mishka_gervaz do
     table do
-      # === IDENTITY SECTION ===
       identity do
         name :complex_posts
         route "/admin/complex-posts"
         stream_name :complex_posts_stream
       end
 
-      # === SOURCE SECTION ===
       source do
         actor_key :current_user
         master_check fn user -> user && user.role == :admin end
@@ -30,12 +28,8 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         preload do
           always [:author]
         end
-
-        # Note: archive section removed since this resource doesn't use AshArchival.Resource
-        # Archive section requires AshArchival.Resource extension
       end
 
-      # === COLUMNS SECTION ===
       columns do
         column_order [:title, :status, :author, :view_count, :is_featured, :inserted_at]
         default_sort {:inserted_at, :desc}
@@ -127,7 +121,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === FILTERS SECTION ===
       filters do
         filter_layout do
           mode :inline
@@ -218,7 +211,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === ROW ACTIONS SECTION ===
       row_actions do
         actions_layout do
           position :end
@@ -294,7 +286,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
           end
         end
 
-        # Update type actions - call Ash actions directly
         action :publish_now do
           type :update
           action :publish
@@ -320,7 +311,27 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
           end
         end
 
-        # Destroy type action with explicit action - call Ash destroy action directly
+        action :edit_form do
+          type :edit
+          visible :active
+
+          ui do
+            label "Edit Form"
+            icon "hero-pencil-square"
+          end
+        end
+
+        action :edit_modal do
+          type :edit
+          visible :active
+          js fn _record -> Phoenix.LiveView.JS.exec("data-show-modal", to: "#edit-modal") end
+
+          ui do
+            label "Edit Modal"
+            icon "hero-pencil"
+          end
+        end
+
         action :remove do
           type :destroy
           action {:master_destroy, :destroy}
@@ -367,7 +378,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === ROW SECTION ===
       row do
         event "show"
         selectable true
@@ -385,7 +395,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === BULK ACTIONS SECTION ===
       bulk_actions do
         enabled true
 
@@ -426,7 +435,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === PAGINATION ===
       pagination do
         type :numbered
         page_size 20
@@ -439,13 +447,11 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === REALTIME ===
       realtime do
         enabled true
         prefix "complex_posts"
       end
 
-      # === EMPTY STATE ===
       empty_state do
         message "No posts found"
         icon "hero-document-text"
@@ -454,20 +460,18 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         action_icon "hero-plus"
       end
 
-      # === ERROR STATE ===
       error_state do
         message "Failed to load posts"
         icon "hero-exclamation-circle"
         retry_label "Try Again"
       end
 
-      # === PRESENTATION SECTION ===
       presentation do
         template MishkaGervaz.Table.Templates.Table
         switchable_templates []
         template_options striped: true, bordered: false, hoverable: true
         features [:sort, :filter, :select, :paginate]
-        ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+        ui_adapter MishkaGervaz.UIAdapters.Tailwind
         ui_adapter_opts []
 
         theme do
@@ -484,7 +488,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      # === REFRESH SECTION ===
       refresh do
         enabled true
         interval 30_000
@@ -493,7 +496,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         pause_on_blur true
       end
 
-      # === URL SYNC SECTION ===
       url_sync do
         enabled true
         params [:filters, :sort, :page, :search]
@@ -501,7 +503,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         preserve_params :all
       end
 
-      # === HOOKS SECTION ===
       hooks do
         on_load fn socket, _data -> socket end
         before_delete fn _record, socket -> {:ok, socket} end
@@ -527,7 +528,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
     update :unarchive, accept: []
     destroy :master_permanent_destroy
     destroy :permanent_destroy
-    # Actions for :update type row actions
     update :publish, accept: []
     update :master_feature, accept: []
     update :feature, accept: []

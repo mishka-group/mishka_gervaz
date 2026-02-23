@@ -11,13 +11,13 @@ defmodule MishkaGervaz.Verifiers.ValidateDomainDefaultsTest do
       # Test.Domain has valid ui_adapter
       config = DomainInfo.domain_config(MishkaGervaz.Test.Domain)
 
-      assert config.table.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert config.table.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
       assert config.table.pagination.page_size == 20
     end
 
     test "valid ui_adapter is configured correctly" do
       ui_adapter = DomainInfo.default_ui_adapter(MishkaGervaz.Test.Domain)
-      assert ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "valid pagination page_size is configured correctly" do
@@ -127,7 +127,7 @@ defmodule MishkaGervaz.Verifiers.ValidateDomainDefaultsTest do
 
         mishka_gervaz do
           table do
-            ui_adapter MishkaGervaz.Table.UIAdapters.Tailwind
+            ui_adapter MishkaGervaz.UIAdapters.Tailwind
 
             pagination do
               page_size 50

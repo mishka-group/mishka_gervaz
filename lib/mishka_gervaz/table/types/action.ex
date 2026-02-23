@@ -39,11 +39,13 @@ defmodule MishkaGervaz.Table.Types.Action do
     builtin: %{
       link: Action.Link,
       event: Action.Event,
+      edit: Action.Edit,
       destroy: Action.Destroy,
       update: Action.Update,
       unarchive: Action.Unarchive,
       permanent_destroy: Action.PermanentDestroy,
-      row_click: Action.RowClick
+      row_click: Action.RowClick,
+      accordion: Action.Accordion
     },
     default: Action.Event
 
@@ -75,7 +77,6 @@ defmodule MishkaGervaz.Table.Types.Action do
     end
   end
 
-  # Keep backwards compatibility with list/0
   @doc """
   List all built-in action types.
 

@@ -12,6 +12,7 @@ defmodule MishkaGervaz.MixProject do
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
       deps: deps(),
+      aliases: aliases(),
       package: package(),
       docs: docs(),
       dialyzer: dialyzer(),
@@ -35,11 +36,12 @@ defmodule MishkaGervaz.MixProject do
 
   defp deps do
     [
-      {:spark, "~> 2.0"},
+      {:spark, github: "ash-project/spark", branch: "main", override: true},
       {:ash, "~> 3.0"},
       {:splode, "~> 0.3"},
       {:gettext, "~> 1.0"},
       {:phoenix_live_view, "~> 1.0", optional: true},
+      {:ash_phoenix, "~> 2.3"},
       {:jason, "~> 1.0"},
       {:html_sanitize_ex, "~> 1.4"},
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
@@ -69,6 +71,12 @@ defmodule MishkaGervaz.MixProject do
       source_ref: "v#{@version}",
       source_url: @source_url,
       extras: ["README.md", "CHANGELOG.md"]
+    ]
+  end
+
+  defp aliases do
+    [
+      "spark.formatter": "spark.formatter --extensions MishkaGervaz.Resource,MishkaGervaz.Domain"
     ]
   end
 

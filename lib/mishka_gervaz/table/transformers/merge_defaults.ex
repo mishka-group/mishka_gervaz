@@ -139,7 +139,7 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
         Transformer.persist(
           dsl_state,
           :mishka_gervaz_default_master_check,
-          {MishkaGervaz.Table.Defaults, :default_master_check, [field]}
+          {MishkaGervaz.Defaults, :default_master_check, [field]}
         )
 
       _ ->
@@ -160,7 +160,7 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
         Transformer.persist(
           dsl_state,
           :mishka_gervaz_default_visibility,
-          {MishkaGervaz.Table.Defaults, :default_visibility, [field]}
+          {MishkaGervaz.Defaults, :default_visibility, [field]}
         )
 
       _ ->

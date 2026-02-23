@@ -395,7 +395,6 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     }
   end
 
-  # Resolve the primary key type for relation filters
   defp resolve_relation_id_type(%{type: :relation} = filter, table_resource) do
     related_resource = resolve_related_resource(filter, table_resource)
 
@@ -713,7 +712,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     ui_adapter_raw =
       get_opt(dsl_state, path, :ui_adapter) ||
         domain_table[:ui_adapter] ||
-        MishkaGervaz.Table.UIAdapters.Tailwind
+        MishkaGervaz.UIAdapters.Tailwind
 
     ui_adapter_opts =
       get_opt(dsl_state, path, :ui_adapter_opts) || domain_table[:ui_adapter_opts] || []
@@ -911,7 +910,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
   defp maybe_generate_adapter(module, adapter, opts) do
     cond do
-      adapter == MishkaGervaz.Table.UIAdapters.Dynamic ->
+      adapter == MishkaGervaz.UIAdapters.Dynamic ->
         generate_dynamic_adapter(module, opts)
 
       Keyword.has_key?(opts, :component_module) ->
@@ -928,10 +927,9 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     if !Code.ensure_loaded?(adapter_name) do
       contents =
         quote do
-          use MishkaGervaz.Table.UIAdapters.Dynamic,
+          use MishkaGervaz.UIAdapters.Dynamic,
             site: unquote(Keyword.get(opts, :site, "Global")),
-            fallback:
-              unquote(Keyword.get(opts, :fallback, MishkaGervaz.Table.UIAdapters.Tailwind)),
+            fallback: unquote(Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)),
             component_renderer: unquote(Keyword.get(opts, :component_renderer)),
             module_resolver: unquote(Keyword.get(opts, :module_resolver))
         end
@@ -948,9 +946,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     if !Code.ensure_loaded?(adapter_name) do
       contents =
         quote do
-          use MishkaGervaz.Table.Behaviours.UIAdapter,
-            fallback:
-              unquote(Keyword.get(opts, :fallback, MishkaGervaz.Table.UIAdapters.Tailwind)),
+          use MishkaGervaz.Behaviours.UIAdapter,
+            fallback: unquote(Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)),
             components: unquote(Keyword.get(opts, :component_module)),
             nested_components: unquote(Keyword.get(opts, :nested_components, false)),
             module_prefix: unquote(Keyword.get(opts, :module_prefix)),

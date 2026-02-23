@@ -1,6 +1,6 @@
-defmodule MishkaGervaz.Table.Defaults do
+defmodule MishkaGervaz.Defaults do
   @moduledoc """
-  Default functions for table configuration.
+  Default functions for table and form configuration.
 
   These functions are used by transformers and must be named (not anonymous)
   so they can be properly escaped by Spark's DSL macros.

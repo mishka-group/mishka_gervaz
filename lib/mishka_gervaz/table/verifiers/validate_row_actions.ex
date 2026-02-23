@@ -10,6 +10,14 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateRowActions do
 
   @impl true
   def verify(dsl_state) do
+    if is_nil(Verifier.get_option(dsl_state, [:mishka_gervaz, :table, :identity], :route)) do
+      :ok
+    else
+      do_verify(dsl_state)
+    end
+  end
+
+  defp do_verify(dsl_state) do
     entities = dsl_state |> Verifier.get_entities(@path) |> List.wrap()
     actions = Enum.filter(entities, &match?(%RowAction{}, &1))
     dropdowns = Enum.filter(entities, &match?(%RowActionDropdown{}, &1))

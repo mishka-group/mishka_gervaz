@@ -187,7 +187,6 @@ defmodule MishkaGervaz.Table.Entities.Column do
 
   def transform(column), do: {:ok, column}
 
-  # Spark stores nested entities as a list - extract the singleton
   defp extract_ui(%{ui: [ui | _]} = column), do: %{column | ui: ui}
   defp extract_ui(%{ui: ui} = column) when is_struct(ui), do: column
   defp extract_ui(column), do: column
@@ -542,7 +541,6 @@ defmodule MishkaGervaz.Table.Entities.AutoColumns.Override do
 
   def transform(override), do: {:ok, override}
 
-  # Spark stores nested entities as a list - extract the singleton
   defp extract_ui(%{ui: [ui | _]} = override), do: %{override | ui: ui}
   defp extract_ui(%{ui: ui} = override) when is_struct(ui), do: override
   defp extract_ui(override), do: override

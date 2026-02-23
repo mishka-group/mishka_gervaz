@@ -6,7 +6,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapterTest do
 
   describe "behaviour callbacks" do
     test "defines required component callbacks" do
-      callbacks = MishkaGervaz.Table.Behaviours.UIAdapter.behaviour_info(:callbacks)
+      callbacks = MishkaGervaz.Behaviours.UIAdapter.behaviour_info(:callbacks)
 
       # Input components
       assert {:text_input, 1} in callbacks
@@ -34,7 +34,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapterTest do
     end
 
     test "defines optional callbacks" do
-      optional = MishkaGervaz.Table.Behaviours.UIAdapter.behaviour_info(:optional_callbacks)
+      optional = MishkaGervaz.Behaviours.UIAdapter.behaviour_info(:optional_callbacks)
 
       assert {:dropdown, 1} in optional
       assert {:empty_state, 1} in optional
@@ -44,7 +44,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapterTest do
 
   describe "module attributes" do
     test "tailwind adapter is defined" do
-      assert Code.ensure_loaded?(MishkaGervaz.Table.UIAdapters.Tailwind)
+      assert Code.ensure_loaded?(MishkaGervaz.UIAdapters.Tailwind)
     end
   end
 end

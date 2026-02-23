@@ -1,5 +1,4 @@
 defmodule MishkaGervaz.Table.Types.Column do
-  # Suppress macro-generated pattern match warning from TypeRegistry
   @dialyzer :no_match
 
   @moduledoc """

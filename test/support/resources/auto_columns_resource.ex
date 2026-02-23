@@ -40,7 +40,7 @@ defmodule MishkaGervaz.Test.Resources.AutoColumnsResource do
           end
 
           override :inserted_at do
-            format(fn value -> Calendar.strftime(value, "%d/%m/%Y") end)
+            format fn value -> Calendar.strftime(value, "%d/%m/%Y") end
           end
         end
       end

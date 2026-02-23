@@ -20,7 +20,6 @@ defmodule MishkaGervaz.Gettext do
   `priv/gettext` directory and customize as needed.
   """
 
-  # Suppress Expo/Gettext opaque type warning (library issue, not our code)
   @dialyzer :no_opaque
 
   use Gettext.Backend, otp_app: :mishka_gervaz, priv: "priv/gettext"

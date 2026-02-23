@@ -538,7 +538,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
   describe "presentation section" do
     test "ui_adapter is set" do
       config = ResourceInfo.table_config(ComplexTestResource)
-      assert config.presentation.ui_adapter == MishkaGervaz.Table.UIAdapters.Tailwind
+      assert config.presentation.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "ui_adapter_opts is set" do

@@ -223,8 +223,6 @@ defmodule MishkaGervaz.Test.VirtualFilter.ArticleResource do
           end
         end
 
-        # ── depends_on & bridge pattern tests ──
-
         # Test 11: depends_on parent filter
         filter :region, :select do
           virtual true

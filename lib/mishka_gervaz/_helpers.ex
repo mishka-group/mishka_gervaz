@@ -13,7 +13,24 @@ defmodule MishkaGervaz.Helpers do
   def dynamic_component(assigns) do
     {mod, assigns} = Map.pop(assigns, :module)
     {func, assigns} = Map.pop(assigns, :function)
-    apply(mod, func, [assigns])
+    apply(mod, func, [normalize_html_attrs(assigns)])
+  end
+
+  defp normalize_html_attrs(assigns) do
+    Enum.reduce(assigns, assigns, fn
+      {key, value}, acc when is_atom(key) ->
+        str = Atom.to_string(key)
+
+        if String.starts_with?(str, "phx_") or String.starts_with?(str, "data_") do
+          dashed = str |> String.replace("_", "-") |> String.to_atom()
+          acc |> Map.delete(key) |> Map.put(dashed, value)
+        else
+          acc
+        end
+
+      {_, _}, acc ->
+        acc
+    end)
   end
 
   @doc """
@@ -361,6 +378,65 @@ defmodule MishkaGervaz.Helpers do
   end
 
   def normalize_selected_values(value), do: [to_string(value)]
+
+  @doc """
+  Checks if a string name is a known entity name in the given state.
+
+  Pattern matches on the state structure to auto-detect the context:
+  - Form state (`static.fields`) — checks field names
+  - Table state (`static.columns`) — checks column names
+  - Table state (`static.filters`) — checks filter names (with explicit `:filters`)
+  - Form state (`static.steps`) — checks step names (with explicit `:steps`)
+  - Form state (`static.uploads`) — checks upload names (with explicit `:uploads`)
+
+  Avoids `String.to_existing_atom/1` and rescue blocks for safe user input validation.
+
+  ## Examples
+
+      iex> state = %{static: %{fields: [%{name: :title}, %{name: :tags}]}}
+      iex> MishkaGervaz.Helpers.known_name?("tags", state)
+      true
+
+      iex> MishkaGervaz.Helpers.known_name?("unknown", state)
+      false
+
+      iex> state = %{static: %{columns: [%{name: :id}, %{name: :status}]}}
+      iex> MishkaGervaz.Helpers.known_name?("status", state)
+      true
+  """
+  @spec known_name?(String.t(), map()) :: boolean()
+  def known_name?(name, %{static: %{fields: fields}}) when is_binary(name) and is_list(fields) do
+    name_in_entities?(name, fields)
+  end
+
+  def known_name?(name, %{static: %{columns: columns}})
+      when is_binary(name) and is_list(columns) do
+    name_in_entities?(name, columns)
+  end
+
+  def known_name?(_, _), do: false
+
+  @spec known_name?(String.t(), map(), :filters | :steps | :uploads) :: boolean()
+  def known_name?(name, %{static: %{filters: filters}}, :filters)
+      when is_binary(name) and is_list(filters) do
+    name_in_entities?(name, filters)
+  end
+
+  def known_name?(name, %{static: %{steps: steps}}, :steps)
+      when is_binary(name) and is_list(steps) do
+    name_in_entities?(name, steps)
+  end
+
+  def known_name?(name, %{static: %{uploads: uploads}}, :uploads)
+      when is_binary(name) and is_list(uploads) do
+    name_in_entities?(name, uploads)
+  end
+
+  def known_name?(_, _, _), do: false
+
+  defp name_in_entities?(name, entities) do
+    Enum.any?(entities, &(Atom.to_string(&1.name) == name))
+  end
 
   @doc """
   Checks if a value is present (not nil, empty string, or empty list).

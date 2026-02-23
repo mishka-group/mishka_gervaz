@@ -7,6 +7,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
           :link
           | :modal
           | :event
+          | :edit
           | :destroy
           | :update
           | :accordion
@@ -24,6 +25,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
           confirm: String.t() | (map() -> String.t()) | nil,
           restricted: boolean(),
           visible: boolean() | :active | :archived | (map(), map() -> boolean()),
+          js: (map() -> Phoenix.LiveView.JS.t()) | nil,
           render:
             (map() -> any()) | (map(), map() -> any()) | (map(), map(), any() -> any()) | nil,
           ui: __MODULE__.Ui.t() | nil,
@@ -42,6 +44,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
     confirm: nil,
     restricted: false,
     visible: :active,
+    js: nil,
     render: nil,
     ui: nil,
     type_module: nil,
@@ -52,6 +55,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
     :link,
     :modal,
     :event,
+    :edit,
     :destroy,
     :update,
     :accordion,
@@ -119,6 +123,10 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
       default: :active,
       doc:
         "When action is visible. `:active` (default) - only for active records, `:archived` - only for archived records, `true` - always visible, `false` - never visible, `fn/2` - custom function."
+    ],
+    js: [
+      type: {:fun, 1},
+      doc: "Optional JS commands to chain onto the button click. `fn record -> JS.exec(...) end`."
     ],
     render: [
       type: {:or, [{:fun, 1}, {:fun, 2}, {:fun, 3}]},

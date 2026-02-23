@@ -544,7 +544,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   defp bulk_action_visible?(_, _status, _state), do: true
 
   def render_template_switcher(assigns) do
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
     assigns = assign(assigns, :ui_adapter, ui_adapter)
 
     ~H"""
@@ -994,11 +994,42 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def action_visible?(%{visible: false}, _record, _state), do: false
   def action_visible?(_, _record, _state), do: true
 
-  defp action_authorized?(%{restricted: true}, record, state) do
-    MishkaGervaz.Table.Web.State.can_modify_record?(state, record)
-  end
+  defp action_authorized?(%{restricted: true}, _record, %{master_user?: master?}), do: master?
 
   defp action_authorized?(_, _record, _state), do: true
+
+  @doc """
+  Checks if any row actions or dropdowns are potentially visible for the current user.
+
+  Used by templates to decide whether to render the Actions column header.
+  Does not evaluate per-record visibility functions — only checks `restricted` and
+  boolean/atom `visible` values.
+  """
+  @spec has_user_visible_actions?(list(), list() | nil, map()) :: boolean()
+  def has_user_visible_actions?(row_actions, dropdowns, state) do
+    action_available? = fn action ->
+      not (action[:restricted] == true and not state.master_user?) and
+        action[:visible] != false and
+        action[:type] != :accordion
+    end
+
+    has_actions = Enum.any?(row_actions, action_available?)
+
+    has_dropdowns =
+      case dropdowns do
+        items when is_list(items) and items != [] ->
+          Enum.any?(items, fn dropdown ->
+            Enum.any?(Map.get(dropdown, :items, []), fn item ->
+              item[:type] == :separator or action_available?.(item)
+            end)
+          end)
+
+        _ ->
+          false
+      end
+
+    has_actions or has_dropdowns
+  end
 
   @doc """
   Renders the empty state with configurable message, icon, and action.
@@ -1007,7 +1038,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def render_empty_state(assigns) do
     empty_state = assigns[:empty_state] || %{}
     action = Map.get(empty_state, :action) || %{}
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
 
     assigns =
       assigns
@@ -1040,7 +1071,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @spec render_error_state(map()) :: Phoenix.LiveView.Rendered.t()
   def render_error_state(assigns) do
     error_state = assigns[:error_state] || %{}
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
 
     assigns =
       assigns
@@ -1073,7 +1104,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @spec render_loading(map()) :: Phoenix.LiveView.Rendered.t()
   def render_loading(assigns) do
     loading_text = assigns[:loading_text] || dgettext("mishka_gervaz", "Loading...")
-    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
     loading_style = assigns[:loading_style] || :spinner
 
     assigns =
@@ -1097,7 +1128,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     {column, record, static, state} =
       {assigns.column, assigns.record, assigns[:static], assigns[:state]}
 
-    ui = (static && static.ui_adapter) || MishkaGervaz.Table.UIAdapters.Tailwind
+    ui = (static && static.ui_adapter) || MishkaGervaz.UIAdapters.Tailwind
     value = MishkaGervaz.Table.Behaviours.Template.get_cell_value(record, column)
     formatted_value = apply_format(Map.get(column, :format), state, record, value)
     render_input = build_render_input(column, record, formatted_value, state)

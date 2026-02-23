@@ -91,6 +91,7 @@ defmodule MishkaGervaz.Table.Web.Events do
       }
 
       alias MishkaGervaz.Resource.Info.Table, as: Info
+      alias MishkaGervaz.Resource.Info.Form, as: FormInfo
       alias MishkaGervaz.Errors
 
       require Ash.Query
@@ -510,12 +511,28 @@ defmodule MishkaGervaz.Table.Web.Events do
                   %{type: :destroy, action: action} when not is_nil(action) ->
                     do_destroy(state, payload, action, socket)
 
+                  %{type: :edit} ->
+                    do_edit(state, payload, socket)
+
                   _ ->
                     send(self(), {:row_action, event_name, payload})
                     {:noreply, socket}
                 end
             end
         end
+      end
+
+      defp do_edit(state, %{"id" => id}, socket) do
+        form_id = FormInfo.component_id(state.static.resource)
+
+        if form_id do
+          Phoenix.LiveView.send_update(MishkaGervaz.Form.Web.Live,
+            id: form_id,
+            record_id: id
+          )
+        end
+
+        {:noreply, socket}
       end
 
       @spec find_row_action_by_event(State.t(), String.t()) :: map() | nil
@@ -688,6 +705,7 @@ defmodule MishkaGervaz.Table.Web.Events do
       end
 
       defp do_handle("close_expanded", _params, state, socket) do
+        old_expanded_id = state.expanded_id
         state = State.update(state, expanded_id: nil, expanded_data: nil)
 
         socket =
@@ -696,6 +714,14 @@ defmodule MishkaGervaz.Table.Web.Events do
             id: "#{state.static.id}-expanded-tbody"
           })
           |> Phoenix.Component.assign(:table_state, state)
+
+        socket =
+          if old_expanded_id do
+            get_record(state, old_expanded_id, state.archive_status)
+            |> then(&safe_stream_reinsert(socket, state, &1))
+          else
+            socket
+          end
 
         {:noreply, socket}
       end
@@ -819,7 +845,6 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
-  # Default implementations for direct use
   @doc """
   Main event handler dispatcher.
 
@@ -833,7 +858,6 @@ end
 
 defmodule MishkaGervaz.Table.Web.Events.Default do
   @moduledoc false
-  # Suppress macro-generated pattern match warning from Events macro
   @dialyzer :no_match
   use MishkaGervaz.Table.Web.Events
 end

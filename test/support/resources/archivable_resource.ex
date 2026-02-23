@@ -9,7 +9,7 @@ defmodule MishkaGervaz.Test.Resources.ArchivableResource do
 
   archive do
     # AshArchival configuration
-    archive_related []
+    archive_related([])
   end
 
   mishka_gervaz do
