@@ -352,10 +352,27 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             |> Enum.filter(&(&1.type == :relation))
             |> Enum.map(& &1.name)
 
+          derive_fns =
+            state.static.fields
+            |> Enum.filter(&(not is_nil(&1[:derive_value])))
+            |> Map.new(&{&1.name, &1.derive_value})
+
           (dependency_names ++ relation_names)
           |> Enum.uniq()
           |> Enum.reduce(%{}, fn field_name, acc ->
             value = Map.get(record, field_name)
+
+            value =
+              case value do
+                nil ->
+                  case Map.get(derive_fns, field_name) do
+                    nil -> nil
+                    derive_fn -> derive_fn.(record)
+                  end
+
+                other ->
+                  other
+              end
 
             case value do
               nil -> acc

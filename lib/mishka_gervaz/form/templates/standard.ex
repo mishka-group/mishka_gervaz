@@ -562,11 +562,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         base |> assign(:function, :textarea) |> dynamic_component()
 
       :select ->
-        options = Map.get(field, :options, [])
+        options = resolve_field_options(field)
         base |> assign(:function, :select) |> assign(:options, options) |> dynamic_component()
 
       :multi_select ->
-        options = Map.get(field, :options, [])
+        options = resolve_field_options(field)
 
         base
         |> assign(:function, :multi_select)
@@ -1310,6 +1310,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp resolve_callable(f) when is_function(f, 0), do: f.()
   defp resolve_callable(v), do: v
+
+  defp resolve_field_options(field) do
+    MishkaGervaz.Helpers.resolve_options(Map.get(field, :options))
+  end
 
   defp evaluate_readonly(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
   defp evaluate_readonly(%{readonly: val}, _state) when is_boolean(val), do: val

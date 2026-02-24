@@ -184,6 +184,28 @@ defmodule MishkaGervaz.Helpers do
   end
 
   @doc """
+  Resolves options that may be a list or a zero-arity function returning a list.
+
+  This enables dynamic options (e.g., from a database query) in DSL fields by
+  allowing users to pass `fn -> query_options() end` which defers execution to runtime.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.resolve_options([{"A", "a"}, {"B", "b"}])
+      [{"A", "a"}, {"B", "b"}]
+
+      iex> MishkaGervaz.Helpers.resolve_options(fn -> [{"X", "x"}] end)
+      [{"X", "x"}]
+
+      iex> MishkaGervaz.Helpers.resolve_options(nil)
+      []
+  """
+  @spec resolve_options(list() | (-> list()) | nil) :: list()
+  def resolve_options(opts) when is_function(opts, 0), do: opts.()
+  def resolve_options(opts) when is_list(opts), do: opts
+  def resolve_options(_), do: []
+
+  @doc """
   Normalizes a list of options for HTML select elements.
 
   Converts various option formats to `{label, value}` tuples with string values,
