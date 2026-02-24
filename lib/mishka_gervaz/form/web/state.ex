@@ -527,6 +527,10 @@ defmodule MishkaGervaz.Form.Web.State do
         [{label, "__nil__"} | options]
       end
 
+      defp prepend_nil_option(options, label) when is_function(label, 0) do
+        [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
+      end
+
       @spec update(State.t(), keyword() | map()) :: State.t()
       def update(%State{} = state, updates), do: struct(state, updates)
 

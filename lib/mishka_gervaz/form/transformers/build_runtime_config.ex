@@ -193,6 +193,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       options_source: field.options_source,
       display_field: field.display_field,
       search_field: field.search_field,
+      value_field: field.value_field,
       readonly: field.readonly,
       mode: field.mode,
       page_size: field.page_size,

@@ -260,6 +260,7 @@ spark_locals_without_parens = [
   upload: 2,
   url_sync: 1,
   validation: 1,
+  value_field: 1,
   virtual: 1,
   visible: 1,
   width: 1,
