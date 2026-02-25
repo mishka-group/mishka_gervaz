@@ -121,11 +121,13 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
             action = resolve_load_action(field, state, resource)
             tenant = get_tenant(state)
             filter_field = vf || :id
+            load_fn = Map.get(field, :load)
 
             query =
               resource
               |> Ash.Query.new()
               |> Ash.Query.filter_input(%{filter_field => %{in: selected_ids}})
+              |> maybe_apply_custom_load(load_fn, state)
 
             opts = [action: action, actor: state.current_user, authorize?: false, page: false]
             opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
