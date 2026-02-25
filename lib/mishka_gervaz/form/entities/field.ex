@@ -222,7 +222,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
     ],
     load_action: [
       type: :atom,
-      doc: "Action to use for loading options."
+      doc:
+        "Action to use for loading options. If the action has pagination, it must set `required?: false`."
     ],
     load: [
       type: {:fun, 2},
