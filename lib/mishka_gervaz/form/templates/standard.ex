@@ -647,6 +647,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:options, Map.get(options, :options, []))
         |> dynamic_component()
 
+      :combobox ->
+        options = Map.get(assigns.state.combobox_options, field.name, [])
+        base |> assign(:function, :combobox) |> assign(:options, options) |> dynamic_component()
+
       :file ->
         render_upload_field(ui, field, form_field, assigns)
 

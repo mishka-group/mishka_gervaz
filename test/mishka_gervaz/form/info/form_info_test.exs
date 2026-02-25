@@ -36,7 +36,7 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     test "returns list for FormPost" do
       fields = FormInfo.fields(FormPost)
       assert is_list(fields)
-      assert length(fields) == 6
+      assert length(fields) == 7
     end
 
     test "returns list with 1 field for MinimalForm" do

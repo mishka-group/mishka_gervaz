@@ -33,7 +33,7 @@ defmodule MishkaGervaz.Form.DSL.GroupsTest do
     test "general group has correct fields" do
       groups = FormInfo.groups(FormPost)
       general = Enum.find(groups, &(&1.name == :general))
-      assert general.fields == [:title, :content, :status]
+      assert general.fields == [:title, :content, :status, :language]
     end
 
     test "settings group has correct fields" do

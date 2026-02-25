@@ -103,7 +103,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     :nested_fields,
     :array_fields,
     :field_error,
-    :string_list_input
+    :string_list_input,
+    :combobox
   ]
 
   @doc """
@@ -568,6 +569,13 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
   def string_list_input(assigns) do
     render_component("string_list_input", assigns, fn assigns ->
       fallback(assigns).string_list_input(assigns)
+    end)
+  end
+
+  @impl true
+  def combobox(assigns) do
+    render_component("combobox", assigns, fn assigns ->
+      fallback(assigns).combobox(assigns)
     end)
   end
 

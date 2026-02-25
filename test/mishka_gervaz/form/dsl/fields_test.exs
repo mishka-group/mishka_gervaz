@@ -13,9 +13,9 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
   }
 
   describe "field count" do
-    test "FormPost has 6 fields" do
+    test "FormPost has 7 fields" do
       fields = FormInfo.fields(FormPost)
-      assert length(fields) == 6
+      assert length(fields) == 7
     end
 
     test "MinimalForm has 1 field" do
@@ -70,6 +70,33 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
     test "metadata is :json" do
       field = FormInfo.field(FormPost, :metadata)
       assert field.type == :json
+    end
+
+    test "language is :combobox" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.type == :combobox
+    end
+  end
+
+  describe "combobox field" do
+    test "has options list" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.options == [{"English", "en"}, {"Persian", "fa"}, {"Arabic", "ar"}]
+    end
+
+    test "has type_module resolved" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.type_module == MishkaGervaz.Form.Types.Field.Combobox
+    end
+
+    test "has UI label" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.ui.label == "Language"
+    end
+
+    test "has UI placeholder" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.ui.placeholder == "Type or select language..."
     end
   end
 

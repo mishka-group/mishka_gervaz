@@ -59,6 +59,7 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       errors: Keyword.get(opts, :errors, %{}),
       field_values: Keyword.get(opts, :field_values, %{}),
       relation_options: Keyword.get(opts, :relation_options, %{}),
+      combobox_options: Keyword.get(opts, :combobox_options, %{}),
       upload_state: Keyword.get(opts, :upload_state, %{}),
       existing_files: Keyword.get(opts, :existing_files, %{}),
       dirty?: Keyword.get(opts, :dirty?, false)

@@ -1862,6 +1862,48 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @impl true
+  def combobox(assigns) do
+    normalized = normalize_options(assigns[:options] || [])
+
+    assigns =
+      assigns
+      |> assign(:options, normalized)
+      |> assign_new(:class, fn ->
+        "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 w-full"
+      end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign(:list_id, "combobox-#{assigns[:name]}")
+
+    ~H"""
+    <div class="relative">
+      <.render_icon
+        :if={@icon}
+        name={@icon}
+        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+      />
+      <input
+        type="text"
+        name={@name}
+        value={@value}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        list={@list_id}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+        phx-debounce={@phx_debounce}
+        autocomplete="off"
+      />
+      <datalist id={@list_id}>
+        <%= for {label, value} <- @options do %>
+          <option value={value}>{label}</option>
+        <% end %>
+      </datalist>
+    </div>
+    """
+  end
+
+  @impl true
   def field_error(assigns) do
     assigns =
       assigns

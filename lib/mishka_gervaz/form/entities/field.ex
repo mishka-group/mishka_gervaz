@@ -119,7 +119,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :hidden,
     :toggle,
     :range,
-    :upload
+    :upload,
+    :combobox
   ]
 
   @opt_schema [

@@ -393,6 +393,15 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
           end
         end
 
+        field :language, :combobox do
+          options [{"English", "en"}, {"Persian", "fa"}, {"Arabic", "ar"}]
+
+          ui do
+            label "Language"
+            placeholder "Type or select language..."
+          end
+        end
+
         field :priority, :number do
           min 0
           max 100
@@ -422,7 +431,7 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
 
       groups do
         group :general do
-          fields [:title, :content, :status]
+          fields [:title, :content, :status, :language]
           position :first
 
           ui do
@@ -559,6 +568,10 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
     end
 
     attribute :metadata, :map do
+      public? true
+    end
+
+    attribute :language, :string do
       public? true
     end
 

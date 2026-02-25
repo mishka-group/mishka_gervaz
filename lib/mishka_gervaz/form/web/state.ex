@@ -148,6 +148,7 @@ defmodule MishkaGervaz.Form.Web.State do
     :form_errors,
     :field_values,
     :relation_options,
+    :combobox_options,
     :upload_state,
     :existing_files,
     :dirty?
@@ -170,6 +171,7 @@ defmodule MishkaGervaz.Form.Web.State do
           form_errors: list(String.t()),
           field_values: map(),
           relation_options: map(),
+          combobox_options: %{atom() => list({String.t(), String.t()})},
           upload_state: map(),
           existing_files: %{atom() => list(map())},
           dirty?: boolean()
@@ -460,6 +462,7 @@ defmodule MishkaGervaz.Form.Web.State do
           if layout_mode in [:wizard, :tabs], do: step_mod.initial_step_states(steps), else: %{}
 
         relation_options = load_static_relation_options(fields, current_user)
+        combobox_options = load_combobox_options(fields)
 
         %State{
           static: static,
@@ -475,6 +478,7 @@ defmodule MishkaGervaz.Form.Web.State do
           form_errors: [],
           field_values: %{},
           relation_options: relation_options,
+          combobox_options: combobox_options,
           upload_state: %{},
           existing_files: %{},
           dirty?: false
@@ -516,6 +520,15 @@ defmodule MishkaGervaz.Form.Web.State do
             {:error, _reason} ->
               acc
           end
+        end)
+      end
+
+      @spec load_combobox_options(list(map())) :: %{atom() => list()}
+      defp load_combobox_options(fields) do
+        fields
+        |> Enum.filter(fn f -> f.type == :combobox and f.options != nil end)
+        |> Enum.reduce(%{}, fn field, acc ->
+          Map.put(acc, field.name, MishkaGervaz.Helpers.resolve_options(field.options))
         end)
       end
 

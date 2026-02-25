@@ -30,7 +30,8 @@ defmodule MishkaGervaz.Form.Types.Field do
       hidden: {Field.Hidden, []},
       toggle: {Field.Toggle, []},
       range: {Field.Range, []},
-      upload: {Field.Upload, []}
+      upload: {Field.Upload, []},
+      combobox: {Field.Combobox, [Ash.Type.String]}
     },
     default: Field.Text
 end

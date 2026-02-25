@@ -13,7 +13,7 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateGroupsTest do
       assert length(groups) == 2
 
       general = Enum.find(groups, &(&1.name == :general))
-      assert general.fields == [:title, :content, :status]
+      assert general.fields == [:title, :content, :status, :language]
 
       settings = Enum.find(groups, &(&1.name == :settings))
       assert settings.fields == [:priority, :featured, :metadata]
