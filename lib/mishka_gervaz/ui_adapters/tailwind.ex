@@ -1874,10 +1874,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:phx_debounce, fn -> 300 end)
-      |> assign(:list_id, "combobox-#{assigns[:name]}")
+      |> assign_new(:field_name, fn -> nil end)
+      |> assign_new(:target, fn -> nil end)
+      |> assign(:dropdown_id, "combobox-dropdown-#{Phoenix.LiveView.Utils.random_id()}")
 
     ~H"""
-    <div class="relative">
+    <div class="relative" phx-click-away={JS.hide(to: "##{@dropdown_id}")}>
       <.render_icon
         :if={@icon}
         name={@icon}
@@ -1889,16 +1891,32 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
-        list={@list_id}
         class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
         phx-debounce={@phx_debounce}
+        phx-click={JS.show(to: "##{@dropdown_id}")}
+        phx-focus={JS.show(to: "##{@dropdown_id}")}
         autocomplete="off"
       />
-      <datalist id={@list_id}>
+      <div
+        id={@dropdown_id}
+        class="hidden absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5"
+      >
         <%= for {label, value} <- @options do %>
-          <option value={value}>{label}</option>
+          <button
+            type="button"
+            phx-click={
+              JS.push("combobox_select",
+                value: %{field: to_string(@field_name), value: value},
+                target: @target
+              )
+              |> JS.hide(to: "##{@dropdown_id}")
+            }
+            class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+          >
+            {label}
+          </button>
         <% end %>
-      </datalist>
+      </div>
     </div>
     """
   end

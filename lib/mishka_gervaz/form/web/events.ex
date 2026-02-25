@@ -205,6 +205,20 @@ defmodule MishkaGervaz.Form.Web.Events do
         end
       end
 
+      defp do_handle("combobox_select", %{"field" => field_name, "value" => value}, state, socket) do
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          field_atom = String.to_existing_atom(field_name)
+
+          new_field_values = Map.put(state.field_values, field_atom, value)
+          state = State.update(state, field_values: new_field_values, dirty?: true)
+          state = revalidate_combobox(state, field_atom, value)
+          socket = Phoenix.Component.assign(socket, :form_state, state)
+          {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
+      end
+
       defp do_handle("relation_" <> action, params, state, socket) do
         relation_handler().handle(action, params, state, socket)
       end
@@ -803,6 +817,33 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp blank_value?(_), do: false
+
+      defp revalidate_combobox(state, field_atom, value) do
+        case state.form do
+          nil ->
+            state
+
+          form ->
+            form_params =
+              form.source
+              |> AshPhoenix.Form.params()
+              |> Map.put(to_string(field_atom), value)
+
+            validated =
+              form.source
+              |> AshPhoenix.Form.validate(form_params)
+              |> Phoenix.Component.to_form()
+
+            show_errors? = form.source.submitted_once? or form.source.type != :create
+
+            errors =
+              if show_errors?,
+                do: validation_handler().build_errors(validated),
+                else: %{}
+
+            State.update(state, form: validated, errors: errors)
+        end
+      end
 
       defoverridable handle: 3
     end
