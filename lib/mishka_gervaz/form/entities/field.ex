@@ -33,7 +33,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
           readonly: boolean() | (map() -> boolean()),
           mode: :static | :load_more | :search | :search_multi,
           page_size: pos_integer(),
-          load_action: atom() | nil,
+          load_action: atom() | {atom(), atom()} | nil,
           load: (any(), map() -> any()) | nil,
           apply: (any(), any(), map() -> any()) | nil,
           format: (any() -> any()) | (map(), map(), any() -> any()) | nil,
@@ -221,9 +221,9 @@ defmodule MishkaGervaz.Form.Entities.Field do
       doc: "Page size for load_more/search modes."
     ],
     load_action: [
-      type: :atom,
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
       doc:
-        "Action to use for loading options. If the action has pagination, it must set `required?: false`."
+        "Action to use for loading options. Atom or `{master_action, tenant_action}` tuple. If the action has pagination, it must set `required?: false`."
     ],
     load: [
       type: {:fun, 2},
