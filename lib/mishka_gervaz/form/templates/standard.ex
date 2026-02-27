@@ -535,7 +535,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp relation_loading?(_, _), do: false
 
-  defp get_disabled_prompt(field, all_fields, is_loading \\ false)
+  defp get_disabled_prompt(field, all_fields, is_loading)
 
   defp get_disabled_prompt(_field, _all_fields, true),
     do: dgettext("mishka_gervaz", "Loading options...")
