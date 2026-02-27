@@ -474,7 +474,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       >
         <div class={[
           "px-3 py-2 text-sm border rounded cursor-not-allowed flex items-center gap-2",
-          if(@is_loading, do: "bg-blue-50 border-blue-200 text-blue-500", else: "bg-gray-100 border-gray-200 text-gray-400")
+          if(@is_loading,
+            do: "bg-blue-50 border-blue-200 text-blue-500",
+            else: "bg-gray-100 border-gray-200 text-gray-400"
+          )
         ]}>
           <span
             :if={@is_loading}
@@ -546,7 +549,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_function(prompt, 0),
     do: prompt.()
 
-  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields, _) when not is_nil(depends_on) do
+  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields, _)
+       when not is_nil(depends_on) do
     parent_label =
       case find_by_name(all_fields, depends_on) do
         nil -> nil

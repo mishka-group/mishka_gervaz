@@ -258,7 +258,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         current_opts = Map.get(state.relation_options, field_name, %{})
 
         relation_options =
-          Map.put(state.relation_options, field_name,
+          Map.put(
+            state.relation_options,
+            field_name,
             Map.merge(current_opts, %{
               options: options,
               has_more?: has_more?,
@@ -274,7 +276,10 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       def handle_async_result({:load_relation, field_name}, _error, socket) do
         state = socket.assigns.form_state
         current_opts = Map.get(state.relation_options, field_name, %{})
-        relation_options = Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
+
+        relation_options =
+          Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
+
         state = State.update(state, relation_options: relation_options)
         Phoenix.Component.assign(socket, :form_state, state)
       end
@@ -288,7 +293,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         current_opts = Map.get(state.relation_options, field_name, %{})
 
         relation_options =
-          Map.put(state.relation_options, field_name,
+          Map.put(
+            state.relation_options,
+            field_name,
             Map.merge(current_opts, %{
               options: options,
               has_more?: has_more?,
@@ -304,7 +311,10 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       def handle_async_result({:search_relation, field_name}, _error, socket) do
         state = socket.assigns.form_state
         current_opts = Map.get(state.relation_options, field_name, %{})
-        relation_options = Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
+
+        relation_options =
+          Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
+
         state = State.update(state, relation_options: relation_options)
         Phoenix.Component.assign(socket, :form_state, state)
       end
