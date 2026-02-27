@@ -453,7 +453,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     errors = assigns.errors
 
     if field_disabled?(field, assigns.state) do
-      disabled_prompt = get_disabled_prompt(field, assigns.static.fields)
+      is_loading = relation_loading?(field, assigns.state)
+      disabled_prompt = get_disabled_prompt(field, assigns.static.fields, is_loading)
 
       assigns =
         assigns
@@ -461,6 +462,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_errors, [])
         |> assign(:wrapper_required, Map.get(field, :required, false))
         |> assign(:disabled_prompt, disabled_prompt)
+        |> assign(:is_loading, is_loading)
 
       ~H"""
       <.dynamic_component
@@ -470,7 +472,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         errors={@wrapper_errors}
         required={@wrapper_required}
       >
-        <div class="px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded text-gray-400 cursor-not-allowed">
+        <div class={[
+          "px-3 py-2 text-sm border rounded cursor-not-allowed flex items-center gap-2",
+          if(@is_loading, do: "bg-blue-50 border-blue-200 text-blue-500", else: "bg-gray-100 border-gray-200 text-gray-400")
+        ]}>
+          <span
+            :if={@is_loading}
+            class="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin shrink-0"
+          />
           {@disabled_prompt}
         </div>
       </.dynamic_component>
@@ -504,24 +513,40 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp field_disabled?(%{depends_on: nil}, _state), do: false
 
-  defp field_disabled?(%{depends_on: depends_on}, state) do
+  defp field_disabled?(%{depends_on: depends_on} = field, state) do
     parent = find_by_name(state.static.fields, depends_on)
 
     cond do
       parent && !accessible?(parent, state) -> false
-      true -> !has_value?(Map.get(state.field_values, depends_on))
+      !has_value?(Map.get(state.field_values, depends_on)) -> true
+      relation_loading?(field, state) -> true
+      true -> false
     end
   end
 
   defp field_disabled?(_, _), do: false
 
-  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_binary(prompt),
+  defp relation_loading?(%{type: :relation, name: name}, state) do
+    case Map.get(state.relation_options, name) do
+      %{loading?: true} -> true
+      _ -> false
+    end
+  end
+
+  defp relation_loading?(_, _), do: false
+
+  defp get_disabled_prompt(field, all_fields, is_loading \\ false)
+
+  defp get_disabled_prompt(_field, _all_fields, true),
+    do: dgettext("mishka_gervaz", "Loading options...")
+
+  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_binary(prompt),
     do: prompt
 
-  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_function(prompt, 0),
+  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_function(prompt, 0),
     do: prompt.()
 
-  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields) when not is_nil(depends_on) do
+  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields, _) when not is_nil(depends_on) do
     parent_label =
       case find_by_name(all_fields, depends_on) do
         nil -> nil
@@ -532,7 +557,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     dgettext("mishka_gervaz", "Select %{field} first", field: field_name)
   end
 
-  defp get_disabled_prompt(_, _),
+  defp get_disabled_prompt(_, _, _),
     do: dgettext("mishka_gervaz", "Select parent field first")
 
   defp render_input(ui, field, form_field, assigns) do

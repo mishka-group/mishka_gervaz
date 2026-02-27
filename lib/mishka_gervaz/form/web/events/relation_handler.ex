@@ -501,6 +501,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
                 Map.put(acc, dep.name, %{
                   options: [],
                   has_more?: false,
+                  loading?: true,
                   page: 1,
                   selected_options: [],
                   dropdown_open?: false

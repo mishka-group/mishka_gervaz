@@ -155,8 +155,16 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
           tenant = tenant_resolver().get_tenant(state)
           relation_mod = relation_loader()
 
-          Phoenix.LiveView.start_async(
-            socket,
+          current_opts = Map.get(state.relation_options, field_name, %{})
+
+          relation_options =
+            Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, true))
+
+          state = State.update(state, relation_options: relation_options)
+
+          socket
+          |> Phoenix.Component.assign(:form_state, state)
+          |> Phoenix.LiveView.start_async(
             {:load_relation, field_name},
             fn ->
               relation_mod.load_options(field, state, tenant: tenant)
@@ -183,8 +191,16 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
           tenant = tenant_resolver().get_tenant(state)
           relation_mod = relation_loader()
 
-          Phoenix.LiveView.start_async(
-            socket,
+          current_opts = Map.get(state.relation_options, field_name, %{})
+
+          relation_options =
+            Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, true))
+
+          state = State.update(state, relation_options: relation_options)
+
+          socket
+          |> Phoenix.Component.assign(:form_state, state)
+          |> Phoenix.LiveView.start_async(
             {:search_relation, field_name},
             fn ->
               relation_mod.search_options(field, state, search_term, tenant: tenant)
@@ -239,14 +255,26 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             socket
           ) do
         state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
 
         relation_options =
-          Map.put(state.relation_options, field_name, %{
-            options: options,
-            has_more?: has_more?,
-            page: 1
-          })
+          Map.put(state.relation_options, field_name,
+            Map.merge(current_opts, %{
+              options: options,
+              has_more?: has_more?,
+              loading?: false,
+              page: 1
+            })
+          )
 
+        state = State.update(state, relation_options: relation_options)
+        Phoenix.Component.assign(socket, :form_state, state)
+      end
+
+      def handle_async_result({:load_relation, field_name}, _error, socket) do
+        state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
+        relation_options = Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
         state = State.update(state, relation_options: relation_options)
         Phoenix.Component.assign(socket, :form_state, state)
       end
@@ -257,14 +285,26 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             socket
           ) do
         state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
 
         relation_options =
-          Map.put(state.relation_options, field_name, %{
-            options: options,
-            has_more?: has_more?,
-            page: 1
-          })
+          Map.put(state.relation_options, field_name,
+            Map.merge(current_opts, %{
+              options: options,
+              has_more?: has_more?,
+              loading?: false,
+              page: 1
+            })
+          )
 
+        state = State.update(state, relation_options: relation_options)
+        Phoenix.Component.assign(socket, :form_state, state)
+      end
+
+      def handle_async_result({:search_relation, field_name}, _error, socket) do
+        state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
+        relation_options = Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
         state = State.update(state, relation_options: relation_options)
         Phoenix.Component.assign(socket, :form_state, state)
       end
