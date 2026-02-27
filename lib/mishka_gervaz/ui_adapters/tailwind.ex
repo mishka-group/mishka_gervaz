@@ -1876,7 +1876,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:phx_debounce, fn -> 300 end)
       |> assign_new(:field_name, fn -> nil end)
       |> assign_new(:target, fn -> nil end)
-      |> assign(:dropdown_id, "combobox-dropdown-#{Phoenix.LiveView.Utils.random_id()}")
+      |> assign(:dropdown_id, "combobox-dropdown-#{assigns[:field_name] || assigns[:name]}")
 
     ~H"""
     <div class="relative" phx-click-away={JS.hide(to: "##{@dropdown_id}")}>
@@ -1895,6 +1895,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-debounce={@phx_debounce}
         phx-click={JS.show(to: "##{@dropdown_id}")}
         phx-focus={JS.show(to: "##{@dropdown_id}")}
+        phx-keyup={JS.show(to: "##{@dropdown_id}")}
         autocomplete="off"
       />
       <div
