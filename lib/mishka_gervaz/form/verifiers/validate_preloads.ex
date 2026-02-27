@@ -74,19 +74,20 @@ defmodule MishkaGervaz.Form.Verifiers.ValidatePreloads do
         pagination = action.pagination
 
         if pagination && pagination_required?(pagination) do
-          {:error, """
-          Preload :#{rel.name} uses action :#{read_action_name} on #{inspect(dest_resource)} \
-          which has `pagination required?: true`.
+          {:error,
+           """
+           Preload :#{rel.name} uses action :#{read_action_name} on #{inspect(dest_resource)} \
+           which has `pagination required?: true`.
 
-          Preloads do not pass pagination parameters, so this will fail at runtime \
-          with `Ash.Error.Invalid.LimitRequired`.
+           Preloads do not pass pagination parameters, so this will fail at runtime \
+           with `Ash.Error.Invalid.LimitRequired`.
 
-          Fix: add `required?: false` to the pagination options of the :#{read_action_name} action:
+           Fix: add `required?: false` to the pagination options of the :#{read_action_name} action:
 
-              read :#{read_action_name} do
-                pagination offset?: true, required?: false, ...
-              end
-          """}
+               read :#{read_action_name} do
+                 pagination offset?: true, required?: false, ...
+               end
+           """}
         else
           :ok
         end

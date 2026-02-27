@@ -319,7 +319,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     case filter.type do
       :text ->
         placeholder =
-          resolve_label(filter.ui && filter.ui.placeholder) || dgettext("mishka_gervaz", "Search...")
+          resolve_label(filter.ui && filter.ui.placeholder) ||
+            dgettext("mishka_gervaz", "Search...")
 
         resolved_label = resolve_ui_label(filter)
 
