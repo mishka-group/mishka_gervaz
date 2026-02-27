@@ -405,8 +405,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
       doc: "Field label. String or `fn -> gettext(...) end` for i18n."
     ],
     placeholder: [
-      type: :string,
-      doc: "Placeholder text."
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     description: [
       type: :string,

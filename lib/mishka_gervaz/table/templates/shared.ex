@@ -26,7 +26,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       resolve_ui_label: 1,
       accessible?: 2,
       has_value?: 1,
-      find_by_name: 2
+      find_by_name: 2,
+      resolve_label: 1
     ]
 
   @doc """
@@ -318,7 +319,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     case filter.type do
       :text ->
         placeholder =
-          (filter.ui && filter.ui.placeholder) || dgettext("mishka_gervaz", "Search...")
+          resolve_label(filter.ui && filter.ui.placeholder) || dgettext("mishka_gervaz", "Search...")
 
         resolved_label = resolve_ui_label(filter)
 
@@ -414,7 +415,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           assigns
           |> assign(:name, filter.name)
           |> assign(:value, assigns.value || "")
-          |> assign(:placeholder, (filter.ui && filter.ui.placeholder) || "")
+          |> assign(:placeholder, resolve_label(filter.ui && filter.ui.placeholder) || "")
           |> assign(:icon, filter.ui && filter.ui.icon)
 
         ~H"""

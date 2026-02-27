@@ -294,8 +294,8 @@ defmodule MishkaGervaz.Table.Entities.Filter.Ui do
       doc: "Filter label. String or `fn -> gettext(...) end` for i18n."
     ],
     placeholder: [
-      type: :string,
-      doc: "Placeholder text."
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     prompt: [
       type: :string,

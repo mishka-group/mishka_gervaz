@@ -544,7 +544,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:name, form_field.name)
       |> assign(:id, form_field.id)
       |> assign(:value, Phoenix.HTML.Form.input_value(assigns.state.form, field.name))
-      |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
+      |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
       |> assign(:disabled, evaluate_readonly(field, assigns.state))
       |> assign(:module, ui)
 
@@ -728,7 +728,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:disabled, evaluate_readonly(field, assigns.state))
     |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
     |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
-    |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
+    |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
     |> assign(:target, assigns[:myself])
     |> dynamic_component()
   end

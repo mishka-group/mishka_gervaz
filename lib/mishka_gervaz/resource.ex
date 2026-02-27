@@ -94,7 +94,8 @@ defmodule MishkaGervaz.Resource do
     MishkaGervaz.Form.Verifiers.ValidateFields,
     MishkaGervaz.Form.Verifiers.ValidateGroups,
     MishkaGervaz.Form.Verifiers.ValidateSteps,
-    MishkaGervaz.Form.Verifiers.ValidateUploads
+    MishkaGervaz.Form.Verifiers.ValidateUploads,
+    MishkaGervaz.Form.Verifiers.ValidatePreloads
   ]
 
   use Spark.Dsl.Extension,
