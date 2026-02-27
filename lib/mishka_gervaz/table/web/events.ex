@@ -539,10 +539,17 @@ defmodule MishkaGervaz.Table.Web.Events do
       defp find_row_action_by_event(state, event_name) do
         event_atom = String.to_existing_atom(event_name)
 
-        Enum.find(state.static.row_actions, fn action ->
+        matcher = fn action ->
           action.event == event_name or action.event == event_atom or
             (action.name == event_atom and is_nil(action.event))
-        end)
+        end
+
+        Enum.find(state.static.row_actions, matcher) ||
+          Enum.find_value(state.static.row_action_dropdowns, fn dropdown ->
+            dropdown.items
+            |> Enum.filter(&is_map_key(&1, :name))
+            |> Enum.find(matcher)
+          end)
       rescue
         ArgumentError -> nil
       end
