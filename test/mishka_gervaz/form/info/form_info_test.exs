@@ -11,7 +11,6 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     WizardForm,
     TabsForm,
     MinimalForm,
-    NoMasterCheckForm,
     SubmitOptionsForm,
     NoButtonsForm
   }
@@ -36,7 +35,7 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     test "returns list for FormPost" do
       fields = FormInfo.fields(FormPost)
       assert is_list(fields)
-      assert length(fields) == 7
+      assert length(fields) == 8
     end
 
     test "returns list with 1 field for MinimalForm" do

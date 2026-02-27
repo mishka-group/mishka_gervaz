@@ -427,6 +427,17 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
             rows 5
           end
         end
+
+        field :user_id, :relation do
+          load_action {:master_read, :tenant_read}
+          mode :search
+          display_field :email
+          search_field :email
+
+          ui do
+            label "User"
+          end
+        end
       end
 
       groups do
@@ -445,7 +456,7 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
         end
 
         group :settings do
-          fields [:priority, :featured, :metadata]
+          fields [:priority, :featured, :metadata, :user_id]
           collapsible true
           collapsed true
 

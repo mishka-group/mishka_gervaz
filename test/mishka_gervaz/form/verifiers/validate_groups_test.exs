@@ -16,7 +16,7 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateGroupsTest do
       assert general.fields == [:title, :content, :status, :language]
 
       settings = Enum.find(groups, &(&1.name == :settings))
-      assert settings.fields == [:priority, :featured, :metadata]
+      assert settings.fields == [:priority, :featured, :metadata, :user_id]
     end
   end
 

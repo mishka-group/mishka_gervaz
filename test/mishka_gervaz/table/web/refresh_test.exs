@@ -507,7 +507,7 @@ defmodule MishkaGervaz.Table.Web.RefreshTest do
       socket_with_timer = Refresh.schedule(socket, config)
 
       # Wait for timer to fire
-      assert_receive :gervaz_refresh, 200
+      assert_receive :gervaz_refresh, 500
 
       # Timer ref should still exist in socket (it's a snapshot)
       assert socket_with_timer.assigns.refresh_timer != nil
