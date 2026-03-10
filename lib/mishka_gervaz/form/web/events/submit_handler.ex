@@ -53,6 +53,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           end
 
         form_params = transform_params(state, form_params)
+        form_params = merge_defaults(state, form_params)
         form_params = drop_protected_fields(state, form_params)
 
         {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
@@ -255,6 +256,23 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       end
 
       @spec drop_protected_fields(State.t(), map()) :: map()
+      @spec merge_defaults(State.t(), map()) :: map()
+      defp merge_defaults(%{mode: :create, defaults: defaults}, params)
+           when is_map(defaults) and defaults != %{} do
+        defaults
+        |> Enum.reduce(params, fn {key, value}, acc ->
+          str_key = to_string(key)
+
+          if Map.has_key?(acc, str_key) and acc[str_key] not in [nil, ""] do
+            acc
+          else
+            Map.put(acc, str_key, value)
+          end
+        end)
+      end
+
+      defp merge_defaults(_state, params), do: params
+
       defp drop_protected_fields(state, params) do
         state.static.fields
         |> Enum.reduce(params, fn field, acc ->

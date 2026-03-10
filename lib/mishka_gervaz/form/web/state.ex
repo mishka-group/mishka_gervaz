@@ -151,7 +151,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :combobox_options,
     :upload_state,
     :existing_files,
-    :dirty?
+    :dirty?,
+    :defaults
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -174,7 +175,8 @@ defmodule MishkaGervaz.Form.Web.State do
           combobox_options: %{atom() => list({String.t(), String.t()})},
           upload_state: map(),
           existing_files: %{atom() => list(map())},
-          dirty?: boolean()
+          dirty?: boolean(),
+          defaults: map() | nil
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -481,7 +483,8 @@ defmodule MishkaGervaz.Form.Web.State do
           combobox_options: combobox_options,
           upload_state: %{},
           existing_files: %{},
-          dirty?: false
+          dirty?: false,
+          defaults: nil
         }
       end
 

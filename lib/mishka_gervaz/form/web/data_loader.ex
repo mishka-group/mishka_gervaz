@@ -132,6 +132,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
         case record_mod.new_for_create(state, tenant: tenant, actor: actor) do
           {:ok, form} ->
+            form = run_on_init_hook(state, form)
             state = State.update(state, form: form, loading: :loaded, mode: :create)
             Phoenix.Component.assign(socket, :form_state, state)
 
@@ -221,6 +222,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             ) :: Phoenix.LiveView.Socket.t()
       def handle_async_result(:load_record, {:ok, {:ok, form}}, socket) do
         state = socket.assigns.form_state
+        form = run_on_init_hook(state, form)
         existing_files = extract_existing_files(state, form)
         field_values = extract_dependency_values(state, form)
 
@@ -446,6 +448,17 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
           load_relation_options(acc, state, field.name)
         end)
       end
+
+      @spec run_on_init_hook(State.t(), Phoenix.HTML.Form.t()) :: Phoenix.HTML.Form.t()
+      defp run_on_init_hook(%{static: %{hooks: %{on_init: on_init}}} = state, form)
+           when is_function(on_init, 2) do
+        case on_init.(form, state) do
+          %Phoenix.HTML.Form{} = modified_form -> modified_form
+          _ -> form
+        end
+      end
+
+      defp run_on_init_hook(_state, form), do: form
 
       defoverridable record_loader: 0,
                      tenant_resolver: 0,
