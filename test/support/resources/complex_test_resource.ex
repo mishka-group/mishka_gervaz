@@ -124,8 +124,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
       filter_groups do
         group :primary do
           filters([:search])
-          collapsible false
-          position :first
 
           ui do
             label "Search"
@@ -135,7 +133,6 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         group :advanced do
           filters([:status, :is_featured, :author_id])
           collapsible true
-          collapsed true
 
           ui do
             label "Advanced Filters"

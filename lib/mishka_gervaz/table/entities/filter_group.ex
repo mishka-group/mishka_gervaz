@@ -44,7 +44,7 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
     :name,
     :__identifier__,
     filters: [],
-    collapsed: false,
+    collapsed: true,
     collapsible: false,
     columns: nil,
     visible: true,
@@ -67,7 +67,7 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
     ],
     collapsed: [
       type: :boolean,
-      default: false,
+      default: true,
       doc: "Start collapsed."
     ],
     collapsible: [

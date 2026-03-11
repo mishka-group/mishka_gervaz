@@ -58,14 +58,14 @@ defmodule MishkaGervaz.DSL.FilterGroupsTest do
       assert group.collapsible == false
     end
 
-    test "is not collapsed" do
+    test "collapsed defaults to true" do
       group = TableInfo.filter_group(ComplexTestResource, :primary)
-      assert group.collapsed == false
+      assert group.collapsed == true
     end
 
-    test "has position :first" do
+    test "position defaults to nil" do
       group = TableInfo.filter_group(ComplexTestResource, :primary)
-      assert group.position == :first
+      assert group.position == nil
     end
 
     test "has ui label" do
@@ -142,9 +142,9 @@ defmodule MishkaGervaz.DSL.FilterGroupsTest do
   end
 
   describe "filter group entity defaults" do
-    test "collapsed defaults to false" do
+    test "collapsed defaults to true" do
       schema = MishkaGervaz.Table.Entities.FilterGroup.opt_schema()
-      assert Keyword.get(Keyword.get(schema, :collapsed), :default) == false
+      assert Keyword.get(Keyword.get(schema, :collapsed), :default) == true
     end
 
     test "collapsible defaults to false" do
