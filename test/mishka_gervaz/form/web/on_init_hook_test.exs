@@ -47,13 +47,14 @@ defmodule MishkaGervaz.Form.Web.OnInitHookTest do
 
       state = build_state(static_opts: [hooks: %{on_init: on_init}])
 
-      result = apply_on_init(state, %Phoenix.HTML.Form{
-        source: %{source: %{data: nil}},
-        errors: [],
-        data: nil,
-        name: "original",
-        id: "original"
-      })
+      result =
+        apply_on_init(state, %Phoenix.HTML.Form{
+          source: %{source: %{data: nil}},
+          errors: [],
+          data: nil,
+          name: "original",
+          id: "original"
+        })
 
       assert result.name == "modified"
     end
@@ -66,11 +67,12 @@ defmodule MishkaGervaz.Form.Web.OnInitHookTest do
         form
       end
 
-      state = build_state(
-        master_user?: true,
-        mode: :create,
-        static_opts: [hooks: %{on_init: on_init}]
-      )
+      state =
+        build_state(
+          master_user?: true,
+          mode: :create,
+          static_opts: [hooks: %{on_init: on_init}]
+        )
 
       original = %Phoenix.HTML.Form{
         source: %{source: %{data: nil}},
@@ -142,11 +144,13 @@ defmodule MishkaGervaz.Form.Web.OnInitHookTest do
         form
       end
 
-      state = build_state(
-        loading: :loading,
-        mode: :update,
-        static_opts: [hooks: %{on_init: on_init}]
-      )
+      state =
+        build_state(
+          loading: :loading,
+          mode: :update,
+          static_opts: [hooks: %{on_init: on_init}]
+        )
+
       socket = build_socket(state)
 
       form = %Phoenix.HTML.Form{
@@ -170,11 +174,13 @@ defmodule MishkaGervaz.Form.Web.OnInitHookTest do
         form
       end
 
-      state = build_state(
-        loading: :loading,
-        mode: :update,
-        static_opts: [hooks: %{on_init: on_init}]
-      )
+      state =
+        build_state(
+          loading: :loading,
+          mode: :update,
+          static_opts: [hooks: %{on_init: on_init}]
+        )
+
       socket = build_socket(state)
 
       DataLoader.Default.handle_async_result(:load_record, {:ok, {:error, :not_found}}, socket)
@@ -190,11 +196,13 @@ defmodule MishkaGervaz.Form.Web.OnInitHookTest do
         form
       end
 
-      state = build_state(
-        loading: :loading,
-        mode: :update,
-        static_opts: [hooks: %{on_init: on_init}]
-      )
+      state =
+        build_state(
+          loading: :loading,
+          mode: :update,
+          static_opts: [hooks: %{on_init: on_init}]
+        )
+
       socket = build_socket(state)
 
       DataLoader.Default.handle_async_result(:load_record, {:exit, :timeout}, socket)
