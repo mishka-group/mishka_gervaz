@@ -67,6 +67,11 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
   end
 
   @presentation_schema [
+    filter_mode: [
+      type: {:in, [:inline, :sidebar, :modal, :drawer]},
+      default: :inline,
+      doc: "Filter display mode: :inline (default), :sidebar, :modal, or :drawer."
+    ],
     template: [
       type: {:or, [:atom, {:behaviour, MishkaGervaz.Table.Behaviours.Template}]},
       default: MishkaGervaz.Table.Templates.Table,

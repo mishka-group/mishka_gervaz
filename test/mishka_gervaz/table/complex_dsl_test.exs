@@ -300,12 +300,15 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
       assert author.type_module == MishkaGervaz.Table.Types.Filter.Relation
     end
 
-    test "filters layout is configured" do
+    test "filter_mode is configured in presentation" do
       config = ResourceInfo.table_config(ComplexTestResource)
-      assert config.filters.layout.mode == :inline
-      assert config.filters.layout.columns == 4
-      assert config.filters.layout.collapsible == true
-      assert config.filters.layout.collapsed_default == false
+      assert config.presentation.filter_mode == :inline
+    end
+
+    test "filter_groups are configured as top-level key" do
+      config = ResourceInfo.table_config(ComplexTestResource)
+      assert is_list(config.filter_groups)
+      assert length(config.filter_groups) == 2
     end
   end
 

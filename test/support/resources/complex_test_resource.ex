@@ -121,14 +121,31 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         end
       end
 
-      filters do
-        filter_layout do
-          mode :inline
-          columns 4
-          collapsible true
-          collapsed_default false
+      filter_groups do
+        group :primary do
+          filters([:search])
+          collapsible false
+          position :first
+
+          ui do
+            label "Search"
+          end
         end
 
+        group :advanced do
+          filters([:status, :is_featured, :author_id])
+          collapsible true
+          collapsed true
+
+          ui do
+            label "Advanced Filters"
+            icon "hero-funnel"
+            columns 3
+          end
+        end
+      end
+
+      filters do
         filter :search, :text do
           fields [:title, :content]
           visible true

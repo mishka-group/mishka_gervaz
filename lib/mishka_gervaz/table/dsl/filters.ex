@@ -53,41 +53,6 @@ defmodule MishkaGervaz.Table.Dsl.Filters do
     }
   end
 
-  @filter_layout_schema [
-    mode: [
-      type: {:in, [:inline, :sidebar, :modal, :drawer]},
-      default: :inline,
-      doc: "Layout mode."
-    ],
-    columns: [
-      type: :integer,
-      default: 4,
-      doc: "Columns for inline mode."
-    ],
-    collapsible: [
-      type: :boolean,
-      default: true,
-      doc: "Can collapse filter bar."
-    ],
-    collapsed_default: [
-      type: :boolean,
-      default: false,
-      doc: "Start collapsed."
-    ],
-    groups: [
-      type: {:list, :any},
-      doc: "Filter grouping list."
-    ]
-  ]
-
-  defp filter_layout_section do
-    %Spark.Dsl.Section{
-      name: :filter_layout,
-      describe: "Filter layout configuration.",
-      schema: @filter_layout_schema
-    }
-  end
-
   @doc """
   Returns the filters section definition.
   """
@@ -95,8 +60,7 @@ defmodule MishkaGervaz.Table.Dsl.Filters do
     %Spark.Dsl.Section{
       name: :filters,
       describe: "Filter input configuration.",
-      entities: [filter_entity()],
-      sections: [filter_layout_section()]
+      entities: [filter_entity()]
     }
   end
 end

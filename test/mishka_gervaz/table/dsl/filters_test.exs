@@ -510,12 +510,9 @@ defmodule MishkaGervaz.DSL.FiltersTest do
       assert filter.name == :search
     end
 
-    test "TableInfo.filter_layout/1 returns layout config" do
-      layout = TableInfo.filter_layout(ComplexTestResource)
-      assert is_map(layout)
-      assert layout.mode == :inline
-      assert layout.columns == 4
-      assert layout.collapsible == true
+    test "TableInfo.filter_mode/1 returns filter mode" do
+      mode = TableInfo.filter_mode(ComplexTestResource)
+      assert mode == :inline
     end
   end
 end

@@ -37,53 +37,9 @@ defmodule MishkaGervaz.Verifiers.ValidateFiltersTest do
       assert config.filters == nil
     end
 
-    test "empty filters section with filter_layout emits DslError warning" do
-      unique_id = System.unique_integer([:positive])
-
-      code = """
-      defmodule MishkaGervaz.Test.EmptyFilters#{unique_id} do
-        use Ash.Resource,
-          domain: MishkaGervaz.Test.Domain,
-          extensions: [MishkaGervaz.Resource],
-          data_layer: Ash.DataLayer.Ets
-
-        attributes do
-          uuid_primary_key :id
-          attribute :name, :string, allow_nil?: false, public?: true
-        end
-
-        actions do
-          defaults [:read, :destroy, create: :*, update: :*]
-          read :master_read
-          read :tenant_read
-        end
-
-        mishka_gervaz do
-          table do
-            identity do
-              name :empty_filters
-              route "/admin/empty-filters"
-            end
-
-            columns do
-              column :name
-            end
-
-            filters do
-              filter_layout mode: :inline
-            end
-          end
-        end
-      end
-      """
-
-      output =
-        ExUnit.CaptureIO.capture_io(:stderr, fn ->
-          Code.compile_string(code)
-        end)
-
-      assert output =~ "filters section requires at least one filter"
-      assert output =~ "Spark.Error.DslError"
+    test "filters section without any filters does not compile filters config" do
+      config = ResourceInfo.table_config(MinimalResource)
+      assert config.filters == nil
     end
 
     test "duplicate filter names emits DslError warning" do

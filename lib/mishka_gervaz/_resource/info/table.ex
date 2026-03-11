@@ -559,14 +559,33 @@ defmodule MishkaGervaz.Resource.Info.Table do
   end
 
   @doc """
-  Get the filter layout configuration for a resource.
+  Get the filter mode for a resource.
   """
-  @spec filter_layout(module()) :: map()
-  def filter_layout(resource) do
+  @spec filter_mode(module()) :: atom()
+  def filter_mode(resource) do
     case config(resource) do
-      %{filters: %{layout: layout}} when is_map(layout) -> layout
-      _ -> %{mode: :inline, columns: 4, collapsible: true, collapsed_default: false, groups: []}
+      %{presentation: %{filter_mode: mode}} when is_atom(mode) -> mode
+      _ -> :inline
     end
+  end
+
+  @doc """
+  Get all filter groups for a resource.
+  """
+  @spec filter_groups(module()) :: [map()]
+  def filter_groups(resource) do
+    case config(resource) do
+      %{filter_groups: groups} when is_list(groups) -> groups
+      _ -> []
+    end
+  end
+
+  @doc """
+  Get a specific filter group by name.
+  """
+  @spec filter_group(module(), atom()) :: map() | nil
+  def filter_group(resource, group_name) do
+    Enum.find(filter_groups(resource), &(&1.name == group_name))
   end
 
   @doc """

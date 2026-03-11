@@ -60,6 +60,18 @@ defmodule MishkaGervaz.ResourceInfo do
 
   defdelegate table_route(resource), to: MishkaGervaz.Resource.Info.Table, as: :route
 
+  defdelegate table_filter_mode(resource),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :filter_mode
+
+  defdelegate table_filter_groups(resource),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :filter_groups
+
+  defdelegate table_filter_group(resource, name),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :filter_group
+
   defdelegate table_action_for(resource, type, master?),
     to: MishkaGervaz.Resource.Info.Table,
     as: :action_for

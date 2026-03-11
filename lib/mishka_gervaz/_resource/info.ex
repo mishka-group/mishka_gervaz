@@ -92,9 +92,17 @@ defmodule MishkaGervaz.Resource.Info do
 
   defdelegate table_events(resource), to: MishkaGervaz.Resource.Info.Table, as: :events
 
-  defdelegate table_filter_layout(resource),
+  defdelegate table_filter_mode(resource),
     to: MishkaGervaz.Resource.Info.Table,
-    as: :filter_layout
+    as: :filter_mode
+
+  defdelegate table_filter_groups(resource),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :filter_groups
+
+  defdelegate table_filter_group(resource, name),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :filter_group
 
   defdelegate table_pagination_ui(resource),
     to: MishkaGervaz.Resource.Info.Table,

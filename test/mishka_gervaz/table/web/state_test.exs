@@ -841,7 +841,8 @@ defmodule MishkaGervaz.Table.Web.StateTest do
         :hooks,
         :url_sync_config,
         :features,
-        :filter_layout,
+        :filter_groups,
+        :filter_mode,
         :pagination_ui,
         :theme,
         :sortable_columns

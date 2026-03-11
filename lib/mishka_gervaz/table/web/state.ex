@@ -118,7 +118,8 @@ defmodule MishkaGervaz.Table.Web.State do
       :switchable_templates,
       :template_options,
       :features,
-      :filter_layout,
+      :filter_groups,
+      :filter_mode,
       :pagination_ui,
       :theme,
       :sortable_columns,
@@ -144,7 +145,8 @@ defmodule MishkaGervaz.Table.Web.State do
             switchable_templates: list(module()),
             template_options: keyword(),
             features: list(atom()),
-            filter_layout: map(),
+            filter_groups: list(map()),
+            filter_mode: atom(),
             pagination_ui: struct(),
             theme: map() | nil,
             sortable_columns: list(atom()),
@@ -347,12 +349,13 @@ defmodule MishkaGervaz.Table.Web.State do
       end
     end
 
-    @spec get_filter_layout(map()) :: map()
-    def get_filter_layout(%{filters: %{layout: layout}}) when is_map(layout), do: layout
+    @spec get_filter_groups(map()) :: list(map())
+    def get_filter_groups(%{filter_groups: groups}) when is_list(groups), do: groups
+    def get_filter_groups(_), do: []
 
-    def get_filter_layout(_) do
-      %{mode: :inline, columns: 4, collapsible: true, collapsed_default: false, groups: []}
-    end
+    @spec get_filter_mode(map()) :: atom()
+    def get_filter_mode(%{presentation: %{filter_mode: mode}}) when is_atom(mode), do: mode
+    def get_filter_mode(_), do: :inline
 
     @spec get_pagination_ui(map()) :: struct()
     def get_pagination_ui(%{pagination: %{ui: ui}}) when is_struct(ui), do: ui
@@ -552,7 +555,8 @@ defmodule MishkaGervaz.Table.Web.State do
           switchable_templates: presentation_mod.get_switchable_templates(config),
           template_options: presentation_mod.get_template_options(config),
           features: StateHelpers.get_features(config, template),
-          filter_layout: StateHelpers.get_filter_layout(config),
+          filter_groups: StateHelpers.get_filter_groups(config),
+          filter_mode: StateHelpers.get_filter_mode(config),
           pagination_ui: StateHelpers.get_pagination_ui(config),
           theme: get_in(config, [:presentation, :theme]),
           sortable_columns: StateHelpers.get_sortable_columns(columns),

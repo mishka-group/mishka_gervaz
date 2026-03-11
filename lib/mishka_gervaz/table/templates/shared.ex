@@ -66,35 +66,238 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def render_filters(assigns) do
     static = assigns.static
     state = assigns.state
-    filter_layout = static.filter_layout
 
     all_filters = merge_relation_filter_state(static.filters, state.relation_filter_state || %{})
     filters = Enum.filter(all_filters, &accessible?(&1, state))
+    groups = static.filter_groups || []
+    has_groups = groups != []
+    filter_mode = static.filter_mode || :inline
 
     assigns =
       assigns
       |> assign(:filters, filters)
       |> assign(:all_filters, all_filters)
       |> assign(:has_active_filters, map_size(state.filter_values) > 0)
-      |> assign(:layout, filter_layout)
+      |> assign(:filter_mode, filter_mode)
+      |> assign(:groups, groups)
+      |> assign(:has_groups, has_groups)
 
     ~H"""
     <div :if={@filters != [] or @state.supports_archive} class="mb-4">
-      <.render_filters_by_mode
-        mode={Map.get(@layout, :mode, :inline)}
-        filters={@filters}
-        all_filters={@all_filters}
-        has_active_filters={@has_active_filters}
-        columns={Map.get(@layout, :columns, 4)}
-        collapsible={Map.get(@layout, :collapsible, true)}
-        collapsed={Map.get(@layout, :collapsed_default, false)}
-        groups={Map.get(@layout, :groups, [])}
-        state={@state}
-        static={@static}
-        myself={@myself}
-      />
+      <%= if @has_groups do %>
+        <.render_grouped_filters
+          filters={@filters}
+          all_filters={@all_filters}
+          has_active_filters={@has_active_filters}
+          groups={@groups}
+          columns={4}
+          state={@state}
+          static={@static}
+          myself={@myself}
+        />
+      <% else %>
+        <.render_filters_by_mode
+          mode={@filter_mode}
+          filters={@filters}
+          all_filters={@all_filters}
+          has_active_filters={@has_active_filters}
+          columns={4}
+          collapsible={true}
+          collapsed={false}
+          groups={[]}
+          state={@state}
+          static={@static}
+          myself={@myself}
+        />
+      <% end %>
     </div>
     """
+  end
+
+  defp render_grouped_filters(assigns) do
+    groups = assigns.groups
+    all_filter_names = assigns.filters |> Enum.map(& &1.name)
+
+    grouped_filter_names =
+      groups |> Enum.flat_map(fn g -> g.filters end) |> MapSet.new()
+
+    ungrouped_filters =
+      Enum.filter(assigns.filters, fn f -> not MapSet.member?(grouped_filter_names, f.name) end)
+
+    visible_groups =
+      groups
+      |> Enum.filter(fn group ->
+        accessible_group?(group, assigns.state) and
+          Enum.any?(group.filters, fn name -> name in all_filter_names end)
+      end)
+      |> sort_by_position()
+
+    assigns =
+      assigns
+      |> assign(:visible_groups, visible_groups)
+      |> assign(:ungrouped_filters, ungrouped_filters)
+
+    ~H"""
+    <div class="space-y-3">
+      <%!-- Archive Toggle --%>
+      <div :if={@state.supports_archive} class="flex items-center gap-4">
+        <.dynamic_component
+          module={@static.ui_adapter}
+          function={:archive_toggle}
+          archive_status={@state.archive_status}
+          myself={@myself}
+        />
+      </div>
+
+      <form phx-change="filter" phx-target={@myself} class="space-y-3">
+        <%!-- Ungrouped filters (always visible) --%>
+        <div :if={@ungrouped_filters != []} class={["grid gap-4", grid_cols(@columns)]}>
+          <.render_filter
+            :for={filter <- @ungrouped_filters}
+            filter={filter}
+            all_filters={@all_filters}
+            state={@state}
+            static={@static}
+            myself={@myself}
+          />
+        </div>
+
+        <%!-- Grouped filters --%>
+        <.render_filter_group
+          :for={group <- @visible_groups}
+          group={group}
+          filters={@filters}
+          all_filters={@all_filters}
+          columns={@columns}
+          state={@state}
+          static={@static}
+          myself={@myself}
+        />
+
+        <.dynamic_component
+          :if={@has_active_filters}
+          module={@static.ui_adapter}
+          function={:filter_reset_button}
+          label={dgettext("mishka_gervaz", "Clear filters")}
+          class="text-sm text-gray-500 hover:text-gray-700 underline"
+        />
+      </form>
+    </div>
+    """
+  end
+
+  defp render_filter_group(assigns) do
+    group = assigns.group
+    group_filters = Enum.filter(assigns.filters, fn f -> f.name in group.filters end)
+    group_columns = (group.ui && group.ui.columns) || assigns.columns
+    group_label = resolve_ui_label(group) || Phoenix.Naming.humanize(group.name)
+    group_icon = group.ui && group.ui.icon
+
+    group_class =
+      (group.ui && group.ui.class) || "p-4 bg-gray-50 rounded-lg border border-gray-200"
+
+    group_id = "filter-group-#{group.name}"
+
+    assigns =
+      assigns
+      |> assign(:group_filters, group_filters)
+      |> assign(:group_columns, group_columns)
+      |> assign(:group_label, group_label)
+      |> assign(:group_icon, group_icon)
+      |> assign(:group_class, group_class)
+      |> assign(:group_id, group_id)
+
+    ~H"""
+    <div :if={@group_filters != []}>
+      <%= if @group.collapsible do %>
+        <div>
+          <button
+            type="button"
+            phx-click={JS.toggle(to: "##{@group_id}")}
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <.dynamic_component
+              :if={@group_icon}
+              module={@static.ui_adapter}
+              function={:icon}
+              name={@group_icon}
+              class="w-4 h-4"
+            />
+            {@group_label}
+          </button>
+
+          <div
+            id={@group_id}
+            class={[@group_class, "mt-2", @group.collapsed && "hidden"]}
+          >
+            <div class={["grid gap-4", grid_cols(@group_columns)]}>
+              <.render_filter
+                :for={filter <- @group_filters}
+                filter={filter}
+                all_filters={@all_filters}
+                state={@state}
+                static={@static}
+                myself={@myself}
+              />
+            </div>
+          </div>
+        </div>
+      <% else %>
+        <div class={@group_class}>
+          <div
+            :if={@group_label}
+            class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2"
+          >
+            <.dynamic_component
+              :if={@group_icon}
+              module={@static.ui_adapter}
+              function={:icon}
+              name={@group_icon}
+              class="w-4 h-4"
+            />
+            {@group_label}
+          </div>
+          <div class={["grid gap-4", grid_cols(@group_columns)]}>
+            <.render_filter
+              :for={filter <- @group_filters}
+              filter={filter}
+              all_filters={@all_filters}
+              state={@state}
+              static={@static}
+              myself={@myself}
+            />
+          </div>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp accessible_group?(group, state) do
+    visible =
+      case group.visible do
+        fun when is_function(fun, 1) -> fun.(state)
+        val -> val
+      end
+
+    restricted =
+      case group.restricted do
+        fun when is_function(fun, 1) -> fun.(state)
+        val -> val
+      end
+
+    visible and (not restricted or Map.get(state, :master_user?, false))
+  end
+
+  defp sort_by_position(groups) do
+    Enum.sort_by(groups, fn group ->
+      case group.position do
+        :first -> {0, 0}
+        :last -> {2, 0}
+        n when is_integer(n) -> {1, n}
+        _ -> {1, 999}
+      end
+    end)
   end
 
   defp render_filters_by_mode(%{mode: :inline} = assigns) do

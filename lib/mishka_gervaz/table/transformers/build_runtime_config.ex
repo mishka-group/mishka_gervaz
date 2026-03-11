@@ -31,6 +31,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   alias MishkaGervaz.Table.Entities.{
     Column,
     Filter,
+    FilterGroup,
     RowAction,
     RowActionDropdown,
     DropdownSeparator,
@@ -65,6 +66,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       realtime: build_realtime(dsl_state, domain_defaults),
       columns: build_columns(dsl_state, module),
       filters: build_filters(dsl_state, module),
+      filter_groups: build_filter_groups(dsl_state),
       row_actions: build_row_actions(dsl_state),
       row: build_row(dsl_state),
       bulk_actions: build_bulk_actions(dsl_state),
@@ -325,30 +327,63 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
   defp build_filters(dsl_state, module) do
     path = @table_path ++ [:filters]
-    layout_path = path ++ [:filter_layout]
     entities = get_entities(dsl_state, path)
     filters = filter_by_type(entities, Filter)
 
-    layout_mode = get_opt(dsl_state, layout_path, :mode)
-
-    if filters != [] or layout_mode != nil do
+    if filters != [] do
       ash_attrs = get_ash_attrs_for_filters(dsl_state)
 
       %{
-        list: Enum.map(filters, &filter_to_map(&1, ash_attrs, module)),
-        groups: get_opt(dsl_state, path, :groups) || [],
-        layout: %{
-          mode: get_opt(dsl_state, layout_path, :mode) || :inline,
-          columns: get_opt(dsl_state, layout_path, :columns) || 4,
-          collapsible: default_if_nil(get_opt(dsl_state, layout_path, :collapsible), true),
-          collapsed_default:
-            default_if_nil(get_opt(dsl_state, layout_path, :collapsed_default), false),
-          groups: get_opt(dsl_state, layout_path, :groups) || []
-        }
+        list: Enum.map(filters, &filter_to_map(&1, ash_attrs, module))
       }
     else
       nil
     end
+  end
+
+  defp build_filter_groups(dsl_state) do
+    path = @table_path ++ [:filter_groups]
+    entities = get_entities(dsl_state, path)
+    groups = filter_by_type(entities, FilterGroup)
+
+    if groups != [] do
+      Enum.map(groups, &filter_group_to_map/1)
+    else
+      []
+    end
+  end
+
+  defp filter_group_to_map(%FilterGroup{} = group) do
+    ui = extract_nested_entity(group.ui, FilterGroup.Ui)
+
+    %{
+      name: group.name,
+      filters: group.filters,
+      collapsed: group.collapsed,
+      collapsible: group.collapsible,
+      visible: group.visible,
+      restricted: default_if_nil(group.restricted, false),
+      position: group.position,
+      ui: maybe_ui(ui, &filter_group_ui_to_map/1, &has_filter_group_ui_values?/1)
+    }
+  end
+
+  defp filter_group_ui_to_map(ui) do
+    %{
+      label: ui.label,
+      icon: ui.icon,
+      description: ui.description,
+      class: ui.class,
+      header_class: ui.header_class,
+      columns: ui.columns,
+      extra: ui.extra
+    }
+  end
+
+  defp has_filter_group_ui_values?(ui) do
+    ui.label != nil or ui.icon != nil or ui.description != nil or
+      ui.class != nil or ui.header_class != nil or ui.columns != nil or
+      ui.extra != %{}
   end
 
   defp get_ash_attrs_for_filters(dsl_state) do
@@ -720,6 +755,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     ui_adapter = maybe_generate_adapter(module, ui_adapter_raw, ui_adapter_opts)
 
     %{
+      filter_mode: get_opt(dsl_state, path, :filter_mode) || :inline,
       template: get_opt(dsl_state, path, :template, MishkaGervaz.Table.Templates.Table),
       switchable_templates: get_opt(dsl_state, path, :switchable_templates, []),
       template_options: get_opt(dsl_state, path, :template_options, []),
