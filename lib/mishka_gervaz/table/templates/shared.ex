@@ -630,8 +630,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     end
   end
 
+  @doc """
+  Merges dynamic relation filter state (options, loading, etc.) into filter configs.
+  """
   @spec merge_relation_filter_state(list(), map()) :: list()
-  defp merge_relation_filter_state(filters, relation_state) when is_list(filters) do
+  def merge_relation_filter_state(filters, relation_state) when is_list(filters) do
     Enum.map(filters, fn filter ->
       case Map.get(relation_state, filter.name) do
         nil ->
@@ -648,7 +651,47 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     end)
   end
 
-  defp merge_relation_filter_state(filters, _), do: filters
+  def merge_relation_filter_state(filters, _), do: filters
+
+  @doc """
+  Splits filters into primary (search) and advanced groups using `filter_groups` config.
+
+  Falls back to type-based splitting (`:text` = search, rest = advanced) when no groups defined.
+
+  Returns `{search_filter, other_filters, advanced_group}` where `advanced_group` is the
+  group config map (with `collapsed`, `collapsible`, `ui` etc.) or `nil`.
+  """
+  @spec split_filters_by_groups(list(), list(), map()) :: {map() | nil, list(), map() | nil}
+  def split_filters_by_groups(filters, groups, state) do
+    all_filters =
+      merge_relation_filter_state(filters, state.relation_filter_state || %{})
+      |> Enum.filter(&accessible?(&1, state))
+
+    primary_group = Enum.find(groups, fn g -> g.name == :primary end)
+    advanced_group = Enum.find(groups, fn g -> g.name == :advanced end)
+
+    primary_names = if primary_group, do: primary_group.filters, else: []
+    advanced_names = if advanced_group, do: advanced_group.filters, else: []
+
+    if primary_names != [] or advanced_names != [] do
+      search_filter =
+        all_filters
+        |> Enum.filter(fn f -> f.name in primary_names end)
+        |> List.first()
+
+      other_filters =
+        if advanced_names != [] do
+          Enum.filter(all_filters, fn f -> f.name in advanced_names end)
+        else
+          Enum.filter(all_filters, fn f -> f.name not in primary_names end)
+        end
+
+      {search_filter, other_filters, advanced_group}
+    else
+      {search, rest} = Enum.split_with(all_filters, fn f -> f.type == :text end)
+      {List.first(search), rest, nil}
+    end
+  end
 
   def render_bulk_actions(assigns) do
     static = assigns.static
