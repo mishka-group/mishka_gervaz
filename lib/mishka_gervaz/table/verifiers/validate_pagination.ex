@@ -44,8 +44,14 @@ defmodule MishkaGervaz.Table.Verifiers.ValidatePagination do
     with :ok <- validate_page_size(pagination.page_size, module),
          :ok <- validate_page_size_options(pagination.page_size_options, module),
          :ok <- validate_type(pagination.type, module),
-         :ok <- validate_page_size_in_options(pagination.page_size, pagination.page_size_options, module),
-         :ok <- validate_max_page_size(pagination.max_page_size, pagination.page_size_options, module) do
+         :ok <-
+           validate_page_size_in_options(
+             pagination.page_size,
+             pagination.page_size_options,
+             module
+           ),
+         :ok <-
+           validate_max_page_size(pagination.max_page_size, pagination.page_size_options, module) do
       :ok
     end
   end
@@ -156,6 +162,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidatePagination do
   defp validate_page_size_in_options(_, _, _), do: :ok
 
   defp validate_max_page_size(nil, _options, _module), do: :ok
+
   defp validate_max_page_size(max, _options, _module) when not is_integer(max) or max <= 0 do
     :ok
   end

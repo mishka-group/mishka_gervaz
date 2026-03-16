@@ -131,6 +131,7 @@ spark_locals_without_parens = [
   max_entries: 1,
   max_file_size: 1,
   max_filter_length: 1,
+  max_page_size: 1,
   max_width: 1,
   menu_group: 1,
   menu_group: 2,

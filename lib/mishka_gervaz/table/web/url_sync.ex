@@ -485,7 +485,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     key = build_key(prefix, "page_size")
 
     case Map.get(params, key) do
-      nil -> nil
+      nil ->
+        nil
+
       size_str ->
         size = String.to_integer(size_str)
         if size > 0, do: size, else: nil
