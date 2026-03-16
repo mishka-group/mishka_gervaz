@@ -180,7 +180,7 @@ defmodule MishkaGervaz.Form.Web.DropProtectedFieldsTest do
 
   # Mirror the private functions from SubmitHandler for testing
   defp field_restricted?(%{restricted: true}, %{master_user?: false}), do: true
-  defp field_restricted?(%{restricted: f}, _state) when is_function(f, 1), do: not f.(_state)
+  defp field_restricted?(%{restricted: f}, state) when is_function(f, 1), do: not f.(state)
   defp field_restricted?(_, _), do: false
 
   defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
