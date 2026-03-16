@@ -6,6 +6,7 @@ defmodule MishkaGervaz.Table.Entities.Pagination do
   alias __MODULE__.Ui
 
   @type t :: %__MODULE__{
+          enabled: boolean() | nil,
           type: :infinite | :numbered | :load_more | nil,
           page_size: pos_integer() | nil,
           page_size_options: [pos_integer()] | nil,
@@ -14,7 +15,8 @@ defmodule MishkaGervaz.Table.Entities.Pagination do
           __spark_metadata__: map() | nil
         }
 
-  defstruct type: nil,
+  defstruct enabled: nil,
+            type: nil,
             page_size: nil,
             page_size_options: nil,
             max_page_size: nil,
@@ -22,6 +24,10 @@ defmodule MishkaGervaz.Table.Entities.Pagination do
             __spark_metadata__: nil
 
   @opt_schema [
+    enabled: [
+      type: :boolean,
+      doc: "Enable or disable pagination. Set to false at resource level to override domain defaults."
+    ],
     type: [
       type: {:in, [:infinite, :numbered, :load_more]},
       doc: "Pagination style. Default: :load_more"

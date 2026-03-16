@@ -39,6 +39,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidatePagination do
   end
 
   defp validate_pagination(nil, _module), do: :ok
+  defp validate_pagination(%Pagination{enabled: false}, _module), do: :ok
 
   defp validate_pagination(%Pagination{} = pagination, module) do
     with :ok <- validate_page_size(pagination.page_size, module),

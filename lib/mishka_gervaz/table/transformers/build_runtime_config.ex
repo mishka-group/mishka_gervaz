@@ -689,21 +689,26 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     domain = domain_defaults[:pagination] || %{}
     resource = find_entity(dsl_state, @table_path, Pagination)
 
-    page_size = (resource && resource.page_size) || domain[:page_size]
-    type = (resource && resource.type) || domain[:type]
-
-    if is_nil(page_size) and is_nil(type) and is_nil(resource) do
+    if resource && resource.enabled == false do
       nil
     else
-      ui = (resource && resource.ui) || struct(Pagination.Ui)
+      page_size = (resource && resource.page_size) || domain[:page_size]
+      type = (resource && resource.type) || domain[:type]
 
-      %{
-        type: type || :numbered,
-        page_size: page_size || 20,
-        page_size_options: (resource && resource.page_size_options) || domain[:page_size_options],
-        max_page_size: (resource && resource.max_page_size) || domain[:max_page_size] || 150,
-        ui: pagination_ui_to_map(ui)
-      }
+      if is_nil(page_size) and is_nil(type) and is_nil(resource) do
+        nil
+      else
+        ui = (resource && resource.ui) || struct(Pagination.Ui)
+
+        %{
+          type: type || :numbered,
+          page_size: page_size || 20,
+          page_size_options:
+            (resource && resource.page_size_options) || domain[:page_size_options],
+          max_page_size: (resource && resource.max_page_size) || domain[:max_page_size] || 150,
+          ui: pagination_ui_to_map(ui)
+        }
+      end
     end
   end
 
