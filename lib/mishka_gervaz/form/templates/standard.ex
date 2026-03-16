@@ -310,6 +310,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     show_cancel =
       cancel_button != nil and
+        (state.mode == :update or state.dirty?) and
         evaluate_button_visible(cancel_button, state) and
         not evaluate_button_restricted(cancel_button, state)
 
