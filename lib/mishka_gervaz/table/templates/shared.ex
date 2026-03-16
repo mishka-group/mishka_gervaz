@@ -820,6 +820,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:page_size, state.current_page_size || static.page_size)
       |> assign(:current_page_size, state.current_page_size || static.page_size)
       |> assign(:page_size_options, static.page_size_options)
+      |> assign(:show_page_size_selector, page_size_selector_enabled?(static))
       |> assign(:loading, state.loading)
       |> assign(:loading_type, state.loading_type)
       |> assign(:ui_adapter, static.ui_adapter)
@@ -864,6 +865,14 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       />
     </div>
 
+    <%!-- Page size selector for load_more/infinite --%>
+    <.render_page_size_selector
+      :if={@pagination_type in [:infinite, :load_more] and @show_page_size_selector}
+      page_size_options={@page_size_options}
+      current_page_size={@current_page_size}
+      myself={@myself}
+    />
+
     <%!-- Numbered pagination --%>
     <.render_numbered_pagination
       :if={@pagination_type == :numbered and @total_pages}
@@ -873,6 +882,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       page_size={@page_size}
       current_page_size={@current_page_size}
       page_size_options={@page_size_options}
+      show_page_size_selector={@show_page_size_selector}
       loading={@loading}
       ui_adapter={@ui_adapter}
       show_total={@show_total}
@@ -945,7 +955,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           phx_target={@pagination_phx_target}
         />
         <.render_page_size_selector
-          :if={@page_size_options != nil and @page_size_options != []}
+          :if={@show_page_size_selector}
           page_size_options={@page_size_options}
           current_page_size={@current_page_size}
           myself={@myself}
@@ -1047,6 +1057,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       <span>per page</span>
     </div>
     """
+  end
+
+  defp page_size_selector_enabled?(static) do
+    static.page_size_options != nil and static.page_size_options != []
   end
 
   defp render_page_numbers(assigns) do

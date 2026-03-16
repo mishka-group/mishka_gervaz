@@ -86,9 +86,9 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
       assert config.pagination.page_size == domain_pagination.page_size
     end
 
-    test "pagination has page_size_options" do
+    test "pagination page_size_options defaults to nil when not set" do
       config = ResourceInfo.table_config(Post)
-      assert is_list(config.pagination.page_size_options)
+      assert is_nil(config.pagination.page_size_options)
     end
   end
 end

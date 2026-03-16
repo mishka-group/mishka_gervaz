@@ -43,7 +43,7 @@ defmodule MishkaGervaz.Table.Entities.Pagination do
   @defaults %{
     type: :load_more,
     page_size: 20,
-    page_size_options: [10, 25, 50, 100],
+    page_size_options: nil,
     max_page_size: 150
   }
 

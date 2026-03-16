@@ -64,9 +64,9 @@ defmodule MishkaGervaz.Transformers.BuildDomainConfigTest do
       assert is_integer(config.table.pagination.page_size)
     end
 
-    test "pagination page_size_options is set" do
+    test "pagination page_size_options defaults to nil when not set" do
       config = DomainInfo.domain_config(Domain)
-      assert is_list(config.table.pagination.page_size_options)
+      assert is_nil(config.table.pagination.page_size_options)
     end
   end
 

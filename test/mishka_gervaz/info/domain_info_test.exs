@@ -181,10 +181,10 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
       assert pagination.type == :numbered
     end
 
-    test "pagination page_size_options has default values" do
+    test "pagination page_size_options defaults to nil" do
       pagination = DomainInfo.default_pagination(Domain)
 
-      assert pagination.page_size_options == [10, 25, 50, 100]
+      assert pagination.page_size_options == nil
     end
   end
 

@@ -132,9 +132,9 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
       assert config.presentation.template == MishkaGervaz.Form.Templates.Standard
     end
 
-    test "ui_adapter defaults to nil" do
+    test "ui_adapter defaults to Tailwind" do
       config = FormInfo.config(FormPost)
-      assert config.presentation.ui_adapter == nil
+      assert config.presentation.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "ui_adapter_opts defaults to empty list" do
