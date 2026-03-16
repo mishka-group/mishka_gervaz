@@ -152,7 +152,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :upload_state,
     :existing_files,
     :dirty?,
-    :defaults
+    :defaults,
+    :preload_aliases
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -176,7 +177,8 @@ defmodule MishkaGervaz.Form.Web.State do
           upload_state: map(),
           existing_files: %{atom() => list(map())},
           dirty?: boolean(),
-          defaults: map() | nil
+          defaults: map() | nil,
+          preload_aliases: %{atom() => atom()}
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -420,6 +422,7 @@ defmodule MishkaGervaz.Form.Web.State do
 
         master_user? = access_mod.master_user?(current_user)
         preloads = access_mod.get_preloads(resource, master_user?)
+        preload_aliases = Info.preload_aliases(resource, master_user?)
 
         fields = field_mod.build(config, resource)
         field_order = Enum.map(fields, & &1.name)
@@ -484,7 +487,8 @@ defmodule MishkaGervaz.Form.Web.State do
           upload_state: %{},
           existing_files: %{},
           dirty?: false,
-          defaults: nil
+          defaults: nil,
+          preload_aliases: preload_aliases
         }
       end
 

@@ -380,6 +380,43 @@ defmodule MishkaGervaz.Resource.Info.Form do
     end
   end
 
+  @doc """
+  Get preload aliases for master/tenant context.
+
+  Returns a map of `%{alias_key => source_key}` for resolving aliased preloads.
+  Only includes entries where source != alias (actual aliases).
+
+  ## Example
+
+      # Given: master [master_tags: :tags], tenant [tenant_tags: :tags]
+      preload_aliases(MyResource, true)   # => %{tags: :master_tags}
+      preload_aliases(MyResource, false)  # => %{tags: :tenant_tags}
+  """
+  @spec preload_aliases(module(), boolean()) :: %{atom() => atom()}
+  def preload_aliases(resource, master_user?) do
+    case config(resource) do
+      %{source: %{preload: preload}} when is_map(preload) ->
+        always = preload[:always] || []
+
+        specific =
+          if master_user?,
+            do: preload[:master] || [],
+            else: preload[:tenant] || []
+
+        (always ++ specific)
+        |> Enum.reduce(%{}, fn
+          {source, alias_key}, acc when source != alias_key ->
+            Map.put(acc, alias_key, source)
+
+          _, acc ->
+            acc
+        end)
+
+      _ ->
+        %{}
+    end
+  end
+
   @spec extract_preload_source(atom() | {atom(), atom()}) :: atom()
   defp extract_preload_source({source, _alias}), do: source
   defp extract_preload_source(source) when is_atom(source), do: source
