@@ -1038,7 +1038,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   defp render_page_size_selector(assigns) do
     ~H"""
-    <form phx-change="change_page_size" phx-target={@myself} class="flex items-center gap-2 text-sm text-gray-600">
+    <form
+      phx-change="change_page_size"
+      phx-target={@myself}
+      class="flex items-center gap-2 text-sm text-gray-600"
+    >
       <span>Show</span>
       <select
         name="size"
