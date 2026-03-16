@@ -51,6 +51,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
         |> apply_url_path(url_state)
         |> apply_url_path_params(url_state)
         |> apply_url_preserved_params(url_state)
+        |> apply_url_page_size(url_state)
       end
 
       @doc """
@@ -146,6 +147,24 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
       end
 
       defp apply_url_preserved_params(state, _), do: state
+
+      @spec apply_url_page_size(map(), map()) :: map()
+      defp apply_url_page_size(state, %{page_size: ps}) when is_integer(ps) and ps > 0 do
+        max = state.static.max_page_size
+        options = state.static.page_size_options
+        clamped = if max, do: min(ps, max), else: ps
+
+        effective =
+          if options && clamped not in options do
+            Enum.min_by(options, &abs(&1 - clamped))
+          else
+            clamped
+          end
+
+        %{state | current_page_size: effective}
+      end
+
+      defp apply_url_page_size(state, _), do: state
 
       defoverridable apply_url_state: 2, bidirectional?: 1
     end

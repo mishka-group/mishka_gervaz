@@ -78,7 +78,7 @@ defmodule MishkaGervaz.Table.Dsl.Defaults do
       """
     ],
     params: [
-      type: {:list, {:in, [:filters, :sort, :page, :search, :template]}},
+      type: {:list, {:in, [:filters, :sort, :page, :page_size, :search, :template]}},
       default: [:filters, :sort, :page],
       doc: "Which state to sync to URL params."
     ],

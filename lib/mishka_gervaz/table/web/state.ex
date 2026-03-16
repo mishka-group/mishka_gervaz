@@ -126,7 +126,9 @@ defmodule MishkaGervaz.Table.Web.State do
       :sort_field_map,
       :hooks,
       :url_sync_config,
-      :page_size
+      :page_size,
+      :page_size_options,
+      :max_page_size
     ]
 
     @type t :: %__MODULE__{
@@ -153,7 +155,9 @@ defmodule MishkaGervaz.Table.Web.State do
             sort_field_map: %{atom() => [atom()]},
             hooks: map(),
             url_sync_config: map() | nil,
-            page_size: pos_integer() | nil
+            page_size: pos_integer() | nil,
+            page_size_options: [pos_integer()] | nil,
+            max_page_size: pos_integer() | nil
           }
   end
 
@@ -185,7 +189,8 @@ defmodule MishkaGervaz.Table.Web.State do
     :base_path,
     :preserved_params,
     :saved_active_state,
-    :saved_archived_state
+    :saved_archived_state,
+    :current_page_size
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error
@@ -220,7 +225,8 @@ defmodule MishkaGervaz.Table.Web.State do
           base_path: String.t() | nil,
           preserved_params: map(),
           saved_active_state: map() | nil,
-          saved_archived_state: map() | nil
+          saved_archived_state: map() | nil,
+          current_page_size: pos_integer() | nil
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -332,6 +338,14 @@ defmodule MishkaGervaz.Table.Web.State do
     @spec get_page_size(map()) :: pos_integer() | nil
     def get_page_size(%{pagination: %{page_size: page_size}}), do: page_size
     def get_page_size(_), do: nil
+
+    @spec get_page_size_options(map()) :: [pos_integer()] | nil
+    def get_page_size_options(%{pagination: %{page_size_options: opts}}), do: opts
+    def get_page_size_options(_), do: nil
+
+    @spec get_max_page_size(map()) :: pos_integer() | nil
+    def get_max_page_size(%{pagination: %{max_page_size: max}}), do: max
+    def get_max_page_size(_), do: nil
 
     @spec get_features(map(), module()) :: list(atom())
     def get_features(config, template) do
@@ -570,7 +584,9 @@ defmodule MishkaGervaz.Table.Web.State do
           sort_field_map: StateHelpers.build_sort_field_map(columns),
           hooks: action_mod.build_hooks(config),
           url_sync_config: get_in(config, [:url_sync]),
-          page_size: StateHelpers.get_page_size(config)
+          page_size: StateHelpers.get_page_size(config),
+          page_size_options: StateHelpers.get_page_size_options(config),
+          max_page_size: StateHelpers.get_max_page_size(config)
         }
 
         %State{
@@ -601,7 +617,8 @@ defmodule MishkaGervaz.Table.Web.State do
           base_path: nil,
           preserved_params: %{},
           saved_active_state: nil,
-          saved_archived_state: nil
+          saved_archived_state: nil,
+          current_page_size: nil
         }
       end
 

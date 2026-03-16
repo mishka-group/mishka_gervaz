@@ -44,7 +44,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
               {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
       def load_page(state, query, page, action, tenant) do
-        page_size = state.static.page_size
+        page_size = state.current_page_size || state.static.page_size
 
         if is_nil(page_size) do
           results =

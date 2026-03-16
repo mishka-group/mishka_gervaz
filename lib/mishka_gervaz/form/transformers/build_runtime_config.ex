@@ -563,9 +563,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     theme_path = path ++ [:theme]
 
     %{
-      template: get_opt(dsl_state, path, :template) || domain_defaults[:template],
+      template: get_opt(dsl_state, path, :template) || domain_defaults[:template] || MishkaGervaz.Form.Templates.Standard,
       features: get_opt(dsl_state, path, :features) || domain_defaults[:features],
-      ui_adapter: get_opt(dsl_state, path, :ui_adapter) || domain_defaults[:ui_adapter],
+      ui_adapter: get_opt(dsl_state, path, :ui_adapter) || domain_defaults[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind,
       ui_adapter_opts: get_opt(dsl_state, path, :ui_adapter_opts) || [],
       theme: build_theme(dsl_state, theme_path, domain_defaults)
     }

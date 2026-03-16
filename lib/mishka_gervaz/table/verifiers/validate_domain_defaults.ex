@@ -78,10 +78,13 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
 
     pagination_type = Verifier.get_option(dsl_state, @pagination_path, :type)
 
+    max_page_size = Verifier.get_option(dsl_state, @pagination_path, :max_page_size)
+
     with :ok <- validate_page_size(page_size, module),
          :ok <- validate_page_size_options(page_size_options, module),
          :ok <- validate_pagination_type(pagination_type, module),
-         :ok <- validate_page_size_in_options(page_size, page_size_options, module) do
+         :ok <- validate_page_size_in_options(page_size, page_size_options, module),
+         :ok <- validate_max_page_size(max_page_size, page_size_options, module) do
       :ok
     end
   end
@@ -200,6 +203,33 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
   end
 
   defp validate_page_size_in_options(_, _, _), do: :ok
+
+  defp validate_max_page_size(nil, _options, _module), do: :ok
+
+  defp validate_max_page_size(max, options, module) when is_list(options) and options != [] do
+    max_option = Enum.max(options)
+
+    if max >= max_option do
+      :ok
+    else
+      message = """
+      max_page_size #{inspect(max)} is less than the largest page_size_options value #{inspect(max_option)}.
+
+      max_page_size must be >= the largest value in page_size_options.
+
+      Fix: Increase max_page_size or reduce page_size_options:
+
+          pagination do
+            page_size_options #{inspect(options)}
+            max_page_size #{inspect(max_option)}
+          end
+      """
+
+      dsl_error(module, @pagination_path ++ [:max_page_size], message)
+    end
+  end
+
+  defp validate_max_page_size(_, _, _), do: :ok
 
   defp dsl_error(module, path, message) do
     {:error, Spark.Error.DslError.exception(module: module, path: path, message: message)}

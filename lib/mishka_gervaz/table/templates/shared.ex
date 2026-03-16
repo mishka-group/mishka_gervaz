@@ -817,7 +817,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:has_more?, state.has_more?)
       |> assign(:total_pages, state.total_pages)
       |> assign(:total_count, state.total_count)
-      |> assign(:page_size, static.page_size)
+      |> assign(:page_size, state.current_page_size || static.page_size)
+      |> assign(:current_page_size, state.current_page_size || static.page_size)
+      |> assign(:page_size_options, static.page_size_options)
       |> assign(:loading, state.loading)
       |> assign(:loading_type, state.loading_type)
       |> assign(:ui_adapter, static.ui_adapter)
@@ -869,6 +871,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       total_pages={@total_pages}
       total_count={@total_count}
       page_size={@page_size}
+      current_page_size={@current_page_size}
+      page_size_options={@page_size_options}
       loading={@loading}
       ui_adapter={@ui_adapter}
       show_total={@show_total}
@@ -940,6 +944,12 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           on_page_change={@pagination_on_change}
           phx_target={@pagination_phx_target}
         />
+        <.render_page_size_selector
+          :if={@page_size_options != nil and @page_size_options != []}
+          page_size_options={@page_size_options}
+          current_page_size={@current_page_size}
+          myself={@myself}
+        />
       </div>
       """
     else
@@ -1006,8 +1016,37 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           disabled={@loading == :loading}
         />
       </.dynamic_component>
+      <.render_page_size_selector
+        :if={@page_size_options != nil and @page_size_options != []}
+        page_size_options={@page_size_options}
+        current_page_size={@current_page_size}
+        myself={@myself}
+      />
       """
     end
+  end
+
+  defp render_page_size_selector(assigns) do
+    ~H"""
+    <div class="flex items-center gap-2 text-sm text-gray-600">
+      <span>Show</span>
+      <select
+        phx-change="change_page_size"
+        phx-target={@myself}
+        name="size"
+        class="rounded border-gray-300 text-sm py-1 px-2"
+      >
+        <option
+          :for={opt <- @page_size_options}
+          value={opt}
+          selected={opt == @current_page_size}
+        >
+          {opt}
+        </option>
+      </select>
+      <span>per page</span>
+    </div>
+    """
   end
 
   defp render_page_numbers(assigns) do

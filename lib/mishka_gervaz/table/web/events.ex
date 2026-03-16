@@ -380,6 +380,25 @@ defmodule MishkaGervaz.Table.Web.Events do
         end
       end
 
+      defp do_handle("change_page_size", %{"size" => size}, state, socket) do
+        page_size = sanitize_page(state, size)
+        max = state.static.max_page_size
+        options = state.static.page_size_options
+
+        clamped = if max, do: min(page_size, max), else: page_size
+
+        effective =
+          if options && clamped not in options do
+            state.static.page_size
+          else
+            clamped
+          end
+
+        state = State.update(state, current_page_size: effective)
+        socket = DataLoader.load_async(socket, state, page: 1, reset: true)
+        {:noreply, socket}
+      end
+
       defp do_handle("delete", %{"id" => id}, state, socket) do
         id = sanitize(state, id)
         record = get_record(state, id, state.archive_status)

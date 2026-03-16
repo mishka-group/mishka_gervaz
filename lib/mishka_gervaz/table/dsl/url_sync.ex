@@ -39,7 +39,7 @@ defmodule MishkaGervaz.Table.Dsl.UrlSync do
       """
     ],
     params: [
-      type: {:list, {:in, [:filters, :sort, :page, :search, :template]}},
+      type: {:list, {:in, [:filters, :sort, :page, :page_size, :search, :template]}},
       doc: "Which state to sync to URL params. Overrides domain default."
     ],
     prefix: [

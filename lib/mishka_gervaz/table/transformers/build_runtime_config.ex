@@ -702,6 +702,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
         page_size: page_size || 20,
         page_size_options:
           (resource && resource.page_size_options) || domain[:page_size_options] || [20, 50, 100],
+        max_page_size: (resource && resource.max_page_size) || domain[:max_page_size] || 150,
         ui: pagination_ui_to_map(ui)
       }
     end
