@@ -42,21 +42,31 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       Returns tuple of {page, page_result, reset?, pagination_info}.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
-              {integer(), Ash.Page.Offset.t(), boolean(), map()}
+              {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
       def load_page(state, query, page, action, tenant) do
         page_size = state.static.page_size
-        pagination_type = get_pagination_type(state)
 
-        page_opts = build_page_opts(page, page_size, pagination_type)
+        if is_nil(page_size) do
+          results =
+            query
+            |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+            |> Ash.read!()
 
-        page_result =
-          query
-          |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
-          |> Ash.read!(page: page_opts)
+          page_result = %{results: results, count: length(results), more?: false}
+          {1, page_result, true, %{}}
+        else
+          pagination_type = get_pagination_type(state)
+          page_opts = build_page_opts(page, page_size, pagination_type)
 
-        pagination_info = build_pagination_info(pagination_type, page_result, page_size)
+          page_result =
+            query
+            |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+            |> Ash.read!(page: page_opts)
 
-        {page, page_result, page == 1, pagination_info}
+          pagination_info = build_pagination_info(pagination_type, page_result, page_size)
+
+          {page, page_result, page == 1, pagination_info}
+        end
       end
 
       @doc """

@@ -153,7 +153,7 @@ defmodule MishkaGervaz.Table.Web.State do
             sort_field_map: %{atom() => [atom()]},
             hooks: map(),
             url_sync_config: map() | nil,
-            page_size: integer()
+            page_size: pos_integer() | nil
           }
   end
 
@@ -329,23 +329,30 @@ defmodule MishkaGervaz.Table.Web.State do
       Map.get(dsl_config || %{}, :relation, RelationLoader.Default)
     end
 
-    @spec get_page_size(map()) :: pos_integer()
+    @spec get_page_size(map()) :: pos_integer() | nil
     def get_page_size(%{pagination: %{page_size: page_size}}), do: page_size
-    def get_page_size(_), do: 25
+    def get_page_size(_), do: nil
 
     @spec get_features(map(), module()) :: list(atom())
     def get_features(config, template) do
-      case get_in(config, [:presentation, :features]) do
-        val when val in [nil, :all] ->
-          switchable = get_in(config, [:presentation, :switchable_templates]) || []
-          all_templates = Enum.uniq([template | switchable])
+      features =
+        case get_in(config, [:presentation, :features]) do
+          val when val in [nil, :all] ->
+            switchable = get_in(config, [:presentation, :switchable_templates]) || []
+            all_templates = Enum.uniq([template | switchable])
 
-          all_templates
-          |> Enum.flat_map(&TemplateBehaviour.normalize_features(&1.features()))
-          |> Enum.uniq()
+            all_templates
+            |> Enum.flat_map(&TemplateBehaviour.normalize_features(&1.features()))
+            |> Enum.uniq()
 
-        list when is_list(list) ->
-          list
+          list when is_list(list) ->
+            list
+        end
+
+      if is_nil(config[:pagination]) do
+        Enum.reject(features, &(&1 == :paginate))
+      else
+        features
       end
     end
 

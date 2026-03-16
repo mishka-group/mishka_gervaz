@@ -688,14 +688,23 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   defp build_pagination(dsl_state, domain_defaults) do
     domain = domain_defaults[:pagination] || %{}
     resource = find_entity(dsl_state, @table_path, Pagination)
-    ui = (resource && resource.ui) || struct(Pagination.Ui)
 
-    %{
-      type: (resource && resource.type) || domain[:type],
-      page_size: (resource && resource.page_size) || domain[:page_size],
-      page_size_options: (resource && resource.page_size_options) || domain[:page_size_options],
-      ui: pagination_ui_to_map(ui)
-    }
+    page_size = (resource && resource.page_size) || domain[:page_size]
+    type = (resource && resource.type) || domain[:type]
+
+    if is_nil(page_size) and is_nil(type) and is_nil(resource) do
+      nil
+    else
+      ui = (resource && resource.ui) || struct(Pagination.Ui)
+
+      %{
+        type: type || :numbered,
+        page_size: page_size || 20,
+        page_size_options:
+          (resource && resource.page_size_options) || domain[:page_size_options] || [20, 50, 100],
+        ui: pagination_ui_to_map(ui)
+      }
+    end
   end
 
   defp pagination_ui_to_map(ui) do
