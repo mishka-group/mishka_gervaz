@@ -63,7 +63,8 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       upload_state: Keyword.get(opts, :upload_state, %{}),
       existing_files: Keyword.get(opts, :existing_files, %{}),
       dirty?: Keyword.get(opts, :dirty?, false),
-      defaults: Keyword.get(opts, :defaults, nil)
+      defaults: Keyword.get(opts, :defaults, nil),
+      preload_aliases: Keyword.get(opts, :preload_aliases, %{})
     }
   end
 

@@ -118,6 +118,34 @@ defmodule MishkaGervaz.Form.Web.StateTest do
     end
   end
 
+  describe "preload_aliases field" do
+    test "defaults to empty map" do
+      state = build_state()
+      assert state.preload_aliases == %{}
+    end
+
+    test "can be initialized with aliases" do
+      aliases = %{category: :master_category, tags: :master_tags}
+      state = build_state(preload_aliases: aliases)
+      assert state.preload_aliases == aliases
+    end
+
+    test "preserves preload_aliases when updating other fields" do
+      aliases = %{category: :tenant_category}
+      state = build_state(preload_aliases: aliases)
+
+      updated = State.update(state, dirty?: true)
+      assert updated.preload_aliases == aliases
+      assert updated.dirty?
+    end
+
+    test "can update preload_aliases" do
+      state = build_state(preload_aliases: %{old: :old_source})
+      updated = State.update(state, preload_aliases: %{new: :new_source})
+      assert updated.preload_aliases == %{new: :new_source}
+    end
+  end
+
   describe "mode and loading" do
     test "defaults to create mode" do
       state = build_state()

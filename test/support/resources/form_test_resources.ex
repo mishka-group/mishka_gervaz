@@ -355,7 +355,8 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
 
         preload do
           always [:user]
-          master [:comments]
+          master [:comments, master_category: :category]
+          tenant tenant_category: :category
         end
       end
 
