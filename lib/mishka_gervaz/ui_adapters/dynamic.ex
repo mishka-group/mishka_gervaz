@@ -104,7 +104,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     :array_fields,
     :field_error,
     :string_list_input,
-    :combobox
+    :combobox,
+    :password_input
   ]
 
   @doc """
@@ -170,6 +171,13 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
   def text_input(assigns) do
     render_component("text_input", assigns, fn assigns ->
       fallback(assigns).text_input(assigns)
+    end)
+  end
+
+  @impl true
+  def password_input(assigns) do
+    render_component("password_input", assigns, fn assigns ->
+      fallback(assigns).password_input(assigns)
     end)
   end
 

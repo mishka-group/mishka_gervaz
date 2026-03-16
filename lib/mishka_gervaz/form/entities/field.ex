@@ -103,6 +103,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
 
   @builtin_field_types [
     :text,
+    :password,
     :textarea,
     :number,
     :checkbox,

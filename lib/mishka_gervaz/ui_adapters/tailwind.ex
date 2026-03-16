@@ -52,6 +52,32 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @impl true
+  def password_input(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn ->
+        "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+      end)
+      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:autocomplete, fn -> "new-password" end)
+
+    ~H"""
+    <input
+      type="password"
+      name={@name}
+      value={@value}
+      placeholder={@placeholder}
+      disabled={@disabled}
+      autocomplete={@autocomplete}
+      class={[@class, @disabled && "bg-gray-100 cursor-not-allowed"]}
+      phx-debounce={@phx_debounce}
+    />
+    """
+  end
+
+  @impl true
   def select(assigns) do
     normalized = normalize_options(assigns[:options] || [])
 

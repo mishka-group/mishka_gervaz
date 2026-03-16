@@ -578,7 +578,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:module, ui)
 
     case type do
-      t when t in [:text, :email, :password, :url, :tel, :hidden] ->
+      :password ->
+        base
+        |> assign(:function, :password_input)
+        |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
+        |> dynamic_component()
+
+      t when t in [:text, :email, :url, :tel, :hidden] ->
         base
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
