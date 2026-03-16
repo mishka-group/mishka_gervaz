@@ -1038,11 +1038,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   defp render_page_size_selector(assigns) do
     ~H"""
-    <div class="flex items-center gap-2 text-sm text-gray-600">
+    <form phx-change="change_page_size" phx-target={@myself} class="flex items-center gap-2 text-sm text-gray-600">
       <span>Show</span>
       <select
-        phx-change="change_page_size"
-        phx-target={@myself}
         name="size"
         class="rounded border-gray-300 text-sm py-1 px-2"
       >
@@ -1055,7 +1053,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         </option>
       </select>
       <span>per page</span>
-    </div>
+    </form>
     """
   end
 

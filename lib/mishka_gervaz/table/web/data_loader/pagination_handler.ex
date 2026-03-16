@@ -46,12 +46,13 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       def load_page(state, query, page, action, tenant) do
         page_size = state.current_page_size || state.static.page_size
 
-        if is_nil(page_size) do
-          results =
+        if is_nil(state.static.config[:pagination]) or is_nil(page_size) do
+          read_result =
             query
             |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
             |> Ash.read!()
 
+          results = extract_results(read_result)
           page_result = %{results: results, count: length(results), more?: false}
           {1, page_result, true, %{}}
         else
@@ -112,6 +113,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       def calculate_total_pages(total_count, page_size) do
         ceil(total_count / page_size)
       end
+
+      defp extract_results(%{results: results}) when is_list(results), do: results
+      defp extract_results(results) when is_list(results), do: results
+      defp extract_results(_), do: []
 
       defoverridable load_page: 5,
                      get_pagination_type: 1,

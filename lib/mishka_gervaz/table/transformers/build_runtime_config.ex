@@ -690,7 +690,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     resource = find_entity(dsl_state, @table_path, Pagination)
 
     if resource && resource.enabled == false do
-      nil
+      :disabled
     else
       page_size = (resource && resource.page_size) || domain[:page_size]
       type = (resource && resource.type) || domain[:type]

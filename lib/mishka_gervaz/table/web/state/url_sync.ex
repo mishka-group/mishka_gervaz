@@ -156,7 +156,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
 
         effective =
           if options && clamped not in options do
-            Enum.min_by(options, &abs(&1 - clamped))
+            state.static.page_size
           else
             clamped
           end

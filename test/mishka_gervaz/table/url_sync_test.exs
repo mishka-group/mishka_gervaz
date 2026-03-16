@@ -860,29 +860,69 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       url_state = %{
         filters: %{status: "active"},
         sort: [{:name, :asc}],
-        page: 2
+        page: 2,
+        page_size: nil
       }
 
       state = %{
         filter_values: %{status: "active"},
         sort_fields: [{:name, :asc}],
-        page: 2
+        page: 2,
+        current_page_size: nil
       }
 
       assert UrlSync.matches_state?(url_state, state) == true
+    end
+
+    test "returns true when page_size matches" do
+      url_state = %{
+        filters: %{},
+        sort: [],
+        page: 1,
+        page_size: 50
+      }
+
+      state = %{
+        filter_values: %{},
+        sort_fields: [],
+        page: 1,
+        current_page_size: 50
+      }
+
+      assert UrlSync.matches_state?(url_state, state) == true
+    end
+
+    test "returns false when page_size doesn't match" do
+      url_state = %{
+        filters: %{},
+        sort: [],
+        page: 1,
+        page_size: 50
+      }
+
+      state = %{
+        filter_values: %{},
+        sort_fields: [],
+        page: 1,
+        current_page_size: 100
+      }
+
+      assert UrlSync.matches_state?(url_state, state) == false
     end
 
     test "returns false when filters don't match" do
       url_state = %{
         filters: %{status: "active"},
         sort: [{:name, :asc}],
-        page: 2
+        page: 2,
+        page_size: nil
       }
 
       state = %{
         filter_values: %{status: "inactive"},
         sort_fields: [{:name, :asc}],
-        page: 2
+        page: 2,
+        current_page_size: nil
       }
 
       assert UrlSync.matches_state?(url_state, state) == false
@@ -892,13 +932,15 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       url_state = %{
         filters: %{status: "active"},
         sort: [{:name, :asc}],
-        page: 2
+        page: 2,
+        page_size: nil
       }
 
       state = %{
         filter_values: %{status: "active"},
         sort_fields: [{:name, :desc}],
-        page: 2
+        page: 2,
+        current_page_size: nil
       }
 
       assert UrlSync.matches_state?(url_state, state) == false
@@ -908,13 +950,15 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       url_state = %{
         filters: %{status: "active"},
         sort: [{:name, :asc}],
-        page: 2
+        page: 2,
+        page_size: nil
       }
 
       state = %{
         filter_values: %{status: "active"},
         sort_fields: [{:name, :asc}],
-        page: 3
+        page: 3,
+        current_page_size: nil
       }
 
       assert UrlSync.matches_state?(url_state, state) == false
@@ -924,7 +968,8 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       state = %{
         filter_values: %{status: "active"},
         sort_fields: [{:name, :asc}],
-        page: 2
+        page: 2,
+        current_page_size: nil
       }
 
       assert UrlSync.matches_state?(nil, state) == false
@@ -1039,6 +1084,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filters: %{status: "active"},
         sort: [{:name, :asc}],
         page: 2,
+        page_size: nil,
         path_params: %{workspace_version_id: "abc-123"}
       }
 
@@ -1046,6 +1092,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filter_values: %{status: "active"},
         sort_fields: [{:name, :asc}],
         page: 2,
+        current_page_size: nil,
         path_params: %{workspace_version_id: "abc-123"}
       }
 
@@ -1057,6 +1104,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filters: %{status: "active"},
         sort: [{:name, :asc}],
         page: 2,
+        page_size: nil,
         path_params: %{workspace_version_id: "abc-123"}
       }
 
@@ -1064,6 +1112,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filter_values: %{status: "active"},
         sort_fields: [{:name, :asc}],
         page: 2,
+        current_page_size: nil,
         path_params: %{workspace_version_id: "def-456"}
       }
 
@@ -1075,6 +1124,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filters: %{},
         sort: [],
         page: 1,
+        page_size: nil,
         path_params: %{}
       }
 
@@ -1082,6 +1132,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filter_values: %{},
         sort_fields: [],
         page: 1,
+        current_page_size: nil,
         path_params: %{}
       }
 
@@ -1093,6 +1144,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
         filters: %{},
         sort: [],
         page: 1,
+        page_size: nil,
         path_params: %{}
       }
 
@@ -1100,7 +1152,8 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       state = %{
         filter_values: %{},
         sort_fields: [],
-        page: 1
+        page: 1,
+        current_page_size: nil
       }
 
       assert UrlSync.matches_state?(url_state, state) == true

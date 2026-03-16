@@ -66,6 +66,11 @@ defmodule MishkaGervaz.Resource.Info.Table do
   end
 
   @spec merge_domain_defaults(map(), map()) :: map()
+  defp merge_domain_defaults(%{pagination: :disabled} = config, domain_defaults)
+       when domain_defaults == %{} do
+    %{config | pagination: nil}
+  end
+
   defp merge_domain_defaults(config, domain_defaults) when domain_defaults == %{}, do: config
 
   defp merge_domain_defaults(config, domain_defaults) do
@@ -86,6 +91,10 @@ defmodule MishkaGervaz.Resource.Info.Table do
   end
 
   @spec merge_pagination(map(), map()) :: map()
+  defp merge_pagination(%{pagination: :disabled} = config, _domain) do
+    %{config | pagination: nil}
+  end
+
   defp merge_pagination(config, domain) do
     defaults = Pagination.defaults()
     current = config[:pagination] || %{}

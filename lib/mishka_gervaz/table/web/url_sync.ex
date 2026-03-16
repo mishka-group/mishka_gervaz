@@ -303,6 +303,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     url_state[:filters] == state.filter_values and
       url_state[:sort] == state.sort_fields and
       url_state[:page] == state.page and
+      url_state[:page_size] == state.current_page_size and
       (url_state[:path_params] || %{}) == (Map.get(state, :path_params) || %{})
   end
 
