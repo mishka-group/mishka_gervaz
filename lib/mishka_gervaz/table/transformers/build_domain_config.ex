@@ -74,7 +74,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildDomainConfig do
           type: default_if_nil(pagination.type, defaults.type),
           page_size: default_if_nil(pagination.page_size, defaults.page_size),
           page_size_options:
-            default_if_nil(pagination.page_size_options, defaults.page_size_options)
+            default_if_nil(pagination.page_size_options, defaults.page_size_options),
+          max_page_size: default_if_nil(pagination.max_page_size, defaults.max_page_size)
         }
     end
   end

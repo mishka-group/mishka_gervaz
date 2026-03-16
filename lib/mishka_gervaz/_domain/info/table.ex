@@ -99,6 +99,39 @@ defmodule MishkaGervaz.Domain.Info.Table do
   def pagination(domain), do: table(domain)[:pagination]
 
   @doc """
+  Get the default page size.
+  """
+  @spec page_size(module()) :: pos_integer() | nil
+  def page_size(domain) do
+    case pagination(domain) do
+      %{page_size: size} -> size
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the default page size options.
+  """
+  @spec page_size_options(module()) :: [pos_integer()] | nil
+  def page_size_options(domain) do
+    case pagination(domain) do
+      %{page_size_options: opts} -> opts
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the default max page size.
+  """
+  @spec max_page_size(module()) :: pos_integer() | nil
+  def max_page_size(domain) do
+    case pagination(domain) do
+      %{max_page_size: max} -> max
+      _ -> nil
+    end
+  end
+
+  @doc """
   Get the realtime config.
   """
   @spec realtime(module()) :: map() | nil

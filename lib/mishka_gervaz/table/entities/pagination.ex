@@ -26,7 +26,8 @@ defmodule MishkaGervaz.Table.Entities.Pagination do
   @opt_schema [
     enabled: [
       type: :boolean,
-      doc: "Enable or disable pagination. Set to false at resource level to override domain defaults."
+      doc:
+        "Enable or disable pagination. Set to false at resource level to override domain defaults."
     ],
     type: [
       type: {:in, [:infinite, :numbered, :load_more]},

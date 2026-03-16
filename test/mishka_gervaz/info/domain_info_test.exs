@@ -219,4 +219,28 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
       assert url_sync == nil
     end
   end
+
+  describe "default_page_size/1" do
+    test "returns page_size from domain pagination" do
+      page_size = DomainInfo.default_page_size(Domain)
+
+      assert page_size == 20
+    end
+  end
+
+  describe "default_page_size_options/1" do
+    test "returns nil when page_size_options not set in domain" do
+      options = DomainInfo.default_page_size_options(Domain)
+
+      assert options == nil
+    end
+  end
+
+  describe "default_max_page_size/1" do
+    test "returns default 150 from pagination defaults when not explicitly set" do
+      max = DomainInfo.default_max_page_size(Domain)
+
+      assert max == 150
+    end
+  end
 end

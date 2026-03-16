@@ -44,6 +44,13 @@ defmodule MishkaGervaz.ResourceInfo do
   defdelegate refresh_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :refresh
   defdelegate url_sync_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :url_sync
 
+  defdelegate pagination(resource), to: MishkaGervaz.Resource.Info.Table
+  defdelegate pagination_enabled?(resource), to: MishkaGervaz.Resource.Info.Table
+  defdelegate pagination_type(resource), to: MishkaGervaz.Resource.Info.Table
+  defdelegate page_size(resource), to: MishkaGervaz.Resource.Info.Table
+  defdelegate page_size_options(resource), to: MishkaGervaz.Resource.Info.Table
+  defdelegate max_page_size(resource), to: MishkaGervaz.Resource.Info.Table
+
   defdelegate table_hooks(resource), to: MishkaGervaz.Resource.Info.Table, as: :hooks
 
   defdelegate table_detected_preloads(resource),

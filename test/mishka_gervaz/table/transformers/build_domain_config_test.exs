@@ -68,6 +68,11 @@ defmodule MishkaGervaz.Transformers.BuildDomainConfigTest do
       config = DomainInfo.domain_config(Domain)
       assert is_nil(config.table.pagination.page_size_options)
     end
+
+    test "pagination has max_page_size key" do
+      config = DomainInfo.domain_config(Domain)
+      assert Map.has_key?(config.table.pagination, :max_page_size)
+    end
   end
 
   describe "actions defaults" do

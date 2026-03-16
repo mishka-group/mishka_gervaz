@@ -20,9 +20,9 @@ defmodule MishkaGervaz.Form.Web.OnInitHookTest do
       end
 
       state = build_state(static_opts: [hooks: %{on_init: on_init}])
-      socket = build_socket(state)
+      _socket = build_socket(state)
 
-      form = %Phoenix.HTML.Form{
+      _form = %Phoenix.HTML.Form{
         source: %{source: %{data: nil}},
         errors: [],
         data: nil,

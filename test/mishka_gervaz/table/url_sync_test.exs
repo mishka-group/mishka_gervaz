@@ -528,6 +528,124 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
     end
   end
 
+  describe "encode/2 page_size" do
+    test "encodes page_size without prefix when current_page_size is set" do
+      state = %{filter_values: %{}, current_page_size: 50}
+      config = %{params: [:page_size], prefix: nil}
+
+      result = UrlSync.encode(state, config)
+
+      assert result["page_size"] == "50"
+    end
+
+    test "does not encode page_size when current_page_size is nil" do
+      state = %{filter_values: %{}, current_page_size: nil}
+      config = %{params: [:page_size], prefix: nil}
+
+      result = UrlSync.encode(state, config)
+
+      refute Map.has_key?(result, "page_size")
+    end
+
+    test "does not encode page_size when not in params config" do
+      state = %{filter_values: %{}, current_page_size: 50}
+      config = %{params: [:page], prefix: nil}
+
+      result = UrlSync.encode(state, config)
+
+      refute Map.has_key?(result, "page_size")
+    end
+
+    test "encodes page_size with prefix" do
+      state = %{filter_values: %{}, current_page_size: 100}
+      config = %{params: [:page_size], prefix: "posts"}
+
+      result = UrlSync.encode(state, config)
+
+      assert result["posts_page_size"] == "100"
+    end
+  end
+
+  describe "decode/3 page_size" do
+    test "decodes page_size without prefix" do
+      params = %{"page_size" => "50"}
+
+      result = UrlSync.decode(params, "", allowed_params: [:page_size])
+
+      assert result.page_size == 50
+    end
+
+    test "decodes page_size with prefix" do
+      params = %{"posts_page_size" => "100"}
+
+      result = UrlSync.decode(params, "posts", allowed_params: [:page_size])
+
+      assert result.page_size == 100
+    end
+
+    test "returns nil when page_size not in URL" do
+      params = %{}
+
+      result = UrlSync.decode(params, "", allowed_params: [:page_size])
+
+      assert result.page_size == nil
+    end
+
+    test "returns nil for invalid page_size" do
+      params = %{"page_size" => "not_a_number"}
+
+      result = UrlSync.decode(params, "", allowed_params: [:page_size])
+
+      assert result.page_size == nil
+    end
+
+    test "returns nil for zero page_size" do
+      params = %{"page_size" => "0"}
+
+      result = UrlSync.decode(params, "", allowed_params: [:page_size])
+
+      assert result.page_size == nil
+    end
+
+    test "returns nil for negative page_size" do
+      params = %{"page_size" => "-5"}
+
+      result = UrlSync.decode(params, "", allowed_params: [:page_size])
+
+      assert result.page_size == nil
+    end
+
+    test "page_size defaults to nil when not in allowed_params" do
+      params = %{"page_size" => "50"}
+
+      result = UrlSync.decode(params, "", allowed_params: [:page])
+
+      assert result.page_size == nil
+    end
+  end
+
+  describe "page_size roundtrip" do
+    test "encodes and decodes page_size correctly" do
+      original_state = %{filter_values: %{}, current_page_size: 50}
+      config = %{params: [:page_size], prefix: nil}
+
+      encoded = UrlSync.encode(original_state, config)
+      decoded = UrlSync.decode(encoded, "", allowed_params: [:page_size])
+
+      assert decoded.page_size == 50
+    end
+
+    test "encodes and decodes page_size with prefix" do
+      original_state = %{filter_values: %{}, current_page_size: 100}
+      config = %{params: [:page_size], prefix: "t"}
+
+      encoded = UrlSync.encode(original_state, config)
+      decoded = UrlSync.decode(encoded, "t", allowed_params: [:page_size])
+
+      assert decoded.page_size == 100
+    end
+  end
+
   describe "decode/3 security" do
     test "ignores non-existing atoms in filter names" do
       params = %{

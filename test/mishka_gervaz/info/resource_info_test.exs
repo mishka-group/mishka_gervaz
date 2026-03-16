@@ -678,6 +678,66 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
   end
 
+  # Pagination info functions
+
+  describe "pagination/1" do
+    test "Post pagination returns full config" do
+      pagination = ResourceInfo.pagination(Post)
+
+      assert is_map(pagination)
+      assert pagination.page_size == 25
+      assert pagination.type == :infinite
+    end
+
+    test "User pagination returns full config" do
+      pagination = ResourceInfo.pagination(User)
+
+      assert pagination.page_size == 20
+      assert pagination.type == :numbered
+    end
+  end
+
+  describe "pagination_enabled?/1" do
+    test "returns true for resources with pagination" do
+      assert ResourceInfo.pagination_enabled?(Post)
+      assert ResourceInfo.pagination_enabled?(User)
+    end
+  end
+
+  describe "pagination_type/1" do
+    test "Post pagination type is infinite" do
+      assert ResourceInfo.pagination_type(Post) == :infinite
+    end
+
+    test "User pagination type is numbered" do
+      assert ResourceInfo.pagination_type(User) == :numbered
+    end
+  end
+
+  describe "page_size/1" do
+    test "Post page_size is 25" do
+      assert ResourceInfo.page_size(Post) == 25
+    end
+
+    test "User page_size is 20" do
+      assert ResourceInfo.page_size(User) == 20
+    end
+  end
+
+  describe "page_size_options/1" do
+    test "returns nil when not configured" do
+      assert ResourceInfo.page_size_options(Post) == nil
+      assert ResourceInfo.page_size_options(User) == nil
+    end
+  end
+
+  describe "max_page_size/1" do
+    test "returns default 150 when not explicitly set" do
+      assert ResourceInfo.max_page_size(Post) == 150
+      assert ResourceInfo.max_page_size(User) == 150
+    end
+  end
+
   # Empty and Error States
 
   describe "empty_state config" do

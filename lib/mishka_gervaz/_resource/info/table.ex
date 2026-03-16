@@ -95,6 +95,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
       page_size: current[:page_size] || domain[:page_size] || defaults.page_size,
       page_size_options:
         current[:page_size_options] || domain[:page_size_options] || defaults.page_size_options,
+      max_page_size: current[:max_page_size] || domain[:max_page_size] || defaults.max_page_size,
       ui: current[:ui] || %{}
     }
 
@@ -586,6 +587,69 @@ defmodule MishkaGervaz.Resource.Info.Table do
   @spec filter_group(module(), atom()) :: map() | nil
   def filter_group(resource, group_name) do
     Enum.find(filter_groups(resource), &(&1.name == group_name))
+  end
+
+  @doc """
+  Get the full pagination configuration for a resource.
+  Returns nil when pagination is disabled or not configured.
+  """
+  @spec pagination(module()) :: map() | nil
+  def pagination(resource) do
+    case config(resource) do
+      %{pagination: pagination} -> pagination
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Check if pagination is enabled for a resource.
+  """
+  @spec pagination_enabled?(module()) :: boolean()
+  def pagination_enabled?(resource), do: pagination(resource) != nil
+
+  @doc """
+  Get the pagination type for a resource.
+  """
+  @spec pagination_type(module()) :: :numbered | :infinite | :load_more | nil
+  def pagination_type(resource) do
+    case pagination(resource) do
+      %{type: type} -> type
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the page size for a resource.
+  """
+  @spec page_size(module()) :: pos_integer() | nil
+  def page_size(resource) do
+    case pagination(resource) do
+      %{page_size: size} -> size
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the page size options for a resource.
+  Returns nil when no options are configured (no dropdown shown).
+  """
+  @spec page_size_options(module()) :: [pos_integer()] | nil
+  def page_size_options(resource) do
+    case pagination(resource) do
+      %{page_size_options: opts} -> opts
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the max page size for a resource.
+  """
+  @spec max_page_size(module()) :: pos_integer() | nil
+  def max_page_size(resource) do
+    case pagination(resource) do
+      %{max_page_size: max} -> max
+      _ -> nil
+    end
   end
 
   @doc """
