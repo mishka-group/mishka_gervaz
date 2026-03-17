@@ -458,6 +458,52 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def grid_cols(nil), do: "grid-cols-4"
   def grid_cols(_), do: "grid-cols-4"
 
+  @doc """
+  Returns the icon name for a filter group, falling back to "hero-funnel".
+  Useful for custom templates rendering their own filter group UI.
+  """
+  @spec group_icon(map()) :: String.t()
+  def group_icon(group) do
+    (group.ui && group.ui.icon) || "hero-funnel"
+  end
+
+  @doc """
+  Returns the resolved label for a filter group, falling back to humanized group name.
+  Useful for custom templates rendering their own filter group UI.
+  """
+  @spec group_label(map()) :: String.t()
+  def group_label(group) do
+    (group.ui && resolve_ui_label(group)) || Phoenix.Naming.humanize(group.name)
+  end
+
+  @doc """
+  Returns the column count from a filter group's UI config, or nil if not set.
+  Pass the result to `grid_cols/1` for the Tailwind class.
+  """
+  @spec group_columns(map()) :: pos_integer() | nil
+  def group_columns(group) do
+    group.ui && group.ui.columns
+  end
+
+  @doc """
+  Returns the CSS class for a collapsible filter group panel wrapper.
+  Falls back to a default rounded panel style if not set in DSL.
+  """
+  @spec group_panel_class(map()) :: String.t()
+  def group_panel_class(group) do
+    (group.ui && group.ui.class) || "p-4 bg-gray-50 rounded-lg border border-gray-200"
+  end
+
+  @doc """
+  Returns a CSS class for inline (non-collapsible) filters based on filter type.
+  Text filters get a flexible width, relation filters a minimum width, others a smaller minimum.
+  Custom templates can override this if they need different sizing.
+  """
+  @spec inline_filter_class(map()) :: String.t()
+  def inline_filter_class(%{type: :text}), do: "flex-1 max-w-md"
+  def inline_filter_class(%{type: :relation}), do: "min-w-[200px]"
+  def inline_filter_class(_), do: "min-w-[160px]"
+
   defp render_filter(assigns) do
     %{filter: filter, all_filters: all_filters, state: state, static: static} = assigns
 
