@@ -93,6 +93,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
         |> Enum.filter(fn {name, _value} ->
           case find_by_name(state.static.filters, name) do
             nil -> false
+            %{visible: false} -> true
             filter -> accessible?(filter, state)
           end
         end)

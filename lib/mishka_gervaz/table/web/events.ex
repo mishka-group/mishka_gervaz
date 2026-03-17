@@ -271,7 +271,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               is_nil(value) or value == "" ->
                 existing = Map.get(state.filter_values, filter.name)
 
-                if filter.type == :relation and existing,
+                if (filter.type == :relation or filter.visible == false) and existing,
                   do: Map.put(acc, filter.name, existing),
                   else: acc
 
