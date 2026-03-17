@@ -495,8 +495,20 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   @doc """
+  Returns the CSS class for an inline (non-collapsible) group wrapper.
+  If the group has `ui do class "..." end`, uses that. Otherwise defaults to
+  `"contents"` which makes the wrapper transparent so filters participate
+  directly in the parent flex layout.
+  """
+  @spec inline_group_class(map()) :: String.t()
+  def inline_group_class(group) do
+    (group.ui && group.ui.class) || "contents"
+  end
+
+  @doc """
   Returns a CSS class for inline (non-collapsible) filters based on filter type.
   Text filters get a flexible width, relation filters a minimum width, others a smaller minimum.
+  Only used when the group has no custom class (i.e., wrapper is `"contents"`).
   Custom templates can override this if they need different sizing.
   """
   @spec inline_filter_class(map()) :: String.t()
