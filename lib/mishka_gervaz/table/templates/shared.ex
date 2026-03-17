@@ -273,7 +273,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     """
   end
 
-  defp accessible_group?(group, state) do
+  @doc """
+  Checks if a filter group is visible and accessible for the current state.
+  """
+  def accessible_group?(group, state) do
     visible =
       case group.visible do
         fun when is_function(fun, 1) -> fun.(state)
@@ -289,7 +292,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     visible and (not restricted or Map.get(state, :master_user?, false))
   end
 
-  defp sort_by_position(groups) do
+  @doc """
+  Sorts filter groups by their position attribute.
+  """
+  def sort_by_position(groups) do
     Enum.sort_by(groups, fn group ->
       case group.position do
         :first -> {0, 0}
@@ -440,13 +446,17 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     """
   end
 
-  defp grid_cols(1), do: "grid-cols-1"
-  defp grid_cols(2), do: "grid-cols-2"
-  defp grid_cols(3), do: "grid-cols-3"
-  defp grid_cols(4), do: "grid-cols-4"
-  defp grid_cols(5), do: "grid-cols-5"
-  defp grid_cols(6), do: "grid-cols-6"
-  defp grid_cols(_), do: "grid-cols-4"
+  @doc """
+  Returns the Tailwind grid-cols class for a given column count.
+  """
+  def grid_cols(1), do: "grid-cols-1"
+  def grid_cols(2), do: "grid-cols-2"
+  def grid_cols(3), do: "grid-cols-3"
+  def grid_cols(4), do: "grid-cols-4"
+  def grid_cols(5), do: "grid-cols-5"
+  def grid_cols(6), do: "grid-cols-6"
+  def grid_cols(nil), do: "grid-cols-4"
+  def grid_cols(_), do: "grid-cols-4"
 
   defp render_filter(assigns) do
     %{filter: filter, all_filters: all_filters, state: state, static: static} = assigns
@@ -660,6 +670,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   Returns `{search_filter, other_filters, advanced_group}` where `advanced_group` is the
   group config map (with `collapsed`, `collapsible`, `ui` etc.) or `nil`.
+
+  Note: This function returns only the first primary filter as `search_filter`.
+  For full multi-group support, use `prepare_filter_groups/3` instead.
   """
   @spec split_filters_by_groups(list(), list(), map()) :: {map() | nil, list(), map() | nil}
   def split_filters_by_groups(filters, groups, state) do
@@ -692,6 +705,62 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       {List.first(search), rest, nil}
     end
   end
+
+  @doc """
+  Prepares all filter groups for rendering by custom templates.
+
+  Resolves accessible filters, splits them into visible groups (sorted by position),
+  and identifies ungrouped filters. Each group entry includes the resolved filter
+  structs (not just names).
+
+  Returns a map:
+
+      %{
+        all_filters: [filter_struct],
+        visible_groups: [%{group | resolved_filters: [filter_struct]}],
+        ungrouped_filters: [filter_struct],
+        inline_groups: [group],      # non-collapsible
+        collapsible_groups: [group]   # collapsible
+      }
+  """
+  @spec prepare_filter_groups(list(), list(), map()) :: map()
+  def prepare_filter_groups(filters, groups, state) do
+    all_filters =
+      merge_relation_filter_state(filters, state.relation_filter_state || %{})
+      |> Enum.filter(&accessible?(&1, state))
+
+    all_filter_names = Enum.map(all_filters, & &1.name)
+
+    visible_groups =
+      (groups || [])
+      |> Enum.filter(fn group ->
+        accessible_group?(group, state) and
+          Enum.any?(group.filters, fn name -> name in all_filter_names end)
+      end)
+      |> sort_by_position()
+      |> Enum.map(fn group ->
+        resolved = Enum.filter(all_filters, fn f -> f.name in group.filters end)
+        Map.put(group, :resolved_filters, resolved)
+      end)
+
+    grouped_filter_names =
+      (groups || []) |> Enum.flat_map(fn g -> g.filters end) |> MapSet.new()
+
+    ungrouped_filters =
+      Enum.filter(all_filters, fn f -> not MapSet.member?(grouped_filter_names, f.name) end)
+
+    inline_groups = Enum.filter(visible_groups, fn g -> not g.collapsible end)
+    collapsible_groups = Enum.filter(visible_groups, fn g -> g.collapsible end)
+
+    %{
+      all_filters: all_filters,
+      visible_groups: visible_groups,
+      ungrouped_filters: ungrouped_filters,
+      inline_groups: inline_groups,
+      collapsible_groups: collapsible_groups
+    }
+  end
+
 
   def render_bulk_actions(assigns) do
     static = assigns.static
