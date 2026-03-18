@@ -1599,4 +1599,84 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     do: format.(state, record, value)
 
   defp apply_format(_format, _state, _record, value), do: value
+
+  @doc """
+  Builds active filter chip data for custom templates.
+
+  Returns `{visible_chips, has_any_active_filters}` where:
+  - `visible_chips` excludes `visible: false` filters (hidden from UI but still active in state)
+  - `has_any_active_filters` is true if any filter has a value (including hidden ones)
+
+  Use `has_any_active_filters` for the "Clear all" button visibility so users can always
+  clear hidden filters (e.g., `id` filter from URL).
+  """
+  @spec build_active_filter_chips(map(), map()) :: {list(map()), boolean()}
+  def build_active_filter_chips(state, static) do
+    all_active =
+      Enum.filter(state.filter_values, fn {_k, v} -> has_chip_value?(v) end)
+
+    has_any = all_active != []
+
+    chips =
+      all_active
+      |> Enum.reject(fn {name, _v} ->
+        match?(%{visible: false}, Enum.find(static.filters, &(&1.name == name)))
+      end)
+      |> Enum.map(fn {name, value} ->
+        filter = Enum.find(static.filters, &(&1.name == name))
+
+        label =
+          if filter,
+            do: resolve_ui_label(filter) || Phoenix.Naming.humanize(name),
+            else: Phoenix.Naming.humanize(name)
+
+        display_value = resolve_chip_value(name, value, state)
+        %{name: name, value: value, label: label, display_value: display_value}
+      end)
+
+    {chips, has_any}
+  end
+
+  @doc "Resolve a filter chip's display value, using relation labels when available."
+  @spec resolve_chip_value(atom(), term(), map()) :: String.t()
+  def resolve_chip_value(name, value, state) do
+    case Map.get(state.relation_filter_state || %{}, name) do
+      %{selected_options: options} when is_list(options) and options != [] ->
+        if is_list(value) do
+          value
+          |> Enum.map(fn v ->
+            case Enum.find(options, fn {_label, ov} -> ov == v end) do
+              {label, _} -> label
+              _ -> v
+            end
+          end)
+          |> Enum.join(", ")
+        else
+          case Enum.find(options, fn {_label, v} -> v == value end) do
+            {label, _v} -> label
+            _ -> format_chip_value(value)
+          end
+        end
+
+      _ ->
+        format_chip_value(value)
+    end
+  end
+
+  @doc "Check if a filter value is meaningful (non-nil, non-empty)."
+  @spec has_chip_value?(term()) :: boolean()
+  def has_chip_value?(nil), do: false
+  def has_chip_value?(""), do: false
+  def has_chip_value?([]), do: false
+  def has_chip_value?(%{} = map) when map_size(map) == 0, do: false
+  def has_chip_value?(_), do: true
+
+  @doc "Format a filter value for display in a chip."
+  @spec format_chip_value(term()) :: String.t()
+  def format_chip_value(value) when is_atom(value), do: Phoenix.Naming.humanize(value)
+  def format_chip_value(value) when is_binary(value), do: value
+  def format_chip_value(value) when is_list(value), do: Enum.join(value, ", ")
+  def format_chip_value(value) when is_boolean(value), do: to_string(value)
+  def format_chip_value(%{} = value), do: inspect(value)
+  def format_chip_value(value), do: to_string(value)
 end
