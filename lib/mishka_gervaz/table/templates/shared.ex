@@ -819,7 +819,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     }
   end
 
-
   def render_bulk_actions(assigns) do
     static = assigns.static
     state = assigns.state
