@@ -720,10 +720,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   @spec detect_preloads(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp detect_preloads(dsl_state) do
-    rel_names =
-      dsl_state
-      |> get_relationships()
-      |> MapSet.new(& &1.name)
+    rel_names = dsl_state |> get_relationships() |> MapSet.new(& &1.name)
 
     preloads =
       dsl_state
