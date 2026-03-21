@@ -6,9 +6,7 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
 
   @impl true
-  def render(assigns, _config) do
-    assigns
-  end
+  def render(assigns, _config), do: assigns
 
   @impl true
   def validate(value, config) when is_number(value) do
