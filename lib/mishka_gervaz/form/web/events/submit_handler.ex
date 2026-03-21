@@ -297,10 +297,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       defp field_readonly?(%{readonly: true}, _), do: true
       defp field_readonly?(_, _), do: false
 
-      defoverridable submit: 3,
-                     transform_params: 2,
-                     after_save: 3,
-                     consume_and_merge_uploads: 3
+      defoverridable submit: 3, transform_params: 2, after_save: 3, consume_and_merge_uploads: 3
     end
   end
 end

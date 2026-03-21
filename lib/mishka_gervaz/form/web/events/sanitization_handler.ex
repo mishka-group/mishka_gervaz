@@ -56,8 +56,7 @@ defmodule MishkaGervaz.Form.Web.Events.SanitizationHandler do
       defp sanitize_list_item(item) when is_map(item), do: sanitize_params(item)
       defp sanitize_list_item(item), do: item
 
-      defoverridable sanitize: 1,
-                     sanitize_params: 1
+      defoverridable sanitize: 1, sanitize_params: 1
     end
   end
 end

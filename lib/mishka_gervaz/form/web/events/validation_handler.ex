@@ -99,8 +99,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
         end)
       end
 
-      defoverridable validate: 3,
-                     build_errors: 1
+      defoverridable validate: 3, build_errors: 1
     end
   end
 end

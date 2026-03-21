@@ -67,8 +67,7 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
 
       defp resolve_upload_name(_state, upload_key), do: upload_key
 
-      defoverridable handle_upload: 3,
-                     cancel_upload: 4
+      defoverridable handle_upload: 3, cancel_upload: 4
     end
   end
 end
