@@ -665,12 +665,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
         rel_data = Map.get(assigns.state.relation_options, field.name, %{})
         current_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+        readonly = evaluate_readonly(field, assigns.state)
 
         state_assigns = %{
           form_field: form_field,
           myself: assigns[:myself],
           field_values: assigns.state.field_values,
-          current_value: current_value
+          current_value: current_value,
+          readonly: readonly
         }
 
         RelationType.render_input(field, rel_data, state_assigns, ui)

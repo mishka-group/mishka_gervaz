@@ -133,8 +133,20 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         case record_mod.new_for_create(state, tenant: tenant, actor: actor) do
           {:ok, form} ->
             form = run_on_init_hook(state, form)
-            state = State.update(state, form: form, loading: :loaded, mode: :create)
-            Phoenix.Component.assign(socket, :form_state, state)
+            field_values = extract_defaults_to_field_values(state)
+
+            state =
+              State.update(state,
+                form: form,
+                loading: :loaded,
+                mode: :create,
+                field_values: field_values
+              )
+
+            socket
+            |> Phoenix.Component.assign(:form_state, state)
+            |> load_readonly_relation_options(state)
+            |> load_dependent_relations(state)
 
           {:error, _reason} ->
             state = State.update(state, loading: :error, mode: :create)
@@ -459,6 +471,34 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       end
 
       defp run_on_init_hook(_state, form), do: form
+
+      @spec extract_defaults_to_field_values(State.t()) :: map()
+      defp extract_defaults_to_field_values(%{defaults: defaults})
+           when is_map(defaults) and defaults != %{} do
+        defaults
+        |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
+        |> Map.new()
+      end
+
+      defp extract_defaults_to_field_values(_state), do: %{}
+
+      @spec load_readonly_relation_options(Phoenix.LiveView.Socket.t(), State.t()) ::
+              Phoenix.LiveView.Socket.t()
+      defp load_readonly_relation_options(socket, state) do
+        state.static.fields
+        |> Enum.filter(fn field ->
+          field.type == :relation and
+            field_readonly?(field, state) and
+            Map.has_key?(state.field_values, field.name)
+        end)
+        |> Enum.reduce(socket, fn field, acc ->
+          load_relation_options(acc, state, field.name)
+        end)
+      end
+
+      defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
+      defp field_readonly?(%{readonly: true}, _), do: true
+      defp field_readonly?(_, _), do: false
 
       defoverridable record_loader: 0,
                      tenant_resolver: 0,

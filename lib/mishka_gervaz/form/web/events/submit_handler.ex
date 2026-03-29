@@ -53,8 +53,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           end
 
         form_params = transform_params(state, form_params)
-        form_params = merge_defaults(state, form_params)
         form_params = drop_protected_fields(state, form_params)
+        form_params = merge_defaults(state, form_params)
 
         {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
 

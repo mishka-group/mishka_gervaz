@@ -88,7 +88,9 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)
       else
-        if record_id != socket.assigns[:record_id] do
+        defaults_changed = defaults != existing_state.defaults
+
+        if record_id != socket.assigns[:record_id] or defaults_changed do
           updated_state =
             State.update(existing_state,
               form: nil,
@@ -97,7 +99,8 @@ defmodule MishkaGervaz.Form.Web.Live do
               dirty?: false,
               existing_files: %{},
               field_values: %{},
-              relation_options: %{}
+              relation_options: %{},
+              defaults: defaults
             )
 
           socket

@@ -124,6 +124,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     options = normalize_options(assigns[:options] || [])
     current_value = assigns[:value] || ""
     selected_options = normalize_options(assigns[:selected_options] || [])
+    disabled = assigns[:disabled] || false
 
     display_options =
       if current_value != "" do
@@ -133,11 +134,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         options
       end
 
+    display_label =
+      if disabled and current_value != "" do
+        all_opts = options ++ selected_options
+
+        case Enum.find(all_opts, fn {_l, v} -> to_string(v) == to_string(current_value) end) do
+          {label, _} -> label
+          nil -> current_value
+        end
+      else
+        nil
+      end
+
     assigns =
       assigns
       |> assign(:options, options)
       |> assign(:display_options, display_options)
       |> assign(:current_value, current_value)
+      |> assign(:disabled, disabled)
+      |> assign(:display_label, display_label)
       |> assign_new(:class, fn ->
         "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
       end)
@@ -156,7 +171,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"search-select-#{@filter_name}"}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={unless @disabled, do: "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
@@ -170,19 +185,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <input
           type="text"
           name={"_search_#{@filter_name}"}
-          value={@search_term || ""}
+          value={if(@disabled, do: @display_label || "", else: @search_term || "")}
           placeholder={@placeholder}
-          class={[@class, @icon && "pl-9", "w-full"]}
-          phx-debounce={@debounce}
-          phx-keyup="relation_search"
-          phx-focus="relation_focus"
+          class={[
+            @class,
+            @icon && "pl-9",
+            "w-full",
+            @disabled && "bg-gray-100 cursor-not-allowed text-gray-700"
+          ]}
+          disabled={@disabled}
+          phx-debounce={if !@disabled, do: @debounce}
+          phx-keyup={if !@disabled, do: "relation_search"}
+          phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
           phx-value-filter={@filter_name}
           phx-value-min-chars={@min_chars}
           autocomplete="off"
         />
         <span
-          :if={@loading?}
+          :if={@loading? && !@disabled}
           class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"
         />
       </div>
@@ -190,9 +211,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <%!-- Hidden input for form submission --%>
       <input type="hidden" name={@name} value={@current_value} />
 
-      <%!-- Dropdown options (only show when open) --%>
+      <%!-- Dropdown options (only show when open and not disabled) --%>
       <div
-        :if={@dropdown_open?}
+        :if={@dropdown_open? && !@disabled}
         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-sm text-gray-400">
