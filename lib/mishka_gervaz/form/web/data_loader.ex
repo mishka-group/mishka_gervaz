@@ -248,6 +248,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
         socket
         |> Phoenix.Component.assign(:form_state, state)
+        |> load_readonly_relation_options(state)
         |> load_dependent_relations(state)
       end
 
