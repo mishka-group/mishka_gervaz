@@ -496,11 +496,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         end)
         |> Enum.reduce(socket, fn field, acc ->
           value = Map.get(original_state.field_values, field.name)
-
-          ids =
-            if is_list(value),
-              do: Enum.map(value, &to_string/1),
-              else: [to_string(value)]
+          ids = if is_list(value), do: Enum.map(value, &to_string/1), else: [to_string(value)]
 
           case relation_mod.resolve_selected(field, original_state, ids) do
             {:ok, resolved} when resolved != [] ->
@@ -514,10 +510,11 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
                   loading?: false
                 })
 
-              relation_options =
-                Map.put(current_state.relation_options, field.name, new_opts)
+              relation_options = Map.put(current_state.relation_options, field.name, new_opts)
 
-              Phoenix.Component.assign(acc, :form_state,
+              Phoenix.Component.assign(
+                acc,
+                :form_state,
                 State.update(current_state, relation_options: relation_options)
               )
 
