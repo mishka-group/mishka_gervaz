@@ -13,8 +13,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
         ui_adapter :dynamic
         ui_adapter_opts [
           site: "Global",
-          component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
-          module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
+          component_renderer: &MishkaCmsCore.Runtime.LiveViewHelpers.component/1,
+          module_resolver: &MishkaCmsCore.Runtime.Compilers.Helpers.module_name/3,
           fallback: MishkaGervaz.UIAdapters.Tailwind
         ]
       end
@@ -636,8 +636,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
 
       assigns = MishkaGervaz.UIAdapters.Dynamic.with_config(assigns,
         site: "MyApp",
-        component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
-        module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
+        component_renderer: &MishkaCmsCore.Runtime.LiveViewHelpers.component/1,
+        module_resolver: &MishkaCmsCore.Runtime.Compilers.Helpers.module_name/3,
         fallback: MishkaGervaz.UIAdapters.Chelekom
       )
   """

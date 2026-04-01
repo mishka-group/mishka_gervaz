@@ -10,7 +10,7 @@ defmodule MishkaGervaz.Messages do
   ### Option 1: Pass backend directly (recommended for gettext extraction)
 
       defmodule MyModule do
-        use MishkaGervaz.Messages, backend: MishkaCmsCoreResources.Gettext
+        use MishkaGervaz.Messages, backend: MishkaCmsCore.Gettext
 
         def my_function do
           dgettext("mishka_gervaz", "Load More")
