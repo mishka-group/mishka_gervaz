@@ -145,8 +145,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
             socket
             |> Phoenix.Component.assign(:form_state, state)
-            |> load_readonly_relation_options(state)
             |> load_dependent_relations(state)
+            |> load_readonly_relation_options(state)
 
           {:error, _reason} ->
             state = State.update(state, loading: :error, mode: :create)
@@ -248,8 +248,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
         socket
         |> Phoenix.Component.assign(:form_state, state)
-        |> load_readonly_relation_options(state)
         |> load_dependent_relations(state)
+        |> load_readonly_relation_options(state)
       end
 
       def handle_async_result(:load_record, {:ok, {:error, _reason}}, socket) do
@@ -485,15 +485,45 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
       @spec load_readonly_relation_options(Phoenix.LiveView.Socket.t(), State.t()) ::
               Phoenix.LiveView.Socket.t()
-      defp load_readonly_relation_options(socket, state) do
-        state.static.fields
+      defp load_readonly_relation_options(socket, original_state) do
+        relation_mod = relation_loader()
+
+        original_state.static.fields
         |> Enum.filter(fn field ->
           field.type == :relation and
-            field_readonly?(field, state) and
-            Map.has_key?(state.field_values, field.name)
+            field_readonly?(field, original_state) and
+            Map.has_key?(original_state.field_values, field.name)
         end)
         |> Enum.reduce(socket, fn field, acc ->
-          load_relation_options(acc, state, field.name)
+          value = Map.get(original_state.field_values, field.name)
+
+          ids =
+            if is_list(value),
+              do: Enum.map(value, &to_string/1),
+              else: [to_string(value)]
+
+          case relation_mod.resolve_selected(field, original_state, ids) do
+            {:ok, resolved} when resolved != [] ->
+              current_state = acc.assigns.form_state
+              current_opts = Map.get(current_state.relation_options, field.name, %{})
+
+              new_opts =
+                Map.merge(current_opts, %{
+                  options: resolved,
+                  selected_options: resolved,
+                  loading?: false
+                })
+
+              relation_options =
+                Map.put(current_state.relation_options, field.name, new_opts)
+
+              Phoenix.Component.assign(acc, :form_state,
+                State.update(current_state, relation_options: relation_options)
+              )
+
+            _ ->
+              acc
+          end
         end)
       end
 
