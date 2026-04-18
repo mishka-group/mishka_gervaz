@@ -511,23 +511,29 @@ defmodule MishkaGervaz.Form.Web.Events do
         if MishkaGervaz.Helpers.known_name?(field_name, state) do
           field_atom = String.to_existing_atom(field_name)
 
-          state =
-            Map.put(state.field_values, field_atom, value)
-            |> then(&State.update(state, field_values: &1, dirty?: true))
+          case run_hook(state, :on_change, [field_atom, value, state]) do
+            {:halt, updated_state} ->
+              {:noreply, Phoenix.Component.assign(socket, :form_state, updated_state)}
 
-          socket = Phoenix.Component.assign(socket, :form_state, state)
+            _ ->
+              state =
+                Map.put(state.field_values, field_atom, value)
+                |> then(&State.update(state, field_values: &1, dirty?: true))
 
-          dependent_fields =
-            Enum.filter(state.static.fields, fn f ->
-              Map.get(f, :depends_on) == field_atom
-            end)
+              socket = Phoenix.Component.assign(socket, :form_state, state)
 
-          socket =
-            Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
-              DataLoader.load_relation_options(acc, state, dep_field.name)
-            end)
+              dependent_fields =
+                Enum.filter(state.static.fields, fn f ->
+                  Map.get(f, :depends_on) == field_atom
+                end)
 
-          {:noreply, socket}
+              socket =
+                Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
+                  DataLoader.load_relation_options(acc, state, dep_field.name)
+                end)
+
+              {:noreply, socket}
+          end
         else
           {:noreply, socket}
         end

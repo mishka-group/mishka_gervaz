@@ -283,6 +283,52 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
           socket
         )
     end
+
+    test "calls on_change hook with field atom, value, and state" do
+      test_pid = self()
+      hook = fn field, value, _state -> send(test_pid, {:on_change, field, value}) end
+
+      state = build_state(static_opts: [hooks: %{on_change: hook}])
+      socket = build_socket(state)
+
+      Events.handle("field_change", %{"field" => "title", "value" => "typed"}, socket)
+
+      assert_received {:on_change, :title, "typed"}
+    end
+
+    test "halts field update when on_change hook returns {:halt, state}" do
+      hook = fn _field, _value, state -> {:halt, state} end
+
+      state =
+        build_state(
+          static_opts: [hooks: %{on_change: hook}],
+          field_values: %{title: "original"}
+        )
+
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} =
+        Events.handle("field_change", %{"field" => "title", "value" => "blocked"}, socket)
+
+      assert updated_socket.assigns.form_state.field_values[:title] == "original"
+    end
+
+    test "hook returning {:halt, state} can carry modified state" do
+      hook = fn field, _value, state ->
+        modified = put_in(state.field_values[field], "hook-modified")
+        {:halt, modified}
+      end
+
+      state =
+        build_state(field_values: %{title: "original"}, static_opts: [hooks: %{on_change: hook}])
+
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} =
+        Events.handle("field_change", %{"field" => "title", "value" => "blocked"}, socket)
+
+      assert updated_socket.assigns.form_state.field_values[:title] == "hook-modified"
+    end
   end
 
   describe "add_nested event" do

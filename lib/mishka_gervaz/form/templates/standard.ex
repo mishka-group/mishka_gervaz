@@ -577,6 +577,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
       |> assign(:disabled, evaluate_readonly(field, assigns.state))
       |> assign(:module, ui)
+      |> then(fn a ->
+        case get_in_map(field, [:ui, :debounce]) do
+          nil -> a
+          ms -> assign(a, :phx_debounce, ms)
+        end
+      end)
 
     case type do
       :password ->
