@@ -259,7 +259,8 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
       state = build_state(static_opts: [hooks: %{on_validate: hook}])
       socket = build_socket(state)
 
-      assert {:noreply, _socket} = Events.handle("validate", %{"form" => %{"title" => "x"}}, socket)
+      assert {:noreply, _socket} =
+               Events.handle("validate", %{"form" => %{"title" => "x"}}, socket)
     end
   end
 

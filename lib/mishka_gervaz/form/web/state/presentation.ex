@@ -110,11 +110,23 @@ defmodule MishkaGervaz.Form.Web.State.Presentation do
       def get_features(_),
         do: [:validation, :uploads, :groups, :wizard, :autosave, :inline_errors]
 
+      @doc """
+      Gets the global default debounce from config. Returns nil if not set.
+      """
+      @spec get_debounce(map()) :: integer() | nil
+      def get_debounce(config) when is_map(config) do
+        get_in(config, [:presentation, :debounce])
+      end
+
+      @spec get_debounce(term()) :: nil
+      def get_debounce(_), do: nil
+
       defoverridable resolve_ui_adapter: 1,
                      get_ui_adapter_opts: 1,
                      resolve_template: 1,
                      get_theme: 1,
-                     get_features: 1
+                     get_features: 1,
+                     get_debounce: 1
     end
   end
 end

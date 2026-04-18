@@ -568,6 +568,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp render_input(ui, field, form_field, assigns) do
     type = Map.get(field, :type, :text)
 
+    debounce = get_in_map(field, [:ui, :debounce]) || assigns.static.debounce
+
     base =
       assigns
       |> assign(:field, form_field)
@@ -577,12 +579,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
       |> assign(:disabled, evaluate_readonly(field, assigns.state))
       |> assign(:module, ui)
-      |> then(fn a ->
-        case get_in_map(field, [:ui, :debounce]) do
-          nil -> a
-          ms -> assign(a, :phx_debounce, ms)
-        end
-      end)
+      |> assign(:phx_debounce, debounce)
 
     case type do
       :password ->

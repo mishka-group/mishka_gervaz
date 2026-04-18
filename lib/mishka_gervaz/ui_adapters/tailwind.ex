@@ -26,7 +26,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn ->
         "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
       end)
-      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign(:placeholder, placeholder)
@@ -58,7 +63,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn ->
         "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
       end)
-      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
@@ -1746,7 +1756,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         "w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500"
       end)
       |> assign_new(:rows, fn -> 4 end)
-      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
       |> assign_new(:disabled, fn -> false end)
 
     ~H"""
@@ -1920,7 +1935,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
-      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
       |> assign_new(:field_name, fn -> nil end)
       |> assign_new(:target, fn -> nil end)
       |> assign(:dropdown_id, "combobox-dropdown-#{assigns[:field_name] || assigns[:name]}")

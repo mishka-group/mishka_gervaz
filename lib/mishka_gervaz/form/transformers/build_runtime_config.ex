@@ -563,6 +563,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     theme_path = path ++ [:theme]
 
     %{
+      debounce: get_opt(dsl_state, path, :debounce) || domain_defaults[:debounce],
       template:
         get_opt(dsl_state, path, :template) || domain_defaults[:template] ||
           MishkaGervaz.Form.Templates.Standard,

@@ -41,6 +41,11 @@ defmodule MishkaGervaz.Form.Dsl.Presentation do
   end
 
   @presentation_schema [
+    debounce: [
+      type: :integer,
+      doc:
+        "Default debounce milliseconds for all fields. Overridden per-field via `ui do debounce end`."
+    ],
     template: [
       type: :atom,
       doc: "Template module for form layout."
