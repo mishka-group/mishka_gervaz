@@ -236,6 +236,31 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
       result = Events.handle("validate", %{"form" => %{"title" => "test"}}, socket)
       assert {:noreply, _socket} = result
     end
+
+    test "on_validate hook is called and can modify params" do
+      test_pid = self()
+
+      hook = fn params, _state ->
+        send(test_pid, :on_validate_called)
+        put_in(params, ["form", "title"], "hook-modified")
+      end
+
+      state = build_state(static_opts: [hooks: %{on_validate: hook}])
+      socket = build_socket(state)
+
+      Events.handle("validate", %{"form" => %{"title" => "original"}}, socket)
+
+      assert_received :on_validate_called
+    end
+
+    test "on_validate hook returning non-map leaves params unchanged" do
+      hook = fn _params, _state -> nil end
+
+      state = build_state(static_opts: [hooks: %{on_validate: hook}])
+      socket = build_socket(state)
+
+      assert {:noreply, _socket} = Events.handle("validate", %{"form" => %{"title" => "x"}}, socket)
+    end
   end
 
   describe "field_change event" do
@@ -328,6 +353,37 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
         Events.handle("field_change", %{"field" => "title", "value" => "blocked"}, socket)
 
       assert updated_socket.assigns.form_state.field_values[:title] == "hook-modified"
+    end
+  end
+
+  describe "combobox_select event - on_change hook" do
+    test "calls on_change hook with field atom, value, and state" do
+      test_pid = self()
+      hook = fn field, value, _state -> send(test_pid, {:on_change, field, value}) end
+
+      state = build_state(static_opts: [hooks: %{on_change: hook}])
+      socket = build_socket(state)
+
+      Events.handle("combobox_select", %{"field" => "status", "value" => "draft"}, socket)
+
+      assert_received {:on_change, :status, "draft"}
+    end
+
+    test "halts combobox update when on_change hook returns {:halt, state}" do
+      hook = fn _field, _value, state -> {:halt, state} end
+
+      state =
+        build_state(
+          static_opts: [hooks: %{on_change: hook}],
+          field_values: %{status: "published"}
+        )
+
+      socket = build_socket(state)
+
+      {:noreply, updated_socket} =
+        Events.handle("combobox_select", %{"field" => "status", "value" => "draft"}, socket)
+
+      assert updated_socket.assigns.form_state.field_values[:status] == "published"
     end
   end
 

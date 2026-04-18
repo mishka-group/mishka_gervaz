@@ -130,7 +130,11 @@ defmodule MishkaGervaz.Form.Web.Events do
           |> strip_empty_list_values()
           |> decode_constrained_map_params(state.static.fields)
 
-        run_hook(state, :before_validate, [params, state])
+        params =
+          case run_hook(state, :on_validate, [params, state]) do
+            result when is_map(result) -> result
+            _ -> params
+          end
 
         state = clear_list_field_values(state)
 
@@ -209,11 +213,17 @@ defmodule MishkaGervaz.Form.Web.Events do
         if MishkaGervaz.Helpers.known_name?(field_name, state) do
           field_atom = String.to_existing_atom(field_name)
 
-          new_field_values = Map.put(state.field_values, field_atom, value)
-          state = State.update(state, field_values: new_field_values, dirty?: true)
-          state = revalidate_combobox(state, field_atom, value)
-          socket = Phoenix.Component.assign(socket, :form_state, state)
-          {:noreply, socket}
+          case run_hook(state, :on_change, [field_atom, value, state]) do
+            {:halt, updated_state} ->
+              {:noreply, Phoenix.Component.assign(socket, :form_state, updated_state)}
+
+            _ ->
+              new_field_values = Map.put(state.field_values, field_atom, value)
+              state = State.update(state, field_values: new_field_values, dirty?: true)
+              state = revalidate_combobox(state, field_atom, value)
+              socket = Phoenix.Component.assign(socket, :form_state, state)
+              {:noreply, socket}
+          end
         else
           {:noreply, socket}
         end
