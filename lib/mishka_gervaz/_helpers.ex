@@ -677,6 +677,55 @@ defmodule MishkaGervaz.Helpers do
   end
 
   @doc """
+  Validates a form and returns per-field errors for the currently-changing field only.
+
+  Designed for use in `on_validate` hooks to provide live inline errors without
+  showing unrelated required-field errors for untouched fields.
+
+  Extracts `_target` from `params` to identify the current field, validates via
+  `AshPhoenix.Form.validate/3`, then filters errors to only that field.
+
+  Returns `{params, errors}` ready to return directly from an `on_validate` hook.
+
+  ## Examples
+
+      hooks do
+        on_validate fn params, state ->
+          MishkaGervaz.Helpers.validate_field_errors(state.form.source, params)
+        end
+      end
+
+      # With param mutation before validation:
+      hooks do
+        on_validate fn params, state ->
+          updated = put_in(params, ["form", "slug"], slugify(params["form"]["title"]))
+          MishkaGervaz.Helpers.validate_field_errors(state.form.source, updated)
+        end
+      end
+  """
+  @spec validate_field_errors(AshPhoenix.Form.t(), map()) :: {map(), map()}
+  def validate_field_errors(ash_form, params) do
+    target = Map.get(params, "_target")
+
+    target_field =
+      case target do
+        [_ | rest] when rest != [] -> List.last(rest)
+        _ -> nil
+      end
+
+    validated =
+      AshPhoenix.Form.validate(ash_form, Map.get(params, "form", params), target: target)
+
+    errors =
+      validated
+      |> AshPhoenix.Form.errors(format: :simple)
+      |> Enum.filter(fn {field, _} -> to_string(field) == target_field end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    {params, errors}
+  end
+
+  @doc """
   Filters columns based on their visibility setting.
 
   Evaluates the `visible` field of each column:

@@ -130,15 +130,18 @@ defmodule MishkaGervaz.Form.Web.Events do
           |> strip_empty_list_values()
           |> decode_constrained_map_params(state.static.fields)
 
-        params =
+        target = Map.get(params, "_target")
+
+        {params, forced_errors} =
           case run_hook(state, :on_validate, [params, state]) do
-            result when is_map(result) -> result
-            _ -> params
+            {result, errors} when is_map(result) and is_map(errors) -> {result, errors}
+            result when is_map(result) -> {result, nil}
+            _ -> {params, nil}
           end
 
         state = clear_list_field_values(state)
 
-        socket = validation_handler().validate(state, params, socket)
+        socket = validation_handler().validate(state, params, socket, forced_errors, target)
         {:noreply, socket}
       end
 
