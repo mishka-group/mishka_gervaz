@@ -104,6 +104,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
       def resolve_selected(field, state, selected_ids) when is_list(selected_ids) do
         resource = Map.get(field, :resource)
         display_field = resolve_display_field(field, resource)
+        vf = Map.get(field, :value_field)
 
         case resource do
           nil ->
@@ -119,11 +120,14 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           resource when is_atom(resource) ->
             action = resolve_load_action(field, state, resource)
             tenant = get_tenant(state)
+            filter_field = vf || :id
+            load_fn = Map.get(field, :load)
 
             query =
               resource
               |> Ash.Query.new()
-              |> Ash.Query.filter_input(%{id: %{in: selected_ids}})
+              |> Ash.Query.filter_input(%{filter_field => %{in: selected_ids}})
+              |> maybe_apply_custom_load(load_fn, state)
 
             opts = [action: action, actor: state.current_user, authorize?: false, page: false]
             opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
@@ -132,31 +136,22 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
               {:ok, records} ->
                 matched =
                   Enum.map(records, fn record ->
-                    {get_display_value(record, display_field), to_string(record.id)}
+                    {get_display_value(record, display_field), get_record_value(record, vf)}
                   end)
 
                 {:ok, matched}
 
               {:error, %Ash.Error.Invalid{errors: errors}} ->
-                # Fallback to Ash.get per-id if pagination is required
                 if Enum.any?(errors, &match?(%Ash.Error.Invalid.PaginationRequired{}, &1)) do
-                  get_opts = [action: action, actor: state.current_user, authorize?: false]
-                  get_opts = if tenant, do: Keyword.put(get_opts, :tenant, tenant), else: get_opts
-
-                  matched =
-                    selected_ids
-                    |> Enum.map(fn id ->
-                      case Ash.get(resource, id, get_opts) do
-                        {:ok, record} ->
-                          {get_display_value(record, display_field), to_string(record.id)}
-
-                        _ ->
-                          nil
-                      end
-                    end)
-                    |> Enum.reject(&is_nil/1)
-
-                  {:ok, matched}
+                  resolve_selected_fallback(
+                    selected_ids,
+                    resource,
+                    action,
+                    tenant,
+                    state,
+                    display_field,
+                    vf
+                  )
                 else
                   {:error, %Ash.Error.Invalid{errors: errors}}
                 end
@@ -174,6 +169,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
         actor = state.current_user
         tenant = get_tenant(state)
         load_fn = Map.get(field, :load)
+        vf = Map.get(field, :value_field)
 
         query =
           resource
@@ -185,7 +181,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case Ash.read(query, opts) do
           {:ok, records} ->
-            options = build_options(records, display_field, field[:include_nil])
+            options = build_options(records, display_field, field[:include_nil], vf)
             {:ok, options, false}
 
           {:error, reason} ->
@@ -201,6 +197,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
         tenant = get_tenant(state)
         page_size = Map.get(field, :page_size) || 20
         load_fn = Map.get(field, :load)
+        vf = Map.get(field, :value_field)
 
         query =
           resource
@@ -219,13 +216,13 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           {:ok, %{results: records}} ->
             has_more? = length(records) > page_size
             actual = if has_more?, do: Enum.take(records, page_size), else: records
-            options = build_options(actual, display_field, include_nil)
+            options = build_options(actual, display_field, include_nil, vf)
             {:ok, options, has_more?}
 
           {:ok, records} when is_list(records) ->
             has_more? = length(records) > page_size
             actual = if has_more?, do: Enum.take(records, page_size), else: records
-            options = build_options(actual, display_field, include_nil)
+            options = build_options(actual, display_field, include_nil, vf)
             {:ok, options, has_more?}
 
           {:error, reason} ->
@@ -235,10 +232,10 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
       # --- Helpers ---
 
-      defp build_options(records, display_field, include_nil \\ false) do
+      defp build_options(records, display_field, include_nil \\ false, value_field \\ nil) do
         base =
           Enum.map(records, fn record ->
-            {get_display_value(record, display_field), to_string(record.id)}
+            {get_display_value(record, display_field), get_record_value(record, value_field)}
           end)
 
         prepend_nil_option(base, include_nil)
@@ -250,6 +247,19 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
       defp prepend_nil_option(options, label) when is_binary(label) do
         [{label, "__nil__"} | options]
+      end
+
+      defp prepend_nil_option(options, label) when is_function(label, 0) do
+        [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
+      end
+
+      defp get_record_value(record, nil), do: to_string(record.id)
+
+      defp get_record_value(record, field_name) when is_atom(field_name) do
+        case Map.get(record, field_name) do
+          nil -> to_string(record.id)
+          val -> to_string(val)
+        end
       end
 
       defp get_display_value(record, display_field) when is_atom(display_field) do
@@ -296,6 +306,56 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
       end
 
       defp maybe_apply_custom_load(query, _load_fn, _state), do: query
+
+      defp resolve_selected_fallback(
+             selected_ids,
+             resource,
+             action,
+             tenant,
+             state,
+             display_field,
+             vf
+           ) do
+        get_opts = [action: action, actor: state.current_user, authorize?: false]
+        get_opts = if tenant, do: Keyword.put(get_opts, :tenant, tenant), else: get_opts
+
+        matched =
+          if vf do
+            Enum.map(selected_ids, fn val ->
+              query =
+                resource
+                |> Ash.Query.new()
+                |> Ash.Query.filter_input(%{vf => val})
+
+              read_opts = Keyword.put(get_opts, :page, limit: 1)
+
+              case Ash.read(query, read_opts) do
+                {:ok, %{results: [record | _]}} ->
+                  {get_display_value(record, display_field), get_record_value(record, vf)}
+
+                {:ok, [record | _]} ->
+                  {get_display_value(record, display_field), get_record_value(record, vf)}
+
+                _ ->
+                  nil
+              end
+            end)
+            |> Enum.reject(&is_nil/1)
+          else
+            Enum.map(selected_ids, fn id ->
+              case Ash.get(resource, id, get_opts) do
+                {:ok, record} ->
+                  {get_display_value(record, display_field), to_string(record.id)}
+
+                _ ->
+                  nil
+              end
+            end)
+            |> Enum.reject(&is_nil/1)
+          end
+
+        {:ok, matched}
+      end
 
       # --- Action resolution (matches table pattern exactly) ---
 

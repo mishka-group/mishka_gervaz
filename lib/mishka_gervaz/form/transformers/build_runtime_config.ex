@@ -193,6 +193,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       options_source: field.options_source,
       display_field: field.display_field,
       search_field: field.search_field,
+      value_field: field.value_field,
       readonly: field.readonly,
       mode: field.mode,
       page_size: field.page_size,
@@ -562,9 +563,14 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     theme_path = path ++ [:theme]
 
     %{
-      template: get_opt(dsl_state, path, :template) || domain_defaults[:template],
+      debounce: get_opt(dsl_state, path, :debounce) || domain_defaults[:debounce],
+      template:
+        get_opt(dsl_state, path, :template) || domain_defaults[:template] ||
+          MishkaGervaz.Form.Templates.Standard,
       features: get_opt(dsl_state, path, :features) || domain_defaults[:features],
-      ui_adapter: get_opt(dsl_state, path, :ui_adapter) || domain_defaults[:ui_adapter],
+      ui_adapter:
+        get_opt(dsl_state, path, :ui_adapter) || domain_defaults[:ui_adapter] ||
+          MishkaGervaz.UIAdapters.Tailwind,
       ui_adapter_opts: get_opt(dsl_state, path, :ui_adapter_opts) || [],
       theme: build_theme(dsl_state, theme_path, domain_defaults)
     }

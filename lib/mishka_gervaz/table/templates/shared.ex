@@ -26,7 +26,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       resolve_ui_label: 1,
       accessible?: 2,
       has_value?: 1,
-      find_by_name: 2
+      find_by_name: 2,
+      resolve_label: 1
     ]
 
   @doc """
@@ -65,35 +66,244 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def render_filters(assigns) do
     static = assigns.static
     state = assigns.state
-    filter_layout = static.filter_layout
 
     all_filters = merge_relation_filter_state(static.filters, state.relation_filter_state || %{})
     filters = Enum.filter(all_filters, &accessible?(&1, state))
+    groups = static.filter_groups || []
+    has_groups = groups != []
+    filter_mode = static.filter_mode || :inline
 
     assigns =
       assigns
       |> assign(:filters, filters)
       |> assign(:all_filters, all_filters)
       |> assign(:has_active_filters, map_size(state.filter_values) > 0)
-      |> assign(:layout, filter_layout)
+      |> assign(:filter_mode, filter_mode)
+      |> assign(:groups, groups)
+      |> assign(:has_groups, has_groups)
 
     ~H"""
     <div :if={@filters != [] or @state.supports_archive} class="mb-4">
-      <.render_filters_by_mode
-        mode={Map.get(@layout, :mode, :inline)}
-        filters={@filters}
-        all_filters={@all_filters}
-        has_active_filters={@has_active_filters}
-        columns={Map.get(@layout, :columns, 4)}
-        collapsible={Map.get(@layout, :collapsible, true)}
-        collapsed={Map.get(@layout, :collapsed_default, false)}
-        groups={Map.get(@layout, :groups, [])}
-        state={@state}
-        static={@static}
-        myself={@myself}
-      />
+      <%= if @has_groups do %>
+        <.render_grouped_filters
+          filters={@filters}
+          all_filters={@all_filters}
+          has_active_filters={@has_active_filters}
+          groups={@groups}
+          columns={4}
+          state={@state}
+          static={@static}
+          myself={@myself}
+        />
+      <% else %>
+        <.render_filters_by_mode
+          mode={@filter_mode}
+          filters={@filters}
+          all_filters={@all_filters}
+          has_active_filters={@has_active_filters}
+          columns={4}
+          collapsible={true}
+          collapsed={false}
+          groups={[]}
+          state={@state}
+          static={@static}
+          myself={@myself}
+        />
+      <% end %>
     </div>
     """
+  end
+
+  defp render_grouped_filters(assigns) do
+    groups = assigns.groups
+    all_filter_names = assigns.filters |> Enum.map(& &1.name)
+
+    grouped_filter_names =
+      groups |> Enum.flat_map(fn g -> g.filters end) |> MapSet.new()
+
+    ungrouped_filters =
+      Enum.filter(assigns.filters, fn f -> not MapSet.member?(grouped_filter_names, f.name) end)
+
+    visible_groups =
+      groups
+      |> Enum.filter(fn group ->
+        accessible_group?(group, assigns.state) and
+          Enum.any?(group.filters, fn name -> name in all_filter_names end)
+      end)
+      |> sort_by_position()
+
+    assigns =
+      assigns
+      |> assign(:visible_groups, visible_groups)
+      |> assign(:ungrouped_filters, ungrouped_filters)
+
+    ~H"""
+    <div class="space-y-3">
+      <%!-- Archive Toggle --%>
+      <div :if={@state.supports_archive} class="flex items-center gap-4">
+        <.dynamic_component
+          module={@static.ui_adapter}
+          function={:archive_toggle}
+          archive_status={@state.archive_status}
+          myself={@myself}
+        />
+      </div>
+
+      <form phx-change="filter" phx-target={@myself} class="space-y-3">
+        <%!-- Ungrouped filters (always visible) --%>
+        <div :if={@ungrouped_filters != []} class={["grid gap-4", grid_cols(@columns)]}>
+          <.render_filter
+            :for={filter <- @ungrouped_filters}
+            filter={filter}
+            all_filters={@all_filters}
+            state={@state}
+            static={@static}
+            myself={@myself}
+          />
+        </div>
+
+        <%!-- Grouped filters --%>
+        <.render_filter_group
+          :for={group <- @visible_groups}
+          group={group}
+          filters={@filters}
+          all_filters={@all_filters}
+          columns={@columns}
+          state={@state}
+          static={@static}
+          myself={@myself}
+        />
+
+        <.dynamic_component
+          :if={@has_active_filters}
+          module={@static.ui_adapter}
+          function={:filter_reset_button}
+          label={dgettext("mishka_gervaz", "Clear filters")}
+          class="text-sm text-gray-500 hover:text-gray-700 underline"
+        />
+      </form>
+    </div>
+    """
+  end
+
+  defp render_filter_group(assigns) do
+    group = assigns.group
+    group_filters = Enum.filter(assigns.filters, fn f -> f.name in group.filters end)
+    group_columns = (group.ui && group.ui.columns) || assigns.columns
+    group_label = resolve_ui_label(group) || Phoenix.Naming.humanize(group.name)
+    group_icon = group.ui && group.ui.icon
+
+    group_class =
+      (group.ui && group.ui.class) || "p-4 bg-gray-50 rounded-lg border border-gray-200"
+
+    group_id = "filter-group-#{group.name}"
+
+    assigns =
+      assigns
+      |> assign(:group_filters, group_filters)
+      |> assign(:group_columns, group_columns)
+      |> assign(:group_label, group_label)
+      |> assign(:group_icon, group_icon)
+      |> assign(:group_class, group_class)
+      |> assign(:group_id, group_id)
+
+    ~H"""
+    <div :if={@group_filters != []}>
+      <%= if @group.collapsible do %>
+        <div>
+          <button
+            type="button"
+            phx-click={JS.toggle(to: "##{@group_id}")}
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <.dynamic_component
+              :if={@group_icon}
+              module={@static.ui_adapter}
+              function={:icon}
+              name={@group_icon}
+              class="w-4 h-4"
+            />
+            {@group_label}
+          </button>
+
+          <div
+            id={@group_id}
+            class={[@group_class, "mt-2", @group.collapsed && "hidden"]}
+          >
+            <div class={["grid gap-4", grid_cols(@group_columns)]}>
+              <.render_filter
+                :for={filter <- @group_filters}
+                filter={filter}
+                all_filters={@all_filters}
+                state={@state}
+                static={@static}
+                myself={@myself}
+              />
+            </div>
+          </div>
+        </div>
+      <% else %>
+        <div class={@group_class}>
+          <div
+            :if={@group_label}
+            class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2"
+          >
+            <.dynamic_component
+              :if={@group_icon}
+              module={@static.ui_adapter}
+              function={:icon}
+              name={@group_icon}
+              class="w-4 h-4"
+            />
+            {@group_label}
+          </div>
+          <div class={["grid gap-4", grid_cols(@group_columns)]}>
+            <.render_filter
+              :for={filter <- @group_filters}
+              filter={filter}
+              all_filters={@all_filters}
+              state={@state}
+              static={@static}
+              myself={@myself}
+            />
+          </div>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  @doc """
+  Checks if a filter group is visible and accessible for the current state.
+  """
+  def accessible_group?(group, state) do
+    visible =
+      case group.visible do
+        fun when is_function(fun, 1) -> fun.(state)
+        val -> val
+      end
+
+    restricted =
+      case group.restricted do
+        fun when is_function(fun, 1) -> fun.(state)
+        val -> val
+      end
+
+    visible and (not restricted or Map.get(state, :master_user?, false))
+  end
+
+  @doc """
+  Sorts filter groups by their position attribute.
+  """
+  def sort_by_position(groups) do
+    Enum.sort_by(groups, fn group ->
+      case group.position do
+        :first -> {0, 0}
+        :last -> {2, 0}
+        n when is_integer(n) -> {1, n}
+        _ -> {1, 999}
+      end
+    end)
   end
 
   defp render_filters_by_mode(%{mode: :inline} = assigns) do
@@ -236,13 +446,75 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     """
   end
 
-  defp grid_cols(1), do: "grid-cols-1"
-  defp grid_cols(2), do: "grid-cols-2"
-  defp grid_cols(3), do: "grid-cols-3"
-  defp grid_cols(4), do: "grid-cols-4"
-  defp grid_cols(5), do: "grid-cols-5"
-  defp grid_cols(6), do: "grid-cols-6"
-  defp grid_cols(_), do: "grid-cols-4"
+  @doc """
+  Returns the Tailwind grid-cols class for a given column count.
+  """
+  def grid_cols(1), do: "grid-cols-1"
+  def grid_cols(2), do: "grid-cols-2"
+  def grid_cols(3), do: "grid-cols-3"
+  def grid_cols(4), do: "grid-cols-4"
+  def grid_cols(5), do: "grid-cols-5"
+  def grid_cols(6), do: "grid-cols-6"
+  def grid_cols(nil), do: "grid-cols-4"
+  def grid_cols(_), do: "grid-cols-4"
+
+  @doc """
+  Returns the icon name for a filter group, falling back to "hero-funnel".
+  Useful for custom templates rendering their own filter group UI.
+  """
+  @spec group_icon(map()) :: String.t()
+  def group_icon(group) do
+    (group.ui && group.ui.icon) || "hero-funnel"
+  end
+
+  @doc """
+  Returns the resolved label for a filter group, falling back to humanized group name.
+  Useful for custom templates rendering their own filter group UI.
+  """
+  @spec group_label(map()) :: String.t()
+  def group_label(group) do
+    (group.ui && resolve_ui_label(group)) || Phoenix.Naming.humanize(group.name)
+  end
+
+  @doc """
+  Returns the column count from a filter group's UI config, or nil if not set.
+  Pass the result to `grid_cols/1` for the Tailwind class.
+  """
+  @spec group_columns(map()) :: pos_integer() | nil
+  def group_columns(group) do
+    group.ui && group.ui.columns
+  end
+
+  @doc """
+  Returns the CSS class for a collapsible filter group panel wrapper.
+  Falls back to a default rounded panel style if not set in DSL.
+  """
+  @spec group_panel_class(map()) :: String.t()
+  def group_panel_class(group) do
+    (group.ui && group.ui.class) || "p-4 bg-gray-50 rounded-lg border border-gray-200"
+  end
+
+  @doc """
+  Returns the CSS class for an inline (non-collapsible) group wrapper.
+  If the group has `ui do class "..." end`, uses that. Otherwise defaults to
+  `"contents"` which makes the wrapper transparent so filters participate
+  directly in the parent flex layout.
+  """
+  @spec inline_group_class(map()) :: String.t()
+  def inline_group_class(group) do
+    (group.ui && group.ui.class) || "contents"
+  end
+
+  @doc """
+  Returns a CSS class for inline (non-collapsible) filters based on filter type.
+  Text filters get a flexible width, relation filters a minimum width, others a smaller minimum.
+  Only used when the group has no custom class (i.e., wrapper is `"contents"`).
+  Custom templates can override this if they need different sizing.
+  """
+  @spec inline_filter_class(map()) :: String.t()
+  def inline_filter_class(%{type: :text}), do: "flex-1 max-w-md"
+  def inline_filter_class(%{type: :relation}), do: "min-w-[200px]"
+  def inline_filter_class(_), do: "min-w-[160px]"
 
   defp render_filter(assigns) do
     %{filter: filter, all_filters: all_filters, state: state, static: static} = assigns
@@ -318,7 +590,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     case filter.type do
       :text ->
         placeholder =
-          (filter.ui && filter.ui.placeholder) || dgettext("mishka_gervaz", "Search...")
+          resolve_label(filter.ui && filter.ui.placeholder) ||
+            dgettext("mishka_gervaz", "Search...")
 
         resolved_label = resolve_ui_label(filter)
 
@@ -414,7 +687,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           assigns
           |> assign(:name, filter.name)
           |> assign(:value, assigns.value || "")
-          |> assign(:placeholder, (filter.ui && filter.ui.placeholder) || "")
+          |> assign(:placeholder, resolve_label(filter.ui && filter.ui.placeholder) || "")
           |> assign(:icon, filter.ui && filter.ui.icon)
 
         ~H"""
@@ -425,8 +698,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     end
   end
 
+  @doc """
+  Merges dynamic relation filter state (options, loading, etc.) into filter configs.
+  """
   @spec merge_relation_filter_state(list(), map()) :: list()
-  defp merge_relation_filter_state(filters, relation_state) when is_list(filters) do
+  def merge_relation_filter_state(filters, relation_state) when is_list(filters) do
     Enum.map(filters, fn filter ->
       case Map.get(relation_state, filter.name) do
         nil ->
@@ -443,7 +719,105 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     end)
   end
 
-  defp merge_relation_filter_state(filters, _), do: filters
+  def merge_relation_filter_state(filters, _), do: filters
+
+  @doc """
+  Splits filters into primary (search) and advanced groups using `filter_groups` config.
+
+  Falls back to type-based splitting (`:text` = search, rest = advanced) when no groups defined.
+
+  Returns `{search_filter, other_filters, advanced_group}` where `advanced_group` is the
+  group config map (with `collapsed`, `collapsible`, `ui` etc.) or `nil`.
+
+  Note: This function returns only the first primary filter as `search_filter`.
+  For full multi-group support, use `prepare_filter_groups/3` instead.
+  """
+  @spec split_filters_by_groups(list(), list(), map()) :: {map() | nil, list(), map() | nil}
+  def split_filters_by_groups(filters, groups, state) do
+    all_filters =
+      merge_relation_filter_state(filters, state.relation_filter_state || %{})
+      |> Enum.filter(&accessible?(&1, state))
+
+    primary_group = Enum.find(groups, fn g -> g.name == :primary end)
+    advanced_group = Enum.find(groups, fn g -> g.name == :advanced end)
+
+    primary_names = if primary_group, do: primary_group.filters, else: []
+    advanced_names = if advanced_group, do: advanced_group.filters, else: []
+
+    if primary_names != [] or advanced_names != [] do
+      search_filter =
+        all_filters
+        |> Enum.filter(fn f -> f.name in primary_names end)
+        |> List.first()
+
+      other_filters =
+        if advanced_names != [] do
+          Enum.filter(all_filters, fn f -> f.name in advanced_names end)
+        else
+          Enum.filter(all_filters, fn f -> f.name not in primary_names end)
+        end
+
+      {search_filter, other_filters, advanced_group}
+    else
+      {search, rest} = Enum.split_with(all_filters, fn f -> f.type == :text end)
+      {List.first(search), rest, nil}
+    end
+  end
+
+  @doc """
+  Prepares all filter groups for rendering by custom templates.
+
+  Resolves accessible filters, splits them into visible groups (sorted by position),
+  and identifies ungrouped filters. Each group entry includes the resolved filter
+  structs (not just names).
+
+  Returns a map:
+
+      %{
+        all_filters: [filter_struct],
+        visible_groups: [%{group | resolved_filters: [filter_struct]}],
+        ungrouped_filters: [filter_struct],
+        inline_groups: [group],      # non-collapsible
+        collapsible_groups: [group]   # collapsible
+      }
+  """
+  @spec prepare_filter_groups(list(), list(), map()) :: map()
+  def prepare_filter_groups(filters, groups, state) do
+    all_filters =
+      merge_relation_filter_state(filters, state.relation_filter_state || %{})
+      |> Enum.filter(&accessible?(&1, state))
+
+    all_filter_names = Enum.map(all_filters, & &1.name)
+
+    visible_groups =
+      (groups || [])
+      |> Enum.filter(fn group ->
+        accessible_group?(group, state) and
+          Enum.any?(group.filters, fn name -> name in all_filter_names end)
+      end)
+      |> sort_by_position()
+      |> Enum.map(fn group ->
+        resolved = Enum.filter(all_filters, fn f -> f.name in group.filters end)
+        Map.put(group, :resolved_filters, resolved)
+      end)
+
+    grouped_filter_names =
+      (groups || []) |> Enum.flat_map(fn g -> g.filters end) |> MapSet.new()
+
+    ungrouped_filters =
+      Enum.filter(all_filters, fn f -> not MapSet.member?(grouped_filter_names, f.name) end)
+
+    inline_groups = Enum.filter(visible_groups, fn g -> not g.collapsible end)
+    collapsible_groups = Enum.filter(visible_groups, fn g -> g.collapsible end)
+
+    %{
+      all_filters: all_filters,
+      visible_groups: visible_groups,
+      ungrouped_filters: ungrouped_filters,
+      inline_groups: inline_groups,
+      collapsible_groups: collapsible_groups
+    }
+  end
 
   def render_bulk_actions(assigns) do
     static = assigns.static
@@ -569,7 +943,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:has_more?, state.has_more?)
       |> assign(:total_pages, state.total_pages)
       |> assign(:total_count, state.total_count)
-      |> assign(:page_size, static.page_size)
+      |> assign(:page_size, state.current_page_size || static.page_size)
+      |> assign(:current_page_size, state.current_page_size || static.page_size)
+      |> assign(:page_size_options, static.page_size_options)
+      |> assign(:show_page_size_selector, page_size_selector_enabled?(static))
       |> assign(:loading, state.loading)
       |> assign(:loading_type, state.loading_type)
       |> assign(:ui_adapter, static.ui_adapter)
@@ -614,6 +991,14 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       />
     </div>
 
+    <%!-- Page size selector for load_more/infinite --%>
+    <.render_page_size_selector
+      :if={@pagination_type in [:infinite, :load_more] and @show_page_size_selector}
+      page_size_options={@page_size_options}
+      current_page_size={@current_page_size}
+      myself={@myself}
+    />
+
     <%!-- Numbered pagination --%>
     <.render_numbered_pagination
       :if={@pagination_type == :numbered and @total_pages}
@@ -621,6 +1006,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       total_pages={@total_pages}
       total_count={@total_count}
       page_size={@page_size}
+      current_page_size={@current_page_size}
+      page_size_options={@page_size_options}
+      show_page_size_selector={@show_page_size_selector}
       loading={@loading}
       ui_adapter={@ui_adapter}
       show_total={@show_total}
@@ -692,6 +1080,12 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           on_page_change={@pagination_on_change}
           phx_target={@pagination_phx_target}
         />
+        <.render_page_size_selector
+          :if={@show_page_size_selector}
+          page_size_options={@page_size_options}
+          current_page_size={@current_page_size}
+          myself={@myself}
+        />
       </div>
       """
     else
@@ -758,8 +1152,43 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           disabled={@loading == :loading}
         />
       </.dynamic_component>
+      <.render_page_size_selector
+        :if={@page_size_options != nil and @page_size_options != []}
+        page_size_options={@page_size_options}
+        current_page_size={@current_page_size}
+        myself={@myself}
+      />
       """
     end
+  end
+
+  defp render_page_size_selector(assigns) do
+    ~H"""
+    <form
+      phx-change="change_page_size"
+      phx-target={@myself}
+      class="flex items-center gap-2 text-sm text-gray-600"
+    >
+      <span>Show</span>
+      <select
+        name="size"
+        class="rounded border-gray-300 text-sm py-1 px-2"
+      >
+        <option
+          :for={opt <- @page_size_options}
+          value={opt}
+          selected={opt == @current_page_size}
+        >
+          {opt}
+        </option>
+      </select>
+      <span>per page</span>
+    </form>
+    """
+  end
+
+  defp page_size_selector_enabled?(static) do
+    static.page_size_options != nil and static.page_size_options != []
   end
 
   defp render_page_numbers(assigns) do
@@ -1169,4 +1598,84 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     do: format.(state, record, value)
 
   defp apply_format(_format, _state, _record, value), do: value
+
+  @doc """
+  Builds active filter chip data for custom templates.
+
+  Returns `{visible_chips, has_any_active_filters}` where:
+  - `visible_chips` excludes `visible: false` filters (hidden from UI but still active in state)
+  - `has_any_active_filters` is true if any filter has a value (including hidden ones)
+
+  Use `has_any_active_filters` for the "Clear all" button visibility so users can always
+  clear hidden filters (e.g., `id` filter from URL).
+  """
+  @spec build_active_filter_chips(map(), map()) :: {list(map()), boolean()}
+  def build_active_filter_chips(state, static) do
+    all_active =
+      Enum.filter(state.filter_values, fn {_k, v} -> has_chip_value?(v) end)
+
+    has_any = all_active != []
+
+    chips =
+      all_active
+      |> Enum.reject(fn {name, _v} ->
+        match?(%{visible: false}, Enum.find(static.filters, &(&1.name == name)))
+      end)
+      |> Enum.map(fn {name, value} ->
+        filter = Enum.find(static.filters, &(&1.name == name))
+
+        label =
+          if filter,
+            do: resolve_ui_label(filter) || Phoenix.Naming.humanize(name),
+            else: Phoenix.Naming.humanize(name)
+
+        display_value = resolve_chip_value(name, value, state)
+        %{name: name, value: value, label: label, display_value: display_value}
+      end)
+
+    {chips, has_any}
+  end
+
+  @doc "Resolve a filter chip's display value, using relation labels when available."
+  @spec resolve_chip_value(atom(), term(), map()) :: String.t()
+  def resolve_chip_value(name, value, state) do
+    case Map.get(state.relation_filter_state || %{}, name) do
+      %{selected_options: options} when is_list(options) and options != [] ->
+        if is_list(value) do
+          value
+          |> Enum.map(fn v ->
+            case Enum.find(options, fn {_label, ov} -> ov == v end) do
+              {label, _} -> label
+              _ -> v
+            end
+          end)
+          |> Enum.join(", ")
+        else
+          case Enum.find(options, fn {_label, v} -> v == value end) do
+            {label, _v} -> label
+            _ -> format_chip_value(value)
+          end
+        end
+
+      _ ->
+        format_chip_value(value)
+    end
+  end
+
+  @doc "Check if a filter value is meaningful (non-nil, non-empty)."
+  @spec has_chip_value?(term()) :: boolean()
+  def has_chip_value?(nil), do: false
+  def has_chip_value?(""), do: false
+  def has_chip_value?([]), do: false
+  def has_chip_value?(%{} = map) when map_size(map) == 0, do: false
+  def has_chip_value?(_), do: true
+
+  @doc "Format a filter value for display in a chip."
+  @spec format_chip_value(term()) :: String.t()
+  def format_chip_value(value) when is_atom(value), do: Phoenix.Naming.humanize(value)
+  def format_chip_value(value) when is_binary(value), do: value
+  def format_chip_value(value) when is_list(value), do: Enum.join(value, ", ")
+  def format_chip_value(value) when is_boolean(value), do: to_string(value)
+  def format_chip_value(%{} = value), do: inspect(value)
+  def format_chip_value(value), do: to_string(value)
 end

@@ -9,9 +9,7 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
 
   @impl true
-  def render(assigns, _config) do
-    assigns
-  end
+  def render(assigns, _config), do: assigns
 
   @impl true
   def validate(value, _config) when is_list(value), do: {:ok, value}

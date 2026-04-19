@@ -42,21 +42,32 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       Returns tuple of {page, page_result, reset?, pagination_info}.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
-              {integer(), Ash.Page.Offset.t(), boolean(), map()}
+              {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
       def load_page(state, query, page, action, tenant) do
-        page_size = state.static.page_size
-        pagination_type = get_pagination_type(state)
+        page_size = state.current_page_size || state.static.page_size
 
-        page_opts = build_page_opts(page, page_size, pagination_type)
+        if is_nil(state.static.config[:pagination]) or is_nil(page_size) do
+          read_result =
+            query
+            |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+            |> Ash.read!()
 
-        page_result =
-          query
-          |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
-          |> Ash.read!(page: page_opts)
+          results = extract_results(read_result)
+          page_result = %{results: results, count: length(results), more?: false}
+          {1, page_result, true, %{}}
+        else
+          pagination_type = get_pagination_type(state)
+          page_opts = build_page_opts(page, page_size, pagination_type)
 
-        pagination_info = build_pagination_info(pagination_type, page_result, page_size)
+          page_result =
+            query
+            |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+            |> Ash.read!(page: page_opts)
 
-        {page, page_result, page == 1, pagination_info}
+          pagination_info = build_pagination_info(pagination_type, page_result, page_size)
+
+          {page, page_result, page == 1, pagination_info}
+        end
       end
 
       @doc """
@@ -102,6 +113,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       def calculate_total_pages(total_count, page_size) do
         ceil(total_count / page_size)
       end
+
+      defp extract_results(%{results: results}) when is_list(results), do: results
+      defp extract_results(results) when is_list(results), do: results
+      defp extract_results(_), do: []
 
       defoverridable load_page: 5,
                      get_pagination_type: 1,

@@ -13,9 +13,9 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
   }
 
   describe "field count" do
-    test "FormPost has 6 fields" do
+    test "FormPost has 8 fields" do
       fields = FormInfo.fields(FormPost)
-      assert length(fields) == 6
+      assert length(fields) == 8
     end
 
     test "MinimalForm has 1 field" do
@@ -70,6 +70,33 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
     test "metadata is :json" do
       field = FormInfo.field(FormPost, :metadata)
       assert field.type == :json
+    end
+
+    test "language is :combobox" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.type == :combobox
+    end
+  end
+
+  describe "combobox field" do
+    test "has options list" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.options == [{"English", "en"}, {"Persian", "fa"}, {"Arabic", "ar"}]
+    end
+
+    test "has type_module resolved" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.type_module == MishkaGervaz.Form.Types.Field.Combobox
+    end
+
+    test "has UI label" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.ui.label == "Language"
+    end
+
+    test "has UI placeholder" do
+      field = FormInfo.field(FormPost, :language)
+      assert field.ui.placeholder == "Type or select language..."
     end
   end
 
@@ -228,6 +255,38 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
     test "extra defaults to empty map" do
       field = FormInfo.field(FormPost, :title)
       assert field.ui.extra == %{}
+    end
+  end
+
+  describe "relation field with load_action tuple" do
+    test "load_action accepts {master, tenant} tuple" do
+      field = FormInfo.field(FormPost, :user_id)
+      assert field.load_action == {:master_read, :tenant_read}
+    end
+
+    test "relation field type is :relation" do
+      field = FormInfo.field(FormPost, :user_id)
+      assert field.type == :relation
+    end
+
+    test "relation field has display_field" do
+      field = FormInfo.field(FormPost, :user_id)
+      assert field.display_field == :email
+    end
+
+    test "relation field has search_field" do
+      field = FormInfo.field(FormPost, :user_id)
+      assert field.search_field == :email
+    end
+
+    test "relation field has mode :search" do
+      field = FormInfo.field(FormPost, :user_id)
+      assert field.mode == :search
+    end
+
+    test "relation field resource auto-resolved from belongs_to" do
+      field = FormInfo.field(FormPost, :user_id)
+      assert field.resource == MishkaGervaz.Test.Resources.User
     end
   end
 

@@ -66,6 +66,8 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
 
   defp build_assigns(field, rel_data, state_assigns, mode) do
     option_list = Map.get(rel_data, :options, [])
+    readonly = state_assigns[:readonly] || false
+    disabled = Map.get(field, :disabled, false) || readonly
 
     base = %{
       name: field.name,
@@ -77,8 +79,8 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
       icon: get_ui(field, :icon),
       has_more?: Map.get(rel_data, :has_more?, false),
       loading?: Map.get(rel_data, :loading?, false),
-      dropdown_open?: Map.get(rel_data, :dropdown_open?, false),
-      disabled: Map.get(field, :disabled, false),
+      dropdown_open?: if(readonly, do: false, else: Map.get(rel_data, :dropdown_open?, false)),
+      disabled: disabled,
       myself: state_assigns[:myself]
     }
 

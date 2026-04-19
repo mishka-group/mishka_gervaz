@@ -184,6 +184,28 @@ defmodule MishkaGervaz.Helpers do
   end
 
   @doc """
+  Resolves options that may be a list or a zero-arity function returning a list.
+
+  This enables dynamic options (e.g., from a database query) in DSL fields by
+  allowing users to pass `fn -> query_options() end` which defers execution to runtime.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.resolve_options([{"A", "a"}, {"B", "b"}])
+      [{"A", "a"}, {"B", "b"}]
+
+      iex> MishkaGervaz.Helpers.resolve_options(fn -> [{"X", "x"}] end)
+      [{"X", "x"}]
+
+      iex> MishkaGervaz.Helpers.resolve_options(nil)
+      []
+  """
+  @spec resolve_options(list() | (-> list()) | nil) :: list()
+  def resolve_options(opts) when is_function(opts, 0), do: opts.()
+  def resolve_options(opts) when is_list(opts), do: opts
+  def resolve_options(_), do: []
+
+  @doc """
   Normalizes a list of options for HTML select elements.
 
   Converts various option formats to `{label, value}` tuples with string values,
@@ -652,6 +674,63 @@ defmodule MishkaGervaz.Helpers do
       grandchildren = find_all_dependents(MapSet.union(changed_parents, direct_children), filters)
       MapSet.union(direct_children, grandchildren)
     end
+  end
+
+  @doc """
+  Validates a form and returns per-field errors for the currently-changing field only.
+
+  Designed for use in `on_validate` hooks to provide live inline errors without
+  showing unrelated required-field errors for untouched fields.
+
+  Extracts `_target` from `params` to identify the current field, validates via
+  `AshPhoenix.Form.validate/3`, then filters errors to only that field.
+
+  Returns `{params, errors}` ready to return directly from an `on_validate` hook.
+
+  ## Examples
+
+      hooks do
+        on_validate fn params, state ->
+          MishkaGervaz.Helpers.validate_field_errors(state.form.source, params)
+        end
+      end
+
+      # With param mutation before validation:
+      hooks do
+        on_validate fn params, state ->
+          updated = put_in(params, ["form", "slug"], slugify(params["form"]["title"]))
+          MishkaGervaz.Helpers.validate_field_errors(state.form.source, updated)
+        end
+      end
+  """
+  @spec validate_field_errors(AshPhoenix.Form.t(), map(), map() | nil) :: {map(), map()}
+  def validate_field_errors(ash_form, params, current_errors \\ %{}) do
+    current_errors = current_errors || %{}
+    target = Map.get(params, "_target")
+
+    target_field =
+      case target do
+        [_ | rest] when rest != [] -> List.last(rest)
+        _ -> nil
+      end
+
+    validated =
+      AshPhoenix.Form.validate(ash_form, Map.get(params, "form", params), target: target)
+
+    field_errors =
+      validated
+      |> AshPhoenix.Form.errors(format: :simple)
+      |> Enum.filter(fn {field, _} -> to_string(field) == target_field end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+      errors =
+          cond do
+            is_nil(target_field) -> current_errors
+            map_size(field_errors) > 0 -> Map.merge(current_errors, field_errors)
+            true -> Map.reject(current_errors, fn {field, _} -> to_string(field) == target_field end)
+          end
+
+    {params, errors}
   end
 
   @doc """

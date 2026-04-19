@@ -271,7 +271,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               is_nil(value) or value == "" ->
                 existing = Map.get(state.filter_values, filter.name)
 
-                if filter.type == :relation and existing,
+                if (filter.type == :relation or filter.visible == false) and existing,
                   do: Map.put(acc, filter.name, existing),
                   else: acc
 
@@ -378,6 +378,25 @@ defmodule MishkaGervaz.Table.Web.Events do
         else
           {:noreply, socket}
         end
+      end
+
+      defp do_handle("change_page_size", %{"size" => size}, state, socket) do
+        page_size = sanitize_page(state, size)
+        max = state.static.max_page_size
+        options = state.static.page_size_options
+
+        clamped = if max, do: min(page_size, max), else: page_size
+
+        effective =
+          if options && clamped not in options do
+            state.static.page_size
+          else
+            clamped
+          end
+
+        state = State.update(state, current_page_size: effective)
+        socket = DataLoader.load_async(socket, state, page: 1, reset: true)
+        {:noreply, socket}
       end
 
       defp do_handle("delete", %{"id" => id}, state, socket) do
@@ -539,10 +558,17 @@ defmodule MishkaGervaz.Table.Web.Events do
       defp find_row_action_by_event(state, event_name) do
         event_atom = String.to_existing_atom(event_name)
 
-        Enum.find(state.static.row_actions, fn action ->
+        matcher = fn action ->
           action.event == event_name or action.event == event_atom or
             (action.name == event_atom and is_nil(action.event))
-        end)
+        end
+
+        Enum.find(state.static.row_actions, matcher) ||
+          Enum.find_value(state.static.row_action_dropdowns, fn dropdown ->
+            dropdown.items
+            |> Enum.filter(&is_map_key(&1, :name))
+            |> Enum.find(matcher)
+          end)
       rescue
         ArgumentError -> nil
       end

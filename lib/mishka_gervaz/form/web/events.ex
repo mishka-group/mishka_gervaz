@@ -130,11 +130,18 @@ defmodule MishkaGervaz.Form.Web.Events do
           |> strip_empty_list_values()
           |> decode_constrained_map_params(state.static.fields)
 
-        run_hook(state, :before_validate, [params, state])
+        target = Map.get(params, "_target")
+
+        {params, forced_errors} =
+          case run_hook(state, :on_validate, [params, state]) do
+            {result, errors} when is_map(result) and is_map(errors) -> {result, errors}
+            result when is_map(result) -> {result, nil}
+            _ -> {params, nil}
+          end
 
         state = clear_list_field_values(state)
 
-        socket = validation_handler().validate(state, params, socket)
+        socket = validation_handler().validate(state, params, socket, forced_errors, target)
         {:noreply, socket}
       end
 
@@ -200,6 +207,26 @@ defmodule MishkaGervaz.Form.Web.Events do
           step_atom = String.to_existing_atom(step_name)
           socket = step_handler().goto_step(state, step_atom, socket)
           {:noreply, socket}
+        else
+          {:noreply, socket}
+        end
+      end
+
+      defp do_handle("combobox_select", %{"field" => field_name, "value" => value}, state, socket) do
+        if MishkaGervaz.Helpers.known_name?(field_name, state) do
+          field_atom = String.to_existing_atom(field_name)
+
+          case run_hook(state, :on_change, [field_atom, value, state]) do
+            {:halt, updated_state} ->
+              {:noreply, Phoenix.Component.assign(socket, :form_state, updated_state)}
+
+            _ ->
+              new_field_values = Map.put(state.field_values, field_atom, value)
+              state = State.update(state, field_values: new_field_values, dirty?: true)
+              state = revalidate_combobox(state, field_atom, value)
+              socket = Phoenix.Component.assign(socket, :form_state, state)
+              {:noreply, socket}
+          end
         else
           {:noreply, socket}
         end
@@ -497,23 +524,29 @@ defmodule MishkaGervaz.Form.Web.Events do
         if MishkaGervaz.Helpers.known_name?(field_name, state) do
           field_atom = String.to_existing_atom(field_name)
 
-          state =
-            Map.put(state.field_values, field_atom, value)
-            |> then(&State.update(state, field_values: &1, dirty?: true))
+          case run_hook(state, :on_change, [field_atom, value, state]) do
+            {:halt, updated_state} ->
+              {:noreply, Phoenix.Component.assign(socket, :form_state, updated_state)}
 
-          socket = Phoenix.Component.assign(socket, :form_state, state)
+            _ ->
+              state =
+                Map.put(state.field_values, field_atom, value)
+                |> then(&State.update(state, field_values: &1, dirty?: true))
 
-          dependent_fields =
-            Enum.filter(state.static.fields, fn f ->
-              Map.get(f, :depends_on) == field_atom
-            end)
+              socket = Phoenix.Component.assign(socket, :form_state, state)
 
-          socket =
-            Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
-              DataLoader.load_relation_options(acc, state, dep_field.name)
-            end)
+              dependent_fields =
+                Enum.filter(state.static.fields, fn f ->
+                  Map.get(f, :depends_on) == field_atom
+                end)
 
-          {:noreply, socket}
+              socket =
+                Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
+                  DataLoader.load_relation_options(acc, state, dep_field.name)
+                end)
+
+              {:noreply, socket}
+          end
         else
           {:noreply, socket}
         end
@@ -803,6 +836,33 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp blank_value?(_), do: false
+
+      defp revalidate_combobox(state, field_atom, value) do
+        case state.form do
+          nil ->
+            state
+
+          form ->
+            form_params =
+              form.source
+              |> AshPhoenix.Form.params()
+              |> Map.put(to_string(field_atom), value)
+
+            validated =
+              form.source
+              |> AshPhoenix.Form.validate(form_params)
+              |> Phoenix.Component.to_form()
+
+            show_errors? = form.source.submitted_once? or form.source.type != :create
+
+            errors =
+              if show_errors?,
+                do: validation_handler().build_errors(validated),
+                else: %{}
+
+            State.update(state, form: validated, errors: errors)
+        end
+      end
 
       defoverridable handle: 3
     end

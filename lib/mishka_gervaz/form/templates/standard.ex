@@ -269,7 +269,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div class={@col_class}>
       <%= for field <- @render_fields do %>
         <% fa = assign(assigns, :field, field) %>
-        {render_field(fa)}
+        <div class={nested_span_class(get_in_map(field, [:ui, :span]))}>
+          {render_field(fa)}
+        </div>
       <% end %>
     </div>
     """
@@ -310,6 +312,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     show_cancel =
       cancel_button != nil and
+        (state.mode == :update or state.dirty?) and
         evaluate_button_visible(cancel_button, state) and
         not evaluate_button_restricted(cancel_button, state)
 
@@ -453,7 +456,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     errors = assigns.errors
 
     if field_disabled?(field, assigns.state) do
-      disabled_prompt = get_disabled_prompt(field, assigns.static.fields)
+      is_loading = relation_loading?(field, assigns.state)
+      disabled_prompt = get_disabled_prompt(field, assigns.static.fields, is_loading)
 
       assigns =
         assigns
@@ -461,6 +465,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_errors, [])
         |> assign(:wrapper_required, Map.get(field, :required, false))
         |> assign(:disabled_prompt, disabled_prompt)
+        |> assign(:is_loading, is_loading)
 
       ~H"""
       <.dynamic_component
@@ -470,7 +475,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         errors={@wrapper_errors}
         required={@wrapper_required}
       >
-        <div class="px-3 py-2 text-sm bg-gray-100 border border-gray-200 rounded text-gray-400 cursor-not-allowed">
+        <div class={[
+          "px-3 py-2 text-sm border rounded cursor-not-allowed flex items-center gap-2",
+          if(@is_loading,
+            do: "bg-blue-50 border-blue-200 text-blue-500",
+            else: "bg-gray-100 border-gray-200 text-gray-400"
+          )
+        ]}>
+          <span
+            :if={@is_loading}
+            class="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin shrink-0"
+          />
           {@disabled_prompt}
         </div>
       </.dynamic_component>
@@ -504,24 +519,41 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp field_disabled?(%{depends_on: nil}, _state), do: false
 
-  defp field_disabled?(%{depends_on: depends_on}, state) do
+  defp field_disabled?(%{depends_on: depends_on} = field, state) do
     parent = find_by_name(state.static.fields, depends_on)
 
     cond do
       parent && !accessible?(parent, state) -> false
-      true -> !has_value?(Map.get(state.field_values, depends_on))
+      !has_value?(Map.get(state.field_values, depends_on)) -> true
+      relation_loading?(field, state) -> true
+      true -> false
     end
   end
 
   defp field_disabled?(_, _), do: false
 
-  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_binary(prompt),
+  defp relation_loading?(%{type: :relation, name: name}, state) do
+    case Map.get(state.relation_options, name) do
+      %{loading?: true} -> true
+      _ -> false
+    end
+  end
+
+  defp relation_loading?(_, _), do: false
+
+  defp get_disabled_prompt(field, all_fields, is_loading)
+
+  defp get_disabled_prompt(_field, _all_fields, true),
+    do: dgettext("mishka_gervaz", "Loading options...")
+
+  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_binary(prompt),
     do: prompt
 
-  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_function(prompt, 0),
+  defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_function(prompt, 0),
     do: prompt.()
 
-  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields) when not is_nil(depends_on) do
+  defp get_disabled_prompt(%{depends_on: depends_on}, all_fields, _)
+       when not is_nil(depends_on) do
     parent_label =
       case find_by_name(all_fields, depends_on) do
         nil -> nil
@@ -532,11 +564,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     dgettext("mishka_gervaz", "Select %{field} first", field: field_name)
   end
 
-  defp get_disabled_prompt(_, _),
+  defp get_disabled_prompt(_, _, _),
     do: dgettext("mishka_gervaz", "Select parent field first")
 
   defp render_input(ui, field, form_field, assigns) do
     type = Map.get(field, :type, :text)
+
+    debounce = get_in_map(field, [:ui, :debounce]) || assigns.static.debounce
 
     base =
       assigns
@@ -544,12 +578,19 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:name, form_field.name)
       |> assign(:id, form_field.id)
       |> assign(:value, Phoenix.HTML.Form.input_value(assigns.state.form, field.name))
-      |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
+      |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
       |> assign(:disabled, evaluate_readonly(field, assigns.state))
       |> assign(:module, ui)
+      |> assign(:phx_debounce, debounce)
 
     case type do
-      t when t in [:text, :email, :password, :url, :tel, :hidden] ->
+      :password ->
+        base
+        |> assign(:function, :password_input)
+        |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
+        |> dynamic_component()
+
+      t when t in [:text, :email, :url, :tel, :hidden] ->
         base
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
@@ -562,11 +603,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         base |> assign(:function, :textarea) |> dynamic_component()
 
       :select ->
-        options = Map.get(field, :options, [])
+        options = resolve_field_options(field)
         base |> assign(:function, :select) |> assign(:options, options) |> dynamic_component()
 
       :multi_select ->
-        options = Map.get(field, :options, [])
+        options = resolve_field_options(field)
 
         base
         |> assign(:function, :multi_select)
@@ -629,12 +670,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
         rel_data = Map.get(assigns.state.relation_options, field.name, %{})
         current_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+        readonly = evaluate_readonly(field, assigns.state)
 
         state_assigns = %{
           form_field: form_field,
           myself: assigns[:myself],
           field_values: assigns.state.field_values,
-          current_value: current_value
+          current_value: current_value,
+          readonly: readonly
         }
 
         RelationType.render_input(field, rel_data, state_assigns, ui)
@@ -645,6 +688,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         base
         |> assign(:function, :search_select)
         |> assign(:options, Map.get(options, :options, []))
+        |> dynamic_component()
+
+      :combobox ->
+        options = Map.get(assigns.state.combobox_options, field.name, [])
+
+        base
+        |> assign(:function, :combobox)
+        |> assign(:options, options)
+        |> assign(:field_name, field.name)
+        |> assign(:target, assigns[:myself])
         |> dynamic_component()
 
       :file ->
@@ -718,7 +771,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:disabled, evaluate_readonly(field, assigns.state))
     |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
     |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
-    |> assign(:placeholder, get_in_map(field, [:ui, :placeholder]))
+    |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
     |> assign(:target, assigns[:myself])
     |> dynamic_component()
   end
@@ -1310,6 +1363,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp resolve_callable(f) when is_function(f, 0), do: f.()
   defp resolve_callable(v), do: v
+
+  defp resolve_field_options(field) do
+    MishkaGervaz.Helpers.resolve_options(Map.get(field, :options))
+  end
 
   defp evaluate_readonly(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
   defp evaluate_readonly(%{readonly: val}, _state) when is_boolean(val), do: val

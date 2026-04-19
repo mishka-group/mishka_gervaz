@@ -720,12 +720,17 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   @spec detect_preloads(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp detect_preloads(dsl_state) do
+    rel_names = dsl_state |> get_relationships() |> MapSet.new(& &1.name)
+
     preloads =
       dsl_state
       |> get_entities(@fields_path)
       |> filter_fields()
-      |> Enum.filter(&(&1.type in [:relation, :select] and not is_nil(&1.resource)))
+      |> Enum.filter(
+        &(&1.type in [:relation, :select] and not is_nil(&1.resource) and not &1.virtual)
+      )
       |> Enum.map(& &1.source)
+      |> Enum.filter(&(&1 in rel_names))
       |> Enum.uniq()
 
     Transformer.persist(dsl_state, :mishka_gervaz_form_detected_preloads, preloads)

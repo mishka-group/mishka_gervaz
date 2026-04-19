@@ -355,7 +355,8 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
 
         preload do
           always [:user]
-          master [:comments]
+          master [:comments, master_category: :category]
+          tenant tenant_category: :category
         end
       end
 
@@ -393,6 +394,15 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
           end
         end
 
+        field :language, :combobox do
+          options [{"English", "en"}, {"Persian", "fa"}, {"Arabic", "ar"}]
+
+          ui do
+            label "Language"
+            placeholder "Type or select language..."
+          end
+        end
+
         field :priority, :number do
           min 0
           max 100
@@ -418,11 +428,22 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
             rows 5
           end
         end
+
+        field :user_id, :relation do
+          load_action {:master_read, :tenant_read}
+          mode :search
+          display_field :email
+          search_field :email
+
+          ui do
+            label "User"
+          end
+        end
       end
 
       groups do
         group :general do
-          fields [:title, :content, :status]
+          fields [:title, :content, :status, :language]
           position :first
 
           ui do
@@ -436,7 +457,7 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
         end
 
         group :settings do
-          fields [:priority, :featured, :metadata]
+          fields [:priority, :featured, :metadata, :user_id]
           collapsible true
           collapsed true
 
@@ -559,6 +580,10 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
     end
 
     attribute :metadata, :map do
+      public? true
+    end
+
+    attribute :language, :string do
       public? true
     end
 
@@ -1736,6 +1761,137 @@ defmodule MishkaGervaz.Test.Resources.NoButtonsForm do
   attributes do
     uuid_primary_key :id
     attribute :title, :string, allow_nil?: false, public?: true
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.PasswordForm do
+  @moduledoc """
+  Test resource for the password field type.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    table do
+      identity do
+        name :password_form_table
+        route "/admin/password"
+      end
+
+      columns do
+        column :email
+      end
+    end
+
+    form do
+      identity do
+        name :password_form
+        route "/admin/password"
+      end
+
+      source do
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read {:master_get, :read}
+        end
+      end
+
+      fields do
+        field :email, :text, required: true
+
+        field :password, :password do
+          virtual true
+
+          ui do
+            label "Password"
+            placeholder "Enter password"
+            autocomplete "new-password"
+          end
+        end
+
+        field :password_confirmation, :password do
+          virtual true
+
+          ui do
+            label "Confirm Password"
+            placeholder "Re-enter password"
+            autocomplete "new-password"
+          end
+        end
+      end
+
+      groups do
+        group :credentials do
+          fields [:email, :password, :password_confirmation]
+
+          ui do
+            label "Credentials"
+            columns 2
+          end
+        end
+      end
+
+      submit do
+        create label: "Create Account"
+      end
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+
+    read :master_read do
+      prepare build(sort: [inserted_at: :desc])
+    end
+
+    read :master_get do
+      get? true
+    end
+
+    create :master_create do
+      accept [:email]
+
+      argument :password, :string do
+        allow_nil? true
+        sensitive? true
+      end
+
+      argument :password_confirmation, :string do
+        allow_nil? true
+        sensitive? true
+      end
+    end
+
+    update :master_update do
+      accept [:email]
+
+      argument :password, :string do
+        allow_nil? true
+        sensitive? true
+      end
+
+      argument :password_confirmation, :string do
+        allow_nil? true
+        sensitive? true
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :email, :string do
+      allow_nil? false
+      public? true
+    end
+
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end

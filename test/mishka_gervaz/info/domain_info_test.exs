@@ -181,10 +181,10 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
       assert pagination.type == :numbered
     end
 
-    test "pagination page_size_options has default values" do
+    test "pagination page_size_options defaults to nil" do
       pagination = DomainInfo.default_pagination(Domain)
 
-      assert pagination.page_size_options == [10, 25, 50, 100]
+      assert pagination.page_size_options == nil
     end
   end
 
@@ -217,6 +217,30 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
       url_sync = DomainInfo.default_url_sync(Domain)
 
       assert url_sync == nil
+    end
+  end
+
+  describe "default_page_size/1" do
+    test "returns page_size from domain pagination" do
+      page_size = DomainInfo.default_page_size(Domain)
+
+      assert page_size == 20
+    end
+  end
+
+  describe "default_page_size_options/1" do
+    test "returns nil when page_size_options not set in domain" do
+      options = DomainInfo.default_page_size_options(Domain)
+
+      assert options == nil
+    end
+  end
+
+  describe "default_max_page_size/1" do
+    test "returns default 150 from pagination defaults when not explicitly set" do
+      max = DomainInfo.default_max_page_size(Domain)
+
+      assert max == 150
     end
   end
 end

@@ -13,6 +13,7 @@ defmodule MishkaGervaz.Form.Types.Field do
   use MishkaGervaz.Table.Behaviours.TypeRegistry,
     builtin: %{
       text: {Field.Text, [Ash.Type.String]},
+      password: {Field.Password, []},
       textarea: {Field.Textarea, []},
       number: {Field.Number, [Ash.Type.Integer, Ash.Type.Float, Ash.Type.Decimal]},
       checkbox: {Field.Checkbox, [Ash.Type.Boolean]},
@@ -30,7 +31,8 @@ defmodule MishkaGervaz.Form.Types.Field do
       hidden: {Field.Hidden, []},
       toggle: {Field.Toggle, []},
       range: {Field.Range, []},
-      upload: {Field.Upload, []}
+      upload: {Field.Upload, []},
+      combobox: {Field.Combobox, [Ash.Type.String]}
     },
     default: Field.Text
 end

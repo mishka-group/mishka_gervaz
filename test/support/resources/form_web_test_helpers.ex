@@ -29,6 +29,7 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
           position: :bottom
         }),
       hooks: Keyword.get(opts, :hooks, %{}),
+      debounce: Keyword.get(opts, :debounce, nil),
       ui_adapter: Keyword.get(opts, :ui_adapter, MishkaGervaz.UIAdapters.Tailwind),
       ui_adapter_opts: Keyword.get(opts, :ui_adapter_opts, []),
       template: Keyword.get(opts, :template, MishkaGervaz.Form.Templates.Standard),
@@ -59,9 +60,12 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       errors: Keyword.get(opts, :errors, %{}),
       field_values: Keyword.get(opts, :field_values, %{}),
       relation_options: Keyword.get(opts, :relation_options, %{}),
+      combobox_options: Keyword.get(opts, :combobox_options, %{}),
       upload_state: Keyword.get(opts, :upload_state, %{}),
       existing_files: Keyword.get(opts, :existing_files, %{}),
-      dirty?: Keyword.get(opts, :dirty?, false)
+      dirty?: Keyword.get(opts, :dirty?, false),
+      defaults: Keyword.get(opts, :defaults, nil),
+      preload_aliases: Keyword.get(opts, :preload_aliases, %{})
     }
   end
 

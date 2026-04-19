@@ -132,8 +132,21 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
         case record_mod.new_for_create(state, tenant: tenant, actor: actor) do
           {:ok, form} ->
-            state = State.update(state, form: form, loading: :loaded, mode: :create)
-            Phoenix.Component.assign(socket, :form_state, state)
+            form = run_on_init_hook(state, form)
+            field_values = extract_defaults_to_field_values(state)
+
+            state =
+              State.update(state,
+                form: form,
+                loading: :loaded,
+                mode: :create,
+                field_values: field_values
+              )
+
+            socket
+            |> Phoenix.Component.assign(:form_state, state)
+            |> load_dependent_relations(state)
+            |> load_readonly_relation_options(state)
 
           {:error, _reason} ->
             state = State.update(state, loading: :error, mode: :create)
@@ -155,8 +168,16 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
           tenant = tenant_resolver().get_tenant(state)
           relation_mod = relation_loader()
 
-          Phoenix.LiveView.start_async(
-            socket,
+          current_opts = Map.get(state.relation_options, field_name, %{})
+
+          relation_options =
+            Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, true))
+
+          state = State.update(state, relation_options: relation_options)
+
+          socket
+          |> Phoenix.Component.assign(:form_state, state)
+          |> Phoenix.LiveView.start_async(
             {:load_relation, field_name},
             fn ->
               relation_mod.load_options(field, state, tenant: tenant)
@@ -183,8 +204,16 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
           tenant = tenant_resolver().get_tenant(state)
           relation_mod = relation_loader()
 
-          Phoenix.LiveView.start_async(
-            socket,
+          current_opts = Map.get(state.relation_options, field_name, %{})
+
+          relation_options =
+            Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, true))
+
+          state = State.update(state, relation_options: relation_options)
+
+          socket
+          |> Phoenix.Component.assign(:form_state, state)
+          |> Phoenix.LiveView.start_async(
             {:search_relation, field_name},
             fn ->
               relation_mod.search_options(field, state, search_term, tenant: tenant)
@@ -205,6 +234,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             ) :: Phoenix.LiveView.Socket.t()
       def handle_async_result(:load_record, {:ok, {:ok, form}}, socket) do
         state = socket.assigns.form_state
+        form = run_on_init_hook(state, form)
         existing_files = extract_existing_files(state, form)
         field_values = extract_dependency_values(state, form)
 
@@ -219,6 +249,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         socket
         |> Phoenix.Component.assign(:form_state, state)
         |> load_dependent_relations(state)
+        |> load_readonly_relation_options(state)
       end
 
       def handle_async_result(:load_record, {:ok, {:error, _reason}}, socket) do
@@ -239,13 +270,30 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             socket
           ) do
         state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
 
         relation_options =
-          Map.put(state.relation_options, field_name, %{
-            options: options,
-            has_more?: has_more?,
-            page: 1
-          })
+          Map.put(
+            state.relation_options,
+            field_name,
+            Map.merge(current_opts, %{
+              options: options,
+              has_more?: has_more?,
+              loading?: false,
+              page: 1
+            })
+          )
+
+        state = State.update(state, relation_options: relation_options)
+        Phoenix.Component.assign(socket, :form_state, state)
+      end
+
+      def handle_async_result({:load_relation, field_name}, _error, socket) do
+        state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
+
+        relation_options =
+          Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
 
         state = State.update(state, relation_options: relation_options)
         Phoenix.Component.assign(socket, :form_state, state)
@@ -257,13 +305,30 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             socket
           ) do
         state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
 
         relation_options =
-          Map.put(state.relation_options, field_name, %{
-            options: options,
-            has_more?: has_more?,
-            page: 1
-          })
+          Map.put(
+            state.relation_options,
+            field_name,
+            Map.merge(current_opts, %{
+              options: options,
+              has_more?: has_more?,
+              loading?: false,
+              page: 1
+            })
+          )
+
+        state = State.update(state, relation_options: relation_options)
+        Phoenix.Component.assign(socket, :form_state, state)
+      end
+
+      def handle_async_result({:search_relation, field_name}, _error, socket) do
+        state = socket.assigns.form_state
+        current_opts = Map.get(state.relation_options, field_name, %{})
+
+        relation_options =
+          Map.put(state.relation_options, field_name, Map.put(current_opts, :loading?, false))
 
         state = State.update(state, relation_options: relation_options)
         Phoenix.Component.assign(socket, :form_state, state)
@@ -352,10 +417,27 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             |> Enum.filter(&(&1.type == :relation))
             |> Enum.map(& &1.name)
 
+          derive_fns =
+            state.static.fields
+            |> Enum.filter(&(not is_nil(&1[:derive_value])))
+            |> Map.new(&{&1.name, &1.derive_value})
+
           (dependency_names ++ relation_names)
           |> Enum.uniq()
           |> Enum.reduce(%{}, fn field_name, acc ->
             value = Map.get(record, field_name)
+
+            value =
+              case value do
+                nil ->
+                  case Map.get(derive_fns, field_name) do
+                    nil -> nil
+                    derive_fn -> derive_fn.(record)
+                  end
+
+                other ->
+                  other
+              end
 
             case value do
               nil -> acc
@@ -379,6 +461,72 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
           load_relation_options(acc, state, field.name)
         end)
       end
+
+      @spec run_on_init_hook(State.t(), Phoenix.HTML.Form.t()) :: Phoenix.HTML.Form.t()
+      defp run_on_init_hook(%{static: %{hooks: %{on_init: on_init}}} = state, form)
+           when is_function(on_init, 2) do
+        case on_init.(form, state) do
+          %Phoenix.HTML.Form{} = modified_form -> modified_form
+          _ -> form
+        end
+      end
+
+      defp run_on_init_hook(_state, form), do: form
+
+      @spec extract_defaults_to_field_values(State.t()) :: map()
+      defp extract_defaults_to_field_values(%{defaults: defaults})
+           when is_map(defaults) and defaults != %{} do
+        defaults
+        |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
+        |> Map.new()
+      end
+
+      defp extract_defaults_to_field_values(_state), do: %{}
+
+      @spec load_readonly_relation_options(Phoenix.LiveView.Socket.t(), State.t()) ::
+              Phoenix.LiveView.Socket.t()
+      defp load_readonly_relation_options(socket, original_state) do
+        relation_mod = relation_loader()
+
+        original_state.static.fields
+        |> Enum.filter(fn field ->
+          field.type == :relation and
+            field_readonly?(field, original_state) and
+            Map.has_key?(original_state.field_values, field.name)
+        end)
+        |> Enum.reduce(socket, fn field, acc ->
+          value = Map.get(original_state.field_values, field.name)
+          ids = if is_list(value), do: Enum.map(value, &to_string/1), else: [to_string(value)]
+
+          case relation_mod.resolve_selected(field, original_state, ids) do
+            {:ok, resolved} when resolved != [] ->
+              current_state = acc.assigns.form_state
+              current_opts = Map.get(current_state.relation_options, field.name, %{})
+
+              new_opts =
+                Map.merge(current_opts, %{
+                  options: resolved,
+                  selected_options: resolved,
+                  loading?: false
+                })
+
+              relation_options = Map.put(current_state.relation_options, field.name, new_opts)
+
+              Phoenix.Component.assign(
+                acc,
+                :form_state,
+                State.update(current_state, relation_options: relation_options)
+              )
+
+            _ ->
+              acc
+          end
+        end)
+      end
+
+      defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
+      defp field_readonly?(%{readonly: true}, _), do: true
+      defp field_readonly?(_, _), do: false
 
       defoverridable record_loader: 0,
                      tenant_resolver: 0,

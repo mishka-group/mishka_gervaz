@@ -13,8 +13,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
         ui_adapter :dynamic
         ui_adapter_opts [
           site: "Global",
-          component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
-          module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
+          component_renderer: &MishkaCmsCore.Runtime.LiveViewHelpers.component/1,
+          module_resolver: &MishkaCmsCore.Runtime.Compilers.Helpers.module_name/3,
           fallback: MishkaGervaz.UIAdapters.Tailwind
         ]
       end
@@ -103,7 +103,9 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     :nested_fields,
     :array_fields,
     :field_error,
-    :string_list_input
+    :string_list_input,
+    :combobox,
+    :password_input
   ]
 
   @doc """
@@ -169,6 +171,13 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
   def text_input(assigns) do
     render_component("text_input", assigns, fn assigns ->
       fallback(assigns).text_input(assigns)
+    end)
+  end
+
+  @impl true
+  def password_input(assigns) do
+    render_component("password_input", assigns, fn assigns ->
+      fallback(assigns).password_input(assigns)
     end)
   end
 
@@ -571,6 +580,13 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     end)
   end
 
+  @impl true
+  def combobox(assigns) do
+    render_component("combobox", assigns, fn assigns ->
+      fallback(assigns).combobox(assigns)
+    end)
+  end
+
   defp render_component(component_name, assigns, fallback_fn) do
     renderer = Map.get(assigns, :__component_renderer__)
     resolver = Map.get(assigns, :__module_resolver__)
@@ -620,8 +636,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
 
       assigns = MishkaGervaz.UIAdapters.Dynamic.with_config(assigns,
         site: "MyApp",
-        component_renderer: &MishkaCmsCoreResources.Runtime.LiveViewHelpers.component/1,
-        module_resolver: &MishkaCmsCoreResources.Runtime.Compilers.Helpers.module_name/3,
+        component_renderer: &MishkaCmsCore.Runtime.LiveViewHelpers.component/1,
+        module_resolver: &MishkaCmsCore.Runtime.Compilers.Helpers.module_name/3,
         fallback: MishkaGervaz.UIAdapters.Chelekom
       )
   """

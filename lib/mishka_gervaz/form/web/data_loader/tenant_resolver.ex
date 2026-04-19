@@ -63,10 +63,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.TenantResolver do
         State.get_action(state, :read)
       end
 
-      defoverridable get_tenant: 1,
-                     get_create_action: 1,
-                     get_update_action: 1,
-                     get_read_action: 1
+      defoverridable get_tenant: 1, get_create_action: 1, get_update_action: 1, get_read_action: 1
     end
   end
 end

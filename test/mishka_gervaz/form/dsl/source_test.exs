@@ -89,9 +89,9 @@ defmodule MishkaGervaz.Form.DSL.SourceTest do
       assert :comments in config.source.preload.master
     end
 
-    test "tenant preloads default to empty" do
+    test "tenant preloads configured on FormPost" do
       config = FormInfo.config(FormPost)
-      assert config.source.preload.tenant == []
+      assert {:tenant_category, :category} in config.source.preload.tenant
     end
   end
 

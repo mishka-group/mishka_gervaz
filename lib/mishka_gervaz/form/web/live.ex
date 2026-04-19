@@ -38,6 +38,7 @@ defmodule MishkaGervaz.Form.Web.Live do
   ## Optional Assigns
 
   - `record_id` - ID of record to edit (nil for create mode)
+  - `defaults` - Map of default field values for create mode (e.g., `%{workspace_id: @workspace_id}`)
 
   ## Parent LiveView Integration
 
@@ -70,11 +71,13 @@ defmodule MishkaGervaz.Form.Web.Live do
     resource = Map.get(assigns, :resource) || socket.assigns[:resource]
     current_user = Map.get(assigns, :current_user) || socket.assigns[:current_user]
     record_id = Map.get(assigns, :record_id)
+    defaults = Map.get(assigns, :defaults)
     existing_state = socket.assigns[:form_state]
 
     socket =
       if is_nil(existing_state) do
         state = State.init(id, resource, current_user)
+        state = if defaults, do: State.update(state, defaults: defaults), else: state
 
         socket
         |> assign(:form_state, state)
@@ -85,7 +88,9 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)
       else
-        if record_id != socket.assigns[:record_id] do
+        defaults_changed = defaults != existing_state.defaults
+
+        if record_id != socket.assigns[:record_id] or defaults_changed do
           updated_state =
             State.update(existing_state,
               form: nil,
@@ -94,7 +99,8 @@ defmodule MishkaGervaz.Form.Web.Live do
               dirty?: false,
               existing_files: %{},
               field_values: %{},
-              relation_options: %{}
+              relation_options: %{},
+              defaults: defaults
             )
 
           socket

@@ -171,10 +171,7 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
         Enum.any?(state.static.steps, &(&1.name == step_name))
       end
 
-      defoverridable can_advance?: 2,
-                     advance: 2,
-                     go_back: 2,
-                     goto_step: 3
+      defoverridable can_advance?: 2, advance: 2, go_back: 2, goto_step: 3
     end
   end
 end

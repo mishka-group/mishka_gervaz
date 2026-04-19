@@ -11,7 +11,6 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     WizardForm,
     TabsForm,
     MinimalForm,
-    NoMasterCheckForm,
     SubmitOptionsForm,
     NoButtonsForm
   }
@@ -36,7 +35,7 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     test "returns list for FormPost" do
       fields = FormInfo.fields(FormPost)
       assert is_list(fields)
-      assert length(fields) == 6
+      assert length(fields) == 8
     end
 
     test "returns list with 1 field for MinimalForm" do
@@ -315,6 +314,48 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     test "returns detected preloads for MinimalForm" do
       preloads = FormInfo.all_preloads(MinimalForm, false)
       assert is_list(preloads)
+    end
+
+    test "extracts source atom from aliased preloads for master" do
+      preloads = FormInfo.all_preloads(FormPost, true)
+      assert :master_category in preloads
+      refute :category in preloads
+    end
+
+    test "extracts source atom from aliased preloads for tenant" do
+      preloads = FormInfo.all_preloads(FormPost, false)
+      assert :tenant_category in preloads
+      refute :category in preloads
+    end
+  end
+
+  describe "preload_aliases/2" do
+    test "returns alias map for master user" do
+      aliases = FormInfo.preload_aliases(FormPost, true)
+      assert is_map(aliases)
+      assert aliases[:category] == :master_category
+    end
+
+    test "returns alias map for tenant user" do
+      aliases = FormInfo.preload_aliases(FormPost, false)
+      assert is_map(aliases)
+      assert aliases[:category] == :tenant_category
+    end
+
+    test "does not include non-aliased preloads" do
+      aliases = FormInfo.preload_aliases(FormPost, true)
+      refute Map.has_key?(aliases, :user)
+      refute Map.has_key?(aliases, :comments)
+    end
+
+    test "returns empty map when no aliases" do
+      aliases = FormInfo.preload_aliases(MinimalForm, true)
+      assert aliases == %{}
+    end
+
+    test "returns empty map for resource without preload config" do
+      aliases = FormInfo.preload_aliases(MinimalForm, false)
+      assert aliases == %{}
     end
   end
 

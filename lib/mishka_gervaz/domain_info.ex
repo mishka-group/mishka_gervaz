@@ -12,6 +12,16 @@ defmodule MishkaGervaz.DomainInfo do
   defdelegate menu_groups(domain), to: MishkaGervaz.Domain.Info.Table
   defdelegate default_ui_adapter(domain), to: MishkaGervaz.Domain.Info.Table, as: :ui_adapter
   defdelegate default_pagination(domain), to: MishkaGervaz.Domain.Info.Table, as: :pagination
+  defdelegate default_page_size(domain), to: MishkaGervaz.Domain.Info.Table, as: :page_size
+
+  defdelegate default_page_size_options(domain),
+    to: MishkaGervaz.Domain.Info.Table,
+    as: :page_size_options
+
+  defdelegate default_max_page_size(domain),
+    to: MishkaGervaz.Domain.Info.Table,
+    as: :max_page_size
+
   defdelegate default_realtime(domain), to: MishkaGervaz.Domain.Info.Table, as: :realtime
   defdelegate default_theme(domain), to: MishkaGervaz.Domain.Info.Table, as: :theme
   defdelegate default_refresh(domain), to: MishkaGervaz.Domain.Info.Table, as: :refresh

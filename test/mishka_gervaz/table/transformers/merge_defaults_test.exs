@@ -86,9 +86,22 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
       assert config.pagination.page_size == domain_pagination.page_size
     end
 
-    test "pagination has page_size_options" do
+    test "pagination page_size_options defaults to nil when not set" do
       config = ResourceInfo.table_config(Post)
-      assert is_list(config.pagination.page_size_options)
+      assert is_nil(config.pagination.page_size_options)
+    end
+
+    test "pagination max_page_size defaults to 150" do
+      config = ResourceInfo.table_config(Post)
+      assert config.pagination.max_page_size == 150
+    end
+
+    test "pagination max_page_size is inherited across resources" do
+      config_user = ResourceInfo.table_config(User)
+      config_minimal = ResourceInfo.table_config(MinimalResource)
+
+      assert config_user.pagination.max_page_size == 150
+      assert config_minimal.pagination.max_page_size == 150
     end
   end
 end

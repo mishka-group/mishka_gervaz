@@ -101,6 +101,7 @@ defmodule MishkaGervaz.Form.Web.State do
       :template,
       :theme,
       :features,
+      :debounce,
       :preloads,
       :layout_mode,
       :layout_columns,
@@ -126,6 +127,7 @@ defmodule MishkaGervaz.Form.Web.State do
             template: module(),
             theme: map() | nil,
             features: list(atom()),
+            debounce: integer() | nil,
             preloads: list(atom()),
             layout_mode: :standard | :wizard | :tabs,
             layout_columns: 1 | 2 | 3 | 4,
@@ -148,9 +150,12 @@ defmodule MishkaGervaz.Form.Web.State do
     :form_errors,
     :field_values,
     :relation_options,
+    :combobox_options,
     :upload_state,
     :existing_files,
-    :dirty?
+    :dirty?,
+    :defaults,
+    :preload_aliases
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -170,9 +175,12 @@ defmodule MishkaGervaz.Form.Web.State do
           form_errors: list(String.t()),
           field_values: map(),
           relation_options: map(),
+          combobox_options: %{atom() => list({String.t(), String.t()})},
           upload_state: map(),
           existing_files: %{atom() => list(map())},
-          dirty?: boolean()
+          dirty?: boolean(),
+          defaults: map() | nil,
+          preload_aliases: %{atom() => atom()}
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -416,6 +424,7 @@ defmodule MishkaGervaz.Form.Web.State do
 
         master_user? = access_mod.master_user?(current_user)
         preloads = access_mod.get_preloads(resource, master_user?)
+        preload_aliases = Info.preload_aliases(resource, master_user?)
 
         fields = field_mod.build(config, resource)
         field_order = Enum.map(fields, & &1.name)
@@ -446,6 +455,7 @@ defmodule MishkaGervaz.Form.Web.State do
           template: template,
           theme: presentation_mod.get_theme(config),
           features: presentation_mod.get_features(config),
+          debounce: presentation_mod.get_debounce(config),
           preloads: preloads,
           layout_mode: layout_mode,
           layout_columns: StateHelpers.get_layout_columns(config),
@@ -460,6 +470,7 @@ defmodule MishkaGervaz.Form.Web.State do
           if layout_mode in [:wizard, :tabs], do: step_mod.initial_step_states(steps), else: %{}
 
         relation_options = load_static_relation_options(fields, current_user)
+        combobox_options = load_combobox_options(fields)
 
         %State{
           static: static,
@@ -475,9 +486,12 @@ defmodule MishkaGervaz.Form.Web.State do
           form_errors: [],
           field_values: %{},
           relation_options: relation_options,
+          combobox_options: combobox_options,
           upload_state: %{},
           existing_files: %{},
-          dirty?: false
+          dirty?: false,
+          defaults: nil,
+          preload_aliases: preload_aliases
         }
       end
 
@@ -519,12 +533,25 @@ defmodule MishkaGervaz.Form.Web.State do
         end)
       end
 
+      @spec load_combobox_options(list(map())) :: %{atom() => list()}
+      defp load_combobox_options(fields) do
+        fields
+        |> Enum.filter(fn f -> f.type == :combobox and f.options != nil end)
+        |> Enum.reduce(%{}, fn field, acc ->
+          Map.put(acc, field.name, MishkaGervaz.Helpers.resolve_options(field.options))
+        end)
+      end
+
       defp prepend_nil_option(options, nil), do: options
       defp prepend_nil_option(options, false), do: options
       defp prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
 
       defp prepend_nil_option(options, label) when is_binary(label) do
         [{label, "__nil__"} | options]
+      end
+
+      defp prepend_nil_option(options, label) when is_function(label, 0) do
+        [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
       end
 
       @spec update(State.t(), keyword() | map()) :: State.t()

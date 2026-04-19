@@ -49,8 +49,7 @@ defmodule MishkaGervaz.Form.Web.Events.HookRunner do
       def apply_hook_result({:halt, _}, original), do: original
       def apply_hook_result(_, original), do: original
 
-      defoverridable run_hook: 3,
-                     apply_hook_result: 2
+      defoverridable run_hook: 3, apply_hook_result: 2
     end
   end
 end

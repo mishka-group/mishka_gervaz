@@ -217,6 +217,12 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   @doc "Render a dynamic string list input with add/remove buttons"
   @callback string_list_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
+  @doc "Render a password input (masked text entry)"
+  @callback password_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc "Render a combobox (text input with dropdown suggestions)"
+  @callback combobox(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
   @doc "Render a field error message display"
   @callback field_error(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
@@ -275,7 +281,9 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     field_error: 1,
     upload_file_input: 1,
     upload_existing_file: 1,
-    string_list_input: 1
+    string_list_input: 1,
+    combobox: 1,
+    password_input: 1
   ]
 
   @component_functions [
@@ -339,7 +347,9 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :field_error,
     :upload_file_input,
     :upload_existing_file,
-    :string_list_input
+    :string_list_input,
+    :combobox,
+    :password_input
   ]
 
   @doc """

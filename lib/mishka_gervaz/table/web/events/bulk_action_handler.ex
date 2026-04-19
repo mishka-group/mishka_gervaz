@@ -259,7 +259,13 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
             Info.action_for(resource, :read, state.master_user?)
           end
 
-        query = Ash.Query.for_read(resource, action)
+        tenant =
+          if state.master_user?, do: nil, else: Map.get(state.current_user, :site_id)
+
+        read_opts = [actor: state.current_user]
+        read_opts = if tenant, do: Keyword.put(read_opts, :tenant, tenant), else: read_opts
+
+        query = Ash.Query.for_read(resource, action, %{}, read_opts)
 
         case filter do
           {:exclude, excluded_ids} ->
@@ -314,16 +320,8 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
       end
 
       defp run_ash_bulk_action(resource, ids, opts, state, action_type) when is_list(ids) do
-        action =
-          if state.archive_status == :archived do
-            Info.archive_action_for(resource, :read, state.master_user?)
-          else
-            Info.action_for(resource, :read, state.master_user?)
-          end
-
         query =
-          resource
-          |> Ash.Query.for_read(action)
+          build_bulk_query(resource, state, nil)
           |> Ash.Query.filter_input(%{id: %{in: ids}})
 
         execute_bulk_by_type(query, opts, action_type)

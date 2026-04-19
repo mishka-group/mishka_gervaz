@@ -47,6 +47,16 @@ defmodule MishkaGervaz.Form.Dsl.Source do
       Supports atoms or `{source, alias}` tuples:
       - `:category` - preload `:category` relationship
       - `{:category, :cat}` or `category: :cat` - preload `:category`, alias as `:cat`
+
+      > ### Pagination Warning {: .warning}
+      >
+      > The relationship's read action must NOT have `pagination required?: true`.
+      > Preloads do not pass pagination params, so required pagination will cause
+      > `LimitRequired` errors at runtime. Use `required?: false` on the action:
+      >
+      >     read :my_action do
+      >       pagination offset?: true, required?: false, default_limit: 20
+      >     end
       """
     ],
     master: [
@@ -56,6 +66,7 @@ defmodule MishkaGervaz.Form.Dsl.Source do
       Additional preloads for master users.
 
       Supports atoms or `{source, alias}` tuples.
+      See `always` for pagination requirements.
       """
     ],
     tenant: [
@@ -65,6 +76,7 @@ defmodule MishkaGervaz.Form.Dsl.Source do
       Additional preloads for tenant users.
 
       Supports atoms or `{source, alias}` tuples.
+      See `always` for pagination requirements.
       """
     ]
   ]

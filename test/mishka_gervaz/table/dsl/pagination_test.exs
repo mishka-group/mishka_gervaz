@@ -58,6 +58,42 @@ defmodule MishkaGervaz.DSL.PaginationTest do
     end
   end
 
+  describe "max_page_size" do
+    test "max_page_size defaults to 150 when not set" do
+      config = ResourceInfo.table_config(Post)
+      assert config.pagination.max_page_size == 150
+    end
+
+    test "max_page_size is present in User pagination" do
+      config = ResourceInfo.table_config(User)
+      assert config.pagination.max_page_size == 150
+    end
+  end
+
+  describe "page_size_options" do
+    test "page_size_options defaults to nil when not set" do
+      config = ResourceInfo.table_config(Post)
+      assert config.pagination.page_size_options == nil
+    end
+
+    test "page_size_options defaults to nil for User" do
+      config = ResourceInfo.table_config(User)
+      assert config.pagination.page_size_options == nil
+    end
+  end
+
+  describe "pagination enabled flag" do
+    test "pagination is present when not explicitly disabled" do
+      config = ResourceInfo.table_config(Post)
+      assert config.pagination != nil
+    end
+
+    test "User pagination is present" do
+      config = ResourceInfo.table_config(User)
+      assert config.pagination != nil
+    end
+  end
+
   describe "pagination priority: resource > domain > DSL default" do
     test "resource with explicit pagination type keeps its value over domain defaults" do
       # Post explicitly sets type: :infinite, domain has type: :numbered

@@ -10,12 +10,13 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFieldsTest do
   describe "positive: valid fields" do
     test "FormPost compiles with all fields referencing valid attributes" do
       fields = FormInfo.fields(FormPost)
-      assert length(fields) == 6
+      assert length(fields) == 8
 
       names = Enum.map(fields, & &1.name)
       assert :title in names
       assert :content in names
       assert :status in names
+      assert :language in names
       assert :priority in names
       assert :featured in names
       assert :metadata in names

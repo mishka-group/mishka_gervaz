@@ -10,8 +10,9 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateFilters do
 
   use Spark.Dsl.Verifier
   alias Spark.Dsl.Verifier
-  alias MishkaGervaz.Table.Entities.Filter
+  alias MishkaGervaz.Table.Entities.{Filter, FilterGroup}
   @path [:mishka_gervaz, :table, :filters]
+  @groups_path [:mishka_gervaz, :table, :filter_groups]
 
   @impl true
   def verify(dsl_state) do
@@ -33,13 +34,19 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateFilters do
 
     filter_names = Enum.map(filters, & &1.name)
 
-    section_defined? =
-      Verifier.get_option(dsl_state, @path ++ [:filter_layout], :mode) != nil or filters != []
+    filter_groups =
+      dsl_state
+      |> Verifier.get_entities(@groups_path)
+      |> List.wrap()
+      |> Enum.filter(&match?(%FilterGroup{}, &1))
+
+    section_defined? = filters != []
 
     with :ok <- validate_at_least_one_filter(section_defined?, filters, dsl_state),
          :ok <- validate_dependencies(filters, filter_names, dsl_state),
          :ok <- validate_static_relation_pagination(filters, module),
          :ok <- validate_function_display_field_requires_search_field(filters, module),
+         :ok <- validate_filter_groups(filter_groups, filter_names, dsl_state),
          do: :ok
   end
 
@@ -229,6 +236,71 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateFilters do
              end
            """
          )}
+    end
+  end
+
+  @spec validate_filter_groups(list(), list(), Spark.Dsl.t()) ::
+          :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_filter_groups([], _filter_names, _dsl_state), do: :ok
+
+  defp validate_filter_groups(groups, filter_names, dsl_state) do
+    with :ok <- validate_group_filters_exist(groups, filter_names, dsl_state),
+         :ok <- validate_no_duplicate_filter_assignments(groups, dsl_state) do
+      :ok
+    end
+  end
+
+  defp validate_group_filters_exist(groups, filter_names, dsl_state) do
+    invalid =
+      Enum.flat_map(groups, fn group ->
+        missing = Enum.reject(group.filters, &(&1 in filter_names))
+        Enum.map(missing, &{group.name, &1})
+      end)
+
+    if invalid == [] do
+      :ok
+    else
+      {:error,
+       Spark.Error.DslError.exception(
+         module: Verifier.get_persisted(dsl_state, :module),
+         path: @groups_path,
+         message: """
+         Filter groups reference non-existent filters: #{inspect(invalid)}
+
+         Each filter in a group must be defined in the filters section.
+         """
+       )}
+    end
+  end
+
+  defp validate_no_duplicate_filter_assignments(groups, dsl_state) do
+    all_assigned =
+      Enum.flat_map(groups, fn group ->
+        Enum.map(group.filters, &{&1, group.name})
+      end)
+
+    duplicates =
+      all_assigned
+      |> Enum.group_by(&elem(&1, 0))
+      |> Enum.filter(fn {_name, assignments} -> length(assignments) > 1 end)
+      |> Enum.map(fn {name, assignments} ->
+        groups = Enum.map(assignments, &elem(&1, 1))
+        {name, groups}
+      end)
+
+    if duplicates == [] do
+      :ok
+    else
+      {:error,
+       Spark.Error.DslError.exception(
+         module: Verifier.get_persisted(dsl_state, :module),
+         path: @groups_path,
+         message: """
+         Filters assigned to multiple groups: #{inspect(duplicates)}
+
+         Each filter can only belong to one group.
+         """
+       )}
     end
   end
 end

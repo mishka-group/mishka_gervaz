@@ -54,6 +54,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
 
         case Ash.get(resource, record_id, read_opts) do
           {:ok, record} ->
+            record = MishkaGervaz.Helpers.inject_preload_aliases(record, state.preload_aliases)
+
             effective_tenant =
               if state.master_user? do
                 nil

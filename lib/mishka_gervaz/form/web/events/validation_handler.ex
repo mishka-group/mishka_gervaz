@@ -35,7 +35,16 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       """
       @spec validate(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
-      def validate(state, params, socket) do
+      def validate(state, params, socket), do: validate(state, params, socket, nil, nil)
+
+      @spec validate(State.t(), map(), Phoenix.LiveView.Socket.t(), map() | nil) ::
+              Phoenix.LiveView.Socket.t()
+      def validate(state, params, socket, forced_errors),
+        do: validate(state, params, socket, forced_errors, nil)
+
+      @spec validate(State.t(), map(), Phoenix.LiveView.Socket.t(), map() | nil, list() | nil) ::
+              Phoenix.LiveView.Socket.t()
+      def validate(state, params, socket, forced_errors, target) do
         incoming = Map.get(params, "form", params)
 
         case state.form do
@@ -57,15 +66,20 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
 
             validated =
               form.source
-              |> AshPhoenix.Form.validate(form_params)
+              |> AshPhoenix.Form.validate(form_params, target: target)
               |> Phoenix.Component.to_form()
 
-            show_errors? = form.source.submitted_once? or form.source.type != :create
-
             errors =
-              if show_errors?,
-                do: build_errors(validated),
-                else: %{}
+              cond do
+                is_map(forced_errors) ->
+                  forced_errors
+
+                form.source.submitted_once? or form.source.type != :create ->
+                  build_errors(validated)
+
+                true ->
+                  %{}
+              end
 
             state = State.update(state, form: validated, errors: errors, dirty?: true)
             Phoenix.Component.assign(socket, :form_state, state)
@@ -99,8 +113,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
         end)
       end
 
-      defoverridable validate: 3,
-                     build_errors: 1
+      defoverridable validate: 3, validate: 4, validate: 5, build_errors: 1
     end
   end
 end

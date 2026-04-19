@@ -26,7 +26,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn ->
         "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
       end)
-      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign(:placeholder, placeholder)
@@ -48,6 +53,37 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-debounce={@phx_debounce}
       />
     </div>
+    """
+  end
+
+  @impl true
+  def password_input(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn ->
+        "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+      end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:placeholder, fn -> nil end)
+      |> assign_new(:autocomplete, fn -> "new-password" end)
+
+    ~H"""
+    <input
+      type="password"
+      name={@name}
+      value={@value}
+      placeholder={@placeholder}
+      disabled={@disabled}
+      autocomplete={@autocomplete}
+      class={[@class, @disabled && "bg-gray-100 cursor-not-allowed"]}
+      phx-debounce={@phx_debounce}
+    />
     """
   end
 
@@ -98,6 +134,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     options = normalize_options(assigns[:options] || [])
     current_value = assigns[:value] || ""
     selected_options = normalize_options(assigns[:selected_options] || [])
+    disabled = assigns[:disabled] || false
 
     display_options =
       if current_value != "" do
@@ -107,11 +144,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         options
       end
 
+    display_label =
+      if disabled and current_value != "" do
+        all_opts = options ++ selected_options
+
+        case Enum.find(all_opts, fn {_l, v} -> to_string(v) == to_string(current_value) end) do
+          {label, _} -> label
+          nil -> current_value
+        end
+      else
+        nil
+      end
+
     assigns =
       assigns
       |> assign(:options, options)
       |> assign(:display_options, display_options)
       |> assign(:current_value, current_value)
+      |> assign(:disabled, disabled)
+      |> assign(:display_label, display_label)
       |> assign_new(:class, fn ->
         "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
       end)
@@ -130,7 +181,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"search-select-#{@filter_name}"}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={if @dropdown_open?, do: "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
@@ -144,19 +195,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <input
           type="text"
           name={"_search_#{@filter_name}"}
-          value={@search_term || ""}
+          value={if(@disabled, do: @display_label || "", else: @search_term || "")}
           placeholder={@placeholder}
-          class={[@class, @icon && "pl-9", "w-full"]}
-          phx-debounce={@debounce}
-          phx-keyup="relation_search"
-          phx-focus="relation_focus"
+          class={[
+            @class,
+            @icon && "pl-9",
+            "w-full",
+            @disabled && "bg-gray-100 cursor-not-allowed text-gray-700"
+          ]}
+          disabled={@disabled}
+          phx-debounce={if !@disabled, do: @debounce}
+          phx-keyup={if !@disabled, do: "relation_search"}
+          phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
           phx-value-filter={@filter_name}
           phx-value-min-chars={@min_chars}
           autocomplete="off"
         />
         <span
-          :if={@loading?}
+          :if={@loading? && !@disabled}
           class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"
         />
       </div>
@@ -164,9 +221,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <%!-- Hidden input for form submission --%>
       <input type="hidden" name={@name} value={@current_value} />
 
-      <%!-- Dropdown options (only show when open) --%>
+      <%!-- Dropdown options (only show when open and not disabled) --%>
       <div
-        :if={@dropdown_open?}
+        :if={@dropdown_open? && !@disabled}
         class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-sm text-gray-400">
@@ -256,7 +313,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"load-more-select-#{@filter_name}"}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={if @dropdown_open?, do: "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
@@ -365,7 +422,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"multi-select-#{@filter_name}"}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={if @dropdown_open?, do: "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
@@ -1628,29 +1685,33 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign_new(:checked, fn -> false end)
-      |> assign_new(:label, fn -> nil end)
-      |> assign_new(:class, fn -> "relative inline-flex items-center" end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
-    <label class={[@class, "cursor-pointer gap-3"]}>
+    <label class={["inline-flex cursor-pointer items-center", @disabled && "opacity-50 cursor-not-allowed"]}>
       <input type="hidden" name={@name} value="false" />
-      <input
-        type="checkbox"
-        name={@name}
-        value={@value}
-        checked={@checked}
-        class="sr-only peer"
-      />
-      <div class={[
-        "w-11 h-6 rounded-full transition-colors duration-200 ease-in-out",
-        "bg-gray-200 peer-checked:bg-blue-600",
-        "after:content-[''] after:absolute after:top-0.5 after:start-[2px]",
-        "after:bg-white after:border after:border-gray-300 after:rounded-full",
-        "after:h-5 after:w-5 after:transition-all after:duration-200",
-        "peer-checked:after:translate-x-full peer-checked:after:border-white",
-        "peer-focus:ring-2 peer-focus:ring-blue-300"
-      ]} />
-      <span :if={@label} class="text-sm font-medium text-gray-700">{@label}</span>
+      <div class="relative w-11 h-6">
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          disabled={@disabled}
+          class="sr-only"
+          role="switch"
+          aria-checked={to_string(@checked)}
+        />
+        <div class={[
+          "w-11 h-6 rounded-full transition-colors duration-200 ease-in-out",
+          if(@checked, do: "bg-blue-600", else: "bg-gray-300")
+        ]} />
+        <div class={[
+          "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out",
+          if(@checked, do: "translate-x-5", else: "translate-x-0")
+        ]} />
+      </div>
     </label>
     """
   end
@@ -1699,7 +1760,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         "w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500"
       end)
       |> assign_new(:rows, fn -> 4 end)
-      |> assign_new(:phx_debounce, fn -> 300 end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
       |> assign_new(:disabled, fn -> false end)
 
     ~H"""
@@ -1857,6 +1923,72 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <.render_icon name="hero-plus" class="w-4 h-4" />
         {@add_label}
       </button>
+    </div>
+    """
+  end
+
+  @impl true
+  def combobox(assigns) do
+    normalized = normalize_options(assigns[:options] || [])
+
+    assigns =
+      assigns
+      |> assign(:options, normalized)
+      |> assign_new(:class, fn ->
+        "rounded border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 w-full"
+      end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:phx_debounce, fn ->
+        case Map.fetch(assigns, :"phx-debounce") do
+          {:ok, value} -> value
+          :error -> 300
+        end
+      end)
+      |> assign_new(:field_name, fn -> nil end)
+      |> assign_new(:target, fn -> nil end)
+      |> assign(:dropdown_id, "combobox-dropdown-#{assigns[:field_name] || assigns[:name]}")
+
+    ~H"""
+    <div class="relative" phx-click-away={JS.hide(to: "##{@dropdown_id}")}>
+      <.render_icon
+        :if={@icon}
+        name={@icon}
+        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+      />
+      <input
+        type="text"
+        name={@name}
+        value={@value}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+        phx-debounce={@phx_debounce}
+        phx-click={JS.show(to: "##{@dropdown_id}")}
+        phx-focus={JS.show(to: "##{@dropdown_id}")}
+        phx-keyup={JS.show(to: "##{@dropdown_id}")}
+        autocomplete="off"
+      />
+      <div
+        id={@dropdown_id}
+        class="hidden absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5"
+      >
+        <%= for {label, value} <- @options do %>
+          <button
+            type="button"
+            phx-click={
+              JS.push("combobox_select",
+                value: %{field: to_string(@field_name), value: value},
+                target: @target
+              )
+              |> JS.hide(to: "##{@dropdown_id}")
+            }
+            class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+          >
+            {label}
+          </button>
+        <% end %>
+      </div>
     </div>
     """
   end

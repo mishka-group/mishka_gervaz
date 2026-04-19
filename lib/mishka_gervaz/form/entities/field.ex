@@ -29,10 +29,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
             | (struct(), map() -> String.t())
             | nil,
           search_field: atom() | nil,
+          value_field: atom() | nil,
           readonly: boolean() | (map() -> boolean()),
           mode: :static | :load_more | :search | :search_multi,
           page_size: pos_integer(),
-          load_action: atom() | nil,
+          load_action: atom() | {atom(), atom()} | nil,
           load: (any(), map() -> any()) | nil,
           apply: (any(), any(), map() -> any()) | nil,
           format: (any() -> any()) | (map(), map(), any() -> any()) | nil,
@@ -41,7 +42,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
             | (struct(), map() -> Phoenix.LiveView.Rendered.t())
             | nil,
           position: position() | nil,
-          include_nil: boolean() | String.t(),
+          include_nil: boolean() | String.t() | (-> String.t()),
           min: integer() | nil,
           max: integer() | nil,
           min_chars: integer() | nil,
@@ -74,6 +75,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     options_source: nil,
     display_field: nil,
     search_field: nil,
+    value_field: nil,
     readonly: false,
     mode: :static,
     page_size: 20,
@@ -101,6 +103,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
 
   @builtin_field_types [
     :text,
+    :password,
     :textarea,
     :number,
     :checkbox,
@@ -117,7 +120,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :hidden,
     :toggle,
     :range,
-    :upload
+    :upload,
+    :combobox
   ]
 
   @opt_schema [
@@ -197,6 +201,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
       type: :atom,
       doc: "Field to search on for autocomplete."
     ],
+    value_field: [
+      type: :atom,
+      doc:
+        "Attribute to store from selected record instead of :id. For relation fields that need a non-primary-key value."
+    ],
     readonly: [
       type: {:or, [:boolean, {:fun, 1}]},
       default: false,
@@ -213,8 +222,9 @@ defmodule MishkaGervaz.Form.Entities.Field do
       doc: "Page size for load_more/search modes."
     ],
     load_action: [
-      type: :atom,
-      doc: "Action to use for loading options."
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc:
+        "Action to use for loading options. Atom or `{master_action, tenant_action}` tuple. If the action has pagination, it must set `required?: false`."
     ],
     load: [
       type: {:fun, 2},
@@ -237,9 +247,9 @@ defmodule MishkaGervaz.Form.Entities.Field do
       doc: "Field position (integer, :first, :last, {:before, :field}, {:after, :field})."
     ],
     include_nil: [
-      type: {:or, [:boolean, :string]},
+      type: {:or, [:boolean, :string, {:fun, 0}]},
       default: false,
-      doc: "Include nil option in select. String sets label."
+      doc: "Include nil option in select. String or `fn -> gettext(...) end` sets label."
     ],
     min: [
       type: :integer,
@@ -396,8 +406,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
       doc: "Field label. String or `fn -> gettext(...) end` for i18n."
     ],
     placeholder: [
-      type: :string,
-      doc: "Placeholder text."
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     description: [
       type: :string,

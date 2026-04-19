@@ -6,23 +6,16 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
 
   @impl true
-  def render(assigns, _config) do
-    assigns
-  end
+  def render(assigns, _config), do: assigns
 
   @impl true
   def validate(value, config) when is_map(value) or is_list(value) do
     ash_type = Map.get(config || %{}, :ash_type)
 
     cond do
-      map_type?(ash_type) and not is_map(value) ->
-        {:error, "must be a JSON object"}
-
-      array_type?(ash_type) and not is_list(value) ->
-        {:error, "must be a JSON array"}
-
-      true ->
-        {:ok, value}
+      map_type?(ash_type) and not is_map(value) -> {:error, "must be a JSON object"}
+      array_type?(ash_type) and not is_list(value) -> {:error, "must be a JSON array"}
+      true -> {:ok, value}
     end
   end
 
@@ -32,14 +25,9 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
     case Jason.decode(value) do
       {:ok, decoded} ->
         cond do
-          map_type?(ash_type) and not is_map(decoded) ->
-            {:error, "must be a JSON object"}
-
-          array_type?(ash_type) and not is_list(decoded) ->
-            {:error, "must be a JSON array"}
-
-          true ->
-            {:ok, value}
+          map_type?(ash_type) and not is_map(decoded) -> {:error, "must be a JSON object"}
+          array_type?(ash_type) and not is_list(decoded) -> {:error, "must be a JSON array"}
+          true -> {:ok, value}
         end
 
       {:error, _} ->

@@ -78,11 +78,9 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaults do
   defp maybe_set_from_domain(dsl_state, _path, _key, nil), do: dsl_state
 
   defp maybe_set_from_domain(dsl_state, path, key, domain_value) do
-    if get_opt(dsl_state, path, key) == nil do
-      set_opt(dsl_state, path, key, domain_value)
-    else
-      dsl_state
-    end
+    if get_opt(dsl_state, path, key) == nil,
+      do: set_opt(dsl_state, path, key, domain_value),
+      else: dsl_state
   end
 
   @spec merge_identity_defaults(Spark.Dsl.t(), module()) :: Spark.Dsl.t()
@@ -98,8 +96,10 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaults do
   defp maybe_set_identity_name(dsl_state, path, module) do
     case get_opt(dsl_state, path, :name) do
       nil ->
-        derived_name = module |> module_to_snake("_form") |> String.to_atom()
-        set_opt(dsl_state, path, :name, derived_name)
+        module
+        |> module_to_snake("_form")
+        |> String.to_atom()
+        |> then(&set_opt(dsl_state, path, :name, &1))
 
       _ ->
         dsl_state
@@ -110,8 +110,8 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaults do
   defp maybe_set_stream_name(dsl_state, path) do
     case get_opt(dsl_state, path, :stream_name) do
       nil ->
-        name = get_opt(dsl_state, path, :name)
-        set_opt(dsl_state, path, :stream_name, String.to_atom("#{name}_stream"))
+        get_opt(dsl_state, path, :name)
+        |> then(&set_opt(dsl_state, path, :stream_name, String.to_atom("#{&1}_stream")))
 
       _ ->
         dsl_state

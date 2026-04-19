@@ -36,7 +36,7 @@ defmodule MishkaGervaz.MixProject do
 
   defp deps do
     [
-      {:spark, github: "ash-project/spark", branch: "main", override: true},
+      {:spark, "~> 2.6"},
       {:ash, "~> 3.0"},
       {:splode, "~> 0.3"},
       {:gettext, "~> 1.0"},

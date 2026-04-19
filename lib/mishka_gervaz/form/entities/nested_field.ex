@@ -135,8 +135,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField.Ui do
       doc: "Sub-field label. String or `fn -> gettext(...) end`."
     ],
     placeholder: [
-      type: :string,
-      doc: "Placeholder text."
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     description: [
       type: :string,

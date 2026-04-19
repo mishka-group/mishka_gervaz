@@ -61,6 +61,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
           filters: map(),
           sort: list({atom(), :asc | :desc}),
           page: integer(),
+          page_size: pos_integer() | nil,
           search: String.t() | nil,
           template: atom() | nil,
           path: String.t() | nil,
@@ -91,6 +92,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     |> maybe_encode_filters(state, config, prefix)
     |> maybe_encode_sort(state, config, prefix)
     |> maybe_encode_page(state, config, prefix)
+    |> maybe_encode_page_size(state, config, prefix)
     |> maybe_encode_search(state, config, prefix)
     |> maybe_encode_template(state, config, prefix)
   end
@@ -220,6 +222,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
         end),
       sort: decode_if_allowed(:sort, allowed_params, fn -> decode_sort(params, prefix) end),
       page: decode_if_allowed(:page, allowed_params, fn -> decode_page(params, prefix) end),
+      page_size:
+        decode_if_allowed(:page_size, allowed_params, fn -> decode_page_size(params, prefix) end),
       search: decode_if_allowed(:search, allowed_params, fn -> decode_search(params, prefix) end),
       template:
         decode_if_allowed(:template, allowed_params, fn -> decode_template(params, prefix) end),
@@ -241,6 +245,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   defp default_for(:filters), do: %{}
   defp default_for(:sort), do: []
   defp default_for(:page), do: 1
+  defp default_for(:page_size), do: nil
   defp default_for(:search), do: nil
   defp default_for(:template), do: nil
 
@@ -298,6 +303,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     url_state[:filters] == state.filter_values and
       url_state[:sort] == state.sort_fields and
       url_state[:page] == state.page and
+      url_state[:page_size] == state.current_page_size and
       (url_state[:path_params] || %{}) == (Map.get(state, :path_params) || %{})
   end
 
@@ -346,6 +352,21 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
       if page > 1 do
         Map.put(params, build_key(prefix, "page"), to_string(page))
+      else
+        params
+      end
+    else
+      params
+    end
+  end
+
+  @spec maybe_encode_page_size(map(), map(), map(), String.t() | nil) :: map()
+  defp maybe_encode_page_size(params, state, config, prefix) do
+    if :page_size in (config[:params] || []) do
+      current_page_size = Map.get(state, :current_page_size)
+
+      if current_page_size do
+        Map.put(params, build_key(prefix, "page_size"), to_string(current_page_size))
       else
         params
       end
@@ -460,6 +481,22 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     _ -> 1
   end
 
+  @spec decode_page_size(map(), String.t() | nil) :: pos_integer() | nil
+  defp decode_page_size(params, prefix) do
+    key = build_key(prefix, "page_size")
+
+    case Map.get(params, key) do
+      nil ->
+        nil
+
+      size_str ->
+        size = String.to_integer(size_str)
+        if size > 0, do: size, else: nil
+    end
+  rescue
+    _ -> nil
+  end
+
   @spec decode_search(map(), String.t() | nil) :: String.t() | nil
   defp decode_search(params, prefix) do
     key = build_key(prefix, "search")
@@ -566,7 +603,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   @spec known_param_prefixes(String.t() | nil) :: list(String.t())
   defp known_param_prefixes(prefix) do
-    suffixes = ["filter_", "sort", "page", "search", "template"]
+    suffixes = ["filter_", "sort", "page", "page_size", "search", "template"]
     Enum.map(suffixes, &build_key(prefix, &1))
   end
 
