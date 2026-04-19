@@ -1685,29 +1685,33 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign_new(:checked, fn -> false end)
-      |> assign_new(:label, fn -> nil end)
-      |> assign_new(:class, fn -> "relative inline-flex items-center" end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
-    <label class={[@class, "cursor-pointer gap-3"]}>
+    <label class={["inline-flex cursor-pointer items-center", @disabled && "opacity-50 cursor-not-allowed"]}>
       <input type="hidden" name={@name} value="false" />
-      <input
-        type="checkbox"
-        name={@name}
-        value={@value}
-        checked={@checked}
-        class="sr-only peer"
-      />
-      <div class={[
-        "w-11 h-6 rounded-full transition-colors duration-200 ease-in-out",
-        "bg-gray-200 peer-checked:bg-blue-600",
-        "after:content-[''] after:absolute after:top-0.5 after:start-[2px]",
-        "after:bg-white after:border after:border-gray-300 after:rounded-full",
-        "after:h-5 after:w-5 after:transition-all after:duration-200",
-        "peer-checked:after:translate-x-full peer-checked:after:border-white",
-        "peer-focus:ring-2 peer-focus:ring-blue-300"
-      ]} />
-      <span :if={@label} class="text-sm font-medium text-gray-700">{@label}</span>
+      <div class="relative w-11 h-6">
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          disabled={@disabled}
+          class="sr-only"
+          role="switch"
+          aria-checked={to_string(@checked)}
+        />
+        <div class={[
+          "w-11 h-6 rounded-full transition-colors duration-200 ease-in-out",
+          if(@checked, do: "bg-blue-600", else: "bg-gray-300")
+        ]} />
+        <div class={[
+          "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out",
+          if(@checked, do: "translate-x-5", else: "translate-x-0")
+        ]} />
+      </div>
     </label>
     """
   end
