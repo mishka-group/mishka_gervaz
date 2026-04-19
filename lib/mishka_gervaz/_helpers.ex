@@ -723,12 +723,12 @@ defmodule MishkaGervaz.Helpers do
       |> Enum.filter(fn {field, _} -> to_string(field) == target_field end)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
-      errors =
-          cond do
-            is_nil(target_field) -> current_errors
-            map_size(field_errors) > 0 -> Map.merge(current_errors, field_errors)
-            true -> Map.reject(current_errors, fn {field, _} -> to_string(field) == target_field end)
-          end
+    errors =
+      cond do
+        is_nil(target_field) -> current_errors
+        map_size(field_errors) > 0 -> Map.merge(current_errors, field_errors)
+        true -> Map.reject(current_errors, fn {field, _} -> to_string(field) == target_field end)
+      end
 
     {params, errors}
   end

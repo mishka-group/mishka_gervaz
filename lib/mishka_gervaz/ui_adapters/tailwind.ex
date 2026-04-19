@@ -1689,7 +1689,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:id, fn -> nil end)
 
     ~H"""
-    <label class={["inline-flex cursor-pointer items-center", @disabled && "opacity-50 cursor-not-allowed"]}>
+    <label class={[
+      "inline-flex cursor-pointer items-center",
+      @disabled && "opacity-50 cursor-not-allowed"
+    ]}>
       <input type="hidden" name={@name} value="false" />
       <div class="relative w-11 h-6">
         <input
