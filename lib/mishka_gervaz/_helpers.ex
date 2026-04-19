@@ -703,8 +703,9 @@ defmodule MishkaGervaz.Helpers do
         end
       end
   """
-  @spec validate_field_errors(AshPhoenix.Form.t(), map(), map()) :: {map(), map()}
+  @spec validate_field_errors(AshPhoenix.Form.t(), map(), map() | nil) :: {map(), map()}
   def validate_field_errors(ash_form, params, current_errors \\ %{}) do
+    current_errors = current_errors || %{}
     target = Map.get(params, "_target")
 
     target_field =
@@ -722,16 +723,12 @@ defmodule MishkaGervaz.Helpers do
       |> Enum.filter(fn {field, _} -> to_string(field) == target_field end)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
-    errors =
-      if target_field do
-        if map_size(field_errors) > 0 do
-          Map.merge(current_errors, field_errors)
-        else
-          Map.reject(current_errors, fn {field, _} -> to_string(field) == target_field end)
-        end
-      else
-        current_errors
-      end
+      errors =
+          cond do
+            is_nil(target_field) -> current_errors
+            map_size(field_errors) > 0 -> Map.merge(current_errors, field_errors)
+            true -> Map.reject(current_errors, fn {field, _} -> to_string(field) == target_field end)
+          end
 
     {params, errors}
   end
