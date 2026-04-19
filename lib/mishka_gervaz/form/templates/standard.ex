@@ -205,13 +205,28 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       render_group_fields(assigns, assigns.static.fields, nil)
     else
       visible_groups = Enum.filter(groups, &accessible?(&1, assigns.state))
-      assigns = assign(assigns, :all_groups, visible_groups)
+
+      grouped_names =
+        groups
+        |> Enum.flat_map(&Map.get(&1, :fields, []))
+        |> MapSet.new()
+
+      ungrouped_fields =
+        Enum.reject(assigns.static.fields, &MapSet.member?(grouped_names, &1.name))
+
+      assigns =
+        assigns
+        |> assign(:all_groups, visible_groups)
+        |> assign(:ungrouped_fields, ungrouped_fields)
 
       ~H"""
       <div>
         <%= for group <- @all_groups do %>
           <% group_assigns = assign(assigns, :group, group) %>
           {render_group(group_assigns)}
+        <% end %>
+        <%= if @ungrouped_fields != [] do %>
+          {render_group_fields(assigns, @ungrouped_fields, nil)}
         <% end %>
       </div>
       """
