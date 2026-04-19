@@ -269,7 +269,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div class={@col_class}>
       <%= for field <- @render_fields do %>
         <% fa = assign(assigns, :field, field) %>
-        {render_field(fa)}
+        <div class={nested_span_class(get_in_map(field, [:ui, :span]))}>
+          {render_field(fa)}
+        </div>
       <% end %>
     </div>
     """
