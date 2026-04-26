@@ -34,6 +34,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
       |> assign(:placeholder, placeholder)
 
     ~H"""
@@ -49,7 +50,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
-        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+        readonly={@readonly}
+        class={[@class, @icon && "pl-9", (@disabled || @readonly) && "bg-gray-100 cursor-not-allowed"]}
         phx-debounce={@phx_debounce}
       />
     </div>
@@ -70,6 +72,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         end
       end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
 
@@ -80,8 +83,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       value={@value}
       placeholder={@placeholder}
       disabled={@disabled}
+      readonly={@readonly}
       autocomplete={@autocomplete}
-      class={[@class, @disabled && "bg-gray-100 cursor-not-allowed"]}
+      class={[@class, (@disabled || @readonly) && "bg-gray-100 cursor-not-allowed"]}
       phx-debounce={@phx_debounce}
     />
     """
@@ -548,6 +552,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:max, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -564,7 +569,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         min={@min}
         max={@max}
         disabled={@disabled}
-        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+        readonly={@readonly}
+        class={[@class, @icon && "pl-9", (@disabled || @readonly) && "bg-gray-100 cursor-not-allowed"]}
       />
     </div>
     """
@@ -579,6 +585,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -592,7 +599,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         name={@name}
         value={@value}
         disabled={@disabled}
-        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+        readonly={@readonly}
+        class={[@class, @icon && "pl-9", (@disabled || @readonly) && "bg-gray-100 cursor-not-allowed"]}
       />
     </div>
     """
@@ -613,6 +621,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:max, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
 
     ~H"""
     <div class="relative">
@@ -630,7 +639,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         max={@max}
         step={@step}
         disabled={@disabled}
-        class={[@class, @icon && "pl-9", @disabled && "bg-gray-100 cursor-not-allowed"]}
+        readonly={@readonly}
+        class={[@class, @icon && "pl-9", (@disabled || @readonly) && "bg-gray-100 cursor-not-allowed"]}
       />
     </div>
     """
@@ -1770,6 +1780,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         end
       end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
 
     ~H"""
     <textarea
@@ -1777,7 +1788,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       placeholder={@placeholder}
       rows={@rows}
       disabled={@disabled}
-      class={[@class, @disabled && "bg-gray-100 cursor-not-allowed"]}
+      readonly={@readonly}
+      class={[@class, (@disabled || @readonly) && "bg-gray-100 cursor-not-allowed"]}
       phx-debounce={@phx_debounce}
     >{@value}</textarea>
     """

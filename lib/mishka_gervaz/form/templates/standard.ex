@@ -586,6 +586,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     type = Map.get(field, :type, :text)
 
     debounce = get_in_map(field, [:ui, :debounce]) || assigns.static.debounce
+    is_readonly = evaluate_readonly(field, assigns.state)
 
     base =
       assigns
@@ -594,28 +595,40 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:id, form_field.id)
       |> assign(:value, Phoenix.HTML.Form.input_value(assigns.state.form, field.name))
       |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
-      |> assign(:disabled, evaluate_readonly(field, assigns.state))
+      |> assign(:disabled, is_readonly)
       |> assign(:module, ui)
       |> assign(:phx_debounce, debounce)
 
     case type do
       :password ->
         base
+        |> assign(:disabled, false)
+        |> assign(:readonly, is_readonly)
         |> assign(:function, :password_input)
         |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
         |> dynamic_component()
 
       t when t in [:text, :email, :url, :tel, :hidden] ->
         base
+        |> assign(:disabled, false)
+        |> assign(:readonly, is_readonly)
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
         |> dynamic_component()
 
       :number ->
-        base |> assign(:function, :number_input) |> dynamic_component()
+        base
+        |> assign(:disabled, false)
+        |> assign(:readonly, is_readonly)
+        |> assign(:function, :number_input)
+        |> dynamic_component()
 
       :textarea ->
-        base |> assign(:function, :textarea) |> dynamic_component()
+        base
+        |> assign(:disabled, false)
+        |> assign(:readonly, is_readonly)
+        |> assign(:function, :textarea)
+        |> dynamic_component()
 
       :select ->
         options = resolve_field_options(field)
@@ -649,10 +662,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :date ->
-        base |> assign(:function, :date_input) |> dynamic_component()
+        base
+        |> assign(:disabled, false)
+        |> assign(:readonly, is_readonly)
+        |> assign(:function, :date_input)
+        |> dynamic_component()
 
       :datetime ->
-        base |> assign(:function, :datetime_input) |> dynamic_component()
+        base
+        |> assign(:disabled, false)
+        |> assign(:readonly, is_readonly)
+        |> assign(:function, :datetime_input)
+        |> dynamic_component()
 
       :range ->
         min = get_in_map(field, [:ui, :min]) || 0
