@@ -155,14 +155,36 @@ defmodule MishkaGervaz.DSL.HooksTest do
   end
 
   describe "hooks DSL schema" do
-    test "all hooks are optional (no defaults)" do
+    @global_keys [
+      :on_load,
+      :before_delete,
+      :after_delete,
+      :on_realtime,
+      :on_expand,
+      :on_filter,
+      :on_event,
+      :on_select,
+      :on_sort
+    ]
+
+    test "all global hooks are optional (no defaults)" do
       schema = MishkaGervaz.Table.Dsl.Hooks.schema()
 
-      # Verify all hooks have no default (they're optional)
-      for {key, config} <- schema do
+      for key <- @global_keys do
+        config = Keyword.get(schema, key)
         assert Keyword.get(config, :default) == nil,
-               "Hook #{key} should have no default"
+               "Global hook #{key} should have no default"
       end
+    end
+
+    test "builtin flags have appropriate defaults" do
+      schema = MishkaGervaz.Table.Dsl.Hooks.schema()
+
+      assert Keyword.get(schema[:switch_to_active_on_empty_archive], :default) == false
+      assert Keyword.get(schema[:switch_to_archive_on_empty_active], :default) == false
+      assert Keyword.get(schema[:clear_selection_after_bulk], :default) == true
+      assert Keyword.get(schema[:reset_page_on_empty_current_page], :default) == false
+      assert Keyword.get(schema[:redirect_on_empty], :default) == nil
     end
 
     test "hooks have correct arity" do

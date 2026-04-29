@@ -539,11 +539,9 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         override_row_action :custom_event, fn _payload, state -> {:ok, state} end
         override_bulk_action :custom_bulk, fn _ids, state -> {:ok, state} end
 
-        builtins do
-          switch_to_active_on_empty_archive true
-          clear_selection_after_bulk true
-          reset_page_on_empty_current_page true
-        end
+        switch_to_active_on_empty_archive true
+        clear_selection_after_bulk true
+        reset_page_on_empty_current_page true
       end
     end
   end

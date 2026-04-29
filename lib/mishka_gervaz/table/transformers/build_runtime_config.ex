@@ -851,17 +851,23 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   defp hook_key(phase, name), do: {phase, name}
 
   defp build_builtin_hooks(dsl_state) do
-    path = @table_path ++ [:hooks, :builtins]
+    path = @table_path ++ [:hooks]
     schema = MishkaGervaz.Table.Dsl.Hooks.builtins_schema()
 
-    values =
+    explicit? =
+      Enum.any?(schema, fn {key, _opts} ->
+        get_opt(dsl_state, path, key, :__unset__) != :__unset__
+      end)
+
+    if explicit? do
       Enum.reduce(schema, %{}, fn {key, opts}, acc ->
         default = Keyword.get(opts, :default)
         value = get_opt(dsl_state, path, key, default)
         Map.put(acc, key, value)
       end)
-
-    if Enum.any?(values, fn {_k, v} -> v not in [nil, false] end), do: values, else: nil
+    else
+      nil
+    end
   end
 
   defp maybe_put(map, _key, nil), do: map

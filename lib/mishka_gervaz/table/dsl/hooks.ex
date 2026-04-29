@@ -34,13 +34,13 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
        - `override_bulk_action :name, fn ids, state -> {:ok, state} end`
 
   4. **Built-in state-transition rules** — opt-in flags for common UX
-     transitions (e.g. switch back to active mode when the archive empties).
+     transitions, declared directly inside `hooks do … end`:
 
-       builtins do
+       hooks do
          switch_to_active_on_empty_archive true
          clear_selection_after_bulk true
          reset_page_on_empty_current_page true
-         redirect_on_empty to: "/dashboard"
+         redirect_on_empty "/dashboard"
        end
 
   ## Return Values
@@ -67,15 +67,13 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
 
         after_bulk_action :unarchive, fn _result, _state -> :ok end
 
-        builtins do
-          switch_to_active_on_empty_archive true
-        end
+        switch_to_active_on_empty_archive true
       end
   """
 
   alias MishkaGervaz.Table.Entities.ActionHook
 
-  @hooks_schema [
+  @global_hooks_schema [
     on_load: [
       type: {:fun, 2},
       doc: "`fn query, state -> {:cont, query} | query` - Before data loaded. Modify query."
@@ -150,6 +148,8 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     ]
   ]
 
+  @hooks_schema @global_hooks_schema ++ @builtins_schema
+
   @hook_phases [
     :before_row_action,
     :after_row_action,
@@ -185,14 +185,6 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     }
   end
 
-  defp builtins_section do
-    %Spark.Dsl.Section{
-      name: :builtins,
-      describe: "Opt-in built-in state-transition rules.",
-      schema: @builtins_schema
-    }
-  end
-
   @doc """
   Returns the hooks section definition.
   """
@@ -201,8 +193,7 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
       name: :hooks,
       describe: "Lifecycle callbacks.",
       schema: @hooks_schema,
-      entities: Enum.map(@hook_phases, &action_hook_entity/1),
-      sections: [builtins_section()]
+      entities: Enum.map(@hook_phases, &action_hook_entity/1)
     }
   end
 end

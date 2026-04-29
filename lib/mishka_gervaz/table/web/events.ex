@@ -462,8 +462,6 @@ defmodule MishkaGervaz.Table.Web.Events do
 
           case result do
             {:ok, updated} ->
-              socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -473,6 +471,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                   socket
                 )
 
+              socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
               socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :unarchive)
               {:noreply, socket}
 
@@ -485,8 +484,6 @@ defmodule MishkaGervaz.Table.Web.Events do
                   record_id: id
                 )
 
-              socket = put_error_flash(socket, error)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -496,6 +493,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                   socket
                 )
 
+              socket = put_error_flash(socket, error)
               {:noreply, socket}
           end
         end
@@ -513,8 +511,6 @@ defmodule MishkaGervaz.Table.Web.Events do
 
           case result do
             {:ok, destroyed} ->
-              socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -523,6 +519,8 @@ defmodule MishkaGervaz.Table.Web.Events do
                   [destroyed, state],
                   socket
                 )
+
+              socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
 
               socket =
                 MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :permanent_destroy)
@@ -538,8 +536,6 @@ defmodule MishkaGervaz.Table.Web.Events do
                   record_id: id
                 )
 
-              socket = put_error_flash(socket, error)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -549,6 +545,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                   socket
                 )
 
+              socket = put_error_flash(socket, error)
               {:noreply, socket}
           end
         end
@@ -687,8 +684,6 @@ defmodule MishkaGervaz.Table.Web.Events do
 
           case result do
             {:ok, updated} ->
-              socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, updated)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -698,6 +693,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                   socket
                 )
 
+              socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, updated)
               {:noreply, socket}
 
             {:error, reason} ->
@@ -709,8 +705,6 @@ defmodule MishkaGervaz.Table.Web.Events do
                   record_id: id
                 )
 
-              socket = put_error_flash(socket, error)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -720,6 +714,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                   socket
                 )
 
+              socket = put_error_flash(socket, error)
               {:noreply, socket}
           end
         end
@@ -747,11 +742,6 @@ defmodule MishkaGervaz.Table.Web.Events do
               run_hook(state, :after_delete, [deleted, state])
 
               socket =
-                socket
-                |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-                |> hide_row(state, record.id)
-
-              socket =
                 apply_action_hook_socket(
                   state,
                   :on_row_action_success,
@@ -759,6 +749,11 @@ defmodule MishkaGervaz.Table.Web.Events do
                   [deleted, state],
                   socket
                 )
+
+              socket =
+                socket
+                |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+                |> hide_row(state, record.id)
 
               socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, action_name)
               {:noreply, socket}
@@ -772,8 +767,6 @@ defmodule MishkaGervaz.Table.Web.Events do
                   record_id: id
                 )
 
-              socket = put_error_flash(socket, error)
-
               socket =
                 apply_action_hook_socket(
                   state,
@@ -783,6 +776,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                   socket
                 )
 
+              socket = put_error_flash(socket, error)
               {:noreply, socket}
           end
         end
@@ -1009,11 +1003,6 @@ defmodule MishkaGervaz.Table.Web.Events do
             run_hook(state, :after_delete, [deleted, state])
 
             socket =
-              socket
-              |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-              |> hide_row(state, record.id)
-
-            socket =
               apply_action_hook_socket(
                 state,
                 :on_row_action_success,
@@ -1021,6 +1010,11 @@ defmodule MishkaGervaz.Table.Web.Events do
                 [deleted, state],
                 socket
               )
+
+            socket =
+              socket
+              |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+              |> hide_row(state, record.id)
 
             socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :delete)
             {:noreply, socket}
@@ -1034,8 +1028,6 @@ defmodule MishkaGervaz.Table.Web.Events do
                 record_id: record.id
               )
 
-            socket = put_error_flash(socket, error)
-
             socket =
               apply_action_hook_socket(
                 state,
@@ -1045,6 +1037,7 @@ defmodule MishkaGervaz.Table.Web.Events do
                 socket
               )
 
+            socket = put_error_flash(socket, error)
             {:noreply, socket}
         end
       end
