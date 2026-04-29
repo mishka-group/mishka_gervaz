@@ -322,12 +322,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     show_submit =
       submit_button != nil and
+        evaluate_button_active(submit_button, state) and
         evaluate_button_visible(submit_button, state) and
         not evaluate_button_restricted(submit_button, state)
 
     show_cancel =
       cancel_button != nil and
         (state.mode == :update or state.dirty?) and
+        evaluate_button_active(cancel_button, state) and
         evaluate_button_visible(cancel_button, state) and
         not evaluate_button_restricted(cancel_button, state)
 
@@ -1422,6 +1424,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp evaluate_button_visible(button, state) do
     case button[:visible] do
+      f when is_function(f, 1) -> f.(state)
+      val when is_boolean(val) -> val
+      _ -> true
+    end
+  end
+
+  defp evaluate_button_active(button, state) do
+    case button[:active] do
       f when is_function(f, 1) -> f.(state)
       val when is_boolean(val) -> val
       _ -> true

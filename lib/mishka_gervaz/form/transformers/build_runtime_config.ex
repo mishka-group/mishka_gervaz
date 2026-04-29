@@ -493,69 +493,48 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp build_submit(dsl_state, domain_defaults) do
-    domain_submit = domain_defaults[:submit]
-
+  defp build_submit(dsl_state, _domain_defaults) do
     case find_entity(dsl_state, @form_path, Submit) do
-      nil ->
-        %{
-          create: %{
-            label: (domain_submit && domain_submit[:create_label]) || "Create",
-            disabled: false,
-            restricted: false,
-            visible: true
-          },
-          update: %{
-            label: (domain_submit && domain_submit[:update_label]) || "Update",
-            disabled: false,
-            restricted: false,
-            visible: true
-          },
-          cancel: %{
-            label: (domain_submit && domain_submit[:cancel_label]) || "Cancel",
-            disabled: false,
-            restricted: false,
-            visible: true
-          },
-          position: (domain_submit && domain_submit[:position]) || :bottom,
-          ui: nil
-        }
-
-      entity ->
-        %{
-          create: button_to_map(entity.create, domain_submit, :create_label, "Create"),
-          update: button_to_map(entity.update, domain_submit, :update_label, "Update"),
-          cancel: button_to_map(entity.cancel, domain_submit, :cancel_label, "Cancel"),
-          position: entity.position,
-          ui: maybe_ui(entity.ui, &submit_ui_to_map/1, &has_submit_ui_values?/1)
-        }
+      nil -> nil
+      %Submit{} = entity -> entity_to_raw_map(entity)
     end
   end
 
-  defp button_to_map(nil, _domain_submit, _domain_key, _fallback), do: nil
-
-  defp button_to_map(%Submit.Button{} = btn, domain_submit, domain_key, fallback) do
+  defp entity_to_raw_map(%Submit{} = entity) do
     %{
-      label: btn.label || (domain_submit && domain_submit[domain_key]) || fallback,
+      create: button_to_raw_map(entity.create),
+      update: button_to_raw_map(entity.update),
+      cancel: button_to_raw_map(entity.cancel),
+      position: entity.position,
+      ui: ui_to_raw_map(entity.ui)
+    }
+  end
+
+  defp button_to_raw_map(nil), do: nil
+
+  defp button_to_raw_map(%Submit.Button{} = btn) do
+    %{
+      label: btn.label,
+      active: btn.active,
       disabled: btn.disabled,
       restricted: btn.restricted,
       visible: btn.visible
     }
   end
 
-  defp has_submit_ui_values?(%Submit.Ui{} = ui) do
-    any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{}
-  end
+  defp ui_to_raw_map(nil), do: nil
 
-  defp has_submit_ui_values?(_), do: false
-
-  defp submit_ui_to_map(%Submit.Ui{} = ui) do
-    %{
-      submit_class: ui.submit_class,
-      cancel_class: ui.cancel_class,
-      wrapper_class: ui.wrapper_class,
-      extra: ui.extra
-    }
+  defp ui_to_raw_map(%Submit.Ui{} = ui) do
+    if any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{} do
+      %{
+        submit_class: ui.submit_class,
+        cancel_class: ui.cancel_class,
+        wrapper_class: ui.wrapper_class,
+        extra: ui.extra
+      }
+    else
+      nil
+    end
   end
 
   defp build_presentation(dsl_state, domain_defaults) do

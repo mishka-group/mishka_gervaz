@@ -7,6 +7,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
 
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
+  alias MishkaGervaz.Form.Entities.Submit
   import MishkaGervaz.Table.Transformers.Helpers
 
   @form_path [:mishka_gervaz, :form]
@@ -24,13 +25,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
     persistence: :none,
     columns: 1,
     responsive: true
-  }
-
-  @submit_defaults %{
-    create_label: "Create",
-    update_label: "Update",
-    cancel_label: "Cancel",
-    position: :bottom
   }
 
   @impl true
@@ -60,8 +54,51 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
       actions: build_actions(dsl_state),
       theme: build_section(dsl_state, :theme, @theme_defaults),
       layout: build_section(dsl_state, :layout, @layout_defaults),
-      submit: build_section(dsl_state, :submit, @submit_defaults)
+      submit: build_submit(dsl_state)
     }
+  end
+
+  @spec build_submit(Spark.Dsl.t()) :: map() | nil
+  defp build_submit(dsl_state) do
+    case find_entity(dsl_state, @form_path, Submit) do
+      nil ->
+        nil
+
+      %Submit{} = entity ->
+        %{
+          create: button_to_map(entity.create),
+          update: button_to_map(entity.update),
+          cancel: button_to_map(entity.cancel),
+          position: entity.position,
+          ui: ui_to_map(entity.ui)
+        }
+    end
+  end
+
+  defp button_to_map(nil), do: nil
+
+  defp button_to_map(%Submit.Button{} = btn) do
+    %{
+      label: btn.label,
+      disabled: btn.disabled,
+      restricted: btn.restricted,
+      visible: btn.visible
+    }
+  end
+
+  defp ui_to_map(nil), do: nil
+
+  defp ui_to_map(%Submit.Ui{} = ui) do
+    if any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{} do
+      %{
+        submit_class: ui.submit_class,
+        cancel_class: ui.cancel_class,
+        wrapper_class: ui.wrapper_class,
+        extra: ui.extra
+      }
+    else
+      nil
+    end
   end
 
   @spec build_actions(Spark.Dsl.t()) :: map()

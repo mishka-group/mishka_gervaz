@@ -101,10 +101,10 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
       assert submit.cancel.label == "Discard"
     end
 
-    test "returns map with defaults for MinimalForm" do
+    test "MinimalForm inherits the domain submit when no resource block is defined" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.create.label == "Create"
-      assert submit.update.label == "Update"
+      assert submit.create.label == "Save"
+      assert submit.update.label == "Save Changes"
       assert submit.cancel.label == "Cancel"
       assert submit.cancel != nil
       assert submit.position == :bottom
@@ -409,14 +409,14 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
       assert submit.cancel.visible == false
     end
 
-    test "NoButtonsForm all buttons are nil" do
+    test "NoButtonsForm inherits all three buttons from the domain" do
       submit = FormInfo.submit(NoButtonsForm)
-      assert submit.create == nil
-      assert submit.update == nil
-      assert submit.cancel == nil
+      assert submit.create.label == "Save"
+      assert submit.update.label == "Save Changes"
+      assert submit.cancel.label == "Cancel"
     end
 
-    test "NoButtonsForm still has position" do
+    test "NoButtonsForm preserves the resource position" do
       submit = FormInfo.submit(NoButtonsForm)
       assert submit.position == :bottom
     end

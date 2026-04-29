@@ -172,28 +172,28 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
       assert length(config.fields.list) == 1
     end
 
-    test "submit has defaults" do
+    test "submit inherits buttons from the domain" do
       config = FormInfo.config(MinimalForm)
-      assert config.submit.create.label == "Create"
-      assert config.submit.update.label == "Update"
+      assert config.submit.create.label == "Save"
+      assert config.submit.update.label == "Save Changes"
       assert config.submit.cancel.label == "Cancel"
     end
 
-    test "submit default buttons have disabled false" do
+    test "inherited buttons have disabled false" do
       config = FormInfo.config(MinimalForm)
       assert config.submit.create.disabled == false
       assert config.submit.update.disabled == false
       assert config.submit.cancel.disabled == false
     end
 
-    test "submit default buttons have restricted false" do
+    test "inherited buttons have restricted false" do
       config = FormInfo.config(MinimalForm)
       assert config.submit.create.restricted == false
       assert config.submit.update.restricted == false
       assert config.submit.cancel.restricted == false
     end
 
-    test "submit default buttons have visible true" do
+    test "inherited buttons have visible true" do
       config = FormInfo.config(MinimalForm)
       assert config.submit.create.visible == true
       assert config.submit.update.visible == true
@@ -232,17 +232,21 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
     end
   end
 
-  describe "NoButtonsForm empty submit block" do
-    test "all buttons are nil" do
+  describe "NoButtonsForm empty submit block inherits from domain" do
+    test "buttons fall back to the domain configuration" do
       config = FormInfo.config(NoButtonsForm)
-      assert config.submit.create == nil
-      assert config.submit.update == nil
-      assert config.submit.cancel == nil
+      assert config.submit.create.label == "Save"
+      assert config.submit.update.label == "Save Changes"
+      assert config.submit.cancel.label == "Cancel"
     end
 
-    test "position and ui still present" do
+    test "position resolves to the resource value" do
       config = FormInfo.config(NoButtonsForm)
       assert config.submit.position == :bottom
+    end
+
+    test "ui inherits from the domain when resource has none" do
+      config = FormInfo.config(NoButtonsForm)
       assert config.submit.ui == nil
     end
   end

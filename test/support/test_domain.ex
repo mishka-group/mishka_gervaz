@@ -29,8 +29,9 @@ defmodule MishkaGervaz.Test.Domain do
       end
 
       submit do
-        create_label "Save"
-        update_label "Save Changes"
+        create label: "Save"
+        update label: "Save Changes"
+        cancel label: "Cancel"
         position :bottom
       end
     end
