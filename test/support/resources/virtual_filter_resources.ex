@@ -9,6 +9,12 @@ defmodule MishkaGervaz.Test.VirtualFilter.Domain do
       actor_key :current_user
       master_check fn user -> user && Map.get(user, :site_id) == nil end
       pagination type: :numbered, page_size: 10
+
+      actions do
+        read {:master_read, :read}
+        get {:master_get, :read}
+        destroy {:master_destroy, :destroy}
+      end
     end
   end
 

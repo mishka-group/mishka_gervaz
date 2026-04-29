@@ -74,9 +74,9 @@ defmodule MishkaGervaz.Table.Transformers.BuildDomainConfig do
     path = @table_path ++ [:actions]
 
     %{
-      read: get_opt(dsl_state, path, :read, {:master_read, :tenant_read}),
-      get: get_opt(dsl_state, path, :get, {:master_get, :read}),
-      destroy: get_opt(dsl_state, path, :destroy, {:master_destroy, :destroy})
+      read: get_opt(dsl_state, path, :read),
+      get: get_opt(dsl_state, path, :get),
+      destroy: get_opt(dsl_state, path, :destroy)
     }
   end
 

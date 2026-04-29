@@ -77,22 +77,16 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp build_source(dsl_state, domain_defaults, multitenancy) do
+  defp build_source(dsl_state, domain_defaults, _multitenancy) do
     source_path = @form_path ++ [:source]
     actions_path = source_path ++ [:actions]
     preload_path = source_path ++ [:preload]
 
-    create =
-      get_opt(dsl_state, actions_path, :create) || domain_defaults[:create_action] ||
-        default_action(:create, multitenancy)
+    domain_actions = domain_defaults[:actions] || %{}
 
-    update =
-      get_opt(dsl_state, actions_path, :update) || domain_defaults[:update_action] ||
-        default_action(:update, multitenancy)
-
-    read =
-      get_opt(dsl_state, actions_path, :read) || domain_defaults[:read_action] ||
-        default_action(:read, multitenancy)
+    create = get_opt(dsl_state, actions_path, :create) || domain_actions[:create]
+    update = get_opt(dsl_state, actions_path, :update) || domain_actions[:update]
+    read = get_opt(dsl_state, actions_path, :read) || domain_actions[:read]
 
     %{
       actor_key:
@@ -115,13 +109,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       access_gate: build_access_gate(dsl_state, source_path)
     }
   end
-
-  defp default_action(:create, %{enabled: true}), do: {:master_create, :create}
-  defp default_action(:create, _), do: :create
-  defp default_action(:update, %{enabled: true}), do: {:master_update, :update}
-  defp default_action(:update, _), do: :update
-  defp default_action(:read, %{enabled: true}), do: {:master_get, :read}
-  defp default_action(:read, _), do: :read
 
   defp build_access_rules(dsl_state, source_path) do
     dsl_state

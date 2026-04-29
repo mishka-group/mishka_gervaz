@@ -18,6 +18,12 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergeDomain do
       actor_key :current_user
       master_check fn user -> user && user.role == :admin end
 
+      actions do
+        create {:master_create, :create}
+        update {:master_update, :update}
+        read {:master_get, :read}
+      end
+
       submit do
         create label: "Domain Create"
         update label: "Domain Update"
@@ -55,6 +61,12 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergePartialDomain do
     form do
       actor_key :current_user
       master_check fn user -> user && user.role == :admin end
+
+      actions do
+        create {:master_create, :create}
+        update {:master_update, :update}
+        read {:master_get, :read}
+      end
 
       submit do
         cancel label: "Partial Cancel"

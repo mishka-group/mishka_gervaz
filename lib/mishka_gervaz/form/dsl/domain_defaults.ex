@@ -18,18 +18,21 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
   @actions_schema [
     create: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_create, :create},
-      doc: "Default create action or {master_action, tenant_action}."
+      doc:
+        "Default create action. Atom (used for both master and tenant) or tuple " <>
+          "`{master_action, tenant_action}`. Inherited by all form resources in the domain."
     ],
     update: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_update, :update},
-      doc: "Default update action or {master_action, tenant_action}."
+      doc:
+        "Default update action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Inherited by all form resources in the domain."
     ],
     read: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_get, :read},
-      doc: "Default read/get action or {master_action, tenant_action}."
+      doc:
+        "Default read/get action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Inherited by all form resources in the domain."
     ]
   ]
 

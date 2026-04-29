@@ -12,18 +12,22 @@ defmodule MishkaGervaz.Form.Dsl.Source do
   @actions_schema [
     create: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_create, :create},
-      doc: "Create action. Atom or tuple `{master_action, tenant_action}`."
+      doc:
+        "Create action. Atom (used for both master and tenant) or tuple " <>
+          "`{master_action, tenant_action}`. Required either here or on the domain — " <>
+          "compile fails otherwise."
     ],
     update: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_update, :update},
-      doc: "Update action. Atom or tuple `{master_action, tenant_action}`."
+      doc:
+        "Update action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Required either here or on the domain."
     ],
     read: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_get, :read},
-      doc: "Read/get action. Atom or tuple `{master_action, tenant_action}`."
+      doc:
+        "Read/get action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Required either here or on the domain."
     ]
   ]
 

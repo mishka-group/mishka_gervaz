@@ -16,6 +16,12 @@ defmodule MishkaGervaz.Test.Domain do
 
       ui_adapter MishkaGervaz.UIAdapters.Tailwind
 
+      actions do
+        read {:master_read, :read}
+        get {:master_get, :read}
+        destroy {:master_destroy, :destroy}
+      end
+
       archive do
         read_action {:master_archived, :archived}
         get_action {:master_get_archived, :get_archived}
@@ -30,6 +36,12 @@ defmodule MishkaGervaz.Test.Domain do
       template MishkaGervaz.Form.Templates.Standard
       features :all
       ui_adapter MishkaGervaz.UIAdapters.Tailwind
+
+      actions do
+        create {:master_create, :create}
+        update {:master_update, :update}
+        read {:master_get, :read}
+      end
 
       layout do
         responsive true

@@ -40,11 +40,27 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
       config
       |> merge_domain_defaults(domain_defaults)
+      |> merge_actions(domain_defaults)
       |> merge_archive(domain_defaults, resource)
       |> apply_realtime_defaults(resource)
     else
       config
     end
+  end
+
+  @spec merge_actions(map(), map()) :: map()
+  defp merge_actions(config, domain_defaults) do
+    domain_actions = domain_defaults[:actions] || %{}
+
+    update_in(config, [:source, :actions], fn actions ->
+      actions = actions || %{}
+
+      %{
+        read: actions[:read] || domain_actions[:read],
+        get: actions[:get] || domain_actions[:get],
+        destroy: actions[:destroy] || domain_actions[:destroy]
+      }
+    end)
   end
 
   @spec merge_archive(map(), map(), module()) :: map()

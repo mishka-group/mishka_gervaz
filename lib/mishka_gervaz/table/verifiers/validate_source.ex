@@ -7,8 +7,11 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   alias Spark.Dsl.Verifier
   alias MishkaGervaz.Table.Entities.Realtime
 
+  @actions_path [:mishka_gervaz, :table, :source, :actions]
   @archive_path [:mishka_gervaz, :table, :source, :archive]
   @realtime_path [:mishka_gervaz, :table, :realtime]
+
+  @required_actions [:read, :get, :destroy]
 
   @archive_opts [
     :enabled,
@@ -30,10 +33,80 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
 
   defp do_verify(dsl_state) do
     with module <- Verifier.get_persisted(dsl_state, :module),
+         :ok <- validate_required_actions(dsl_state, module),
          :ok <- validate_archive_section(dsl_state, module),
          :ok <- validate_archive_inheritance(dsl_state, module),
          :ok <- validate_realtime_prefix(dsl_state, module),
          do: :ok
+  end
+
+  @spec validate_required_actions(Spark.Dsl.t(), module()) ::
+          :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_required_actions(dsl_state, module) do
+    domain_actions = domain_actions(module)
+
+    missing =
+      Enum.filter(@required_actions, fn key ->
+        is_nil(Verifier.get_option(dsl_state, @actions_path, key)) and
+          is_nil(Map.get(domain_actions, key))
+      end)
+
+    case missing do
+      [] -> :ok
+      _ -> dsl_error(module, @actions_path, missing_actions_message(missing))
+    end
+  end
+
+  defp domain_actions(module) do
+    with {:ok, domain} <- safe_domain(module),
+         %{table: %{actions: actions}} when is_map(actions) <-
+           Spark.Dsl.Extension.get_persisted(domain, :mishka_gervaz_domain_config) do
+      actions
+    else
+      _ -> %{}
+    end
+  rescue
+    _ -> %{}
+  end
+
+  defp missing_actions_message(missing) do
+    keys = Enum.map_join(missing, ", ", &inspect/1)
+
+    """
+    Missing required table source action(s): #{keys}
+
+    Each of #{Enum.map_join(@required_actions, ", ", &inspect/1)} must be defined
+    either on the resource or on the domain. Resource values win when both are set.
+
+    Provide them on the resource:
+
+        mishka_gervaz do
+          table do
+            source do
+              actions do
+                read {:master_read, :read}
+                get {:master_get, :read}
+                destroy {:master_destroy, :destroy}
+              end
+            end
+          end
+        end
+
+    Or on the domain (inherited by every resource in the domain):
+
+        mishka_gervaz do
+          table do
+            actions do
+              read {:master_read, :read}
+              get {:master_get, :read}
+              destroy {:master_destroy, :destroy}
+            end
+          end
+        end
+
+    Each value can be a single atom (used for both master and tenant requests)
+    or a tuple `{master_action, tenant_action}`.
+    """
   end
 
   @spec validate_archive_section(Spark.Dsl.t(), module()) ::

@@ -62,6 +62,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
   @spec merge_domain_defaults(map(), map()) :: map()
   defp merge_domain_defaults(config, domain_defaults) when domain_defaults == %{} do
     config
+    |> merge_actions(%{})
     |> merge_submit(%{})
     |> resolve_default_master_check()
   end
@@ -71,9 +72,24 @@ defmodule MishkaGervaz.Resource.Info.Form do
     |> update_in([:source, :actor_key], fn v -> v || domain_defaults[:actor_key] end)
     |> update_in([:source, :master_check], fn v -> v || domain_defaults[:master_check] end)
     |> merge_presentation_defaults(domain_defaults)
+    |> merge_actions(domain_defaults)
     |> merge_submit(domain_defaults)
     |> merge_layout_defaults(domain_defaults)
     |> resolve_default_master_check()
+  end
+
+  defp merge_actions(config, domain_defaults) do
+    domain_actions = domain_defaults[:actions] || %{}
+
+    update_in(config, [:source, :actions], fn actions ->
+      actions = actions || %{}
+
+      %{
+        create: actions[:create] || domain_actions[:create],
+        update: actions[:update] || domain_actions[:update],
+        read: actions[:read] || domain_actions[:read]
+      }
+    end)
   end
 
   defp merge_submit(config, domain_defaults) do

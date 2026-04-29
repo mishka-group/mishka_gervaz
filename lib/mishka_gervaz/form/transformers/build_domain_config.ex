@@ -106,9 +106,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
     path = @form_path ++ [:actions]
 
     %{
-      create: get_opt(dsl_state, path, :create, {:master_create, :create}),
-      update: get_opt(dsl_state, path, :update, {:master_update, :update}),
-      read: get_opt(dsl_state, path, :read, {:master_get, :read})
+      create: get_opt(dsl_state, path, :create),
+      update: get_opt(dsl_state, path, :update),
+      read: get_opt(dsl_state, path, :read)
     }
   end
 

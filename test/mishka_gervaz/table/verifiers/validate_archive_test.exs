@@ -106,6 +106,12 @@ defmodule MishkaGervaz.Verifiers.ValidateArchiveTest do
           table do
             actor_key :current_user
             master_check fn user -> user && user.role == :admin end
+
+            actions do
+              read {:master_read, :read}
+              get {:master_get, :read}
+              destroy {:master_destroy, :destroy}
+            end
           end
         end
 

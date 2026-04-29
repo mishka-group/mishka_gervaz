@@ -105,6 +105,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     }
   end
 
+  defp resolve_action(nil, _multitenancy), do: nil
   defp resolve_action({_master, _tenant} = tuple, _multitenancy), do: tuple
   defp resolve_action(action, _multitenancy) when is_atom(action), do: action
 
@@ -125,21 +126,9 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
     domain_actions = domain_defaults[:actions] || %{}
 
-    dsl_read = get_opt(dsl_state, actions_path, :read)
-    dsl_get = get_opt(dsl_state, actions_path, :get)
-    dsl_destroy = get_opt(dsl_state, actions_path, :destroy)
-
-    read =
-      dsl_read || domain_actions[:read] ||
-        default_action(:read, multitenancy)
-
-    get =
-      dsl_get || domain_actions[:get] ||
-        default_action(:get, multitenancy)
-
-    destroy =
-      dsl_destroy || domain_actions[:destroy] ||
-        default_action(:destroy, multitenancy)
+    read = get_opt(dsl_state, actions_path, :read) || domain_actions[:read]
+    get = get_opt(dsl_state, actions_path, :get) || domain_actions[:get]
+    destroy = get_opt(dsl_state, actions_path, :destroy) || domain_actions[:destroy]
 
     %{
       actor_key:
@@ -160,13 +149,6 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       archive: build_archive(dsl_state, multitenancy, has_archival?)
     }
   end
-
-  defp default_action(:read, %{enabled: true}), do: {:master_read, :tenant_read}
-  defp default_action(:read, _), do: :read
-  defp default_action(:get, %{enabled: true}), do: {:master_get, :get}
-  defp default_action(:get, _), do: :get
-  defp default_action(:destroy, %{enabled: true}), do: {:master_destroy, :destroy}
-  defp default_action(:destroy, _), do: :destroy
 
   @archive_keys [
     :enabled,

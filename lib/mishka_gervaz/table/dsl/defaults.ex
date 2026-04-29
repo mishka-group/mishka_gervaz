@@ -13,18 +13,21 @@ defmodule MishkaGervaz.Table.Dsl.Defaults do
   @actions_schema [
     read: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_read, :tenant_read},
-      doc: "Default read action or {master_action, tenant_action}."
+      doc:
+        "Default read action. Atom (used for both master and tenant) or tuple " <>
+          "`{master_action, tenant_action}`. Inherited by all resources in the domain."
     ],
     get: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_get, :read},
-      doc: "Default get action."
+      doc:
+        "Default get action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Inherited by all resources in the domain."
     ],
     destroy: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_destroy, :destroy},
-      doc: "Default destroy action."
+      doc:
+        "Default destroy action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Inherited by all resources in the domain."
     ]
   ]
 
