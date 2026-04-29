@@ -350,7 +350,12 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
         end
       end
 
-      @spec adapt_lifecycle_args(map() | nil, {atom(), atom()}, list(), Phoenix.LiveView.Socket.t()) ::
+      @spec adapt_lifecycle_args(
+              map() | nil,
+              {atom(), atom()},
+              list(),
+              Phoenix.LiveView.Socket.t()
+            ) ::
               list()
       defp adapt_lifecycle_args(hooks, hook_key, args, socket) when is_map(hooks) do
         case Map.get(hooks, hook_key) do

@@ -489,7 +489,10 @@ defmodule MishkaGervaz.Table.Web.Events do
                 )
 
               socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-              socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :unarchive)
+
+              socket =
+                MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :unarchive)
+
               {:noreply, socket}
 
             {:error, reason} ->
@@ -540,7 +543,11 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
 
               socket =
-                MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :permanent_destroy)
+                MishkaGervaz.Table.Web.AutoState.after_row_action(
+                  socket,
+                  state,
+                  :permanent_destroy
+                )
 
               {:noreply, socket}
 
@@ -680,7 +687,12 @@ defmodule MishkaGervaz.Table.Web.Events do
 
       @spec do_update(State.t(), map(), atom(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
-      defp do_update(state, %{"id" => id, "_action_name" => action_name} = params, action_spec, socket) do
+      defp do_update(
+             state,
+             %{"id" => id, "_action_name" => action_name} = params,
+             action_spec,
+             socket
+           ) do
         do_update_with_name(state, params, action_spec, socket, action_name)
       end
 
@@ -772,7 +784,9 @@ defmodule MishkaGervaz.Table.Web.Events do
                 |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
                 |> hide_row(state, record.id)
 
-              socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, action_name)
+              socket =
+                MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, action_name)
+
               {:noreply, socket}
 
             {:error, reason} ->

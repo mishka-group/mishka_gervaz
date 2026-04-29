@@ -40,6 +40,7 @@ defmodule MishkaGervaz.Table.Web.Events.HookRunnerTest do
 
     test "invokes function under {:after_row_action, :name}" do
       hooks = %{{:after_row_action, :delete} => fn result, _state -> {:got, result} end}
+
       assert HookRunner.run_hook(hooks, {:after_row_action, :delete}, [{:ok, :rec}, %{}]) ==
                {:got, {:ok, :rec}}
     end

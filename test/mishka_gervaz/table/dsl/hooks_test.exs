@@ -172,6 +172,7 @@ defmodule MishkaGervaz.DSL.HooksTest do
 
       for key <- @global_keys do
         config = Keyword.get(schema, key)
+
         assert Keyword.get(config, :default) == nil,
                "Global hook #{key} should have no default"
       end
