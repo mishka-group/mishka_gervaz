@@ -168,52 +168,25 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   defp default_action(:destroy, %{enabled: true}), do: {:master_destroy, :destroy}
   defp default_action(:destroy, _), do: :destroy
 
-  defp build_archive(dsl_state, multitenancy, has_archival?) do
-    path = @table_path ++ [:source, :archive]
-    opts = [:enabled, :restricted, :display, :read_action]
-    section_defined? = any_set?(Enum.map(opts, &get_opt(dsl_state, path, &1)))
+  @archive_keys [
+    :enabled,
+    :restricted,
+    :visible,
+    :read_action,
+    :get_action,
+    :restore_action,
+    :destroy_action
+  ]
 
-    cond do
-      not section_defined? and not has_archival? -> nil
-      not section_defined? and has_archival? -> archive_defaults(multitenancy)
-      true -> archive_config(dsl_state, multitenancy)
+  defp build_archive(dsl_state, _multitenancy, _has_archival?) do
+    path = @table_path ++ [:source, :archive]
+    values = Map.new(@archive_keys, &{&1, get_opt(dsl_state, path, &1)})
+
+    if any_set?(Map.values(values)) do
+      Map.reject(values, fn {_, v} -> is_nil(v) end)
+    else
+      nil
     end
-  end
-
-  defp archive_defaults(multitenancy) do
-    %{
-      enabled: true,
-      restricted: false,
-      visible: true,
-      actions: %{
-        read: resolve_action({:master_archived, :archived}, multitenancy),
-        get: resolve_action({:master_get_archived, :get_archived}, multitenancy),
-        restore: resolve_action({:master_unarchive, :unarchive}, multitenancy),
-        destroy: resolve_action({:master_permanent_destroy, :permanent_destroy}, multitenancy)
-      }
-    }
-  end
-
-  defp archive_config(dsl_state, multitenancy) do
-    path = @table_path ++ [:source, :archive]
-
-    read = get_opt(dsl_state, path, :read_action)
-    get = get_opt(dsl_state, path, :get_action)
-    restore = get_opt(dsl_state, path, :restore_action)
-    destroy = get_opt(dsl_state, path, :destroy_action)
-
-    %{
-      enabled: get_opt(dsl_state, path, :enabled, true),
-      restricted: get_opt(dsl_state, path, :restricted, false),
-      visible: get_opt(dsl_state, path, :visible, true),
-      actions: %{
-        read: resolve_action(read || {:master_archived, :archived}, multitenancy),
-        get: resolve_action(get || {:master_get_archived, :get_archived}, multitenancy),
-        restore: resolve_action(restore || {:master_unarchive, :unarchive}, multitenancy),
-        destroy:
-          resolve_action(destroy || {:master_permanent_destroy, :permanent_destroy}, multitenancy)
-      }
-    }
   end
 
   defp build_realtime(dsl_state, domain_defaults) do

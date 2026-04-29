@@ -40,10 +40,32 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
       config
       |> merge_domain_defaults(domain_defaults)
+      |> merge_archive(domain_defaults, resource)
       |> apply_realtime_defaults(resource)
     else
       config
     end
+  end
+
+  @spec merge_archive(map(), map(), module()) :: map()
+  defp merge_archive(config, domain_defaults, resource) do
+    has_archival? = AshArchival.Resource in Spark.extensions(resource)
+
+    resource_archive = get_in(config, [:source, :archive])
+    domain_archive = domain_defaults[:archive]
+    multitenancy = config[:multitenancy] || %{enabled: false}
+
+    merged =
+      MishkaGervaz.Table.ArchiveMerger.merge(
+        resource_archive,
+        domain_archive,
+        multitenancy,
+        has_archival?
+      )
+
+    put_in(config, [:source, :archive], merged)
+  rescue
+    _ -> config
   end
 
   @spec get_domain_defaults(module()) :: map()

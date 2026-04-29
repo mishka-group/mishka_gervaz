@@ -15,6 +15,13 @@ defmodule MishkaGervaz.Test.Domain do
       pagination type: :numbered, page_size: 20
 
       ui_adapter MishkaGervaz.UIAdapters.Tailwind
+
+      archive do
+        read_action {:master_archived, :archived}
+        get_action {:master_get_archived, :get_archived}
+        restore_action {:master_unarchive, :unarchive}
+        destroy_action {:master_permanent_destroy, :permanent_destroy}
+      end
     end
 
     form do
@@ -61,6 +68,11 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.NestedDslForm
     resource MishkaGervaz.Test.Resources.SubmitOptionsForm
     resource MishkaGervaz.Test.Resources.NoButtonsForm
+    resource MishkaGervaz.Test.Resources.ArchiveMergeNoExt
+    resource MishkaGervaz.Test.Resources.ArchiveMergeInheritDomain
+    resource MishkaGervaz.Test.Resources.ArchiveMergeEnabledFalse
+    resource MishkaGervaz.Test.Resources.ArchiveMergePartial
+    resource MishkaGervaz.Test.Resources.ArchiveMergeAtomAction
     allow_unregistered? true
   end
 end

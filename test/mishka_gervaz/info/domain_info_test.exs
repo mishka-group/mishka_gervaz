@@ -39,6 +39,18 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
       assert length(config.navigation.menu_groups) == 2
     end
+
+    test "config table section persists the domain archive defaults" do
+      config = DomainInfo.domain_config(Domain)
+
+      assert is_map(config.table.archive)
+      assert config.table.archive.read_action == {:master_archived, :archived}
+      assert config.table.archive.get_action == {:master_get_archived, :get_archived}
+      assert config.table.archive.restore_action == {:master_unarchive, :unarchive}
+
+      assert config.table.archive.destroy_action ==
+               {:master_permanent_destroy, :permanent_destroy}
+    end
   end
 
   describe "defaults/1" do

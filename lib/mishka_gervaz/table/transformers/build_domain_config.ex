@@ -42,12 +42,31 @@ defmodule MishkaGervaz.Table.Transformers.BuildDomainConfig do
       actor_key: get_opt(dsl_state, @table_path, :actor_key, :current_user),
       master_check: get_opt(dsl_state, @table_path, :master_check),
       actions: build_actions(dsl_state),
+      archive: build_archive(dsl_state),
       pagination: build_pagination(dsl_state),
       realtime: build_section(dsl_state, :realtime, @realtime_defaults),
       theme: build_section(dsl_state, :theme, @theme_defaults),
       refresh: build_section(dsl_state, :refresh, @refresh_defaults),
       url_sync: build_section(dsl_state, :url_sync, @url_sync_defaults)
     }
+  end
+
+  @archive_keys [
+    :enabled,
+    :restricted,
+    :visible,
+    :read_action,
+    :get_action,
+    :restore_action,
+    :destroy_action
+  ]
+
+  @spec build_archive(Spark.Dsl.t()) :: map() | nil
+  defp build_archive(dsl_state) do
+    path = @table_path ++ [:archive]
+    values = Map.new(@archive_keys, &{&1, get_opt(dsl_state, path, &1)})
+
+    if any_set?(Map.values(values)), do: reject_nil_values(values), else: nil
   end
 
   @spec build_actions(Spark.Dsl.t()) :: map()

@@ -88,6 +88,39 @@ defmodule MishkaGervaz.Table.Dsl.Defaults do
     ]
   ]
 
+  @archive_schema [
+    enabled: [
+      type: :boolean,
+      doc:
+        "Default for whether archive support is enabled at the domain level. " <>
+          "Resources still need `AshArchival.Resource` in their extensions for archive to apply."
+    ],
+    restricted: [
+      type: :boolean,
+      doc: "Default for restricting archive UI to master users only."
+    ],
+    visible: [
+      type: {:or, [:boolean, {:mfa_or_fun, 1}]},
+      doc: "Default archive toggle visibility. Boolean or `fn state -> boolean end`."
+    ],
+    read_action: [
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc: "Default read archived action. Single atom or tuple `{master_action, tenant_action}`."
+    ],
+    get_action: [
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc: "Default get archived action."
+    ],
+    restore_action: [
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc: "Default restore action."
+    ],
+    destroy_action: [
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc: "Default permanent destroy action."
+    ]
+  ]
+
   @refresh_schema [
     enabled: [
       type: :boolean,
@@ -145,6 +178,7 @@ defmodule MishkaGervaz.Table.Dsl.Defaults do
       schema: @schema,
       sections: [
         actions_section(),
+        archive_section(),
         realtime_section(),
         theme_section(),
         url_sync_section(),
@@ -153,6 +187,14 @@ defmodule MishkaGervaz.Table.Dsl.Defaults do
       entities: [
         pagination_entity()
       ]
+    }
+  end
+
+  defp archive_section do
+    %Spark.Dsl.Section{
+      name: :archive,
+      describe: "Default archive configuration inherited by resources with AshArchival.Resource.",
+      schema: @archive_schema
     }
   end
 
