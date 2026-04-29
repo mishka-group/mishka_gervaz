@@ -792,7 +792,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   defp build_hooks(dsl_state) do
     path = @table_path ++ [:hooks]
 
-    keys = [
+    global_keys = [
       :on_load,
       :before_delete,
       :after_delete,
@@ -804,10 +804,68 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       :on_sort
     ]
 
-    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
+    globals = Map.new(global_keys, &{&1, get_opt(dsl_state, path, &1)})
 
-    if any_set?(Map.values(values)), do: values, else: nil
+    per_action = build_per_action_hooks(dsl_state, path)
+    builtins = build_builtin_hooks(dsl_state)
+
+    has_globals? = any_set?(Map.values(globals))
+    has_per_action? = map_size(per_action) > 0
+    has_builtins? = builtins != nil
+
+    cond do
+      has_globals? or has_per_action? or has_builtins? ->
+        globals
+        |> Map.merge(per_action)
+        |> maybe_put(:__builtins__, builtins)
+
+      true ->
+        nil
+    end
   end
+
+  defp build_per_action_hooks(dsl_state, path) do
+    phases = MishkaGervaz.Table.Dsl.Hooks.hook_phases()
+
+    dsl_state
+    |> get_entities(path)
+    |> Enum.reduce(%{}, fn entity, acc ->
+      with %MishkaGervaz.Table.Entities.ActionHook{phase: phase, names: names, run: run} <-
+             entity,
+           true <- phase in phases,
+           true <- not is_nil(names),
+           true <- not is_nil(run) do
+        names
+        |> List.wrap()
+        |> Enum.reduce(acc, fn name, inner ->
+          Map.put(inner, hook_key(phase, name), run)
+        end)
+      else
+        _ -> acc
+      end
+    end)
+  end
+
+  defp hook_key(:override_row_action, name), do: {:on_event, Atom.to_string(name)}
+  defp hook_key(:override_bulk_action, name), do: {:on_bulk_action, Atom.to_string(name)}
+  defp hook_key(phase, name), do: {phase, name}
+
+  defp build_builtin_hooks(dsl_state) do
+    path = @table_path ++ [:hooks, :builtins]
+    schema = MishkaGervaz.Table.Dsl.Hooks.builtins_schema()
+
+    values =
+      Enum.reduce(schema, %{}, fn {key, opts}, acc ->
+        default = Keyword.get(opts, :default)
+        value = get_opt(dsl_state, path, key, default)
+        Map.put(acc, key, value)
+      end)
+
+    if Enum.any?(values, fn {_k, v} -> v not in [nil, false] end), do: values, else: nil
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp build_refresh(dsl_state, domain_defaults) do
     path = @table_path ++ [:refresh]

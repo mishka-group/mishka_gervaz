@@ -4,6 +4,45 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
 
   Defines lifecycle callbacks for table events.
 
+  ## Three layers
+
+  1. **Global lifecycle** — fires for every event of a kind (`before_delete`,
+     `after_delete`, `on_realtime`, `on_filter`, …). These keep their existing
+     behavior.
+
+  2. **Per-action observers** — fire alongside the built-in handler for a
+     specific row or bulk action, keyed by the action's `name`. They cannot
+     replace the handler; they observe and decorate it.
+
+       - `before_row_action :name, fn record, state -> ... end`
+       - `after_row_action  :name, fn result, state -> ... end`
+       - `on_row_action_success :name, fn result, state -> socket end`
+       - `on_row_action_error   :name, fn reason, state -> socket end`
+       - `before_bulk_action :name, fn ids, state -> ... end`
+       - `after_bulk_action  :name, fn result, state -> ... end`
+       - `on_bulk_action_success :name, fn result, state -> socket end`
+       - `on_bulk_action_error   :name, fn errors, state -> socket end`
+
+     A list of action names is also accepted to share one hook across actions:
+     `before_row_action [:unarchive, :restore], fn ... end`.
+
+  3. **Full overrides** — replace the built-in handler entirely. These are the
+     same runtime as the legacy `{:on_event, name}` / `{:on_bulk_action, name}`
+     keys; the DSL aliases below are the documented form.
+
+       - `override_row_action  :name, fn payload, state -> {:ok, state} end`
+       - `override_bulk_action :name, fn ids, state -> {:ok, state} end`
+
+  4. **Built-in state-transition rules** — opt-in flags for common UX
+     transitions (e.g. switch back to active mode when the archive empties).
+
+       builtins do
+         switch_to_active_on_empty_archive true
+         clear_selection_after_bulk true
+         reset_page_on_empty_current_page true
+         redirect_on_empty to: "/dashboard"
+       end
+
   ## Return Values
 
   Most hooks can return:
@@ -15,7 +54,6 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
 
       hooks do
         on_realtime fn notification, socket ->
-          # Skip updates for records created by current user
           if notification.data.created_by_id == socket.assigns.current_user.id do
             {:halt, socket}
           else
@@ -23,13 +61,19 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
           end
         end
 
-        on_filter fn filter_values, socket ->
-          # Log filter changes
-          Logger.info("Filters changed: \#{inspect(filter_values)}")
-          socket
+        before_row_action :unarchive, fn record, state ->
+          if record.locked?, do: {:halt, {:error, "locked"}}, else: :ok
+        end
+
+        after_bulk_action :unarchive, fn _result, _state -> :ok end
+
+        builtins do
+          switch_to_active_on_empty_archive true
         end
       end
   """
+
+  alias MishkaGervaz.Table.Entities.ActionHook
 
   @hooks_schema [
     on_load: [
@@ -76,8 +120,78 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     ]
   ]
 
+  @builtins_schema [
+    switch_to_active_on_empty_archive: [
+      type: :boolean,
+      default: false,
+      doc:
+        "Switch to active mode after a successful unarchive/permanent_destroy if the archive list is now empty."
+    ],
+    switch_to_archive_on_empty_active: [
+      type: :boolean,
+      default: false,
+      doc:
+        "Symmetric: switch to archive mode after a successful destroy if the active list is now empty."
+    ],
+    clear_selection_after_bulk: [
+      type: :boolean,
+      default: true,
+      doc: "Clear `selected_ids` / `excluded_ids` / `select_all?` after a successful bulk action."
+    ],
+    reset_page_on_empty_current_page: [
+      type: :boolean,
+      default: false,
+      doc: "Reload page 1 if the current page becomes empty after an action."
+    ],
+    redirect_on_empty: [
+      type: {:or, [:string, {:fun, 1}]},
+      doc:
+        "Redirect path (string or `fn state -> path end`) when `total_count == 0` after a load."
+    ]
+  ]
+
+  @hook_phases [
+    :before_row_action,
+    :after_row_action,
+    :on_row_action_success,
+    :on_row_action_error,
+    :before_bulk_action,
+    :after_bulk_action,
+    :on_bulk_action_success,
+    :on_bulk_action_error,
+    :override_row_action,
+    :override_bulk_action
+  ]
+
   @doc false
   def schema, do: @hooks_schema
+
+  @doc false
+  def builtins_schema, do: @builtins_schema
+
+  @doc false
+  def hook_phases, do: @hook_phases
+
+  defp action_hook_entity(name) do
+    %Spark.Dsl.Entity{
+      name: name,
+      describe:
+        "Per-action #{name |> Atom.to_string() |> String.replace("_", " ")} hook. First arg: action name atom or list of atoms. Second arg: function.",
+      target: ActionHook,
+      args: [:names, :run],
+      schema: ActionHook.opt_schema(),
+      auto_set_fields: [phase: name],
+      transform: {ActionHook, :transform, []}
+    }
+  end
+
+  defp builtins_section do
+    %Spark.Dsl.Section{
+      name: :builtins,
+      describe: "Opt-in built-in state-transition rules.",
+      schema: @builtins_schema
+    }
+  end
 
   @doc """
   Returns the hooks section definition.
@@ -86,7 +200,9 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     %Spark.Dsl.Section{
       name: :hooks,
       describe: "Lifecycle callbacks.",
-      schema: @hooks_schema
+      schema: @hooks_schema,
+      entities: Enum.map(@hook_phases, &action_hook_entity/1),
+      sections: [builtins_section()]
     }
   end
 end

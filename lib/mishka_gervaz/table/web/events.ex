@@ -211,6 +211,33 @@ defmodule MishkaGervaz.Table.Web.Events do
         hook_runner(state).apply_hook_result(state.static.hooks, hook_name, args, default_socket)
       end
 
+      @spec run_action_hook(State.t(), atom(), atom(), list()) :: any()
+      defp run_action_hook(state, phase, action_name, args) do
+        run_hook(state, {phase, action_name}, args)
+      end
+
+      @spec apply_action_hook_socket(
+              State.t(),
+              atom(),
+              atom(),
+              list(),
+              Phoenix.LiveView.Socket.t()
+            ) :: Phoenix.LiveView.Socket.t()
+      defp apply_action_hook_socket(state, phase, action_name, args, default_socket) do
+        case apply_hook_result(state, {phase, action_name}, args, default_socket) do
+          {:halt, socket} -> socket
+          socket -> socket
+        end
+      end
+
+      @spec halted_before_action?(State.t(), atom(), atom(), list()) :: boolean()
+      defp halted_before_action?(state, phase, action_name, args) do
+        case run_action_hook(state, phase, action_name, args) do
+          {:halt, _} -> true
+          _ -> false
+        end
+      end
+
       @spec put_error_flash(Phoenix.LiveView.Socket.t(), any()) :: Phoenix.LiveView.Socket.t()
       defp put_error_flash(socket, error) do
         message = Errors.format_flash_message(error)
@@ -403,15 +430,19 @@ defmodule MishkaGervaz.Table.Web.Events do
         id = sanitize(state, id)
         record = get_record(state, id, state.archive_status)
 
-        case run_hook(state, :before_delete, [record, state]) do
-          {:halt, {:error, _reason}} ->
-            {:noreply, socket}
+        if halted_before_action?(state, :before_row_action, :delete, [record, state]) do
+          {:noreply, socket}
+        else
+          case run_hook(state, :before_delete, [record, state]) do
+            {:halt, {:error, _reason}} ->
+              {:noreply, socket}
 
-          {:halt, {:confirm, _message}} ->
-            do_delete(state, record, socket)
+            {:halt, {:confirm, _message}} ->
+              do_delete(state, record, socket)
 
-          _ ->
-            do_delete(state, record, socket)
+            _ ->
+              do_delete(state, record, socket)
+          end
         end
       end
 
@@ -423,21 +454,50 @@ defmodule MishkaGervaz.Table.Web.Events do
         id = sanitize(state, id)
         record = get_record(state, id, :archived)
 
-        case unarchive_record(state, record) do
-          {:ok, _updated} ->
-            socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-            {:noreply, socket}
+        if halted_before_action?(state, :before_row_action, :unarchive, [record, state]) do
+          {:noreply, socket}
+        else
+          result = unarchive_record(state, record)
+          run_action_hook(state, :after_row_action, :unarchive, [result, state])
 
-          {:error, reason} ->
-            error =
-              Errors.Action.Failed.exception(
-                resource: state.static.resource,
-                action: :unarchive,
-                reason: reason,
-                record_id: id
-              )
+          case result do
+            {:ok, updated} ->
+              socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
 
-            {:noreply, put_error_flash(socket, error)}
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_success,
+                  :unarchive,
+                  [updated, state],
+                  socket
+                )
+
+              socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :unarchive)
+              {:noreply, socket}
+
+            {:error, reason} ->
+              error =
+                Errors.Action.Failed.exception(
+                  resource: state.static.resource,
+                  action: :unarchive,
+                  reason: reason,
+                  record_id: id
+                )
+
+              socket = put_error_flash(socket, error)
+
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_error,
+                  :unarchive,
+                  [reason, state],
+                  socket
+                )
+
+              {:noreply, socket}
+          end
         end
       end
 
@@ -445,21 +505,52 @@ defmodule MishkaGervaz.Table.Web.Events do
         id = sanitize(state, id)
         record = get_record(state, id, :archived)
 
-        case permanent_destroy_record(state, record) do
-          {:ok, _destroyed} ->
-            socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-            {:noreply, socket}
+        if halted_before_action?(state, :before_row_action, :permanent_destroy, [record, state]) do
+          {:noreply, socket}
+        else
+          result = permanent_destroy_record(state, record)
+          run_action_hook(state, :after_row_action, :permanent_destroy, [result, state])
 
-          {:error, reason} ->
-            error =
-              Errors.Action.Failed.exception(
-                resource: state.static.resource,
-                action: :permanent_destroy,
-                reason: reason,
-                record_id: id
-              )
+          case result do
+            {:ok, destroyed} ->
+              socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
 
-            {:noreply, put_error_flash(socket, error)}
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_success,
+                  :permanent_destroy,
+                  [destroyed, state],
+                  socket
+                )
+
+              socket =
+                MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :permanent_destroy)
+
+              {:noreply, socket}
+
+            {:error, reason} ->
+              error =
+                Errors.Action.Failed.exception(
+                  resource: state.static.resource,
+                  action: :permanent_destroy,
+                  reason: reason,
+                  record_id: id
+                )
+
+              socket = put_error_flash(socket, error)
+
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_error,
+                  :permanent_destroy,
+                  [reason, state],
+                  socket
+                )
+
+              {:noreply, socket}
+          end
         end
       end
 
@@ -575,55 +666,125 @@ defmodule MishkaGervaz.Table.Web.Events do
 
       @spec do_update(State.t(), map(), atom(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
-      defp do_update(state, %{"id" => id}, action_spec, socket) do
+      defp do_update(state, %{"id" => id, "_action_name" => action_name} = params, action_spec, socket) do
+        do_update_with_name(state, params, action_spec, socket, action_name)
+      end
+
+      defp do_update(state, %{"id" => _id} = params, action_spec, socket) do
+        action_name = update_action_name(action_spec)
+        do_update_with_name(state, params, action_spec, socket, action_name)
+      end
+
+      defp do_update_with_name(state, %{"id" => id}, action_spec, socket, action_name) do
         id = sanitize(state, id)
         record = get_record(state, id, state.archive_status)
 
-        case update_record(state, record, action_spec) do
-          {:ok, updated} ->
-            socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, updated)
-            {:noreply, socket}
+        if halted_before_action?(state, :before_row_action, action_name, [record, state]) do
+          {:noreply, socket}
+        else
+          result = update_record(state, record, action_spec)
+          run_action_hook(state, :after_row_action, action_name, [result, state])
 
-          {:error, reason} ->
-            error =
-              Errors.Action.Failed.exception(
-                resource: state.static.resource,
-                action: :update,
-                reason: reason,
-                record_id: id
-              )
+          case result do
+            {:ok, updated} ->
+              socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, updated)
 
-            {:noreply, put_error_flash(socket, error)}
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_success,
+                  action_name,
+                  [updated, state],
+                  socket
+                )
+
+              {:noreply, socket}
+
+            {:error, reason} ->
+              error =
+                Errors.Action.Failed.exception(
+                  resource: state.static.resource,
+                  action: :update,
+                  reason: reason,
+                  record_id: id
+                )
+
+              socket = put_error_flash(socket, error)
+
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_error,
+                  action_name,
+                  [reason, state],
+                  socket
+                )
+
+              {:noreply, socket}
+          end
         end
       end
+
+      @spec update_action_name(atom() | {atom(), atom()}) :: atom()
+      defp update_action_name({_master, tenant}), do: tenant
+      defp update_action_name(action) when is_atom(action), do: action
 
       @spec do_destroy(State.t(), map(), atom(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
       defp do_destroy(state, %{"id" => id}, action_spec, socket) do
         id = sanitize(state, id)
         record = get_record(state, id, state.archive_status)
+        action_name = update_action_name(action_spec)
 
-        case destroy_record(state, record, action_spec) do
-          {:ok, deleted} ->
-            run_hook(state, :after_delete, [deleted, state])
+        if halted_before_action?(state, :before_row_action, action_name, [record, state]) do
+          {:noreply, socket}
+        else
+          result = destroy_record(state, record, action_spec)
+          run_action_hook(state, :after_row_action, action_name, [result, state])
 
-            socket =
-              socket
-              |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-              |> hide_row(state, record.id)
+          case result do
+            {:ok, deleted} ->
+              run_hook(state, :after_delete, [deleted, state])
 
-            {:noreply, socket}
+              socket =
+                socket
+                |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+                |> hide_row(state, record.id)
 
-          {:error, reason} ->
-            error =
-              Errors.Action.Failed.exception(
-                resource: state.static.resource,
-                action: :destroy,
-                reason: reason,
-                record_id: id
-              )
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_success,
+                  action_name,
+                  [deleted, state],
+                  socket
+                )
 
-            {:noreply, put_error_flash(socket, error)}
+              socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, action_name)
+              {:noreply, socket}
+
+            {:error, reason} ->
+              error =
+                Errors.Action.Failed.exception(
+                  resource: state.static.resource,
+                  action: :destroy,
+                  reason: reason,
+                  record_id: id
+                )
+
+              socket = put_error_flash(socket, error)
+
+              socket =
+                apply_action_hook_socket(
+                  state,
+                  :on_row_action_error,
+                  action_name,
+                  [reason, state],
+                  socket
+                )
+
+              {:noreply, socket}
+          end
         end
       end
 
@@ -810,17 +971,21 @@ defmodule MishkaGervaz.Table.Web.Events do
         bulk_action = Enum.find(state.static.bulk_actions, fn a -> a.name == action_atom end)
         selected_ids = get_selected_ids(state)
 
-        case run_hook(state, {:on_bulk_action, action_name}, [selected_ids, state]) do
-          {:ok, new_state} ->
-            socket = Phoenix.Component.assign(socket, :table_state, new_state)
-            {:noreply, socket}
+        if halted_before_action?(state, :before_bulk_action, action_atom, [selected_ids, state]) do
+          {:noreply, socket}
+        else
+          case run_hook(state, {:on_bulk_action, action_name}, [selected_ids, state]) do
+            {:ok, new_state} ->
+              socket = Phoenix.Component.assign(socket, :table_state, new_state)
+              {:noreply, socket}
 
-          {:send, message} ->
-            send(self(), message)
-            {:noreply, socket}
+            {:send, message} ->
+              send(self(), message)
+              {:noreply, socket}
 
-          _ ->
-            execute_bulk_action(bulk_action, selected_ids, state, socket)
+            _ ->
+              execute_bulk_action(bulk_action, selected_ids, state, socket)
+          end
         end
       end
 
@@ -836,7 +1001,10 @@ defmodule MishkaGervaz.Table.Web.Events do
       @spec do_delete(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               {:noreply, Phoenix.LiveView.Socket.t()}
       defp do_delete(state, record, socket) do
-        case delete_record(state, record) do
+        result = delete_record(state, record)
+        run_action_hook(state, :after_row_action, :delete, [result, state])
+
+        case result do
           {:ok, deleted} ->
             run_hook(state, :after_delete, [deleted, state])
 
@@ -845,6 +1013,16 @@ defmodule MishkaGervaz.Table.Web.Events do
               |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
               |> hide_row(state, record.id)
 
+            socket =
+              apply_action_hook_socket(
+                state,
+                :on_row_action_success,
+                :delete,
+                [deleted, state],
+                socket
+              )
+
+            socket = MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :delete)
             {:noreply, socket}
 
           {:error, reason} ->
@@ -856,7 +1034,18 @@ defmodule MishkaGervaz.Table.Web.Events do
                 record_id: record.id
               )
 
-            {:noreply, put_error_flash(socket, error)}
+            socket = put_error_flash(socket, error)
+
+            socket =
+              apply_action_hook_socket(
+                state,
+                :on_row_action_error,
+                :delete,
+                [reason, state],
+                socket
+              )
+
+            {:noreply, socket}
         end
       end
 

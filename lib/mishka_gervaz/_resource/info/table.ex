@@ -478,30 +478,36 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
   @doc """
   Get all hooks as a map.
+
+  Returns globals (`:on_load`, `:before_delete`, …), per-action observer hooks
+  keyed as `{:before_row_action, :unarchive}`, and the `:__builtins__` map of
+  state-transition flags.
   """
   @spec hooks(module()) :: map()
   def hooks(resource) do
-    %{
-      on_load: get_hook(resource, :on_load),
-      before_delete: get_hook(resource, :before_delete),
-      after_delete: get_hook(resource, :after_delete),
-      on_realtime: get_hook(resource, :on_realtime),
-      on_expand: get_hook(resource, :on_expand),
-      on_filter: get_hook(resource, :on_filter),
-      on_event: get_hook(resource, :on_event),
-      on_select: get_hook(resource, :on_select),
-      on_sort: get_hook(resource, :on_sort)
-    }
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new()
+    case Extension.get_persisted(resource, :mishka_gervaz_config) do
+      %{hooks: hooks} when is_map(hooks) -> hooks
+      _ -> %{}
+    end
   end
 
-  @spec get_hook(module(), atom()) :: term() | nil
-  defp get_hook(resource, hook_name) do
-    case apply(__MODULE__, :"mishka_gervaz_table_hooks_#{hook_name}", [resource]) do
-      {:ok, hook} -> hook
-      :error -> nil
-    end
+  @doc """
+  Get a single hook entry by key.
+
+  The key may be a global atom (e.g. `:on_load`) or a per-action tuple
+  (e.g. `{:before_row_action, :unarchive}`).
+  """
+  @spec get_hook(module(), atom() | {atom(), atom()}) :: term() | nil
+  def get_hook(resource, key) do
+    resource |> hooks() |> Map.get(key)
+  end
+
+  @doc """
+  Get the built-in state-transition rules map, or `nil` if none are configured.
+  """
+  @spec builtins(module()) :: map() | nil
+  def builtins(resource) do
+    resource |> hooks() |> Map.get(:__builtins__)
   end
 
   @doc """

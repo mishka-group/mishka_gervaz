@@ -156,13 +156,36 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
 
       def execute(%{handler: handler} = action, selected_ids, state, socket)
           when is_function(handler, 2) do
-        case handler.(selected_ids, state) do
+        result = handler.(selected_ids, state)
+        run_lifecycle_hook(state, :after_bulk_action, action, [result, state])
+
+        case result do
           {:ok, %State{} = new_state} ->
             socket = Phoenix.Component.assign(socket, :table_state, new_state)
+
+            socket =
+              apply_lifecycle_socket(
+                state,
+                :on_bulk_action_success,
+                action,
+                [new_state, state],
+                socket
+              )
+
             {:noreply, socket}
 
           :reload ->
             socket = DataLoader.load_async(socket, state, page: 1, reset: true)
+
+            socket =
+              apply_lifecycle_socket(
+                state,
+                :on_bulk_action_success,
+                action,
+                [:reload, state],
+                socket
+              )
+
             {:noreply, socket}
 
           {:error, reason} ->
@@ -174,9 +197,29 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
                 record_id: nil
               )
 
-            {:noreply, put_error_flash(socket, error)}
+            socket = put_error_flash(socket, error)
+
+            socket =
+              apply_lifecycle_socket(
+                state,
+                :on_bulk_action_error,
+                action,
+                [reason, state],
+                socket
+              )
+
+            {:noreply, socket}
 
           :ok ->
+            socket =
+              apply_lifecycle_socket(
+                state,
+                :on_bulk_action_success,
+                action,
+                [:ok, state],
+                socket
+              )
+
             {:noreply, socket}
         end
       end
@@ -224,19 +267,37 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
         result =
           run_ash_bulk_action(state.static.resource, selected_ids, opts, state, effective_type)
 
+        run_lifecycle_hook(state, :after_bulk_action, action, [result, state])
+
         case result do
-          %Ash.BulkResult{status: :success} ->
-            state =
-              State.update(state,
-                selected_ids: MapSet.new(),
-                excluded_ids: MapSet.new(),
-                select_all?: false
+          %Ash.BulkResult{status: :success} = bulk_result ->
+            socket =
+              apply_lifecycle_socket(
+                state,
+                :on_bulk_action_success,
+                action,
+                [bulk_result, state],
+                socket
               )
 
-            socket = DataLoader.load_async(socket, state, page: 1, reset: true)
+            new_state = state
+
+            new_state =
+              if builtin_enabled?(state, :clear_selection_after_bulk) do
+                State.update(new_state,
+                  selected_ids: MapSet.new(),
+                  excluded_ids: MapSet.new(),
+                  select_all?: false
+                )
+              else
+                new_state
+              end
+
+            socket = DataLoader.load_async(socket, new_state, page: 1, reset: true)
+            socket = MishkaGervaz.Table.Web.AutoState.after_bulk_action(socket, new_state, action)
             {:noreply, socket}
 
-          %Ash.BulkResult{status: status, errors: errors} ->
+          %Ash.BulkResult{status: status, errors: errors} = bulk_result ->
             error =
               Errors.Action.Failed.exception(
                 resource: state.static.resource,
@@ -245,7 +306,62 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
                 record_id: nil
               )
 
-            {:noreply, put_error_flash(socket, error)}
+            socket = put_error_flash(socket, error)
+
+            socket =
+              apply_lifecycle_socket(
+                state,
+                :on_bulk_action_error,
+                action,
+                [bulk_result, state],
+                socket
+              )
+
+            {:noreply, socket}
+        end
+      end
+
+      @spec run_lifecycle_hook(State.t(), atom(), map() | nil, list()) :: any()
+      defp run_lifecycle_hook(_state, _phase, nil, _args), do: nil
+
+      defp run_lifecycle_hook(state, phase, %{name: action_name}, args) do
+        hooks = state.static.hooks
+        runner = hook_runner_for(state)
+        runner.run_hook(hooks, {phase, action_name}, args)
+      end
+
+      @spec apply_lifecycle_socket(
+              State.t(),
+              atom(),
+              map() | nil,
+              list(),
+              Phoenix.LiveView.Socket.t()
+            ) :: Phoenix.LiveView.Socket.t()
+      defp apply_lifecycle_socket(_state, _phase, nil, _args, socket), do: socket
+
+      defp apply_lifecycle_socket(state, phase, %{name: action_name}, args, socket) do
+        hooks = state.static.hooks
+        runner = hook_runner_for(state)
+
+        case runner.apply_hook_result(hooks, {phase, action_name}, args, socket) do
+          {:halt, sock} -> sock
+          sock -> sock
+        end
+      end
+
+      @spec builtin_enabled?(State.t(), atom()) :: boolean()
+      defp builtin_enabled?(state, key) do
+        case state.static.hooks do
+          %{__builtins__: %{} = b} -> Map.get(b, key) == true
+          _ -> key == :clear_selection_after_bulk
+        end
+      end
+
+      @spec hook_runner_for(State.t()) :: module()
+      defp hook_runner_for(state) do
+        case Info.events(state.static.resource) do
+          %{hooks: mod} when is_atom(mod) and not is_nil(mod) -> mod
+          _ -> MishkaGervaz.Table.Web.Events.HookRunner.Default
         end
       end
 
