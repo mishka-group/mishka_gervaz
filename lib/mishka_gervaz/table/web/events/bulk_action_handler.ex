@@ -342,12 +342,24 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
       defp apply_lifecycle_socket(state, phase, %{name: action_name}, args, socket) do
         hooks = state.static.hooks
         runner = hook_runner_for(state)
+        full_args = adapt_lifecycle_args(hooks, {phase, action_name}, args, socket)
 
-        case runner.apply_hook_result(hooks, {phase, action_name}, args, socket) do
+        case runner.apply_hook_result(hooks, {phase, action_name}, full_args, socket) do
           {:halt, sock} -> sock
           sock -> sock
         end
       end
+
+      @spec adapt_lifecycle_args(map() | nil, {atom(), atom()}, list(), Phoenix.LiveView.Socket.t()) ::
+              list()
+      defp adapt_lifecycle_args(hooks, hook_key, args, socket) when is_map(hooks) do
+        case Map.get(hooks, hook_key) do
+          fun when is_function(fun, 3) -> args ++ [socket]
+          _ -> args
+        end
+      end
+
+      defp adapt_lifecycle_args(_hooks, _hook_key, args, _socket), do: args
 
       @spec builtin_enabled?(State.t(), atom()) :: boolean()
       defp builtin_enabled?(state, key) do

@@ -16,12 +16,17 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
 
        - `before_row_action :name, fn record, state -> ... end`
        - `after_row_action  :name, fn result, state -> ... end`
-       - `on_row_action_success :name, fn result, state -> socket end`
-       - `on_row_action_error   :name, fn reason, state -> socket end`
+       - `on_row_action_success :name, fn result, state[, socket] -> socket end`
+       - `on_row_action_error   :name, fn reason, state[, socket] -> socket end`
        - `before_bulk_action :name, fn ids, state -> ... end`
        - `after_bulk_action  :name, fn result, state -> ... end`
-       - `on_bulk_action_success :name, fn result, state -> socket end`
-       - `on_bulk_action_error   :name, fn errors, state -> socket end`
+       - `on_bulk_action_success :name, fn result, state[, socket] -> socket end`
+       - `on_bulk_action_error   :name, fn errors, state[, socket] -> socket end`
+
+     The `on_*_success` / `on_*_error` hooks accept arity 2 or 3. Use arity 3
+     when you need the live socket for full manual control (e.g. to call
+     `DataLoader.apply_archive_status/3`, `Phoenix.LiveView.push_navigate/2`,
+     `put_flash/3`, etc). Arity 2 is fine for log-only side effects.
 
      A list of action names is also accepted to share one hook across actions:
      `before_row_action [:unarchive, :restore], fn ... end`.

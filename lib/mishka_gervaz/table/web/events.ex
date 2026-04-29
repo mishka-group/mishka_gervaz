@@ -224,9 +224,26 @@ defmodule MishkaGervaz.Table.Web.Events do
               Phoenix.LiveView.Socket.t()
             ) :: Phoenix.LiveView.Socket.t()
       defp apply_action_hook_socket(state, phase, action_name, args, default_socket) do
-        case apply_hook_result(state, {phase, action_name}, args, default_socket) do
+        full_args = adapt_hook_args(state, {phase, action_name}, args, default_socket)
+
+        case apply_hook_result(state, {phase, action_name}, full_args, default_socket) do
           {:halt, socket} -> socket
           socket -> socket
+        end
+      end
+
+      @spec adapt_hook_args(
+              State.t(),
+              {atom(), atom()},
+              list(),
+              Phoenix.LiveView.Socket.t()
+            ) :: list()
+      defp adapt_hook_args(state, hook_key, args, socket) do
+        hooks = state.static.hooks || %{}
+
+        case Map.get(hooks, hook_key) do
+          fun when is_function(fun, 3) -> args ++ [socket]
+          _ -> args
         end
       end
 
