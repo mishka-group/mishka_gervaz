@@ -30,6 +30,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.JS
 
+  @doc false
+  def pagination_type(static) do
+    get_in(static.config, [:pagination, :type]) || :numbered
+  end
+
   @impl true
   def name, do: :table
 
@@ -81,6 +86,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
     show_actions =
       Shared.has_user_visible_actions?(static.row_actions, static.row_action_dropdowns, state)
 
+    is_infinite_scroll? =
+      pagination_type(static) == :infinite and state.has_more?
+
+    viewport_event = if is_infinite_scroll?, do: "load_more", else: nil
+
     assigns =
       assigns
       |> assign(:show_checkboxes, show_checkboxes)
@@ -91,6 +101,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:show_expand, show_expand)
       |> assign(:show_actions, show_actions)
       |> assign(:features, features)
+      |> assign(:infinite_scroll?, is_infinite_scroll?)
+      |> assign(:viewport_event, viewport_event)
 
     ~H"""
     <div class="mishka-gervaz-table">
@@ -147,7 +159,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
               features={@features}
               myself={@myself}
             />
-            <tbody id={"#{@static.stream_name}"} phx-update="stream" class="divide-y divide-gray-200">
+            <tbody
+              id={"#{@static.stream_name}"}
+              phx-update="stream"
+              class="divide-y divide-gray-200"
+            >
               <tr id={"#{@static.stream_name}-empty-state"} class="hidden only:table-row">
                 <td colspan="100" class="px-4 py-12 text-center text-gray-500">
                   <span
@@ -224,6 +240,17 @@ defmodule MishkaGervaz.Table.Templates.Table do
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div
+          :if={@infinite_scroll?}
+          id={@static.id <> "-infinite-trigger"}
+          phx-viewport-bottom={@viewport_event}
+          phx-target={@myself}
+          class="py-6 flex items-center justify-center gap-2 text-sm text-gray-400"
+        >
+          <span class="hero-arrow-down-circle w-4 h-4 animate-bounce"></span>
+          <span>{dgettext("mishka_gervaz", "Scroll for more")}</span>
         </div>
 
         {render_notices_at(assigns, :after_table)}
@@ -787,11 +814,9 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
   @impl true
   def render_pagination(assigns) do
-    pagination_type = get_in(assigns.static.config, [:pagination, :type]) || :numbered
-
     assigns =
       assigns
-      |> assign(:pagination_type, pagination_type)
+      |> assign(:pagination_type, pagination_type(assigns.static))
       |> assign(:loading_text, assigns.static.pagination_ui.loading_text)
       |> assign(:load_more_label, assigns.static.pagination_ui.load_more_label)
 

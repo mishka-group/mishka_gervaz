@@ -87,6 +87,8 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.ArchiveMergeAtomAction
     resource MishkaGervaz.Test.Resources.ChromeForm
     resource MishkaGervaz.Test.Resources.ChromeTable
+    resource MishkaGervaz.Test.Resources.InfiniteScrollResource
+    resource MishkaGervaz.Test.Resources.NumberedScrollResource
     allow_unregistered? true
   end
 end
