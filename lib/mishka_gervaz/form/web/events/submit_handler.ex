@@ -234,7 +234,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             js = func.(record_id)
 
             Phoenix.LiveView.push_event(socket, "gervaz:exec-js", %{
-              js: Jason.encode!(js),
+              js: Jason.encode!(js.ops),
               target: state.static.id <> "-form-wrapper"
             })
 
