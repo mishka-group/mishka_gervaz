@@ -85,6 +85,7 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.ArchiveMergeEnabledFalse
     resource MishkaGervaz.Test.Resources.ArchiveMergePartial
     resource MishkaGervaz.Test.Resources.ArchiveMergeAtomAction
+    resource MishkaGervaz.Test.Resources.ChromeForm
     allow_unregistered? true
   end
 end

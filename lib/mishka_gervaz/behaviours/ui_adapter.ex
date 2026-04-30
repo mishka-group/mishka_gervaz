@@ -232,6 +232,15 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   @doc "Render an existing file card with remove button (for edit mode)"
   @callback upload_existing_file(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 
+  @doc "Render a static alert/notice (info/warning/error/success/neutral)"
+  @callback alert(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc "Render a form header (title + description)"
+  @callback form_header(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
+  @doc "Render a form footer (static content below the submit row)"
+  @callback form_footer(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+
   @optional_callbacks [
     # Table-only optional (23)
     template_switcher: 1,
@@ -283,7 +292,10 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     upload_existing_file: 1,
     string_list_input: 1,
     combobox: 1,
-    password_input: 1
+    password_input: 1,
+    alert: 1,
+    form_header: 1,
+    form_footer: 1
   ]
 
   @component_functions [
@@ -349,7 +361,10 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     :upload_existing_file,
     :string_list_input,
     :combobox,
-    :password_input
+    :password_input,
+    :alert,
+    :form_header,
+    :form_footer
   ]
 
   @doc """

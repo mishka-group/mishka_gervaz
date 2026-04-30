@@ -239,6 +239,56 @@ defmodule MishkaGervaz.Resource.Info.Form do
   end
 
   @doc """
+  Get the form header configuration. Returns nil when no header is declared.
+  """
+  @spec header(module()) :: map() | nil
+  def header(resource) do
+    case layout(resource) do
+      %{header: header} when is_map(header) -> header
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the form footer configuration. Returns nil when no footer is declared.
+  """
+  @spec footer(module()) :: map() | nil
+  def footer(resource) do
+    case layout(resource) do
+      %{footer: footer} when is_map(footer) -> footer
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get all notices declared in the form layout.
+  """
+  @spec notices(module()) :: [map()]
+  def notices(resource) do
+    case layout(resource) do
+      %{notices: notices} when is_list(notices) -> notices
+      _ -> []
+    end
+  end
+
+  @doc """
+  Get a specific notice by name.
+  """
+  @spec notice(module(), atom()) :: map() | nil
+  def notice(resource, notice_name) do
+    Enum.find(notices(resource), &(&1.name == notice_name))
+  end
+
+  @doc """
+  Get notices targeting the given position. Position can be an atom or a
+  `{:before_group, name}` / `{:after_group, name}` tuple.
+  """
+  @spec notices_at(module(), term()) :: [map()]
+  def notices_at(resource, position) do
+    Enum.filter(notices(resource), &(&1.position == position))
+  end
+
+  @doc """
   Get the navigation strategy for a resource form.
 
   Returns `:sequential` or `:free`.

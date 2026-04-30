@@ -96,7 +96,8 @@ defmodule MishkaGervaz.Resource do
     MishkaGervaz.Form.Verifiers.ValidateGroups,
     MishkaGervaz.Form.Verifiers.ValidateSteps,
     MishkaGervaz.Form.Verifiers.ValidateUploads,
-    MishkaGervaz.Form.Verifiers.ValidatePreloads
+    MishkaGervaz.Form.Verifiers.ValidatePreloads,
+    MishkaGervaz.Form.Verifiers.ValidateChrome
   ]
 
   use Spark.Dsl.Extension,

@@ -2298,6 +2298,177 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  Render a static alert/notice.
+
+  ## Assigns
+    * `:type` - `:info` | `:warning` | `:error` | `:success` | `:neutral`
+    * `:title` - optional headline string
+    * `:content` - body string or pre-rendered inner block
+    * `:icon` - optional heroicon name
+    * `:dismissible` - boolean
+    * `:dismiss_event` - phx-click event name for the dismiss button
+    * `:dismiss_value` - phx-value-name payload for dismiss
+    * `:phx_target` - LiveComponent target
+    * `:class` - extra wrapper classes
+    * `:inner_block` - optional slot for HEEx content (overrides `:content`)
+  """
+  @impl true
+  def alert(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:type, fn -> :info end)
+      |> assign_new(:title, fn -> nil end)
+      |> assign_new(:content, fn -> nil end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:dismissible, fn -> false end)
+      |> assign_new(:dismiss_event, fn -> "dismiss_notice" end)
+      |> assign_new(:dismiss_value, fn -> nil end)
+      |> assign_new(:phx_target, fn -> nil end)
+      |> assign_new(:class, fn -> nil end)
+      |> assign_new(:inner_block, fn -> nil end)
+      |> assign(:tone, alert_tone(Map.get(assigns, :type, :info)))
+
+    ~H"""
+    <div
+      class={[
+        "rounded-md border p-4 flex items-start gap-3",
+        @tone.wrapper,
+        @class
+      ]}
+      role="alert"
+    >
+      <.render_icon
+        :if={@icon}
+        name={@icon}
+        class={["w-5 h-5 mt-0.5 shrink-0", @tone.icon]}
+      />
+      <div class="flex-1 min-w-0">
+        <h3 :if={@title} class={["text-sm font-semibold", @tone.title]}>
+          {@title}
+        </h3>
+        <div
+          :if={@content && !@inner_block}
+          class={["text-sm", @tone.body, if(@title, do: "mt-1", else: "")]}
+        >
+          {@content}
+        </div>
+        <div :if={@inner_block} class={["text-sm", @tone.body, if(@title, do: "mt-1", else: "")]}>
+          {render_slot(@inner_block)}
+        </div>
+      </div>
+      <button
+        :if={@dismissible}
+        type="button"
+        phx-click={@dismiss_event}
+        phx-value-name={@dismiss_value}
+        phx-target={@phx_target}
+        class={["shrink-0 rounded p-1 hover:bg-black/5 transition-colors", @tone.icon]}
+        aria-label="Dismiss"
+      >
+        <span class="hero-x-mark w-4 h-4"></span>
+      </button>
+    </div>
+    """
+  end
+
+  defp alert_tone(:info),
+    do: %{
+      wrapper: "bg-blue-50 border-blue-200",
+      icon: "text-blue-500",
+      title: "text-blue-900",
+      body: "text-blue-800"
+    }
+
+  defp alert_tone(:warning),
+    do: %{
+      wrapper: "bg-amber-50 border-amber-200",
+      icon: "text-amber-500",
+      title: "text-amber-900",
+      body: "text-amber-800"
+    }
+
+  defp alert_tone(:error),
+    do: %{
+      wrapper: "bg-red-50 border-red-200",
+      icon: "text-red-500",
+      title: "text-red-900",
+      body: "text-red-800"
+    }
+
+  defp alert_tone(:success),
+    do: %{
+      wrapper: "bg-emerald-50 border-emerald-200",
+      icon: "text-emerald-500",
+      title: "text-emerald-900",
+      body: "text-emerald-800"
+    }
+
+  defp alert_tone(_),
+    do: %{
+      wrapper: "bg-gray-50 border-gray-200",
+      icon: "text-gray-500",
+      title: "text-gray-900",
+      body: "text-gray-700"
+    }
+
+  @doc """
+  Render the form header (title + description).
+
+  ## Assigns
+    * `:title` - heading text
+    * `:description` - subtitle text
+    * `:icon` - optional heroicon name
+    * `:class` - extra wrapper classes
+  """
+  @impl true
+  def form_header(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:title, fn -> nil end)
+      |> assign_new(:description, fn -> nil end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:class, fn -> nil end)
+
+    ~H"""
+    <div class={["mb-6 flex items-start gap-3", @class]}>
+      <.render_icon
+        :if={@icon}
+        name={@icon}
+        class="w-6 h-6 mt-1 text-gray-500 shrink-0"
+      />
+      <div class="flex-1 min-w-0">
+        <h2 :if={@title} class="text-lg font-semibold text-gray-900">{@title}</h2>
+        <p :if={@description} class="mt-1 text-sm text-gray-500">{@description}</p>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Render the form footer (content below the submit row).
+
+  ## Assigns
+    * `:content` - footer text
+    * `:class` - extra wrapper classes
+    * `:inner_block` - optional slot
+  """
+  @impl true
+  def form_footer(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:content, fn -> nil end)
+      |> assign_new(:class, fn -> nil end)
+      |> assign_new(:inner_block, fn -> nil end)
+
+    ~H"""
+    <div class={["mt-4 text-sm text-gray-500", @class]}>
+      <div :if={@content && !@inner_block}>{@content}</div>
+      <div :if={@inner_block}>{render_slot(@inner_block)}</div>
+    </div>
+    """
+  end
+
   defp render_icon(assigns) do
     name = assigns[:name] || ""
     class = assigns[:class] || "w-5 h-5"

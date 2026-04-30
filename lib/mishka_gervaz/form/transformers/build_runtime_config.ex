@@ -13,7 +13,18 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   alias Spark.Dsl.Transformer
   import MishkaGervaz.Table.Transformers.Helpers
 
-  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit, Events, Access}
+  alias MishkaGervaz.Form.Entities.{
+    Field,
+    Group,
+    Step,
+    Upload,
+    Submit,
+    Events,
+    Access,
+    Header,
+    Footer,
+    Notice
+  }
 
   @form_path [:mishka_gervaz, :form]
 
@@ -382,9 +393,15 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       [:columns, :mode, :navigation, :persistence, :responsive]
       |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
 
-    steps = get_entities(dsl_state, path) |> filter_by_type(Step)
+    layout_entities = get_entities(dsl_state, path)
+    steps = filter_by_type(layout_entities, Step)
+    headers = filter_by_type(layout_entities, Header)
+    footers = filter_by_type(layout_entities, Footer)
+    notices = filter_by_type(layout_entities, Notice)
 
-    has_values = any_set?(Map.values(values)) or steps != [] or is_map(domain_layout)
+    has_values =
+      any_set?(Map.values(values)) or steps != [] or is_map(domain_layout) or
+        headers != [] or footers != [] or notices != []
 
     if has_values do
       %{
@@ -399,11 +416,70 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
             do: values.responsive,
             else: (domain_layout && domain_layout[:responsive]) || true
           ),
-        steps: if(steps != [], do: Enum.map(steps, &step_to_map/1), else: nil)
+        steps: if(steps != [], do: Enum.map(steps, &step_to_map/1), else: nil),
+        header: maybe_first(headers, &header_to_map/1),
+        footer: maybe_first(footers, &footer_to_map/1),
+        notices: if(notices != [], do: Enum.map(notices, &notice_to_map/1), else: [])
       }
     else
       nil
     end
+  end
+
+  defp maybe_first([], _), do: nil
+  defp maybe_first([entity | _], to_map_fn), do: to_map_fn.(entity)
+
+  defp header_to_map(%Header{} = h) do
+    %{
+      title: h.title,
+      description: h.description,
+      icon: h.icon,
+      class: h.class,
+      visible: h.visible,
+      restricted: h.restricted,
+      render: h.render,
+      extra: h.extra
+    }
+  end
+
+  defp footer_to_map(%Footer{} = f) do
+    %{
+      content: f.content,
+      class: f.class,
+      visible: f.visible,
+      restricted: f.restricted,
+      render: f.render,
+      extra: f.extra
+    }
+  end
+
+  defp notice_to_map(%Notice{} = n) do
+    %{
+      name: n.name,
+      position: n.position,
+      type: n.type,
+      title: n.title,
+      content: n.content,
+      icon: n.icon,
+      dismissible: n.dismissible,
+      bind_to: n.bind_to,
+      show_when: n.show_when,
+      visible: n.visible,
+      restricted: n.restricted,
+      only_steps: n.only_steps,
+      render: n.render,
+      ui: maybe_ui(n.ui, &notice_ui_to_map/1, &has_notice_ui_values?/1)
+    }
+  end
+
+  defp has_notice_ui_values?(%Notice.Ui{} = ui) do
+    any_set?([ui.class]) or ui.extra != %{}
+  end
+
+  defp has_notice_ui_values?(_), do: false
+
+  defp notice_ui_to_map(%Notice.Ui{} = ui) do
+    %{class: ui.class, extra: ui.extra}
   end
 
   defp step_to_map(step) do

@@ -57,15 +57,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-target={@myself}
             multipart={has_uploads?(@static)}
           >
-            <%= if @state.form_errors != [] do %>
-              <div class="mb-4 rounded-md bg-red-50 p-4">
-                <div class="flex">
-                  <div class="text-sm text-red-700">
-                    <p :for={err <- @state.form_errors}>{err}</p>
-                  </div>
-                </div>
-              </div>
-            <% end %>
+            {render_notices_at(assigns, :form_top)}
+            {render_notices_at(assigns, :before_header)}
+            {render_form_header(assigns)}
+            {render_notices_at(assigns, :after_header)}
+            {render_notices_at(assigns, :before_groups)}
 
             <%= if @state.static.layout_mode == :standard do %>
               {render_groups(assigns)}
@@ -74,8 +70,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             <% end %>
 
             {render_uploads_section(assigns)}
+            {render_notices_at(assigns, :before_submit)}
             {render_submit(assigns)}
+            {render_notices_at(assigns, :form_bottom)}
           </.form>
+          {render_form_footer(assigns)}
+          {render_notices_at(assigns, :form_footer)}
         <% true -> %>
           {render_loading(assigns)}
       <% end %>
@@ -223,7 +223,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <div>
         <%= for group <- @all_groups do %>
           <% group_assigns = assign(assigns, :group, group) %>
+          {render_notices_at(assigns, {:before_group, group.name})}
           {render_group(group_assigns)}
+          {render_notices_at(assigns, {:after_group, group.name})}
         <% end %>
         <%= if @ungrouped_fields != [] do %>
           {render_group_fields(assigns, @ungrouped_fields, nil)}
@@ -253,11 +255,269 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div>
       <%= for group <- @step_groups do %>
         <% ga = assign(assigns, :group, group) %>
+        {render_notices_at(assigns, {:before_group, group.name})}
         {render_group(ga)}
+        {render_notices_at(assigns, {:after_group, group.name})}
       <% end %>
     </div>
     """
   end
+
+  @doc false
+  def render_form_header(assigns) do
+    case assigns.static.header do
+      nil ->
+        ~H""
+
+      header ->
+        if chrome_visible?(header, assigns.state) do
+          do_render_form_header(assigns, header)
+        else
+          ~H""
+        end
+    end
+  end
+
+  defp do_render_form_header(assigns, header) do
+    case header.render do
+      fun when is_function(fun, 1) ->
+        fun.(assigns)
+
+      fun when is_function(fun, 2) ->
+        fun.(assigns, assigns.state)
+
+      _ ->
+        title = resolve_dynamic(header.title, assigns.state)
+        description = resolve_dynamic(header.description, assigns.state)
+
+        if is_nil(title) and is_nil(description) do
+          ~H""
+        else
+          assigns =
+            assigns
+            |> assign(:header_title, title)
+            |> assign(:header_description, description)
+            |> assign(:header_icon, header.icon)
+            |> assign(:header_class, header.class)
+            |> assign(:ui, assigns.static.ui_adapter)
+
+          ~H"""
+          <.dynamic_component
+            module={@ui}
+            function={:form_header}
+            title={@header_title}
+            description={@header_description}
+            icon={@header_icon}
+            class={@header_class}
+          />
+          """
+        end
+    end
+  end
+
+  @doc false
+  def render_form_footer(assigns) do
+    case assigns.static.footer do
+      nil ->
+        ~H""
+
+      footer ->
+        if chrome_visible?(footer, assigns.state) do
+          do_render_form_footer(assigns, footer)
+        else
+          ~H""
+        end
+    end
+  end
+
+  defp do_render_form_footer(assigns, footer) do
+    case footer.render do
+      fun when is_function(fun, 1) ->
+        fun.(assigns)
+
+      fun when is_function(fun, 2) ->
+        fun.(assigns, assigns.state)
+
+      _ ->
+        content = resolve_dynamic(footer.content, assigns.state)
+
+        if is_nil(content) do
+          ~H""
+        else
+          assigns =
+            assigns
+            |> assign(:footer_content, content)
+            |> assign(:footer_class, footer.class)
+            |> assign(:ui, assigns.static.ui_adapter)
+
+          ~H"""
+          <.dynamic_component
+            module={@ui}
+            function={:form_footer}
+            content={@footer_content}
+            class={@footer_class}
+          />
+          """
+        end
+    end
+  end
+
+  @doc false
+  def render_notices_at(assigns, position) do
+    notices =
+      assigns.static.notices
+      |> Enum.filter(&(&1.position == position))
+      |> Enum.filter(&notice_visible?(&1, assigns.state))
+
+    assigns = assign(assigns, :notices_at_position, notices)
+
+    ~H"""
+    <%= for notice <- @notices_at_position do %>
+      {render_notice(assigns, notice)}
+    <% end %>
+    """
+  end
+
+  defp render_notice(assigns, notice) do
+    case notice.render do
+      fun when is_function(fun, 1) ->
+        assigns
+        |> assign(:notice, notice)
+        |> fun.()
+
+      fun when is_function(fun, 2) ->
+        assigns_with = assign(assigns, :notice, notice)
+        fun.(assigns_with, assigns.state)
+
+      _ ->
+        title = resolve_dynamic(notice.title, assigns.state)
+        content = resolve_dynamic(notice.content, assigns.state)
+        notice_ui = notice.ui || %{}
+
+        assigns =
+          assigns
+          |> assign(:notice_type, notice.type)
+          |> assign(:notice_title, title)
+          |> assign(:notice_content, content)
+          |> assign(:notice_icon, notice.icon)
+          |> assign(:notice_dismissible, notice.dismissible)
+          |> assign(:notice_name, notice.name)
+          |> assign(:notice_class, Map.get(notice_ui, :class))
+          |> assign(:ui, assigns.static.ui_adapter)
+
+        ~H"""
+        <div class="mb-4">
+          <.dynamic_component
+            module={@ui}
+            function={:alert}
+            type={@notice_type}
+            title={@notice_title}
+            content={@notice_content}
+            icon={@notice_icon}
+            dismissible={@notice_dismissible}
+            dismiss_event="dismiss_notice"
+            dismiss_value={to_string(@notice_name)}
+            phx_target={@myself}
+            class={@notice_class}
+          />
+        </div>
+        """
+    end
+  end
+
+  defp notice_visible?(notice, state) do
+    cond do
+      not chrome_visible?(notice, state) ->
+        false
+
+      MapSet.member?(state.dismissed_notices || MapSet.new(), notice.name) ->
+        false
+
+      not step_match?(notice, state) ->
+        false
+
+      not bind_to_active?(notice, state) ->
+        false
+
+      is_function(notice.show_when, 1) ->
+        notice.show_when.(state)
+
+      true ->
+        true
+    end
+  end
+
+  defp chrome_visible?(entity, state) do
+    restricted_ok? =
+      case Map.get(entity, :restricted) do
+        true -> state.master_user?
+        fun when is_function(fun, 1) -> not fun.(state)
+        _ -> true
+      end
+
+    visible_ok? =
+      case Map.get(entity, :visible) do
+        false -> false
+        fun when is_function(fun, 1) -> fun.(state)
+        _ -> true
+      end
+
+    restricted_ok? and visible_ok?
+  end
+
+  defp step_match?(%{only_steps: nil}, _state), do: true
+  defp step_match?(%{only_steps: []}, _state), do: true
+
+  defp step_match?(%{only_steps: steps}, %{current_step: current}) when is_list(steps),
+    do: current in steps
+
+  defp step_match?(_, _), do: true
+
+  defp bind_to_active?(%{bind_to: nil}, _state), do: true
+
+  defp bind_to_active?(%{bind_to: :validation}, state) do
+    has_form_errors?(state) or has_field_errors?(state) or has_changeset_errors?(state)
+  end
+
+  defp bind_to_active?(%{bind_to: :dirty}, %{dirty?: dirty?}), do: dirty? == true
+
+  defp bind_to_active?(%{bind_to: :uploads}, %{upload_state: upload_state})
+       when is_map(upload_state) do
+    Enum.any?(upload_state, fn
+      {_k, %{errors: errs}} when is_list(errs) -> errs != []
+      _ -> false
+    end)
+  end
+
+  defp bind_to_active?(_, _), do: true
+
+  defp has_form_errors?(%{form_errors: errors}) when is_list(errors), do: errors != []
+  defp has_form_errors?(_), do: false
+
+  defp has_field_errors?(%{errors: errors}) when is_map(errors) do
+    Enum.any?(errors, fn
+      {_k, v} when is_list(v) -> v != []
+      {_k, v} when is_binary(v) -> v != ""
+      _ -> false
+    end)
+  end
+
+  defp has_field_errors?(_), do: false
+
+  defp has_changeset_errors?(%{form: %{source: %{submitted_once?: true} = source}}) do
+    case source do
+      %{errors: errors} when is_list(errors) -> errors != []
+      _ -> false
+    end
+  end
+
+  defp has_changeset_errors?(_), do: false
+
+  defp resolve_dynamic(nil, _state), do: nil
+  defp resolve_dynamic(value, _state) when is_binary(value), do: value
+  defp resolve_dynamic(fun, _state) when is_function(fun, 0), do: fun.()
+  defp resolve_dynamic(fun, state) when is_function(fun, 1), do: fun.(state)
+  defp resolve_dynamic(value, _state), do: value
 
   defp render_group_fields(assigns, fields, group_columns) do
     columns = group_columns || assigns.static.layout_columns

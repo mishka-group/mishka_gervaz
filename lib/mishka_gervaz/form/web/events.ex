@@ -598,6 +598,25 @@ defmodule MishkaGervaz.Form.Web.Events do
         end
       end
 
+      defp do_handle("dismiss_notice", %{"name" => name}, state, socket)
+           when is_binary(name) and byte_size(name) > 0 do
+        notice_atom =
+          state.static.notices
+          |> Enum.find(&(to_string(&1.name) == name))
+          |> case do
+            %{name: n} -> n
+            _ -> nil
+          end
+
+        if notice_atom do
+          dismissed = MapSet.put(state.dismissed_notices || MapSet.new(), notice_atom)
+          new_state = State.update(state, dismissed_notices: dismissed)
+          {:noreply, Phoenix.Component.assign(socket, :form_state, new_state)}
+        else
+          {:noreply, socket}
+        end
+      end
+
       defp do_handle(event, params, _state, socket) do
         send(self(), {:form_event, event, params})
         {:noreply, socket}
