@@ -42,7 +42,10 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     EmptyState,
     ErrorState,
     DataLoader,
-    Events
+    Events,
+    Header,
+    Footer,
+    Notice
   }
 
   @table_path [:mishka_gervaz, :table]
@@ -73,6 +76,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       pagination: build_pagination(dsl_state, domain_defaults),
       empty_state: build_empty_state(dsl_state),
       error_state: build_error_state(dsl_state),
+      layout: build_layout(dsl_state),
       presentation: build_presentation(dsl_state, module, domain_config),
       refresh: build_refresh(dsl_state, domain_defaults),
       url_sync: build_url_sync(dsl_state, domain_defaults),
@@ -1027,5 +1031,79 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     end
 
     adapter_name
+  end
+
+  defp build_layout(dsl_state) do
+    path = @table_path ++ [:layout]
+    entities = get_entities(dsl_state, path)
+
+    headers = filter_by_type(entities, Header)
+    footers = filter_by_type(entities, Footer)
+    notices = filter_by_type(entities, Notice)
+
+    if headers == [] and footers == [] and notices == [] do
+      nil
+    else
+      %{
+        header: maybe_first(headers, &header_to_map/1),
+        footer: maybe_first(footers, &footer_to_map/1),
+        notices: Enum.map(notices, &notice_to_map/1)
+      }
+    end
+  end
+
+  defp maybe_first([], _), do: nil
+  defp maybe_first([entity | _], to_map_fn), do: to_map_fn.(entity)
+
+  defp header_to_map(%Header{} = h) do
+    %{
+      title: h.title,
+      description: h.description,
+      icon: h.icon,
+      class: h.class,
+      visible: h.visible,
+      restricted: h.restricted,
+      render: h.render,
+      extra: h.extra
+    }
+  end
+
+  defp footer_to_map(%Footer{} = f) do
+    %{
+      content: f.content,
+      class: f.class,
+      visible: f.visible,
+      restricted: f.restricted,
+      render: f.render,
+      extra: f.extra
+    }
+  end
+
+  defp notice_to_map(%Notice{} = n) do
+    %{
+      name: n.name,
+      position: n.position,
+      type: n.type,
+      title: n.title,
+      content: n.content,
+      icon: n.icon,
+      dismissible: n.dismissible,
+      bind_to: n.bind_to,
+      show_when: n.show_when,
+      visible: n.visible,
+      restricted: n.restricted,
+      render: n.render,
+      ui: notice_ui_to_map(n.ui)
+    }
+  end
+
+  defp notice_ui_to_map(nil), do: nil
+  defp notice_ui_to_map([]), do: nil
+  defp notice_ui_to_map([ui | _]), do: notice_ui_to_map(ui)
+
+  defp notice_ui_to_map(%Notice.Ui{class: nil, extra: e}) when e == %{}, do: nil
+
+  defp notice_ui_to_map(%Notice.Ui{} = ui) do
+    %{class: ui.class, extra: ui.extra}
   end
 end

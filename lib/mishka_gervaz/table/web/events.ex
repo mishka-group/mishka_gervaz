@@ -1018,6 +1018,25 @@ defmodule MishkaGervaz.Table.Web.Events do
         relation_filter_handler(state).handle(action, params, state, socket)
       end
 
+      defp do_handle("dismiss_notice", %{"name" => name}, state, socket)
+           when is_binary(name) and byte_size(name) > 0 do
+        notice_atom =
+          state.static.notices
+          |> Enum.find(&(to_string(&1.name) == name))
+          |> case do
+            %{name: n} -> n
+            _ -> nil
+          end
+
+        if notice_atom do
+          dismissed = MapSet.put(state.dismissed_notices || MapSet.new(), notice_atom)
+          new_state = State.update(state, dismissed_notices: dismissed)
+          {:noreply, Phoenix.Component.assign(socket, :table_state, new_state)}
+        else
+          {:noreply, socket}
+        end
+      end
+
       defp do_handle(event, params, _state, socket) do
         send(self(), {:table_event, event, params})
         {:noreply, socket}
