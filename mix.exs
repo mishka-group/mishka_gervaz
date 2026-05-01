@@ -1,14 +1,14 @@
 defmodule MishkaGervaz.MixProject do
   use Mix.Project
 
-  @version "0.0.1"
+  @version "0.0.1-alpha.1"
   @source_url "https://github.com/mishka-group/mishka_gervaz"
 
   def project do
     [
       app: :mishka_gervaz,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
       deps: deps(),
@@ -18,7 +18,7 @@ defmodule MishkaGervaz.MixProject do
       dialyzer: dialyzer(),
       name: "MishkaGervaz",
       description:
-        "Mishka Gervaz is a comprehensive, declarative UI library for the Ash ecosystem — define tables, forms, and data-driven interfaces entirely through DSL, with built-in sorting, filtering, real-time updates, and extensible templates. Every component, adapter, and behavior is fully overridable and customizable",
+        "Mishka Gervaz is a comprehensive, declarative UI library for the Ash ecosystem — define tables, forms, and data-driven interfaces entirely through DSL, with built-in sorting, filtering, real-time updates, and extensible templates.",
       source_url: @source_url,
       homepage_url: @source_url,
       elixirc_paths: elixirc_paths(Mix.env())
