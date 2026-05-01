@@ -3,11 +3,16 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
   Entity struct for a single submit/cancel button configuration.
 
   Each button (create, update, cancel) is an independent entity with its own
-  `label`, `disabled`, `restricted`, and `visible` options.
+  `label`, `active`, `disabled`, `restricted`, and `visible` options.
+
+  The `active` option is intended for resources only — it suppresses a button
+  that would otherwise be inherited from the domain. Use `active: false` to
+  opt out of a domain-defined button on a per-resource basis.
   """
 
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
+          active: boolean() | (map() -> boolean()),
           disabled: boolean() | (map() -> boolean()),
           restricted: boolean() | (map() -> boolean()),
           visible: boolean() | (map() -> boolean()),
@@ -15,6 +20,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
         }
 
   defstruct label: nil,
+            active: true,
             disabled: false,
             restricted: false,
             visible: true,
@@ -24,6 +30,13 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
     label: [
       type: {:or, [:string, {:fun, 0}]},
       doc: "Button label. String or zero-arity function."
+    ],
+    active: [
+      type: {:or, [:boolean, {:fun, 1}]},
+      default: true,
+      doc:
+        "Whether the button is active. Boolean or `fn state -> boolean end`. " <>
+          "Set to `false` to suppress a button inherited from the domain. Resource-only."
     ],
     disabled: [
       type: {:or, [:boolean, {:fun, 1}]},

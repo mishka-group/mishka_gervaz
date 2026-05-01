@@ -115,13 +115,13 @@ defmodule MishkaGervaz.DSL.SourceTest do
     end
   end
 
-  describe "system defaults (no DSL source section)" do
-    test "non-tenant resource uses single atom defaults" do
+  describe "actions inherited from the domain (no DSL source section)" do
+    test "non-tenant resource inherits the domain action tuples" do
       config = ResourceInfo.table_config(MinimalResource)
 
-      assert config.source.actions.read == :read
-      assert config.source.actions.get == :get
-      assert config.source.actions.destroy == :destroy
+      assert config.source.actions.read == {:master_read, :read}
+      assert config.source.actions.get == {:master_get, :read}
+      assert config.source.actions.destroy == {:master_destroy, :destroy}
     end
 
     test "multitenancy is disabled for MinimalResource" do
@@ -129,21 +129,21 @@ defmodule MishkaGervaz.DSL.SourceTest do
       assert config.multitenancy.enabled == false
     end
 
-    test "get_action returns same action for master and tenant" do
+    test "get_action returns the master/tenant tuple values" do
       master_read = ResourceInfo.get_action(MinimalResource, :read, true)
       tenant_read = ResourceInfo.get_action(MinimalResource, :read, false)
 
-      assert master_read == :read
+      assert master_read == :master_read
       assert tenant_read == :read
     end
 
-    test "get_action works for all action types with single atoms" do
+    test "get_action returns inherited values for all action types" do
       for action_type <- [:read, :get, :destroy] do
         master = ResourceInfo.get_action(MinimalResource, action_type, true)
         tenant = ResourceInfo.get_action(MinimalResource, action_type, false)
 
-        assert master == tenant
         assert is_atom(master)
+        assert is_atom(tenant)
       end
     end
 
@@ -191,11 +191,11 @@ defmodule MishkaGervaz.DSL.SourceTest do
     end
   end
 
-  describe "DSL vs system defaults comparison" do
-    test "User (no source section) uses system defaults" do
+  describe "DSL vs domain defaults comparison" do
+    test "User (no source section) uses domain defaults" do
       config = ResourceInfo.table_config(User)
 
-      assert config.source.actions.read == :read
+      assert config.source.actions.read == {:master_read, :read}
       assert config.multitenancy.enabled == false
     end
 

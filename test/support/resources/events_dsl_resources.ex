@@ -67,7 +67,20 @@ defmodule MishkaGervaz.Test.EventsDsl do
 
   # Test domain
   defmodule TestDomain do
-    use Ash.Domain, validate_config_inclusion?: false
+    use Ash.Domain, extensions: [MishkaGervaz.Domain], validate_config_inclusion?: false
+
+    mishka_gervaz do
+      table do
+        actor_key :current_user
+        master_check fn _user -> true end
+
+        actions do
+          read {:master_read, :read}
+          get {:master_get, :read}
+          destroy {:master_destroy, :destroy}
+        end
+      end
+    end
 
     resources do
       resource MishkaGervaz.Test.EventsDsl.CustomSanitizationResource

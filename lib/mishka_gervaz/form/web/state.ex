@@ -106,7 +106,10 @@ defmodule MishkaGervaz.Form.Web.State do
       :layout_mode,
       :layout_columns,
       :layout_navigation,
-      :layout_persistence
+      :layout_persistence,
+      :header,
+      :footer,
+      :notices
     ]
 
     @type t :: %__MODULE__{
@@ -132,7 +135,10 @@ defmodule MishkaGervaz.Form.Web.State do
             layout_mode: :standard | :wizard | :tabs,
             layout_columns: 1 | 2 | 3 | 4,
             layout_navigation: :sequential | :free,
-            layout_persistence: :none | :ets | :client_token
+            layout_persistence: :none | :ets | :client_token,
+            header: map() | nil,
+            footer: map() | nil,
+            notices: list(map())
           }
   end
 
@@ -155,7 +161,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :existing_files,
     :dirty?,
     :defaults,
-    :preload_aliases
+    :preload_aliases,
+    :dismissed_notices
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -180,7 +187,8 @@ defmodule MishkaGervaz.Form.Web.State do
           existing_files: %{atom() => list(map())},
           dirty?: boolean(),
           defaults: map() | nil,
-          preload_aliases: %{atom() => atom()}
+          preload_aliases: %{atom() => atom()},
+          dismissed_notices: MapSet.t()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -267,6 +275,30 @@ defmodule MishkaGervaz.Form.Web.State do
     def get_uploads(config) do
       case config do
         %{uploads: uploads} when is_list(uploads) -> uploads
+        _ -> []
+      end
+    end
+
+    @spec get_header(map()) :: map() | nil
+    def get_header(config) do
+      case config do
+        %{layout: %{header: header}} when is_map(header) -> header
+        _ -> nil
+      end
+    end
+
+    @spec get_footer(map()) :: map() | nil
+    def get_footer(config) do
+      case config do
+        %{layout: %{footer: footer}} when is_map(footer) -> footer
+        _ -> nil
+      end
+    end
+
+    @spec get_notices(map()) :: list(map())
+    def get_notices(config) do
+      case config do
+        %{layout: %{notices: notices}} when is_list(notices) -> notices
         _ -> []
       end
     end
@@ -460,7 +492,10 @@ defmodule MishkaGervaz.Form.Web.State do
           layout_mode: layout_mode,
           layout_columns: StateHelpers.get_layout_columns(config),
           layout_navigation: StateHelpers.get_layout_navigation(config),
-          layout_persistence: StateHelpers.get_layout_persistence(config)
+          layout_persistence: StateHelpers.get_layout_persistence(config),
+          header: StateHelpers.get_header(config),
+          footer: StateHelpers.get_footer(config),
+          notices: StateHelpers.get_notices(config)
         }
 
         current_step =
@@ -491,7 +526,8 @@ defmodule MishkaGervaz.Form.Web.State do
           existing_files: %{},
           dirty?: false,
           defaults: nil,
-          preload_aliases: preload_aliases
+          preload_aliases: preload_aliases,
+          dismissed_notices: MapSet.new()
         }
       end
 

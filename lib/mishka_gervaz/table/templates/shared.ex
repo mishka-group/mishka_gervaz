@@ -975,9 +975,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       />
     </div>
 
-    <%!-- Load more button --%>
+    <%!-- Load more button (for :load_more — manual click) --%>
     <div
-      :if={@pagination_type in [:infinite, :load_more] and @has_more? and @loading != :loading}
+      :if={@pagination_type == :load_more and @has_more? and @loading != :loading}
       class="mt-4 text-center"
     >
       <.dynamic_component
@@ -989,6 +989,14 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         disabled={false}
         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
       />
+    </div>
+
+    <%!-- End-of-list marker for :infinite (the real load trigger is phx-viewport-bottom on tbody) --%>
+    <div
+      :if={@pagination_type == :infinite and not @has_more? and @loading != :loading and @page > 1}
+      class="mt-4 py-4 text-center text-xs text-gray-400 border-t border-gray-200"
+    >
+      {dgettext("mishka_gervaz", "End of results")}
     </div>
 
     <%!-- Page size selector for load_more/infinite --%>

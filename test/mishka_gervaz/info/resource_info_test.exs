@@ -433,29 +433,29 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
       assert tenant_action == :destroy
     end
 
-    test "User read action uses defaults (no source section)" do
+    test "User read action uses domain defaults (no source section)" do
       master_action = ResourceInfo.get_action(User, :read, true)
       tenant_action = ResourceInfo.get_action(User, :read, false)
 
-      assert master_action == :read
+      assert master_action == :master_read
       assert tenant_action == :read
     end
 
-    test "Comment read action uses defaults (no source section)" do
+    test "Comment read action uses domain defaults (no source section)" do
       master_action = ResourceInfo.get_action(Comment, :read, true)
       tenant_action = ResourceInfo.get_action(Comment, :read, false)
 
-      assert master_action == :read
+      assert master_action == :master_read
       assert tenant_action == :read
     end
   end
 
   describe "get_action/3 edge cases" do
-    test "handles single atom action (MinimalResource)" do
+    test "MinimalResource inherits the domain tuple action" do
       master = ResourceInfo.get_action(MinimalResource, :read, true)
       tenant = ResourceInfo.get_action(MinimalResource, :read, false)
 
-      assert master == :read
+      assert master == :master_read
       assert tenant == :read
     end
 
@@ -472,8 +472,8 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
         master = ResourceInfo.get_action(MinimalResource, action_type, true)
         tenant = ResourceInfo.get_action(MinimalResource, action_type, false)
 
-        assert master == tenant
         assert is_atom(master)
+        assert is_atom(tenant)
       end
     end
 

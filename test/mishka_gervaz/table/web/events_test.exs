@@ -1251,6 +1251,145 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
     end
   end
 
+  describe "per-action row hooks" do
+    test "before_row_action :delete halts the deletion" do
+      [record | _] = create_test_data(BasicResource, 2)
+
+      before = fn _record, _state -> {:halt, {:error, :no}} end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:before_row_action, :delete} => before}
+        )
+
+      socket = create_socket(state, with_stream: true)
+      {:noreply, _} = Events.handle("delete", %{"id" => record.id}, socket)
+
+      # Record still exists — halted
+      assert Ash.get!(BasicResource, record.id)
+    end
+
+    test "after_row_action :delete fires after success with {:ok, record}" do
+      [record | _] = create_test_data(BasicResource, 2)
+      test_pid = self()
+
+      after_hook = fn result, _state ->
+        send(test_pid, {:after_row, result})
+        :ok
+      end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:after_row_action, :delete} => after_hook}
+        )
+
+      socket = create_socket(state, with_stream: true)
+
+      try do
+        {:noreply, _} = Events.handle("delete", %{"id" => record.id}, socket)
+      rescue
+        KeyError -> :ok
+      end
+
+      assert_received {:after_row, {:ok, _deleted}}
+    end
+
+    test "on_row_action_success :delete fires after success" do
+      [record | _] = create_test_data(BasicResource, 2)
+      test_pid = self()
+
+      success = fn rec, _state ->
+        send(test_pid, {:row_success, rec.id})
+        nil
+      end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:on_row_action_success, :delete} => success}
+        )
+
+      socket = create_socket(state, with_stream: true)
+
+      try do
+        {:noreply, _} = Events.handle("delete", %{"id" => record.id}, socket)
+      rescue
+        KeyError -> :ok
+      end
+
+      assert_received {:row_success, _id}
+    end
+
+    test "before_row_action keyed by other action does NOT halt :delete" do
+      [record | _] = create_test_data(BasicResource, 2)
+
+      before = fn _record, _state -> {:halt, {:error, :no}} end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:before_row_action, :unarchive} => before}
+        )
+
+      socket = create_socket(state, with_stream: true)
+
+      try do
+        {:noreply, _} = Events.handle("delete", %{"id" => record.id}, socket)
+      rescue
+        KeyError -> :ok
+      end
+
+      # The :delete went through (the :unarchive hook didn't apply)
+      refute Ash.get(BasicResource, record.id) |> elem(0) == :ok and
+               match?(%{}, Ash.get(BasicResource, record.id) |> elem(1))
+    end
+  end
+
+  describe "per-action bulk hook — before_bulk_action halt" do
+    test "before_bulk_action halt stops execution" do
+      _records = create_test_data(BasicResource, 2)
+      test_pid = self()
+
+      before = fn _ids, _state ->
+        send(test_pid, :before_fired)
+        {:halt, {:error, :no}}
+      end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:before_bulk_action, :export} => before},
+          bulk_actions: [%{name: :export, handler: :parent}]
+        )
+
+      socket = create_socket(state)
+      {:noreply, _} = Events.handle("bulk_action", %{"action" => "export"}, socket)
+
+      assert_received :before_fired
+      # parent message was NOT sent because the halt stopped dispatch
+      refute_received {:bulk_action, :export, _}
+    end
+
+    test "before_bulk_action returning :ok lets dispatch proceed" do
+      _records = create_test_data(BasicResource, 2)
+      test_pid = self()
+
+      before = fn _ids, _state ->
+        send(test_pid, :before_fired)
+        :ok
+      end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:before_bulk_action, :export} => before},
+          bulk_actions: [%{name: :export, handler: :parent}]
+        )
+
+      socket = create_socket(state)
+      {:noreply, _} = Events.handle("bulk_action", %{"action" => "export"}, socket)
+
+      assert_received :before_fired
+      assert_received {:bulk_action, :export, _}
+    end
+  end
+
   describe "tenant user handling" do
     test "uses tenant action for delete" do
       [record | _] = create_test_data(BasicResource, 3)

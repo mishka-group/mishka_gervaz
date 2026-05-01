@@ -7,8 +7,11 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   alias Spark.Dsl.Verifier
   alias MishkaGervaz.Table.Entities.Realtime
 
+  @actions_path [:mishka_gervaz, :table, :source, :actions]
   @archive_path [:mishka_gervaz, :table, :source, :archive]
   @realtime_path [:mishka_gervaz, :table, :realtime]
+
+  @required_actions [:read, :get, :destroy]
 
   @archive_opts [
     :enabled,
@@ -30,9 +33,80 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
 
   defp do_verify(dsl_state) do
     with module <- Verifier.get_persisted(dsl_state, :module),
+         :ok <- validate_required_actions(dsl_state, module),
          :ok <- validate_archive_section(dsl_state, module),
+         :ok <- validate_archive_inheritance(dsl_state, module),
          :ok <- validate_realtime_prefix(dsl_state, module),
          do: :ok
+  end
+
+  @spec validate_required_actions(Spark.Dsl.t(), module()) ::
+          :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_required_actions(dsl_state, module) do
+    domain_actions = domain_actions(module)
+
+    missing =
+      Enum.filter(@required_actions, fn key ->
+        is_nil(Verifier.get_option(dsl_state, @actions_path, key)) and
+          is_nil(Map.get(domain_actions, key))
+      end)
+
+    case missing do
+      [] -> :ok
+      _ -> dsl_error(module, @actions_path, missing_actions_message(missing))
+    end
+  end
+
+  defp domain_actions(module) do
+    with {:ok, domain} <- safe_domain(module),
+         %{table: %{actions: actions}} when is_map(actions) <-
+           Spark.Dsl.Extension.get_persisted(domain, :mishka_gervaz_domain_config) do
+      actions
+    else
+      _ -> %{}
+    end
+  rescue
+    _ -> %{}
+  end
+
+  defp missing_actions_message(missing) do
+    keys = Enum.map_join(missing, ", ", &inspect/1)
+
+    """
+    Missing required table source action(s): #{keys}
+
+    Each of #{Enum.map_join(@required_actions, ", ", &inspect/1)} must be defined
+    either on the resource or on the domain. Resource values win when both are set.
+
+    Provide them on the resource:
+
+        mishka_gervaz do
+          table do
+            source do
+              actions do
+                read {:master_read, :read}
+                get {:master_get, :read}
+                destroy {:master_destroy, :destroy}
+              end
+            end
+          end
+        end
+
+    Or on the domain (inherited by every resource in the domain):
+
+        mishka_gervaz do
+          table do
+            actions do
+              read {:master_read, :read}
+              get {:master_get, :read}
+              destroy {:master_destroy, :destroy}
+            end
+          end
+        end
+
+    Each value can be a single atom (used for both master and tenant requests)
+    or a tuple `{master_action, tenant_action}`.
+    """
   end
 
   @spec validate_archive_section(Spark.Dsl.t(), module()) ::
@@ -51,6 +125,82 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   defp validate_archive(true, false, module),
     do:
       dsl_error(module, @archive_path, "archive section requires AshArchival.Resource extension")
+
+  @spec validate_archive_inheritance(Spark.Dsl.t(), module()) ::
+          :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_archive_inheritance(dsl_state, module) do
+    cond do
+      not has_ash_archival?(module) ->
+        :ok
+
+      resource_archive_defined?(dsl_state) ->
+        :ok
+
+      domain_archive_defined?(module) ->
+        :ok
+
+      true ->
+        dsl_error(
+          module,
+          @archive_path,
+          archive_missing_message()
+        )
+    end
+  end
+
+  defp resource_archive_defined?(dsl_state) do
+    Enum.any?(@archive_opts, &(Verifier.get_option(dsl_state, @archive_path, &1) != nil))
+  end
+
+  defp domain_archive_defined?(module) do
+    with {:ok, domain} <- safe_domain(module),
+         %{table: %{archive: archive}} when is_map(archive) and map_size(archive) > 0 <-
+           Spark.Dsl.Extension.get_persisted(domain, :mishka_gervaz_domain_config) do
+      true
+    else
+      _ -> false
+    end
+  rescue
+    _ -> false
+  end
+
+  defp safe_domain(module) do
+    case Ash.Resource.Info.domain(module) do
+      nil -> :error
+      domain -> {:ok, domain}
+    end
+  rescue
+    _ -> :error
+  end
+
+  defp archive_missing_message do
+    """
+    AshArchival.Resource is in the resource extensions, but no archive
+    configuration is defined.
+
+    Either:
+
+      * add an `archive do ... end` block under `mishka_gervaz > table > source`
+        on the resource:
+
+            mishka_gervaz do
+              table do
+                source do
+                  archive do
+                    read_action {:master_archived, :archived}
+                    get_action {:master_get_archived, :get_archived}
+                    restore_action {:master_unarchive, :unarchive}
+                    destroy_action {:master_permanent_destroy, :permanent_destroy}
+                  end
+                end
+              end
+            end
+
+      * or add a domain-level `archive do ... end` under
+        `mishka_gervaz > table` so all archival resources in the domain
+        inherit the same defaults.
+    """
+  end
 
   @spec validate_realtime_prefix(Spark.Dsl.t(), module()) ::
           :ok | {:error, Spark.Error.DslError.t()}

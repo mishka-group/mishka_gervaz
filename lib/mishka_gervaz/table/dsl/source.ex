@@ -8,19 +8,22 @@ defmodule MishkaGervaz.Table.Dsl.Source do
 
   @actions_schema [
     read: [
-      type: {:tuple, [:atom, :atom]},
-      default: {:master_read, :tenant_read},
-      doc: "Read action tuple `{master_action, tenant_action}`."
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc:
+        "Read action. Atom (used for both master and tenant) or tuple `{master_action, tenant_action}`. " <>
+          "Required either here or on the domain — compile fails otherwise."
     ],
     get: [
-      type: {:tuple, [:atom, :atom]},
-      default: {:master_get, :read},
-      doc: "Get action tuple `{master_action, tenant_action}`."
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc:
+        "Get action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Required either here or on the domain."
     ],
     destroy: [
-      type: {:tuple, [:atom, :atom]},
-      default: {:master_destroy, :destroy},
-      doc: "Destroy action tuple `{master_action, tenant_action}`."
+      type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+      doc:
+        "Destroy action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Required either here or on the domain."
     ]
   ]
 

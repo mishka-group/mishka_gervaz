@@ -70,7 +70,8 @@ defmodule MishkaGervaz.Table.Dsl do
     Presentation,
     Hooks,
     Refresh,
-    UrlSync
+    UrlSync,
+    Layout
   }
 
   alias MishkaGervaz.Table.Dsl.State, as: StateDsl
@@ -95,6 +96,7 @@ defmodule MishkaGervaz.Table.Dsl do
         RowActions.section(),
         Row.section(),
         BulkActions.section(),
+        Layout.section(),
         Presentation.section(),
         Hooks.section(),
         Refresh.section(),

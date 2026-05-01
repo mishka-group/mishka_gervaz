@@ -30,6 +30,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.JS
 
+  @doc false
+  def pagination_type(static) do
+    get_in(static.config, [:pagination, :type]) || :numbered
+  end
+
   @impl true
   def name, do: :table
 
@@ -81,6 +86,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
     show_actions =
       Shared.has_user_visible_actions?(static.row_actions, static.row_action_dropdowns, state)
 
+    is_infinite_scroll? =
+      pagination_type(static) == :infinite and state.has_more?
+
+    viewport_event = if is_infinite_scroll?, do: "load_more", else: nil
+
     assigns =
       assigns
       |> assign(:show_checkboxes, show_checkboxes)
@@ -91,9 +101,16 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:show_expand, show_expand)
       |> assign(:show_actions, show_actions)
       |> assign(:features, features)
+      |> assign(:infinite_scroll?, is_infinite_scroll?)
+      |> assign(:viewport_event, viewport_event)
 
     ~H"""
     <div class="mishka-gervaz-table">
+      {render_notices_at(assigns, :table_top)}
+      {render_notices_at(assigns, :before_header)}
+      {render_chrome_header(assigns)}
+      {render_notices_at(assigns, :after_header)}
+
       <.render_initial_loading
         :if={!@state.has_initial_data? and @state.loading in [:initial, :loading]}
         static={@static}
@@ -101,14 +118,18 @@ defmodule MishkaGervaz.Table.Templates.Table do
       />
 
       <div :if={@state.has_initial_data? or @state.loading == :loaded}>
+        {render_notices_at(assigns, :before_filters)}
         <.render_filters :if={@show_filters} static={@static} state={@state} myself={@myself} />
+        {render_notices_at(assigns, :after_filters)}
 
+        {render_notices_at(assigns, :before_bulk_actions)}
         <.render_bulk_actions
           :if={@show_bulk_actions}
           static={@static}
           state={@state}
           myself={@myself}
         />
+        {render_notices_at(assigns, :after_bulk_actions)}
 
         <Shared.render_template_switcher
           :if={@show_template_switcher}
@@ -116,6 +137,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
           current_template={@state.template}
           myself={@myself}
         />
+
+        {render_notices_at(assigns, :before_table)}
 
         <div class="relative overflow-x-auto" style="isolation: isolate;">
           <.render_loading_overlay
@@ -136,7 +159,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
               features={@features}
               myself={@myself}
             />
-            <tbody id={"#{@static.stream_name}"} phx-update="stream" class="divide-y divide-gray-200">
+            <tbody
+              id={"#{@static.stream_name}"}
+              phx-update="stream"
+              class="divide-y divide-gray-200"
+            >
               <tr id={"#{@static.stream_name}-empty-state"} class="hidden only:table-row">
                 <td colspan="100" class="px-4 py-12 text-center text-gray-500">
                   <span
@@ -215,13 +242,289 @@ defmodule MishkaGervaz.Table.Templates.Table do
           </table>
         </div>
 
+        <div
+          :if={@infinite_scroll?}
+          id={@static.id <> "-infinite-trigger"}
+          phx-viewport-bottom={@viewport_event}
+          phx-target={@myself}
+          class="py-6 flex items-center justify-center gap-2 text-sm text-gray-400"
+        >
+          <span class="hero-arrow-down-circle w-4 h-4 animate-bounce"></span>
+          <span>{dgettext("mishka_gervaz", "Scroll for more")}</span>
+        </div>
+
+        {render_notices_at(assigns, :after_table)}
+
+        {render_notices_at(assigns, :empty_state)}
         <.render_empty :if={@empty?} static={@static} state={@state} myself={@myself} />
 
+        {render_notices_at(assigns, :before_pagination)}
         <.render_pagination :if={@show_pagination} static={@static} state={@state} myself={@myself} />
+        {render_notices_at(assigns, :after_pagination)}
+
+        {render_notices_at(assigns, :table_bottom)}
       </div>
+
+      {render_chrome_footer(assigns)}
     </div>
     """
   end
+
+  @doc false
+  def render_chrome_header(assigns) do
+    case assigns.static.header do
+      nil ->
+        ~H""
+
+      header ->
+        if chrome_visible?(header, assigns.state) do
+          do_render_chrome_header(assigns, header)
+        else
+          ~H""
+        end
+    end
+  end
+
+  defp do_render_chrome_header(assigns, header) do
+    case header.render do
+      fun when is_function(fun, 1) ->
+        fun.(assigns)
+
+      fun when is_function(fun, 2) ->
+        fun.(assigns, assigns.state)
+
+      _ ->
+        title = resolve_dynamic(header.title, assigns.state)
+        description = resolve_dynamic(header.description, assigns.state)
+
+        if is_nil(title) and is_nil(description) do
+          ~H""
+        else
+          assigns =
+            assigns
+            |> assign(:header_title, title)
+            |> assign(:header_description, description)
+            |> assign(:header_icon, header.icon)
+            |> assign(:header_class, header.class)
+            |> assign(:ui, assigns.static.ui_adapter)
+
+          ~H"""
+          <.dynamic_component
+            module={@ui}
+            function={:form_header}
+            title={@header_title}
+            description={@header_description}
+            icon={@header_icon}
+            class={@header_class}
+          />
+          """
+        end
+    end
+  end
+
+  @doc false
+  def render_chrome_footer(assigns) do
+    case assigns.static.footer do
+      nil ->
+        ~H""
+
+      footer ->
+        if chrome_visible?(footer, assigns.state) do
+          do_render_chrome_footer(assigns, footer)
+        else
+          ~H""
+        end
+    end
+  end
+
+  defp do_render_chrome_footer(assigns, footer) do
+    case footer.render do
+      fun when is_function(fun, 1) ->
+        fun.(assigns)
+
+      fun when is_function(fun, 2) ->
+        fun.(assigns, assigns.state)
+
+      _ ->
+        content = resolve_dynamic(footer.content, assigns.state)
+
+        if is_nil(content) do
+          ~H""
+        else
+          assigns =
+            assigns
+            |> assign(:footer_content, content)
+            |> assign(:footer_class, footer.class)
+            |> assign(:ui, assigns.static.ui_adapter)
+
+          ~H"""
+          <.dynamic_component
+            module={@ui}
+            function={:form_footer}
+            content={@footer_content}
+            class={@footer_class}
+          />
+          """
+        end
+    end
+  end
+
+  @doc false
+  def render_notices_at(assigns, position) do
+    notices =
+      assigns.static.notices
+      |> Enum.filter(&(&1.position == position))
+      |> Enum.filter(&notice_visible?(&1, assigns.state, assigns))
+
+    assigns = assign(assigns, :notices_at_position, notices)
+
+    ~H"""
+    <%= for notice <- @notices_at_position do %>
+      {render_notice(assigns, notice)}
+    <% end %>
+    """
+  end
+
+  defp render_notice(assigns, notice) do
+    case notice.render do
+      fun when is_function(fun, 1) ->
+        assigns
+        |> assign(:notice, notice)
+        |> fun.()
+
+      fun when is_function(fun, 2) ->
+        assigns_with = assign(assigns, :notice, notice)
+        fun.(assigns_with, assigns.state)
+
+      _ ->
+        title = resolve_dynamic(notice.title, assigns.state)
+        content = resolve_dynamic(notice.content, assigns.state)
+        notice_ui = notice.ui || %{}
+
+        assigns =
+          assigns
+          |> assign(:notice_type, notice.type)
+          |> assign(:notice_title, title)
+          |> assign(:notice_content, content)
+          |> assign(:notice_icon, notice.icon)
+          |> assign(:notice_dismissible, notice.dismissible)
+          |> assign(:notice_name, notice.name)
+          |> assign(:notice_class, Map.get(notice_ui, :class))
+          |> assign(:ui, assigns.static.ui_adapter)
+
+        ~H"""
+        <div class="mb-4">
+          <.dynamic_component
+            module={@ui}
+            function={:alert}
+            type={@notice_type}
+            title={@notice_title}
+            content={@notice_content}
+            icon={@notice_icon}
+            dismissible={@notice_dismissible}
+            dismiss_event="dismiss_notice"
+            dismiss_value={to_string(@notice_name)}
+            phx_target={@myself}
+            class={@notice_class}
+          />
+        </div>
+        """
+    end
+  end
+
+  defp notice_visible?(notice, state, assigns) do
+    cond do
+      not chrome_visible?(notice, state) -> false
+      MapSet.member?(state.dismissed_notices || MapSet.new(), notice.name) -> false
+      not bind_to_active?(notice, state, assigns) -> false
+      is_function(notice.show_when, 1) -> notice.show_when.(state)
+      true -> true
+    end
+  end
+
+  defp chrome_visible?(entity, state) do
+    restricted_ok? =
+      case Map.get(entity, :restricted) do
+        true -> state.master_user?
+        fun when is_function(fun, 1) -> not fun.(state)
+        _ -> true
+      end
+
+    visible_ok? =
+      case Map.get(entity, :visible) do
+        false -> false
+        fun when is_function(fun, 1) -> fun.(state)
+        _ -> true
+      end
+
+    restricted_ok? and visible_ok?
+  end
+
+  defp bind_to_active?(%{bind_to: nil}, _state, _assigns), do: true
+
+  defp bind_to_active?(%{bind_to: :no_results}, state, _assigns) do
+    state.has_initial_data? and state.loading != :loading and result_empty?(state.records_result)
+  end
+
+  defp bind_to_active?(%{bind_to: :has_filters}, %{filter_values: values}, _assigns)
+       when is_map(values) do
+    Enum.any?(values, fn
+      {_k, nil} -> false
+      {_k, ""} -> false
+      {_k, []} -> false
+      {_k, %{}} -> false
+      _ -> true
+    end)
+  end
+
+  defp bind_to_active?(%{bind_to: :has_filters}, _state, _assigns), do: false
+
+  defp bind_to_active?(%{bind_to: :has_selection}, state, _assigns) do
+    select_all = Map.get(state, :select_all?, false) == true
+    selected = Map.get(state, :selected_ids, MapSet.new())
+
+    select_all or
+      (is_struct(selected, MapSet) and MapSet.size(selected) > 0)
+  end
+
+  defp bind_to_active?(%{bind_to: :loading}, %{loading: loading}, _assigns),
+    do: loading in [:initial, :loading]
+
+  defp bind_to_active?(%{bind_to: :error}, %{loading: :error}, _assigns), do: true
+
+  defp bind_to_active?(%{bind_to: :error}, %{records_result: %{failed: true}}, _assigns),
+    do: true
+
+  defp bind_to_active?(%{bind_to: :error}, %{records_result: %{failed: reason}}, _assigns)
+       when not is_nil(reason),
+       do: true
+
+  defp bind_to_active?(%{bind_to: :error}, _state, _assigns), do: false
+
+  defp bind_to_active?(%{bind_to: :archived_view}, %{archive_status: :archived}, _assigns),
+    do: true
+
+  defp bind_to_active?(%{bind_to: :archived_view}, _state, _assigns), do: false
+
+  defp bind_to_active?(_, _, _), do: true
+
+  defp result_empty?(%{ok?: true, result: %{data: %{results: results}}})
+       when is_list(results),
+       do: results == []
+
+  defp result_empty?(%{ok?: true, result: %{results: results}}) when is_list(results),
+    do: results == []
+
+  defp result_empty?(%{ok?: true, result: results}) when is_list(results),
+    do: results == []
+
+  defp result_empty?(_), do: false
+
+  defp resolve_dynamic(nil, _state), do: nil
+  defp resolve_dynamic(value, _state) when is_binary(value), do: value
+  defp resolve_dynamic(fun, _state) when is_function(fun, 0), do: fun.()
+  defp resolve_dynamic(fun, state) when is_function(fun, 1), do: fun.(state)
+  defp resolve_dynamic(value, _state), do: value
 
   @impl true
   def render_header(assigns) do
@@ -511,11 +814,9 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
   @impl true
   def render_pagination(assigns) do
-    pagination_type = get_in(assigns.static.config, [:pagination, :type]) || :numbered
-
     assigns =
       assigns
-      |> assign(:pagination_type, pagination_type)
+      |> assign(:pagination_type, pagination_type(assigns.static))
       |> assign(:loading_text, assigns.static.pagination_ui.loading_text)
       |> assign(:load_more_label, assigns.static.pagination_ui.load_more_label)
 

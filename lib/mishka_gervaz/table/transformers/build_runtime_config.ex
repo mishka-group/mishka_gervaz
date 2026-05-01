@@ -42,7 +42,10 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     EmptyState,
     ErrorState,
     DataLoader,
-    Events
+    Events,
+    Header,
+    Footer,
+    Notice
   }
 
   @table_path [:mishka_gervaz, :table]
@@ -73,6 +76,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       pagination: build_pagination(dsl_state, domain_defaults),
       empty_state: build_empty_state(dsl_state),
       error_state: build_error_state(dsl_state),
+      layout: build_layout(dsl_state),
       presentation: build_presentation(dsl_state, module, domain_config),
       refresh: build_refresh(dsl_state, domain_defaults),
       url_sync: build_url_sync(dsl_state, domain_defaults),
@@ -105,6 +109,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     }
   end
 
+  defp resolve_action(nil, _multitenancy), do: nil
   defp resolve_action({_master, _tenant} = tuple, _multitenancy), do: tuple
   defp resolve_action(action, _multitenancy) when is_atom(action), do: action
 
@@ -125,21 +130,9 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
     domain_actions = domain_defaults[:actions] || %{}
 
-    dsl_read = get_opt(dsl_state, actions_path, :read)
-    dsl_get = get_opt(dsl_state, actions_path, :get)
-    dsl_destroy = get_opt(dsl_state, actions_path, :destroy)
-
-    read =
-      dsl_read || domain_actions[:read] ||
-        default_action(:read, multitenancy)
-
-    get =
-      dsl_get || domain_actions[:get] ||
-        default_action(:get, multitenancy)
-
-    destroy =
-      dsl_destroy || domain_actions[:destroy] ||
-        default_action(:destroy, multitenancy)
+    read = get_opt(dsl_state, actions_path, :read) || domain_actions[:read]
+    get = get_opt(dsl_state, actions_path, :get) || domain_actions[:get]
+    destroy = get_opt(dsl_state, actions_path, :destroy) || domain_actions[:destroy]
 
     %{
       actor_key:
@@ -161,59 +154,25 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp default_action(:read, %{enabled: true}), do: {:master_read, :tenant_read}
-  defp default_action(:read, _), do: :read
-  defp default_action(:get, %{enabled: true}), do: {:master_get, :get}
-  defp default_action(:get, _), do: :get
-  defp default_action(:destroy, %{enabled: true}), do: {:master_destroy, :destroy}
-  defp default_action(:destroy, _), do: :destroy
+  @archive_keys [
+    :enabled,
+    :restricted,
+    :visible,
+    :read_action,
+    :get_action,
+    :restore_action,
+    :destroy_action
+  ]
 
-  defp build_archive(dsl_state, multitenancy, has_archival?) do
+  defp build_archive(dsl_state, _multitenancy, _has_archival?) do
     path = @table_path ++ [:source, :archive]
-    opts = [:enabled, :restricted, :display, :read_action]
-    section_defined? = any_set?(Enum.map(opts, &get_opt(dsl_state, path, &1)))
+    values = Map.new(@archive_keys, &{&1, get_opt(dsl_state, path, &1)})
 
-    cond do
-      not section_defined? and not has_archival? -> nil
-      not section_defined? and has_archival? -> archive_defaults(multitenancy)
-      true -> archive_config(dsl_state, multitenancy)
+    if any_set?(Map.values(values)) do
+      Map.reject(values, fn {_, v} -> is_nil(v) end)
+    else
+      nil
     end
-  end
-
-  defp archive_defaults(multitenancy) do
-    %{
-      enabled: true,
-      restricted: false,
-      visible: true,
-      actions: %{
-        read: resolve_action({:master_archived, :archived}, multitenancy),
-        get: resolve_action({:master_get_archived, :get_archived}, multitenancy),
-        restore: resolve_action({:master_unarchive, :unarchive}, multitenancy),
-        destroy: resolve_action({:master_permanent_destroy, :permanent_destroy}, multitenancy)
-      }
-    }
-  end
-
-  defp archive_config(dsl_state, multitenancy) do
-    path = @table_path ++ [:source, :archive]
-
-    read = get_opt(dsl_state, path, :read_action)
-    get = get_opt(dsl_state, path, :get_action)
-    restore = get_opt(dsl_state, path, :restore_action)
-    destroy = get_opt(dsl_state, path, :destroy_action)
-
-    %{
-      enabled: get_opt(dsl_state, path, :enabled, true),
-      restricted: get_opt(dsl_state, path, :restricted, false),
-      visible: get_opt(dsl_state, path, :visible, true),
-      actions: %{
-        read: resolve_action(read || {:master_archived, :archived}, multitenancy),
-        get: resolve_action(get || {:master_get_archived, :get_archived}, multitenancy),
-        restore: resolve_action(restore || {:master_unarchive, :unarchive}, multitenancy),
-        destroy:
-          resolve_action(destroy || {:master_permanent_destroy, :permanent_destroy}, multitenancy)
-      }
-    }
   end
 
   defp build_realtime(dsl_state, domain_defaults) do
@@ -584,6 +543,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       confirm: action.confirm,
       restricted: default_if_nil(action.restricted, false),
       visible: action.visible,
+      js: action.js,
       render: action.render,
       type_module: action.type_module,
       ui: maybe_ui(ui, &action_ui_to_map/1, &has_action_ui_values?/1)
@@ -837,7 +797,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   defp build_hooks(dsl_state) do
     path = @table_path ++ [:hooks]
 
-    keys = [
+    global_keys = [
       :on_load,
       :before_delete,
       :after_delete,
@@ -849,10 +809,74 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       :on_sort
     ]
 
-    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
+    globals = Map.new(global_keys, &{&1, get_opt(dsl_state, path, &1)})
 
-    if any_set?(Map.values(values)), do: values, else: nil
+    per_action = build_per_action_hooks(dsl_state, path)
+    builtins = build_builtin_hooks(dsl_state)
+
+    has_globals? = any_set?(Map.values(globals))
+    has_per_action? = map_size(per_action) > 0
+    has_builtins? = builtins != nil
+
+    cond do
+      has_globals? or has_per_action? or has_builtins? ->
+        globals
+        |> Map.merge(per_action)
+        |> maybe_put(:__builtins__, builtins)
+
+      true ->
+        nil
+    end
   end
+
+  defp build_per_action_hooks(dsl_state, path) do
+    phases = MishkaGervaz.Table.Dsl.Hooks.hook_phases()
+
+    dsl_state
+    |> get_entities(path)
+    |> Enum.reduce(%{}, fn entity, acc ->
+      with %MishkaGervaz.Table.Entities.ActionHook{phase: phase, names: names, run: run} <-
+             entity,
+           true <- phase in phases,
+           true <- not is_nil(names),
+           true <- not is_nil(run) do
+        names
+        |> List.wrap()
+        |> Enum.reduce(acc, fn name, inner ->
+          Map.put(inner, hook_key(phase, name), run)
+        end)
+      else
+        _ -> acc
+      end
+    end)
+  end
+
+  defp hook_key(:override_row_action, name), do: {:on_event, Atom.to_string(name)}
+  defp hook_key(:override_bulk_action, name), do: {:on_bulk_action, Atom.to_string(name)}
+  defp hook_key(phase, name), do: {phase, name}
+
+  defp build_builtin_hooks(dsl_state) do
+    path = @table_path ++ [:hooks]
+    schema = MishkaGervaz.Table.Dsl.Hooks.builtins_schema()
+
+    explicit? =
+      Enum.any?(schema, fn {key, _opts} ->
+        get_opt(dsl_state, path, key, :__unset__) != :__unset__
+      end)
+
+    if explicit? do
+      Enum.reduce(schema, %{}, fn {key, opts}, acc ->
+        default = Keyword.get(opts, :default)
+        value = get_opt(dsl_state, path, key, default)
+        Map.put(acc, key, value)
+      end)
+    else
+      nil
+    end
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp build_refresh(dsl_state, domain_defaults) do
     path = @table_path ++ [:refresh]
@@ -1008,5 +1032,79 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     end
 
     adapter_name
+  end
+
+  defp build_layout(dsl_state) do
+    path = @table_path ++ [:layout]
+    entities = get_entities(dsl_state, path)
+
+    headers = filter_by_type(entities, Header)
+    footers = filter_by_type(entities, Footer)
+    notices = filter_by_type(entities, Notice)
+
+    if headers == [] and footers == [] and notices == [] do
+      nil
+    else
+      %{
+        header: maybe_first(headers, &header_to_map/1),
+        footer: maybe_first(footers, &footer_to_map/1),
+        notices: Enum.map(notices, &notice_to_map/1)
+      }
+    end
+  end
+
+  defp maybe_first([], _), do: nil
+  defp maybe_first([entity | _], to_map_fn), do: to_map_fn.(entity)
+
+  defp header_to_map(%Header{} = h) do
+    %{
+      title: h.title,
+      description: h.description,
+      icon: h.icon,
+      class: h.class,
+      visible: h.visible,
+      restricted: h.restricted,
+      render: h.render,
+      extra: h.extra
+    }
+  end
+
+  defp footer_to_map(%Footer{} = f) do
+    %{
+      content: f.content,
+      class: f.class,
+      visible: f.visible,
+      restricted: f.restricted,
+      render: f.render,
+      extra: f.extra
+    }
+  end
+
+  defp notice_to_map(%Notice{} = n) do
+    %{
+      name: n.name,
+      position: n.position,
+      type: n.type,
+      title: n.title,
+      content: n.content,
+      icon: n.icon,
+      dismissible: n.dismissible,
+      bind_to: n.bind_to,
+      show_when: n.show_when,
+      visible: n.visible,
+      restricted: n.restricted,
+      render: n.render,
+      ui: notice_ui_to_map(n.ui)
+    }
+  end
+
+  defp notice_ui_to_map(nil), do: nil
+  defp notice_ui_to_map([]), do: nil
+  defp notice_ui_to_map([ui | _]), do: notice_ui_to_map(ui)
+
+  defp notice_ui_to_map(%Notice.Ui{class: nil, extra: e}) when e == %{}, do: nil
+
+  defp notice_ui_to_map(%Notice.Ui{} = ui) do
+    %{class: ui.class, extra: ui.extra}
   end
 end

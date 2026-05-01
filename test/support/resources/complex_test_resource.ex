@@ -524,6 +524,24 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
         on_filter fn _filters, socket -> socket end
         on_select fn _ids, socket -> socket end
         on_sort fn _sort, socket -> socket end
+
+        before_row_action :delete, fn _record, _state -> :ok end
+        before_row_action [:unarchive, :permanent_destroy], fn _record, _state -> :ok end
+        after_row_action :delete, fn _result, _state -> :ok end
+        on_row_action_success :unarchive, fn _record, _state -> nil end
+        on_row_action_error :delete, fn _reason, _state -> nil end
+
+        before_bulk_action :destroy, fn _ids, _state -> :ok end
+        after_bulk_action :destroy, fn _result, _state -> :ok end
+        on_bulk_action_success :destroy, fn _result, _state -> nil end
+        on_bulk_action_error :destroy, fn _reason, _state -> nil end
+
+        override_row_action :custom_event, fn _payload, state -> {:ok, state} end
+        override_bulk_action :custom_bulk, fn _ids, state -> {:ok, state} end
+
+        switch_to_active_on_empty_archive true
+        clear_selection_after_bulk true
+        reset_page_on_empty_current_page true
       end
     end
   end

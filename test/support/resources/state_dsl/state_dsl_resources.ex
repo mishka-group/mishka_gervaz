@@ -8,6 +8,12 @@ defmodule MishkaGervaz.Test.StateDsl.Domain do
     table do
       actor_key :current_user
       master_check fn user -> user && Map.get(user, :site_id) == nil end
+
+      actions do
+        read {:master_read, :read}
+        get {:master_get, :read}
+        destroy {:master_destroy, :destroy}
+      end
     end
   end
 

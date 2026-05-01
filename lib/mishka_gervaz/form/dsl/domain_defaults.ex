@@ -6,23 +6,33 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
   that use `MishkaGervaz.Resource`.
 
   Used by `MishkaGervaz.Domain` extension.
+
+  Domain `submit` mirrors the resource `submit` DSL — the same entity is
+  reused so both layers accept identical syntax. Resource-level configuration
+  takes priority on a per-button basis; missing buttons fall back to the
+  domain configuration.
   """
+
+  alias MishkaGervaz.Form.Dsl.Submit, as: SubmitDsl
 
   @actions_schema [
     create: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_create, :create},
-      doc: "Default create action or {master_action, tenant_action}."
+      doc:
+        "Default create action. Atom (used for both master and tenant) or tuple " <>
+          "`{master_action, tenant_action}`. Inherited by all form resources in the domain."
     ],
     update: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_update, :update},
-      doc: "Default update action or {master_action, tenant_action}."
+      doc:
+        "Default update action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Inherited by all form resources in the domain."
     ],
     read: [
       type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
-      default: {:master_get, :read},
-      doc: "Default read/get action or {master_action, tenant_action}."
+      doc:
+        "Default read/get action. Atom or tuple `{master_action, tenant_action}`. " <>
+          "Inherited by all form resources in the domain."
     ]
   ]
 
@@ -117,29 +127,6 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
     ]
   ]
 
-  @submit_schema [
-    create_label: [
-      type: {:or, [:string, {:fun, 0}]},
-      default: "Create",
-      doc: "Default submit button label for create."
-    ],
-    update_label: [
-      type: {:or, [:string, {:fun, 0}]},
-      default: "Update",
-      doc: "Default submit button label for update."
-    ],
-    cancel_label: [
-      type: {:or, [:string, {:fun, 0}]},
-      default: "Cancel",
-      doc: "Default cancel button label."
-    ],
-    position: [
-      type: {:in, [:top, :bottom, :both]},
-      default: :bottom,
-      doc: "Default button position."
-    ]
-  ]
-
   def section do
     %Spark.Dsl.Section{
       name: :form,
@@ -148,8 +135,10 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
       sections: [
         actions_section(),
         theme_section(),
-        layout_section(),
-        submit_section()
+        layout_section()
+      ],
+      entities: [
+        SubmitDsl.entity()
       ]
     }
   end
@@ -175,14 +164,6 @@ defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
       name: :layout,
       describe: "Default form layout configuration.",
       schema: @layout_schema
-    }
-  end
-
-  defp submit_section do
-    %Spark.Dsl.Section{
-      name: :submit,
-      describe: "Default form submit button configuration.",
-      schema: @submit_schema
     }
   end
 end

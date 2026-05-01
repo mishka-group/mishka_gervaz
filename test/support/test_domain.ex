@@ -15,6 +15,19 @@ defmodule MishkaGervaz.Test.Domain do
       pagination type: :numbered, page_size: 20
 
       ui_adapter MishkaGervaz.UIAdapters.Tailwind
+
+      actions do
+        read {:master_read, :read}
+        get {:master_get, :read}
+        destroy {:master_destroy, :destroy}
+      end
+
+      archive do
+        read_action {:master_archived, :archived}
+        get_action {:master_get_archived, :get_archived}
+        restore_action {:master_unarchive, :unarchive}
+        destroy_action {:master_permanent_destroy, :permanent_destroy}
+      end
     end
 
     form do
@@ -24,13 +37,20 @@ defmodule MishkaGervaz.Test.Domain do
       features :all
       ui_adapter MishkaGervaz.UIAdapters.Tailwind
 
+      actions do
+        create {:master_create, :create}
+        update {:master_update, :update}
+        read {:master_get, :read}
+      end
+
       layout do
         responsive true
       end
 
       submit do
-        create_label "Save"
-        update_label "Save Changes"
+        create label: "Save"
+        update label: "Save Changes"
+        cancel label: "Cancel"
         position :bottom
       end
     end
@@ -60,6 +80,15 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.NestedDslForm
     resource MishkaGervaz.Test.Resources.SubmitOptionsForm
     resource MishkaGervaz.Test.Resources.NoButtonsForm
+    resource MishkaGervaz.Test.Resources.ArchiveMergeNoExt
+    resource MishkaGervaz.Test.Resources.ArchiveMergeInheritDomain
+    resource MishkaGervaz.Test.Resources.ArchiveMergeEnabledFalse
+    resource MishkaGervaz.Test.Resources.ArchiveMergePartial
+    resource MishkaGervaz.Test.Resources.ArchiveMergeAtomAction
+    resource MishkaGervaz.Test.Resources.ChromeForm
+    resource MishkaGervaz.Test.Resources.ChromeTable
+    resource MishkaGervaz.Test.Resources.InfiniteScrollResource
+    resource MishkaGervaz.Test.Resources.NumberedScrollResource
     allow_unregistered? true
   end
 end

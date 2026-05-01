@@ -40,10 +40,48 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
       config
       |> merge_domain_defaults(domain_defaults)
+      |> merge_actions(domain_defaults)
+      |> merge_archive(domain_defaults, resource)
       |> apply_realtime_defaults(resource)
     else
       config
     end
+  end
+
+  @spec merge_actions(map(), map()) :: map()
+  defp merge_actions(config, domain_defaults) do
+    domain_actions = domain_defaults[:actions] || %{}
+
+    update_in(config, [:source, :actions], fn actions ->
+      actions = actions || %{}
+
+      %{
+        read: actions[:read] || domain_actions[:read],
+        get: actions[:get] || domain_actions[:get],
+        destroy: actions[:destroy] || domain_actions[:destroy]
+      }
+    end)
+  end
+
+  @spec merge_archive(map(), map(), module()) :: map()
+  defp merge_archive(config, domain_defaults, resource) do
+    has_archival? = AshArchival.Resource in Spark.extensions(resource)
+
+    resource_archive = get_in(config, [:source, :archive])
+    domain_archive = domain_defaults[:archive]
+    multitenancy = config[:multitenancy] || %{enabled: false}
+
+    merged =
+      MishkaGervaz.Table.ArchiveMerger.merge(
+        resource_archive,
+        domain_archive,
+        multitenancy,
+        has_archival?
+      )
+
+    put_in(config, [:source, :archive], merged)
+  rescue
+    _ -> config
   end
 
   @spec get_domain_defaults(module()) :: map()
@@ -439,31 +477,99 @@ defmodule MishkaGervaz.Resource.Info.Table do
   end
 
   @doc """
+  Get the table layout configuration (chrome). Returns nil when no `layout`
+  block is declared.
+  """
+  @spec layout(module()) :: map() | nil
+  def layout(resource) do
+    case Extension.get_persisted(resource, :mishka_gervaz_config) do
+      %{layout: layout} when is_map(layout) -> layout
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the table header configuration. Returns nil when no header is declared.
+  """
+  @spec header(module()) :: map() | nil
+  def header(resource) do
+    case layout(resource) do
+      %{header: header} when is_map(header) -> header
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the table footer configuration. Returns nil when no footer is declared.
+  """
+  @spec footer(module()) :: map() | nil
+  def footer(resource) do
+    case layout(resource) do
+      %{footer: footer} when is_map(footer) -> footer
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get all notices declared in the table layout.
+  """
+  @spec notices(module()) :: [map()]
+  def notices(resource) do
+    case layout(resource) do
+      %{notices: notices} when is_list(notices) -> notices
+      _ -> []
+    end
+  end
+
+  @doc """
+  Get a specific notice by name.
+  """
+  @spec notice(module(), atom()) :: map() | nil
+  def notice(resource, notice_name) do
+    Enum.find(notices(resource), &(&1.name == notice_name))
+  end
+
+  @doc """
+  Get notices targeting the given position. Position can be an atom or a
+  `{:before_column, name}` / `{:after_column, name}` tuple.
+  """
+  @spec notices_at(module(), term()) :: [map()]
+  def notices_at(resource, position) do
+    Enum.filter(notices(resource), &(&1.position == position))
+  end
+
+  @doc """
   Get all hooks as a map.
+
+  Returns globals (`:on_load`, `:before_delete`, …), per-action observer hooks
+  keyed as `{:before_row_action, :unarchive}`, and the `:__builtins__` map of
+  state-transition flags.
   """
   @spec hooks(module()) :: map()
   def hooks(resource) do
-    %{
-      on_load: get_hook(resource, :on_load),
-      before_delete: get_hook(resource, :before_delete),
-      after_delete: get_hook(resource, :after_delete),
-      on_realtime: get_hook(resource, :on_realtime),
-      on_expand: get_hook(resource, :on_expand),
-      on_filter: get_hook(resource, :on_filter),
-      on_event: get_hook(resource, :on_event),
-      on_select: get_hook(resource, :on_select),
-      on_sort: get_hook(resource, :on_sort)
-    }
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new()
+    case Extension.get_persisted(resource, :mishka_gervaz_config) do
+      %{hooks: hooks} when is_map(hooks) -> hooks
+      _ -> %{}
+    end
   end
 
-  @spec get_hook(module(), atom()) :: term() | nil
-  defp get_hook(resource, hook_name) do
-    case apply(__MODULE__, :"mishka_gervaz_table_hooks_#{hook_name}", [resource]) do
-      {:ok, hook} -> hook
-      :error -> nil
-    end
+  @doc """
+  Get a single hook entry by key.
+
+  The key may be a global atom (e.g. `:on_load`) or a per-action tuple
+  (e.g. `{:before_row_action, :unarchive}`).
+  """
+  @spec get_hook(module(), atom() | {atom(), atom()}) :: term() | nil
+  def get_hook(resource, key) do
+    resource |> hooks() |> Map.get(key)
+  end
+
+  @doc """
+  Get the built-in state-transition rules map, or `nil` if none are configured.
+  """
+  @spec builtins(module()) :: map() | nil
+  def builtins(resource) do
+    resource |> hooks() |> Map.get(:__builtins__)
   end
 
   @doc """

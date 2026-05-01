@@ -119,14 +119,19 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfigTest do
       assert is_map(config.form.submit)
     end
 
-    test "submit contains create_label" do
+    test "submit has create button with label" do
       config = DomainInfo.domain_config(Domain)
-      assert config.form.submit.create_label == "Save"
+      assert config.form.submit.create.label == "Save"
     end
 
-    test "submit contains update_label" do
+    test "submit has update button with label" do
       config = DomainInfo.domain_config(Domain)
-      assert config.form.submit.update_label == "Save Changes"
+      assert config.form.submit.update.label == "Save Changes"
+    end
+
+    test "submit has cancel button with label" do
+      config = DomainInfo.domain_config(Domain)
+      assert config.form.submit.cancel.label == "Cancel"
     end
 
     test "submit contains position" do
@@ -134,9 +139,16 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfigTest do
       assert config.form.submit.position == :bottom
     end
 
-    test "submit contains cancel_label with default" do
+    test "domain submit buttons carry the per-button option keys" do
       config = DomainInfo.domain_config(Domain)
-      assert config.form.submit.cancel_label == "Cancel"
+
+      for kind <- [:create, :update, :cancel] do
+        button = Map.fetch!(config.form.submit, kind)
+        assert Map.has_key?(button, :label)
+        assert Map.has_key?(button, :disabled)
+        assert Map.has_key?(button, :restricted)
+        assert Map.has_key?(button, :visible)
+      end
     end
   end
 
@@ -163,8 +175,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfigTest do
 
     test "test domain has expected submit labels" do
       config = DomainInfo.domain_config(Domain)
-      assert config.form.submit.create_label == "Save"
-      assert config.form.submit.update_label == "Save Changes"
+      assert config.form.submit.create.label == "Save"
+      assert config.form.submit.update.label == "Save Changes"
+      assert config.form.submit.cancel.label == "Cancel"
     end
 
     test "test domain has expected layout responsive" do

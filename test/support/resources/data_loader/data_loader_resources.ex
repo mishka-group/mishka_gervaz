@@ -9,6 +9,12 @@ defmodule MishkaGervaz.Test.DataLoader.Domain do
       actor_key :current_user
       master_check fn user -> user && Map.get(user, :site_id) == nil end
       pagination type: :numbered, page_size: 10
+
+      actions do
+        read {:master_read, :read}
+        get {:master_get, :read}
+        destroy :destroy
+      end
     end
   end
 
@@ -697,6 +703,12 @@ defmodule MishkaGervaz.Test.DataLoader.CustomDomain do
       actor_key :current_user
       master_check fn user -> user && Map.get(user, :site_id) == nil end
       pagination type: :numbered, page_size: 10
+
+      actions do
+        read {:master_read, :read}
+        get {:master_get, :read}
+        destroy :destroy
+      end
     end
   end
 

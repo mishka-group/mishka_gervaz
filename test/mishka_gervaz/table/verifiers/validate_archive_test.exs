@@ -92,5 +92,85 @@ defmodule MishkaGervaz.Verifiers.ValidateArchiveTest do
       # Post doesn't have archive section, so it should be nil
       assert config.source.archive == nil
     end
+
+    test "AshArchival without resource OR domain archive block raises DslError" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.OrphanArchivalDomain#{unique_id} do
+        use Ash.Domain,
+          extensions: [MishkaGervaz.Domain],
+          validate_config_inclusion?: false
+
+        mishka_gervaz do
+          table do
+            actor_key :current_user
+            master_check fn user -> user && user.role == :admin end
+
+            actions do
+              read {:master_read, :read}
+              get {:master_get, :read}
+              destroy {:master_destroy, :destroy}
+            end
+          end
+        end
+
+        resources do
+          allow_unregistered? true
+        end
+      end
+
+      defmodule MishkaGervaz.Test.OrphanArchival#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.OrphanArchivalDomain#{unique_id},
+          extensions: [AshArchival.Resource, MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        archive do
+          archive_related []
+        end
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :orphan_archival_test
+              route "/admin/orphan-archival"
+            end
+
+            columns do
+              column :title
+            end
+          end
+        end
+      end
+      """
+
+      output =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string(code)
+        end)
+
+      assert output =~ "AshArchival.Resource is in the resource extensions"
+      assert output =~ "Spark.Error.DslError"
+    end
+
+    test "AshArchival with domain archive block (and no resource block) compiles fine" do
+      # ArchiveMergeInheritDomain has AshArchival.Resource and no resource-level
+      # archive block. The Test.Domain provides archive defaults, so the
+      # verifier must accept it. The runtime config must reflect inheritance.
+      config = ResourceInfo.table_config(MishkaGervaz.Test.Resources.ArchiveMergeInheritDomain)
+
+      assert config.source.archive.enabled == true
+      assert config.source.archive.actions.read == {:master_archived, :archived}
+    end
   end
 end

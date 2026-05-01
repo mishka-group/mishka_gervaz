@@ -236,6 +236,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> Phoenix.Component.assign(:table_state, state)
         |> Phoenix.LiveView.stream(state.static.stream_name, records, reset: reset)
         |> maybe_sync_url(state)
+        |> MishkaGervaz.Table.Web.AutoState.after_load(state)
       end
 
       def handle_async(:load_data, {:exit, reason}, socket) do

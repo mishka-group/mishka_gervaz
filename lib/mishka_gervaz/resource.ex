@@ -90,13 +90,15 @@ defmodule MishkaGervaz.Resource do
     MishkaGervaz.Table.Verifiers.ValidateRowActions,
     MishkaGervaz.Table.Verifiers.ValidateBulkActions,
     MishkaGervaz.Table.Verifiers.ValidatePagination,
+    MishkaGervaz.Table.Verifiers.ValidateLayout,
     MishkaGervaz.Form.Verifiers.ValidateIdentity,
     MishkaGervaz.Form.Verifiers.ValidateSource,
     MishkaGervaz.Form.Verifiers.ValidateFields,
     MishkaGervaz.Form.Verifiers.ValidateGroups,
     MishkaGervaz.Form.Verifiers.ValidateSteps,
     MishkaGervaz.Form.Verifiers.ValidateUploads,
-    MishkaGervaz.Form.Verifiers.ValidatePreloads
+    MishkaGervaz.Form.Verifiers.ValidatePreloads,
+    MishkaGervaz.Form.Verifiers.ValidateChrome
   ]
 
   use Spark.Dsl.Extension,

@@ -128,7 +128,10 @@ defmodule MishkaGervaz.Table.Web.State do
       :url_sync_config,
       :page_size,
       :page_size_options,
-      :max_page_size
+      :max_page_size,
+      :header,
+      :footer,
+      :notices
     ]
 
     @type t :: %__MODULE__{
@@ -157,7 +160,10 @@ defmodule MishkaGervaz.Table.Web.State do
             url_sync_config: map() | nil,
             page_size: pos_integer() | nil,
             page_size_options: [pos_integer()] | nil,
-            max_page_size: pos_integer() | nil
+            max_page_size: pos_integer() | nil,
+            header: map() | nil,
+            footer: map() | nil,
+            notices: list(map())
           }
   end
 
@@ -190,7 +196,8 @@ defmodule MishkaGervaz.Table.Web.State do
     :preserved_params,
     :saved_active_state,
     :saved_archived_state,
-    :current_page_size
+    :current_page_size,
+    :dismissed_notices
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error
@@ -226,7 +233,8 @@ defmodule MishkaGervaz.Table.Web.State do
           preserved_params: map(),
           saved_active_state: map() | nil,
           saved_archived_state: map() | nil,
-          current_page_size: pos_integer() | nil
+          current_page_size: pos_integer() | nil,
+          dismissed_notices: MapSet.t()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -346,6 +354,18 @@ defmodule MishkaGervaz.Table.Web.State do
     @spec get_max_page_size(map()) :: pos_integer() | nil
     def get_max_page_size(%{pagination: %{max_page_size: max}}), do: max
     def get_max_page_size(_), do: nil
+
+    @spec get_layout_header(map()) :: map() | nil
+    def get_layout_header(%{layout: %{header: header}}) when is_map(header), do: header
+    def get_layout_header(_), do: nil
+
+    @spec get_layout_footer(map()) :: map() | nil
+    def get_layout_footer(%{layout: %{footer: footer}}) when is_map(footer), do: footer
+    def get_layout_footer(_), do: nil
+
+    @spec get_layout_notices(map()) :: list(map())
+    def get_layout_notices(%{layout: %{notices: notices}}) when is_list(notices), do: notices
+    def get_layout_notices(_), do: []
 
     @spec get_features(map(), module()) :: list(atom())
     def get_features(config, template) do
@@ -586,7 +606,10 @@ defmodule MishkaGervaz.Table.Web.State do
           url_sync_config: get_in(config, [:url_sync]),
           page_size: StateHelpers.get_page_size(config),
           page_size_options: StateHelpers.get_page_size_options(config),
-          max_page_size: StateHelpers.get_max_page_size(config)
+          max_page_size: StateHelpers.get_max_page_size(config),
+          header: StateHelpers.get_layout_header(config),
+          footer: StateHelpers.get_layout_footer(config),
+          notices: StateHelpers.get_layout_notices(config)
         }
 
         %State{
@@ -618,7 +641,8 @@ defmodule MishkaGervaz.Table.Web.State do
           preserved_params: %{},
           saved_active_state: nil,
           saved_archived_state: nil,
-          current_page_size: nil
+          current_page_size: nil,
+          dismissed_notices: MapSet.new()
         }
       end
 

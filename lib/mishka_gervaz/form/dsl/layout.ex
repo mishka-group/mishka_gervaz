@@ -3,10 +3,14 @@ defmodule MishkaGervaz.Form.Dsl.Layout do
   Layout section DSL definition for form configuration.
 
   Defines form layout structure including grid columns, wizard/tabs mode,
-  step definitions, navigation, and responsiveness.
+  step definitions, navigation, responsiveness, and the form chrome —
+  header, footer, and notices (alerts/banners).
+
+  Each chrome entity (`header`, `footer`, `notice`) supports `visible` and
+  `restricted` for the same access conventions used by `field`/`group`.
   """
 
-  alias MishkaGervaz.Form.Entities.Step
+  alias MishkaGervaz.Form.Entities.{Step, Header, Footer, Notice}
 
   @layout_schema [
     columns: [
@@ -63,15 +67,61 @@ defmodule MishkaGervaz.Form.Dsl.Layout do
     }
   end
 
+  defp header_entity do
+    %Spark.Dsl.Entity{
+      name: :header,
+      describe: "Static form header (title + description) rendered above the fields.",
+      target: Header,
+      schema: Header.opt_schema(),
+      singleton_entity_keys: [:header],
+      transform: {Header, :transform, []}
+    }
+  end
+
+  defp footer_entity do
+    %Spark.Dsl.Entity{
+      name: :footer,
+      describe: "Static form footer rendered below the submit row.",
+      target: Footer,
+      schema: Footer.opt_schema(),
+      singleton_entity_keys: [:footer],
+      transform: {Footer, :transform, []}
+    }
+  end
+
+  defp notice_ui_entity do
+    %Spark.Dsl.Entity{
+      name: :ui,
+      describe: "UI/presentation configuration for the notice.",
+      target: Notice.Ui,
+      schema: Notice.Ui.opt_schema(),
+      singleton_entity_keys: [:ui],
+      transform: {Notice.Ui, :transform, []}
+    }
+  end
+
+  defp notice_entity do
+    %Spark.Dsl.Entity{
+      name: :notice,
+      describe: "Static alert/banner with positioning and validation binding.",
+      target: Notice,
+      args: [:name],
+      identifier: :name,
+      schema: Notice.opt_schema(),
+      entities: [ui: [notice_ui_entity()]],
+      transform: {Notice, :transform, []}
+    }
+  end
+
   @doc """
   Returns the layout section definition.
   """
   def section do
     %Spark.Dsl.Section{
       name: :layout,
-      describe: "Form layout configuration.",
+      describe: "Form layout configuration including chrome (header/footer/notices).",
       schema: @layout_schema,
-      entities: [step_entity()]
+      entities: [step_entity(), header_entity(), footer_entity(), notice_entity()]
     }
   end
 end

@@ -13,7 +13,18 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   alias Spark.Dsl.Transformer
   import MishkaGervaz.Table.Transformers.Helpers
 
-  alias MishkaGervaz.Form.Entities.{Field, Group, Step, Upload, Submit, Events, Access}
+  alias MishkaGervaz.Form.Entities.{
+    Field,
+    Group,
+    Step,
+    Upload,
+    Submit,
+    Events,
+    Access,
+    Header,
+    Footer,
+    Notice
+  }
 
   @form_path [:mishka_gervaz, :form]
 
@@ -77,22 +88,16 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp build_source(dsl_state, domain_defaults, multitenancy) do
+  defp build_source(dsl_state, domain_defaults, _multitenancy) do
     source_path = @form_path ++ [:source]
     actions_path = source_path ++ [:actions]
     preload_path = source_path ++ [:preload]
 
-    create =
-      get_opt(dsl_state, actions_path, :create) || domain_defaults[:create_action] ||
-        default_action(:create, multitenancy)
+    domain_actions = domain_defaults[:actions] || %{}
 
-    update =
-      get_opt(dsl_state, actions_path, :update) || domain_defaults[:update_action] ||
-        default_action(:update, multitenancy)
-
-    read =
-      get_opt(dsl_state, actions_path, :read) || domain_defaults[:read_action] ||
-        default_action(:read, multitenancy)
+    create = get_opt(dsl_state, actions_path, :create) || domain_actions[:create]
+    update = get_opt(dsl_state, actions_path, :update) || domain_actions[:update]
+    read = get_opt(dsl_state, actions_path, :read) || domain_actions[:read]
 
     %{
       actor_key:
@@ -115,13 +120,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       access_gate: build_access_gate(dsl_state, source_path)
     }
   end
-
-  defp default_action(:create, %{enabled: true}), do: {:master_create, :create}
-  defp default_action(:create, _), do: :create
-  defp default_action(:update, %{enabled: true}), do: {:master_update, :update}
-  defp default_action(:update, _), do: :update
-  defp default_action(:read, %{enabled: true}), do: {:master_get, :read}
-  defp default_action(:read, _), do: :read
 
   defp build_access_rules(dsl_state, source_path) do
     dsl_state
@@ -395,9 +393,15 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       [:columns, :mode, :navigation, :persistence, :responsive]
       |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
 
-    steps = get_entities(dsl_state, path) |> filter_by_type(Step)
+    layout_entities = get_entities(dsl_state, path)
+    steps = filter_by_type(layout_entities, Step)
+    headers = filter_by_type(layout_entities, Header)
+    footers = filter_by_type(layout_entities, Footer)
+    notices = filter_by_type(layout_entities, Notice)
 
-    has_values = any_set?(Map.values(values)) or steps != [] or is_map(domain_layout)
+    has_values =
+      any_set?(Map.values(values)) or steps != [] or is_map(domain_layout) or
+        headers != [] or footers != [] or notices != []
 
     if has_values do
       %{
@@ -412,11 +416,70 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
             do: values.responsive,
             else: (domain_layout && domain_layout[:responsive]) || true
           ),
-        steps: if(steps != [], do: Enum.map(steps, &step_to_map/1), else: nil)
+        steps: if(steps != [], do: Enum.map(steps, &step_to_map/1), else: nil),
+        header: maybe_first(headers, &header_to_map/1),
+        footer: maybe_first(footers, &footer_to_map/1),
+        notices: if(notices != [], do: Enum.map(notices, &notice_to_map/1), else: [])
       }
     else
       nil
     end
+  end
+
+  defp maybe_first([], _), do: nil
+  defp maybe_first([entity | _], to_map_fn), do: to_map_fn.(entity)
+
+  defp header_to_map(%Header{} = h) do
+    %{
+      title: h.title,
+      description: h.description,
+      icon: h.icon,
+      class: h.class,
+      visible: h.visible,
+      restricted: h.restricted,
+      render: h.render,
+      extra: h.extra
+    }
+  end
+
+  defp footer_to_map(%Footer{} = f) do
+    %{
+      content: f.content,
+      class: f.class,
+      visible: f.visible,
+      restricted: f.restricted,
+      render: f.render,
+      extra: f.extra
+    }
+  end
+
+  defp notice_to_map(%Notice{} = n) do
+    %{
+      name: n.name,
+      position: n.position,
+      type: n.type,
+      title: n.title,
+      content: n.content,
+      icon: n.icon,
+      dismissible: n.dismissible,
+      bind_to: n.bind_to,
+      show_when: n.show_when,
+      visible: n.visible,
+      restricted: n.restricted,
+      only_steps: n.only_steps,
+      render: n.render,
+      ui: maybe_ui(n.ui, &notice_ui_to_map/1, &has_notice_ui_values?/1)
+    }
+  end
+
+  defp has_notice_ui_values?(%Notice.Ui{} = ui) do
+    any_set?([ui.class]) or ui.extra != %{}
+  end
+
+  defp has_notice_ui_values?(_), do: false
+
+  defp notice_ui_to_map(%Notice.Ui{} = ui) do
+    %{class: ui.class, extra: ui.extra}
   end
 
   defp step_to_map(step) do
@@ -493,69 +556,48 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     }
   end
 
-  defp build_submit(dsl_state, domain_defaults) do
-    domain_submit = domain_defaults[:submit]
-
+  defp build_submit(dsl_state, _domain_defaults) do
     case find_entity(dsl_state, @form_path, Submit) do
-      nil ->
-        %{
-          create: %{
-            label: (domain_submit && domain_submit[:create_label]) || "Create",
-            disabled: false,
-            restricted: false,
-            visible: true
-          },
-          update: %{
-            label: (domain_submit && domain_submit[:update_label]) || "Update",
-            disabled: false,
-            restricted: false,
-            visible: true
-          },
-          cancel: %{
-            label: (domain_submit && domain_submit[:cancel_label]) || "Cancel",
-            disabled: false,
-            restricted: false,
-            visible: true
-          },
-          position: (domain_submit && domain_submit[:position]) || :bottom,
-          ui: nil
-        }
-
-      entity ->
-        %{
-          create: button_to_map(entity.create, domain_submit, :create_label, "Create"),
-          update: button_to_map(entity.update, domain_submit, :update_label, "Update"),
-          cancel: button_to_map(entity.cancel, domain_submit, :cancel_label, "Cancel"),
-          position: entity.position,
-          ui: maybe_ui(entity.ui, &submit_ui_to_map/1, &has_submit_ui_values?/1)
-        }
+      nil -> nil
+      %Submit{} = entity -> entity_to_raw_map(entity)
     end
   end
 
-  defp button_to_map(nil, _domain_submit, _domain_key, _fallback), do: nil
-
-  defp button_to_map(%Submit.Button{} = btn, domain_submit, domain_key, fallback) do
+  defp entity_to_raw_map(%Submit{} = entity) do
     %{
-      label: btn.label || (domain_submit && domain_submit[domain_key]) || fallback,
+      create: button_to_raw_map(entity.create),
+      update: button_to_raw_map(entity.update),
+      cancel: button_to_raw_map(entity.cancel),
+      position: entity.position,
+      ui: ui_to_raw_map(entity.ui)
+    }
+  end
+
+  defp button_to_raw_map(nil), do: nil
+
+  defp button_to_raw_map(%Submit.Button{} = btn) do
+    %{
+      label: btn.label,
+      active: btn.active,
       disabled: btn.disabled,
       restricted: btn.restricted,
       visible: btn.visible
     }
   end
 
-  defp has_submit_ui_values?(%Submit.Ui{} = ui) do
-    any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{}
-  end
+  defp ui_to_raw_map(nil), do: nil
 
-  defp has_submit_ui_values?(_), do: false
-
-  defp submit_ui_to_map(%Submit.Ui{} = ui) do
-    %{
-      submit_class: ui.submit_class,
-      cancel_class: ui.cancel_class,
-      wrapper_class: ui.wrapper_class,
-      extra: ui.extra
-    }
+  defp ui_to_raw_map(%Submit.Ui{} = ui) do
+    if any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{} do
+      %{
+        submit_class: ui.submit_class,
+        cancel_class: ui.cancel_class,
+        wrapper_class: ui.wrapper_class,
+        extra: ui.extra
+      }
+    else
+      nil
+    end
   end
 
   defp build_presentation(dsl_state, domain_defaults) do

@@ -61,7 +61,10 @@ defmodule MishkaGervaz.Resource.Info.Form do
 
   @spec merge_domain_defaults(map(), map()) :: map()
   defp merge_domain_defaults(config, domain_defaults) when domain_defaults == %{} do
-    resolve_default_master_check(config)
+    config
+    |> merge_actions(%{})
+    |> merge_submit(%{})
+    |> resolve_default_master_check()
   end
 
   defp merge_domain_defaults(config, domain_defaults) do
@@ -69,54 +72,38 @@ defmodule MishkaGervaz.Resource.Info.Form do
     |> update_in([:source, :actor_key], fn v -> v || domain_defaults[:actor_key] end)
     |> update_in([:source, :master_check], fn v -> v || domain_defaults[:master_check] end)
     |> merge_presentation_defaults(domain_defaults)
-    |> merge_submit_defaults(domain_defaults)
+    |> merge_actions(domain_defaults)
+    |> merge_submit(domain_defaults)
     |> merge_layout_defaults(domain_defaults)
     |> resolve_default_master_check()
+  end
+
+  defp merge_actions(config, domain_defaults) do
+    domain_actions = domain_defaults[:actions] || %{}
+
+    update_in(config, [:source, :actions], fn actions ->
+      actions = actions || %{}
+
+      %{
+        create: actions[:create] || domain_actions[:create],
+        update: actions[:update] || domain_actions[:update],
+        read: actions[:read] || domain_actions[:read]
+      }
+    end)
+  end
+
+  defp merge_submit(config, domain_defaults) do
+    Map.put(
+      config,
+      :submit,
+      MishkaGervaz.Form.SubmitMerger.merge(config[:submit], domain_defaults[:submit])
+    )
   end
 
   defp merge_presentation_defaults(config, domain_defaults) do
     config
     |> update_in([:presentation, :template], fn v -> v || domain_defaults[:template] end)
     |> update_in([:presentation, :features], fn v -> v || domain_defaults[:features] end)
-  end
-
-  defp merge_submit_defaults(config, domain_defaults) do
-    case domain_defaults[:submit] do
-      nil ->
-        config
-
-      domain_submit ->
-        update_in(config, [:submit], fn submit ->
-          %{
-            create:
-              merge_button_defaults(
-                submit[:create],
-                domain_submit[:create_label],
-                "Create"
-              ),
-            update:
-              merge_button_defaults(
-                submit[:update],
-                domain_submit[:update_label],
-                "Update"
-              ),
-            cancel:
-              merge_button_defaults(
-                submit[:cancel],
-                domain_submit[:cancel_label],
-                "Cancel"
-              ),
-            position: submit[:position] || domain_submit[:position] || :bottom,
-            ui: submit[:ui]
-          }
-        end)
-    end
-  end
-
-  defp merge_button_defaults(nil, _domain_label, _fallback), do: nil
-
-  defp merge_button_defaults(button, domain_label, fallback) when is_map(button) do
-    %{button | label: button[:label] || domain_label || fallback}
   end
 
   defp merge_layout_defaults(config, domain_defaults) do
@@ -212,9 +199,9 @@ defmodule MishkaGervaz.Resource.Info.Form do
 
       _ ->
         %{
-          create: %{label: "Create", disabled: false, restricted: false, visible: true},
-          update: %{label: "Update", disabled: false, restricted: false, visible: true},
-          cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+          create: nil,
+          update: nil,
+          cancel: nil,
           position: :bottom,
           ui: nil
         }
@@ -249,6 +236,56 @@ defmodule MishkaGervaz.Resource.Info.Form do
   @spec step(module(), atom()) :: map() | nil
   def step(resource, step_name) do
     Enum.find(steps(resource), &(&1.name == step_name))
+  end
+
+  @doc """
+  Get the form header configuration. Returns nil when no header is declared.
+  """
+  @spec header(module()) :: map() | nil
+  def header(resource) do
+    case layout(resource) do
+      %{header: header} when is_map(header) -> header
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the form footer configuration. Returns nil when no footer is declared.
+  """
+  @spec footer(module()) :: map() | nil
+  def footer(resource) do
+    case layout(resource) do
+      %{footer: footer} when is_map(footer) -> footer
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get all notices declared in the form layout.
+  """
+  @spec notices(module()) :: [map()]
+  def notices(resource) do
+    case layout(resource) do
+      %{notices: notices} when is_list(notices) -> notices
+      _ -> []
+    end
+  end
+
+  @doc """
+  Get a specific notice by name.
+  """
+  @spec notice(module(), atom()) :: map() | nil
+  def notice(resource, notice_name) do
+    Enum.find(notices(resource), &(&1.name == notice_name))
+  end
+
+  @doc """
+  Get notices targeting the given position. Position can be an atom or a
+  `{:before_group, name}` / `{:after_group, name}` tuple.
+  """
+  @spec notices_at(module(), term()) :: [map()]
+  def notices_at(resource, position) do
+    Enum.filter(notices(resource), &(&1.position == position))
   end
 
   @doc """

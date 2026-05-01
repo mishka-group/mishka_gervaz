@@ -92,35 +92,35 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
     end
   end
 
-  describe "MinimalForm submit defaults" do
-    test "create button label defaults to Create" do
+  describe "MinimalForm submit inheritance" do
+    test "create button is inherited from the domain" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.create.label == "Create"
+      assert submit.create.label == "Save"
     end
 
-    test "update button label defaults to Update" do
+    test "update button is inherited from the domain" do
       submit = FormInfo.submit(MinimalForm)
-      assert submit.update.label == "Update"
+      assert submit.update.label == "Save Changes"
     end
 
-    test "cancel button label defaults to Cancel" do
+    test "cancel button is inherited from the domain" do
       submit = FormInfo.submit(MinimalForm)
       assert submit.cancel.label == "Cancel"
     end
 
-    test "all buttons present by default" do
+    test "all buttons present after inheritance" do
       submit = FormInfo.submit(MinimalForm)
       assert submit.create != nil
       assert submit.update != nil
       assert submit.cancel != nil
     end
 
-    test "position defaults to :bottom" do
+    test "position is the domain default" do
       submit = FormInfo.submit(MinimalForm)
       assert submit.position == :bottom
     end
 
-    test "ui defaults to nil" do
+    test "ui is nil when neither side defines it" do
       submit = FormInfo.submit(MinimalForm)
       assert submit.ui == nil
     end
@@ -225,20 +225,20 @@ defmodule MishkaGervaz.Form.DSL.PresentationTest do
     end
   end
 
-  describe "NoButtonsForm — empty submit block" do
-    test "all buttons are nil" do
+  describe "NoButtonsForm — empty submit block inherits from domain" do
+    test "all buttons fall back to the domain configuration" do
       submit = FormInfo.submit(NoButtonsForm)
-      assert submit.create == nil
-      assert submit.update == nil
-      assert submit.cancel == nil
+      assert submit.create.label == "Save"
+      assert submit.update.label == "Save Changes"
+      assert submit.cancel.label == "Cancel"
     end
 
-    test "position still works" do
+    test "position is preserved from the resource" do
       submit = FormInfo.submit(NoButtonsForm)
       assert submit.position == :bottom
     end
 
-    test "ui is nil" do
+    test "ui is nil when neither side defines it" do
       submit = FormInfo.submit(NoButtonsForm)
       assert submit.ui == nil
     end
