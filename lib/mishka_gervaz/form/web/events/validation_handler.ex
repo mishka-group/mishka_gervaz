@@ -1,3 +1,22 @@
+defmodule MishkaGervaz.Form.Web.Events.ValidationHandler.Internal do
+  @moduledoc false
+
+  alias MishkaGervaz.Form.Web.State
+
+  @spec merge_relation_field_values(map(), State.t()) :: map()
+  def merge_relation_field_values(params, state) do
+    state.static.fields
+    |> Enum.filter(&(&1.type == :relation))
+    |> Enum.reduce(params, fn field, acc ->
+      case Map.get(state.field_values, field.name) do
+        "__nil__" -> Map.put(acc, to_string(field.name), nil)
+        v when v not in [nil, ""] -> Map.put(acc, to_string(field.name), v)
+        _ -> acc
+      end
+    end)
+  end
+end
+
 defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
   @moduledoc """
   Handles form validation (phx-change events).
@@ -26,6 +45,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       use MishkaGervaz.Form.Web.Events.Builder
 
       alias MishkaGervaz.Form.Web.State
+      alias MishkaGervaz.Form.Web.Events.ValidationHandler.Internal
 
       @doc """
       Validate form params and update the form state.
@@ -56,7 +76,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
               form.source
               |> AshPhoenix.Form.params()
               |> Map.merge(incoming)
-              |> merge_relation_field_values(state)
+              |> Internal.merge_relation_field_values(state)
               |> then(
                 &MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(
                   state.static.fields,
@@ -98,18 +118,6 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
           Enum.reduce(opts, msg, fn {key, value}, acc ->
             String.replace(acc, "%{#{key}}", to_string(value))
           end)
-        end)
-      end
-
-      defp merge_relation_field_values(params, state) do
-        state.static.fields
-        |> Enum.filter(&(&1.type == :relation))
-        |> Enum.reduce(params, fn field, acc ->
-          case Map.get(state.field_values, field.name) do
-            "__nil__" -> Map.put(acc, to_string(field.name), nil)
-            v when v not in [nil, ""] -> Map.put(acc, to_string(field.name), v)
-            _ -> acc
-          end
         end)
       end
 

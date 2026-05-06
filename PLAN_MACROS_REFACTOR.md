@@ -200,9 +200,25 @@ After Tier 1 completes, optionally measure compile time on a clean build (`mix d
 
 ## Status
 
-- [ ] **Tier 0 audit complete** — DSL reachability table filled in for every macro file. Each row marked reachable / dead / partial with D1/D2/D3 decision.
-- [ ] Open questions resolved.
+- [x] **Tier 0 audit complete** — Form had 1 reachable, 8 dead, 9 partial. Table had 21/21 reachable.
+- [x] **Phase A — Form/Table parity wiring complete** (May 2026). All 18 form-side broken/partial surfaces flipped to **reachable** via runtime `Info.Form.{events,state,data_loader}/1` lookups. New tests: 33 (form/dsl/state, events, data_loader). Full suite 2877/2877 green.
+- [ ] Open questions resolved (#2 handler accessor promotion answered: form events handlers ARE now accessor-style but still defp; promote in Phase B if desired).
 - [ ] Tier 1 complete (9 files).
 - [ ] Tier 2 complete (2 files).
-- [ ] Tier 3 complete (10 files).
+- [ ] Tier 3 partial (3/10 files — pattern proven; remainder pending):
+  - [x] `form/web/state/field_builder.ex` → `FieldBuilder.Internal.get_resource_attributes/1`
+  - [x] `table/web/state/column_builder.ex` → `ColumnBuilder.Internal.get_resource_attributes/1`
+  - [x] `form/web/events/validation_handler.ex` → `ValidationHandler.Internal.merge_relation_field_values/2`
 - [ ] Final compile-time measurement recorded.
+
+## Phase B Implementation Notes (May 2026)
+
+**Pattern proven on 3 Tier 3 files.** The recipe:
+1. Define `Foo.Internal` module ABOVE `Foo` in the same file with `@moduledoc false`.
+2. Move pure `defp` helpers (no overridable-function calls, no consumer-module context) to `Internal` as public `def`s.
+3. Add `alias Foo.Internal` inside the macro's `quote do`.
+4. Replace internal call sites with `Internal.fn_name(...)`.
+
+**Key constraint discovered:** `defp` helpers that call overridable functions (e.g. `column_builder.ex`'s `maybe_resolve_type/2` calls the overridable `resolve_type/2`) MUST stay in the quote — moving them to Internal would lose the overridable dispatch (Internal would call `Internal.resolve_type` which doesn't exist).
+
+**Risk in Tier 1:** Files like `form/web/events.ex` have many interconnected `defp`s where extraction safety must be checked per-function. Recommend doing those one-by-one with full test runs between, not bulk-extracting.

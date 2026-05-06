@@ -62,6 +62,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       alias MishkaGervaz.Form.Web.State
+      alias MishkaGervaz.Resource.Info.Form, as: Info
 
       require Phoenix.LiveView
 
@@ -106,9 +107,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       @spec load_record(Phoenix.LiveView.Socket.t(), State.t(), String.t()) ::
               Phoenix.LiveView.Socket.t()
       def load_record(socket, state, record_id) do
-        tenant = tenant_resolver().get_tenant(state)
+        tenant = resolve_tenant_resolver(state.static.resource).get_tenant(state)
         actor = state.current_user
-        record_mod = record_loader()
+        record_mod = resolve_record_loader(state.static.resource)
 
         state = State.update(state, loading: :loading, mode: :update)
 
@@ -126,9 +127,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       """
       @spec new_record(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
       def new_record(socket, state) do
-        tenant = tenant_resolver().get_tenant(state)
+        tenant = resolve_tenant_resolver(state.static.resource).get_tenant(state)
         actor = state.current_user
-        record_mod = record_loader()
+        record_mod = resolve_record_loader(state.static.resource)
 
         case record_mod.new_for_create(state, tenant: tenant, actor: actor) do
           {:ok, form} ->
@@ -165,8 +166,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         field = find_field(state, field_name)
 
         if field do
-          tenant = tenant_resolver().get_tenant(state)
-          relation_mod = relation_loader()
+          tenant = resolve_tenant_resolver(state.static.resource).get_tenant(state)
+          relation_mod = resolve_relation_loader(state.static.resource)
 
           current_opts = Map.get(state.relation_options, field_name, %{})
 
@@ -201,8 +202,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
         field = find_field(state, field_name)
 
         if field do
-          tenant = tenant_resolver().get_tenant(state)
-          relation_mod = relation_loader()
+          tenant = resolve_tenant_resolver(state.static.resource).get_tenant(state)
+          relation_mod = resolve_relation_loader(state.static.resource)
 
           current_opts = Map.get(state.relation_options, field_name, %{})
 
@@ -486,7 +487,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       @spec load_readonly_relation_options(Phoenix.LiveView.Socket.t(), State.t()) ::
               Phoenix.LiveView.Socket.t()
       defp load_readonly_relation_options(socket, original_state) do
-        relation_mod = relation_loader()
+        relation_mod = resolve_relation_loader(original_state.static.resource)
 
         original_state.static.fields
         |> Enum.filter(fn field ->
@@ -527,6 +528,34 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
       defp field_readonly?(%{readonly: true}, _), do: true
       defp field_readonly?(_, _), do: false
+
+      @spec resolve_record_loader(module() | nil) :: module()
+      defp resolve_record_loader(nil), do: record_loader()
+
+      defp resolve_record_loader(resource) do
+        Map.get(Info.data_loader(resource), :record, record_loader())
+      end
+
+      @spec resolve_tenant_resolver(module() | nil) :: module()
+      defp resolve_tenant_resolver(nil), do: tenant_resolver()
+
+      defp resolve_tenant_resolver(resource) do
+        Map.get(Info.data_loader(resource), :tenant, tenant_resolver())
+      end
+
+      @spec resolve_relation_loader(module() | nil) :: module()
+      defp resolve_relation_loader(nil), do: relation_loader()
+
+      defp resolve_relation_loader(resource) do
+        Map.get(Info.data_loader(resource), :relation, relation_loader())
+      end
+
+      @spec resolve_hook_runner(module() | nil) :: module()
+      defp resolve_hook_runner(nil), do: hook_runner()
+
+      defp resolve_hook_runner(resource) do
+        Map.get(Info.data_loader(resource), :hooks, hook_runner())
+      end
 
       defoverridable record_loader: 0,
                      tenant_resolver: 0,
