@@ -22,6 +22,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
     sections: [:mishka_gervaz]
 
   alias Spark.Dsl.Extension
+  import MishkaGervaz.Helpers, only: [map_put_if_set: 3]
 
   @doc """
   Get the full compiled form configuration for a resource.
@@ -489,6 +490,54 @@ defmodule MishkaGervaz.Resource.Info.Form do
     case config(resource) do
       %{identity: %{name: name}} when not is_nil(name) -> to_string(name)
       _ -> nil
+    end
+  end
+
+  @doc """
+  Get the state configuration.
+
+  Returns a map with any configured state module overrides.
+  Keys can include: `:module`, `:field`, `:group`, `:step`, `:presentation`, `:access`.
+  Empty map when no overrides are set.
+  """
+  @spec state(module()) :: map()
+  def state(resource) do
+    %{}
+    |> map_put_if_set(:module, mishka_gervaz_form_state_module(resource))
+    |> map_put_if_set(:field, mishka_gervaz_form_state_field(resource))
+    |> map_put_if_set(:group, mishka_gervaz_form_state_group(resource))
+    |> map_put_if_set(:step, mishka_gervaz_form_state_step(resource))
+    |> map_put_if_set(:presentation, mishka_gervaz_form_state_presentation(resource))
+    |> map_put_if_set(:access, mishka_gervaz_form_state_access(resource))
+  end
+
+  @doc """
+  Get the events configuration.
+
+  Returns a map with optional keys for sub-handler overrides:
+  `:module`, `:sanitization`, `:validation`, `:submit`, `:step`, `:upload`,
+  `:relation`, `:hooks`. Returns an empty map if no events configuration is set.
+  """
+  @spec events(module()) :: map()
+  def events(resource) do
+    case Extension.get_persisted(resource, :mishka_gervaz_form_config) do
+      %{events: events} when is_map(events) -> events
+      _ -> %{}
+    end
+  end
+
+  @doc """
+  Get the data_loader configuration.
+
+  Returns a map with optional keys for sub-builder overrides:
+  `:module`, `:record`, `:tenant`, `:relation`, `:hooks`.
+  Returns an empty map if no data_loader configuration is set.
+  """
+  @spec data_loader(module()) :: map()
+  def data_loader(resource) do
+    case Extension.get_persisted(resource, :mishka_gervaz_form_config) do
+      %{data_loader: data_loader} when is_map(data_loader) -> data_loader
+      _ -> %{}
     end
   end
 end

@@ -74,30 +74,53 @@ defmodule MishkaGervaz.Form.Web.Events do
       }
 
       alias MishkaGervaz.Form.Web.UploadHelpers
+      alias MishkaGervaz.Resource.Info.Form, as: Info
 
-      @spec sanitization_handler() :: module()
-      defp sanitization_handler, do: SanitizationHandler.Default
+      @spec sanitization_handler(State.t()) :: module()
+      defp sanitization_handler(state) do
+        get_events_config(state, :sanitization) || SanitizationHandler.Default
+      end
 
-      @spec validation_handler() :: module()
-      defp validation_handler, do: ValidationHandler.Default
+      @spec validation_handler(State.t()) :: module()
+      defp validation_handler(state) do
+        get_events_config(state, :validation) || ValidationHandler.Default
+      end
 
-      @spec submit_handler() :: module()
-      defp submit_handler, do: SubmitHandler.Default
+      @spec submit_handler(State.t()) :: module()
+      defp submit_handler(state) do
+        get_events_config(state, :submit) || SubmitHandler.Default
+      end
 
-      @spec step_handler() :: module()
-      defp step_handler, do: StepHandler.Default
+      @spec step_handler(State.t()) :: module()
+      defp step_handler(state) do
+        get_events_config(state, :step) || StepHandler.Default
+      end
 
-      @spec upload_handler() :: module()
-      defp upload_handler, do: UploadHandler.Default
+      @spec upload_handler(State.t()) :: module()
+      defp upload_handler(state) do
+        get_events_config(state, :upload) || UploadHandler.Default
+      end
 
-      @spec relation_handler() :: module()
-      defp relation_handler, do: RelationHandler.Default
+      @spec relation_handler(State.t()) :: module()
+      defp relation_handler(state) do
+        get_events_config(state, :relation) || RelationHandler.Default
+      end
 
-      @spec hook_runner() :: module()
-      defp hook_runner, do: HookRunner.Default
+      @spec hook_runner(State.t()) :: module()
+      defp hook_runner(state) do
+        get_events_config(state, :hooks) || HookRunner.Default
+      end
 
-      @spec sanitize_params(map(), list()) :: map()
-      defp sanitize_params(params, fields) do
+      @spec get_events_config(State.t(), atom()) :: module() | nil
+      defp get_events_config(state, key) do
+        case Info.events(state.static.resource) do
+          config when is_map(config) -> Map.get(config, key)
+          _ -> nil
+        end
+      end
+
+      @spec sanitize_params(map(), list(), State.t()) :: map()
+      defp sanitize_params(params, fields, state) do
         case params do
           %{"form" => form_params} = p when is_map(form_params) ->
             sanitized =
@@ -106,13 +129,13 @@ defmodule MishkaGervaz.Form.Web.Events do
             Map.put(p, "form", sanitized)
 
           _ ->
-            sanitization_handler().sanitize_params(params)
+            sanitization_handler(state).sanitize_params(params)
         end
       end
 
       @spec run_hook(State.t(), atom(), list()) :: any()
       defp run_hook(state, hook_name, args) do
-        hook_runner().run_hook(state.static.hooks, hook_name, args)
+        hook_runner(state).run_hook(state.static.hooks, hook_name, args)
       end
 
       @impl true
@@ -126,7 +149,7 @@ defmodule MishkaGervaz.Form.Web.Events do
       defp do_handle("validate", params, state, socket) do
         params =
           params
-          |> sanitize_params(state.static.fields)
+          |> sanitize_params(state.static.fields, state)
           |> strip_empty_list_values()
           |> decode_constrained_map_params(state.static.fields)
 
@@ -141,7 +164,7 @@ defmodule MishkaGervaz.Form.Web.Events do
 
         state = clear_list_field_values(state)
 
-        socket = validation_handler().validate(state, params, socket, forced_errors, target)
+        socket = validation_handler(state).validate(state, params, socket, forced_errors, target)
         {:noreply, socket}
       end
 
@@ -154,7 +177,7 @@ defmodule MishkaGervaz.Form.Web.Events do
         if submit_button_allowed?(submit_button, state) do
           params =
             params
-            |> sanitize_params(state.static.fields)
+            |> sanitize_params(state.static.fields, state)
             |> strip_empty_list_values()
             |> decode_constrained_map_params(state.static.fields)
             |> strip_empty_constrained_entries(state.static.fields)
@@ -164,11 +187,11 @@ defmodule MishkaGervaz.Form.Web.Events do
               {:noreply, socket}
 
             {:cont, modified_params} ->
-              socket = submit_handler().submit(state, modified_params, socket)
+              socket = submit_handler(state).submit(state, modified_params, socket)
               {:noreply, socket}
 
             _ ->
-              socket = submit_handler().submit(state, params, socket)
+              socket = submit_handler(state).submit(state, params, socket)
               {:noreply, socket}
           end
         else
@@ -193,19 +216,19 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("next_step", _params, state, socket) do
-        socket = step_handler().advance(state, socket)
+        socket = step_handler(state).advance(state, socket)
         {:noreply, socket}
       end
 
       defp do_handle("prev_step", _params, state, socket) do
-        socket = step_handler().go_back(state, socket)
+        socket = step_handler(state).go_back(state, socket)
         {:noreply, socket}
       end
 
       defp do_handle("goto_step", %{"step" => step_name}, state, socket) do
         if MishkaGervaz.Helpers.known_name?(step_name, state, :steps) do
           step_atom = String.to_existing_atom(step_name)
-          socket = step_handler().goto_step(state, step_atom, socket)
+          socket = step_handler(state).goto_step(state, step_atom, socket)
           {:noreply, socket}
         else
           {:noreply, socket}
@@ -233,13 +256,13 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
       defp do_handle("relation_" <> action, params, state, socket) do
-        relation_handler().handle(action, params, state, socket)
+        relation_handler(state).handle(action, params, state, socket)
       end
 
       defp do_handle("upload_complete", %{"key" => upload_key}, state, socket) do
         if MishkaGervaz.Helpers.known_name?(upload_key, state, :uploads) do
           key_atom = String.to_existing_atom(upload_key)
-          socket = upload_handler().handle_upload(state, key_atom, socket)
+          socket = upload_handler(state).handle_upload(state, key_atom, socket)
           {:noreply, socket}
         else
           {:noreply, socket}
@@ -249,7 +272,7 @@ defmodule MishkaGervaz.Form.Web.Events do
       defp do_handle("cancel_upload", %{"key" => upload_key, "ref" => ref}, state, socket) do
         if MishkaGervaz.Helpers.known_name?(upload_key, state, :uploads) do
           key_atom = String.to_existing_atom(upload_key)
-          socket = upload_handler().cancel_upload(state, key_atom, ref, socket)
+          socket = upload_handler(state).cancel_upload(state, key_atom, ref, socket)
           {:noreply, socket}
         else
           {:noreply, socket}
@@ -315,7 +338,7 @@ defmodule MishkaGervaz.Form.Web.Events do
 
               errors =
                 if show_errors?,
-                  do: validation_handler().build_errors(validated),
+                  do: validation_handler(state).build_errors(validated),
                   else: %{}
 
               state = State.update(state, form: validated, errors: errors, dirty?: true)
@@ -359,7 +382,7 @@ defmodule MishkaGervaz.Form.Web.Events do
 
               errors =
                 if show_errors?,
-                  do: validation_handler().build_errors(validated),
+                  do: validation_handler(state).build_errors(validated),
                   else: %{}
 
               state = State.update(state, form: validated, errors: errors, dirty?: true)
@@ -502,7 +525,7 @@ defmodule MishkaGervaz.Form.Web.Events do
               field_values = Map.put(state.field_values, field_atom, new_items)
 
               state =
-                validation_handler().build_errors(validated)
+                validation_handler(state).build_errors(validated)
                 |> then(
                   &State.update(state,
                     form: validated,
@@ -567,7 +590,7 @@ defmodule MishkaGervaz.Form.Web.Events do
 
             errors =
               if show_errors?,
-                do: validation_handler().build_errors(updated),
+                do: validation_handler(state).build_errors(updated),
                 else: %{}
 
             state = State.update(state, form: updated, errors: errors, dirty?: true)
@@ -590,7 +613,7 @@ defmodule MishkaGervaz.Form.Web.Events do
 
             errors =
               if show_errors?,
-                do: validation_handler().build_errors(updated),
+                do: validation_handler(state).build_errors(updated),
                 else: %{}
 
             state = State.update(state, form: updated, errors: errors, dirty?: true)
@@ -876,7 +899,7 @@ defmodule MishkaGervaz.Form.Web.Events do
 
             errors =
               if show_errors?,
-                do: validation_handler().build_errors(validated),
+                do: validation_handler(state).build_errors(validated),
                 else: %{}
 
             State.update(state, form: validated, errors: errors)

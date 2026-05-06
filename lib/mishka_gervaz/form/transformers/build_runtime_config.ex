@@ -20,6 +20,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     Upload,
     Submit,
     Events,
+    DataLoader,
     Access,
     Header,
     Footer,
@@ -49,7 +50,9 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       submit: build_submit(dsl_state, domain_defaults),
       presentation: build_presentation(dsl_state, domain_defaults),
       hooks: build_hooks(dsl_state),
+      state: build_state(dsl_state),
       events: build_events(dsl_state),
+      data_loader: build_data_loader(dsl_state),
       detected_preloads:
         Transformer.get_persisted(dsl_state, :mishka_gervaz_form_detected_preloads, []),
       field_order: Transformer.get_persisted(dsl_state, :mishka_gervaz_form_field_order, [])
@@ -692,6 +695,48 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
           relation: entity.relation,
           hooks: entity.hooks
         }
+        |> Enum.reject(fn {_, v} -> is_nil(v) end)
+        |> Map.new()
+        |> case do
+          config when config == %{} -> nil
+          config -> config
+        end
+    end
+  end
+
+  defp build_state(dsl_state) do
+    path = @form_path ++ [:state]
+    keys = [:module, :field, :group, :step, :presentation, :access]
+    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
+
+    values
+    |> Enum.reject(fn {_, v} -> is_nil(v) end)
+    |> Map.new()
+    |> case do
+      config when config == %{} -> nil
+      config -> config
+    end
+  end
+
+  defp build_data_loader(dsl_state) do
+    case find_entity(dsl_state, @form_path, DataLoader) do
+      nil ->
+        nil
+
+      entity ->
+        %{
+          module: entity.module,
+          record: entity.record,
+          tenant: entity.tenant,
+          relation: entity.relation,
+          hooks: entity.hooks
+        }
+        |> Enum.reject(fn {_, v} -> is_nil(v) end)
+        |> Map.new()
+        |> case do
+          config when config == %{} -> nil
+          config -> config
+        end
     end
   end
 

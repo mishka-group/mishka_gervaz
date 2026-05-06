@@ -1,9 +1,29 @@
+defmodule MishkaGervaz.Test.FormWebHelpers.FakeResource do
+  @moduledoc false
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :content, :string, public?: true
+    attribute :status, :atom, public?: true, constraints: [one_of: [:draft, :published]]
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+end
+
 defmodule MishkaGervaz.Test.FormWebHelpers do
   @moduledoc """
   Helper functions for form web layer tests.
 
-  Provides builders for State, Static, and Socket structs
-  without depending on Spark DSL compilation.
+  Provides builders for State, Static, and Socket structs.
+  Default resource is `FakeResource` — a real Spark DSL resource so
+  `Info.Form.events/1` and friends behave correctly under tests.
   """
 
   alias MishkaGervaz.Form.Web.State
