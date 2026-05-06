@@ -147,6 +147,8 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
       @behaviour MishkaGervaz.Behaviours.UIAdapter
       use Phoenix.Component
 
+      import MishkaGervaz.Helpers, only: [map_put_if_set: 3]
+
       @site unquote(site)
       @fallback unquote(fallback)
       @component_renderer unquote(component_renderer)
@@ -156,12 +158,9 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
         assigns
         |> Map.put(:__site__, @site)
         |> Map.put(:__fallback__, @fallback)
-        |> maybe_put(:__component_renderer__, @component_renderer)
-        |> maybe_put(:__module_resolver__, @module_resolver)
+        |> map_put_if_set(:__component_renderer__, @component_renderer)
+        |> map_put_if_set(:__module_resolver__, @module_resolver)
       end
-
-      defp maybe_put(map, _key, nil), do: map
-      defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
       unquote_splicing(component_wrappers)
     end
@@ -650,10 +649,7 @@ defmodule MishkaGervaz.UIAdapters.Dynamic do
     assigns
     |> Map.put(:__site__, site)
     |> Map.put(:__fallback__, fallback)
-    |> maybe_put(:__component_renderer__, component_renderer)
-    |> maybe_put(:__module_resolver__, module_resolver)
+    |> MishkaGervaz.Helpers.map_put_if_set(:__component_renderer__, component_renderer)
+    |> MishkaGervaz.Helpers.map_put_if_set(:__module_resolver__, module_resolver)
   end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

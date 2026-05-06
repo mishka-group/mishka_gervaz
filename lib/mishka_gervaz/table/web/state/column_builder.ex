@@ -1,14 +1,3 @@
-defmodule MishkaGervaz.Table.Web.State.ColumnBuilder.Internal do
-  @moduledoc false
-
-  @spec get_resource_attributes(module()) :: map()
-  def get_resource_attributes(resource) do
-    resource
-    |> Ash.Resource.Info.attributes()
-    |> Map.new(&{&1.name, &1})
-  end
-end
-
 defmodule MishkaGervaz.Table.Web.State.ColumnBuilder do
   @moduledoc """
   Builds column configuration from DSL and resource attributes.
@@ -40,7 +29,8 @@ defmodule MishkaGervaz.Table.Web.State.ColumnBuilder do
 
       alias MishkaGervaz.Resource.Info.Table, as: Info
       alias MishkaGervaz.Table.Types.Column, as: ColumnType
-      alias MishkaGervaz.Table.Web.State.ColumnBuilder.Internal
+
+      import MishkaGervaz.Helpers, only: [get_resource_attributes: 1]
 
       @doc """
       Builds columns from config and resource.
@@ -58,7 +48,7 @@ defmodule MishkaGervaz.Table.Web.State.ColumnBuilder do
       def build(config, resource) when is_map(config) do
         columns_config = Map.get(config, :columns, %{})
         column_order = Map.get(columns_config, :order, [])
-        attributes = Internal.get_resource_attributes(resource)
+        attributes = get_resource_attributes(resource)
 
         columns =
           Info.columns(resource)

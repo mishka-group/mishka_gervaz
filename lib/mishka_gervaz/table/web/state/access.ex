@@ -29,6 +29,8 @@ defmodule MishkaGervaz.Table.Web.State.Access do
 
       alias MishkaGervaz.Resource.Info.Table, as: Info
 
+      import MishkaGervaz.Helpers, only: [get_tenant_field: 1, default_record_visible?: 2]
+
       @doc """
       Checks if user is a master user (has global access).
 
@@ -133,26 +135,6 @@ defmodule MishkaGervaz.Table.Web.State.Access do
       @spec get_preloads(module(), boolean()) :: list()
       def get_preloads(resource, master_user?) do
         Info.all_preloads(resource, master_user?)
-      end
-
-      @spec get_tenant_field(struct()) :: atom() | nil
-      defp get_tenant_field(record) when is_struct(record) do
-        Ash.Resource.Info.multitenancy_attribute(record.__struct__)
-      end
-
-      @spec get_tenant_field(term()) :: nil
-      defp get_tenant_field(_), do: nil
-
-      @spec default_record_visible?(struct(), map()) :: boolean()
-      defp default_record_visible?(record, user) do
-        case get_tenant_field(record) do
-          nil ->
-            true
-
-          tenant_field ->
-            user_tenant = Map.get(user, tenant_field)
-            is_nil(user_tenant) or Map.get(record, tenant_field) in [nil, user_tenant]
-        end
       end
 
       defoverridable master_user?: 1,

@@ -88,6 +88,34 @@ For each target file `lib/mishka_gervaz/<path>/foo.ex`:
 
 ---
 
+## Phase A — Form/Table Parity Wiring (COMPLETED — May 2026)
+
+Wired the form-side override surfaces to match the table-side DSL→runtime lookup pattern. Without this, `defoverridable` on form macros was a paper tiger because the form DSL never plugged user modules in. After Phase A every form override surface is reachable from the DSL exactly as on the table.
+
+- [x] **A.1 — `Info.Form` accessors** (`lib/mishka_gervaz/_resource/info/form.ex`)
+  Added `events/1`, `state/1`, `data_loader/1` mirroring `info/table.ex:631-675`. Imported `map_put_if_set` from `MishkaGervaz.Helpers`.
+- [x] **A.2 — `BuildRuntimeConfig` transformer** (`lib/mishka_gervaz/form/transformers/build_runtime_config.ex`)
+  Fixed pre-existing nil-leak bug in `build_events/1` (broke `||` fallback). Added `build_state/1` (Section-based via `get_opt`) and `build_data_loader/1` (Entity-based via `find_entity`). Wired into the persisted config map at lines 41-58. Aliased `Form.Entities.DataLoader`.
+- [x] **A.3 — Form event sub-handlers** (`lib/mishka_gervaz/form/web/events.ex:78-120`)
+  Replaced 7 zero-arity `defp xxx_handler` accessors with `defp xxx_handler(state)` that resolves via `Info.Form.events(state.static.resource)[:key] || XxxHandler.Default`. Mirror of `table/web/events.ex:99-130`. Updated all internal call sites; `sanitize_params/2` → `sanitize_params/3` (now takes state).
+- [x] **A.4 — Form state sub-builders + module override** (`lib/mishka_gervaz/form/web/state.ex:437-499`)
+  `init/3` now reads `Info.Form.state(resource)` and dispatches to `state[:module].init(...)` if set, else falls through to `do_init/4`. `do_init/3` signature changed to `do_init/4` taking `dsl_state`; each `*_builder()` accessor is now `Map.get(dsl_state, :field, field_builder())`. Mirror of `table/web/state.ex:548-574`.
+- [x] **A.5 — Form data_loader sub-builders** (`lib/mishka_gervaz/form/web/data_loader.ex`)
+  Added 4 `resolve_*(resource)` helpers: `resolve_record_loader/1`, `resolve_tenant_resolver/1`, `resolve_relation_loader/1`, `resolve_hook_runner/1`. Each `Map.get(Info.data_loader(resource), :key, default())` style. Updated all call sites in `load_record/3`, `new_record/2`, `load_relation_options/3`, `search_relation_options/4`, `load_readonly_relation_options/2`. Mirror of `table/web/data_loader.ex:408-454`.
+- [x] **A.6 — Comprehensive override fixtures + tests** (`test/`)
+  Real Spark fixtures for all surfaces (no `FakeResource`-style bypass — converted that to a real Spark module too):
+  - `test/support/resources/form_state_dsl/` — 8 resources + 6 custom builders.
+  - `test/support/resources/form_events_dsl/` — 10 resources + 8 custom handlers.
+  - `test/support/resources/form_data_loader_dsl/` — 7 resources + 5 custom modules.
+  - `test/mishka_gervaz/form/dsl/state_dsl_test.exs` — 21 tests (Info reads + per-builder runtime override + all-builders + whole-module + default).
+  - `test/mishka_gervaz/form/dsl/events_dsl_test.exs` — 12 tests (per-handler Info reads + all-handlers + whole-module + nil-stripping).
+  - `test/mishka_gervaz/form/dsl/data_loader_dsl_test.exs` — 9 tests (per-sub-builder Info reads + whole-module + nil-stripping).
+- [x] **A.7 — Re-audit reachability** — All 18 previously broken/partial form surfaces flipped to **reachable**. Form/table parity for top-level `module:` defdelegate pattern preserved (both go through `__MODULE__.Default`; the `module:` DSL option is documented but framework dispatch still uses `Default` — same on both sides).
+
+**Test totals after Phase A:** 2877/2877 gervaz tests pass (added 42 new). Parent `mishka_cms` compiles clean.
+
+---
+
 ## Tier 1 — Heavyweight (>15 defp inside quote)
 
 Highest compile-time payoff. Do these first.
@@ -129,8 +157,10 @@ Highest compile-time payoff. Do these first.
 
 ## Tier 2 — Mid-weight (5–15 defp inside quote)
 
-- [ ] **`lib/mishka_gervaz/table/web/state/filter_builder.ex`** — 9 defp, 5 def
-- [ ] **`lib/mishka_gervaz/form/web/data_loader/record_loader.ex`** — 5 defp, 3 def
+- [x] **`lib/mishka_gervaz/table/web/state/filter_builder.ex`** — 9 defp, 5 def — DONE (May 2026)
+  - Moved to `MishkaGervaz.Helpers`: `get_resource_attributes/1` (already), `get_resource_calculations/1`, `get_resource_relationships/1`, `find_display_field/1`, `maybe_resolve_options/1`. Kept in quote: `maybe_resolve_type/2` (calls overridable `resolve_type/1`), `maybe_load_relationship_options/3` (calls overridable `load_relationship_options/2`).
+- [x] **`lib/mishka_gervaz/form/web/data_loader/record_loader.ex`** — 5 defp, 3 def — DONE (May 2026)
+  - Moved to `MishkaGervaz.Helpers`: `keyword_put_if_set/3` (replaces both `maybe_add_tenant/2` and `maybe_add_opt/3` — same shape), `resolve_tenant_from_record/2`.
 
 ---
 
@@ -138,17 +168,24 @@ Highest compile-time payoff. Do these first.
 
 Small wins; do as a batch at the end.
 
-- [ ] **`lib/mishka_gervaz/ui_adapters/dynamic.ex`** — 3 defp, 1 def
-- [ ] **`lib/mishka_gervaz/table/web/state/column_builder.ex`** — 3 defp, 4 def
-  - Already audited. Move `defp maybe_resolve_type/2` and `defp get_resource_attributes/1` to `ColumnBuilder.Internal`. (Third defp is one of the multi-clause forms — confirm count.)
-- [ ] **`lib/mishka_gervaz/table/web/state/access.ex`** — 3 defp, 8 def
-- [ ] **`lib/mishka_gervaz/table/web/data_loader/pagination_handler.ex`** — 3 defp, 7 def
-- [ ] **`lib/mishka_gervaz/form/web/events/step_handler.ex`** — 3 defp, 4 def
-- [ ] **`lib/mishka_gervaz/form/web/events/sanitization_handler.ex`** — 3 defp, 3 def
-- [ ] **`lib/mishka_gervaz/form/web/events/upload_handler.ex`** — 2 defp, 2 def
-- [ ] **`lib/mishka_gervaz/form/web/state/field_builder.ex`** — 1 defp, 5 def
-  - Already audited. Move `defp get_resource_attributes/1` to `FieldBuilder.Internal`.
-- [ ] **`lib/mishka_gervaz/form/web/events/validation_handler.ex`** — 1 defp, 4 def
+- [x] **`lib/mishka_gervaz/ui_adapters/dynamic.ex`** — 3 defp, 1 def — DONE (May 2026)
+  - `maybe_put/3` (in-quote AND module-level duplicate) → use existing `MishkaGervaz.Helpers.map_put_if_set/3` (same nil-skip semantics). `inject_config/1` kept in quote (uses module attributes `@site` etc.).
+- [x] **`lib/mishka_gervaz/table/web/state/column_builder.ex`** — 3 defp, 4 def — DONE (May 2026)
+  - `get_resource_attributes/1` → `MishkaGervaz.Helpers.get_resource_attributes/1`. `maybe_resolve_type/2` kept in quote (calls overridable `resolve_type/2`).
+- [x] **`lib/mishka_gervaz/table/web/state/access.ex`** — 3 defp, 8 def — DONE (May 2026)
+  - `get_tenant_field/1` and `default_record_visible?/2` → `MishkaGervaz.Helpers`.
+- [x] **`lib/mishka_gervaz/table/web/data_loader/pagination_handler.ex`** — 3 defp, 7 def — DONE (May 2026)
+  - `extract_results/1` (3 clauses) → `MishkaGervaz.Helpers.extract_results/1`.
+- [x] **`lib/mishka_gervaz/form/web/events/step_handler.ex`** — 3 defp, 4 def — DONE (May 2026)
+  - `find_next_step/2`, `find_prev_step/2`, `step_exists?/2` → `MishkaGervaz.Helpers`.
+- [x] **`lib/mishka_gervaz/form/web/events/sanitization_handler.ex`** — 3 defp, 3 def — SKIPPED
+  - Only candidate `sanitize_list_item/1` calls overridable `sanitize/1` and `sanitize_params/1` — must stay in quote (no safe extraction).
+- [x] **`lib/mishka_gervaz/form/web/events/upload_handler.ex`** — 2 defp, 2 def — DONE (May 2026)
+  - `resolve_upload_name/2` → `MishkaGervaz.Helpers.resolve_upload_name/2`.
+- [x] **`lib/mishka_gervaz/form/web/state/field_builder.ex`** — 1 defp, 5 def — DONE (May 2026)
+  - `get_resource_attributes/1` → `MishkaGervaz.Helpers.get_resource_attributes/1`.
+- [x] **`lib/mishka_gervaz/form/web/events/validation_handler.ex`** — 1 defp, 4 def — DONE (May 2026)
+  - `merge_relation_field_values/2` → `MishkaGervaz.Helpers.merge_relation_field_values/2`.
 
 ---
 
@@ -204,21 +241,32 @@ After Tier 1 completes, optionally measure compile time on a clean build (`mix d
 - [x] **Phase A — Form/Table parity wiring complete** (May 2026). All 18 form-side broken/partial surfaces flipped to **reachable** via runtime `Info.Form.{events,state,data_loader}/1` lookups. New tests: 33 (form/dsl/state, events, data_loader). Full suite 2877/2877 green.
 - [ ] Open questions resolved (#2 handler accessor promotion answered: form events handlers ARE now accessor-style but still defp; promote in Phase B if desired).
 - [ ] Tier 1 complete (9 files).
-- [ ] Tier 2 complete (2 files).
-- [ ] Tier 3 partial (3/10 files — pattern proven; remainder pending):
-  - [x] `form/web/state/field_builder.ex` → `FieldBuilder.Internal.get_resource_attributes/1`
-  - [x] `table/web/state/column_builder.ex` → `ColumnBuilder.Internal.get_resource_attributes/1`
-  - [x] `form/web/events/validation_handler.ex` → `ValidationHandler.Internal.merge_relation_field_values/2`
+- [x] **Tier 2 complete (2/2 files)** — May 2026.
+- [x] **Tier 3 complete (10/10 files)** — May 2026. 9 extracted (1 candidate skipped: dispatches to overridable funcs). 7 helpers consolidated into `MishkaGervaz.Helpers` (no per-file `Internal` modules — see notes).
 - [ ] Final compile-time measurement recorded.
 
 ## Phase B Implementation Notes (May 2026)
 
-**Pattern proven on 3 Tier 3 files.** The recipe:
-1. Define `Foo.Internal` module ABOVE `Foo` in the same file with `@moduledoc false`.
-2. Move pure `defp` helpers (no overridable-function calls, no consumer-module context) to `Internal` as public `def`s.
-3. Add `alias Foo.Internal` inside the macro's `quote do`.
-4. Replace internal call sites with `Internal.fn_name(...)`.
+**Centralization decision:** All extracted helpers go into the existing `lib/mishka_gervaz/_helpers.ex` (`MishkaGervaz.Helpers`) module — NOT into per-file `Foo.Internal` siblings. This keeps shared utilities in one place and is consistent with the project's existing pattern (Helpers already housed `humanize`, `get_ui_label`, `map_put_if_set`, etc.).
 
-**Key constraint discovered:** `defp` helpers that call overridable functions (e.g. `column_builder.ex`'s `maybe_resolve_type/2` calls the overridable `resolve_type/2`) MUST stay in the quote — moving them to Internal would lose the overridable dispatch (Internal would call `Internal.resolve_type` which doesn't exist).
+**Recipe (per file):**
+1. For each candidate `defp` inside the macro's `quote do`: classify.
+   - **Move** — pure function, no calls to overridable functions inside the consumer module → add to `MishkaGervaz.Helpers` as a public `def`.
+   - **Keep in quote** — calls overridable functions, OR uses module attributes / consumer-module compile-time context.
+2. Add `import MishkaGervaz.Helpers, only: [fn: arity, ...]` inside the macro's `quote do` so call sites stay unchanged.
+3. Delete the original `defp` from the quote.
+4. Run `mix test` from `__extensions/mishka_gervaz`.
+
+**Key constraint:** `defp` helpers that call overridable functions MUST stay in the quote. Examples:
+- `column_builder.ex` `maybe_resolve_type/2` calls overridable `resolve_type/2` → kept.
+- `sanitization_handler.ex` `sanitize_list_item/1` calls overridable `sanitize/1` and `sanitize_params/1` → kept (whole file skipped — only candidate had this issue).
+
+**Helpers added in Tier 3:**
+- `get_resource_attributes/1` — Ash attribute map by name.
+- `merge_relation_field_values/2` — form params with relation values from state.
+- `resolve_upload_name/2` — namespaced LiveView upload name.
+- `find_next_step/2`, `find_prev_step/2`, `step_exists?/2` — wizard navigation.
+- `get_tenant_field/1`, `default_record_visible?/2` — multitenancy access checks.
+- `extract_results/1` — Ash read result → list.
 
 **Risk in Tier 1:** Files like `form/web/events.ex` have many interconnected `defp`s where extraction safety must be checked per-function. Recommend doing those one-by-one with full test runs between, not bulk-extracting.

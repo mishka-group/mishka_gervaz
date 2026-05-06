@@ -30,6 +30,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       alias MishkaGervaz.Form.Web.State
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
+      import MishkaGervaz.Helpers,
+        only: [keyword_put_if_set: 3, resolve_tenant_from_record: 2]
+
       @doc """
       Load a record by ID and build an AshPhoenix.Form for editing.
 
@@ -50,7 +53,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
 
         read_opts =
           [action: read_action, actor: actor, load: preloads]
-          |> maybe_add_tenant(tenant)
+          |> keyword_put_if_set(:tenant, tenant)
 
         case Ash.get(resource, record_id, read_opts) do
           {:ok, record} ->
@@ -103,8 +106,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
 
         form_opts =
           [as: "form"]
-          |> maybe_add_opt(:actor, actor)
-          |> maybe_add_opt(:tenant, tenant)
+          |> keyword_put_if_set(:actor, actor)
+          |> keyword_put_if_set(:tenant, tenant)
 
         try do
           form =
@@ -119,21 +122,6 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
           {:ok, Phoenix.Component.to_form(form)}
         rescue
           e -> {:error, e}
-        end
-      end
-
-      @spec maybe_add_tenant(keyword(), any()) :: keyword()
-      defp maybe_add_tenant(opts, nil), do: opts
-      defp maybe_add_tenant(opts, tenant), do: Keyword.put(opts, :tenant, tenant)
-
-      @spec maybe_add_opt(keyword(), atom(), any()) :: keyword()
-      defp maybe_add_opt(opts, _key, nil), do: opts
-      defp maybe_add_opt(opts, key, value), do: Keyword.put(opts, key, value)
-
-      defp resolve_tenant_from_record(resource, record) do
-        case Ash.Resource.Info.multitenancy_attribute(resource) do
-          nil -> nil
-          attr -> Map.get(record, attr)
         end
       end
 

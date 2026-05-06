@@ -1,14 +1,3 @@
-defmodule MishkaGervaz.Form.Web.State.FieldBuilder.Internal do
-  @moduledoc false
-
-  @spec get_resource_attributes(module()) :: map()
-  def get_resource_attributes(resource) do
-    resource
-    |> Ash.Resource.Info.attributes()
-    |> Map.new(&{&1.name, &1})
-  end
-end
-
 defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
   @moduledoc """
   Builds field configuration from DSL and resource attributes.
@@ -39,9 +28,8 @@ defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
       use MishkaGervaz.Form.Web.State.Builder
 
       alias MishkaGervaz.Resource.Info.Form, as: Info
-      alias MishkaGervaz.Form.Web.State.FieldBuilder.Internal
 
-      import MishkaGervaz.Helpers, only: [humanize: 1, get_ui_label: 1]
+      import MishkaGervaz.Helpers, only: [humanize: 1, get_ui_label: 1, get_resource_attributes: 1]
 
       @doc """
       Builds fields from config and resource.
@@ -53,7 +41,7 @@ defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
       def build(config, resource) when is_map(config) do
         fields = Info.fields(resource)
         field_order = Info.field_order(resource)
-        attributes = Internal.get_resource_attributes(resource)
+        attributes = get_resource_attributes(resource)
 
         built =
           Enum.map(fields, fn field ->

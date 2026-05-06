@@ -20,14 +20,14 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
   """
 
   alias MishkaGervaz.Form.Web.State
-  alias MishkaGervaz.Form.Web.UploadHelpers
 
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Form.Web.Events.Builder
 
       alias MishkaGervaz.Form.Web.State
-      alias MishkaGervaz.Form.Web.UploadHelpers
+
+      import MishkaGervaz.Helpers, only: [resolve_upload_name: 2]
 
       @doc """
       Process completed uploads for a given upload key.
@@ -60,12 +60,6 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
         ns_name = resolve_upload_name(state, upload_key)
         Phoenix.LiveView.cancel_upload(socket, ns_name, ref)
       end
-
-      defp resolve_upload_name(%{static: %{id: id}}, upload_key) do
-        UploadHelpers.namespaced_upload_name(upload_key, id)
-      end
-
-      defp resolve_upload_name(_state, upload_key), do: upload_key
 
       defoverridable handle_upload: 3, cancel_upload: 4
     end

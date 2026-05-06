@@ -37,6 +37,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
 
       alias MishkaGervaz.Table.Web.State
 
+      import MishkaGervaz.Helpers, only: [extract_results: 1]
+
       @doc """
       Load a page of data with the given query, action, and tenant.
       Returns tuple of {page, page_result, reset?, pagination_info}.
@@ -113,10 +115,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       def calculate_total_pages(total_count, page_size) do
         ceil(total_count / page_size)
       end
-
-      defp extract_results(%{results: results}) when is_list(results), do: results
-      defp extract_results(results) when is_list(results), do: results
-      defp extract_results(_), do: []
 
       defoverridable load_page: 5,
                      get_pagination_type: 1,
