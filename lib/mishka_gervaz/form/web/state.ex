@@ -436,23 +436,32 @@ defmodule MishkaGervaz.Form.Web.State do
 
       @spec init(String.t(), module(), map() | nil) :: State.t()
       def init(id, resource, current_user) do
-        do_init(id, resource, current_user)
+        dsl_state = Info.state(resource)
+
+        case Map.get(dsl_state, :module) do
+          nil ->
+            do_init(id, resource, current_user, dsl_state)
+
+          custom_module ->
+            custom_module.init(id, resource, current_user)
+        end
       end
 
       @spec default_init(String.t(), module(), map() | nil) :: State.t()
       def default_init(id, resource, current_user) do
-        do_init(id, resource, current_user)
+        dsl_state = Info.state(resource) |> Map.delete(:module)
+        do_init(id, resource, current_user, dsl_state)
       end
 
-      @spec do_init(String.t(), module(), map() | nil) :: State.t()
-      defp do_init(id, resource, current_user) do
+      @spec do_init(String.t(), module(), map() | nil, map()) :: State.t()
+      defp do_init(id, resource, current_user, dsl_state) do
         config = Info.config(resource)
 
-        field_mod = field_builder()
-        group_mod = group_builder()
-        step_mod = step_builder()
-        presentation_mod = presentation()
-        access_mod = access()
+        field_mod = Map.get(dsl_state, :field, field_builder())
+        group_mod = Map.get(dsl_state, :group, group_builder())
+        step_mod = Map.get(dsl_state, :step, step_builder())
+        presentation_mod = Map.get(dsl_state, :presentation, presentation())
+        access_mod = Map.get(dsl_state, :access, access())
 
         master_user? = access_mod.master_user?(current_user)
         preloads = access_mod.get_preloads(resource, master_user?)
