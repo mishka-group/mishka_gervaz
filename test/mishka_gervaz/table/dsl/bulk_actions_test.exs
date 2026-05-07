@@ -150,6 +150,81 @@ defmodule MishkaGervaz.DSL.BulkActionsTest do
     end
   end
 
+  describe "BulkAction.transform/1 — handler: <builtin-type-atom> auto-promotion" do
+    alias MishkaGervaz.Table.Entities.BulkAction
+
+    test "handler: :destroy is promoted to {:type, :destroy}" do
+      action = %BulkAction{name: :archive, handler: :destroy}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == {:type, :destroy}
+      assert transformed.type == :destroy
+    end
+
+    test "handler: :update is promoted to {:type, :update}" do
+      action = %BulkAction{name: :activate, handler: :update}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == {:type, :update}
+      assert transformed.type == :update
+    end
+
+    test "handler: :unarchive is promoted to {:type, :unarchive}" do
+      action = %BulkAction{name: :restore, handler: :unarchive}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == {:type, :unarchive}
+      assert transformed.type == :unarchive
+    end
+
+    test "handler: :permanent_destroy is promoted to {:type, :permanent_destroy}" do
+      action = %BulkAction{name: :purge, handler: :permanent_destroy}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == {:type, :permanent_destroy}
+      assert transformed.type == :permanent_destroy
+    end
+
+    test "handler: :event is promoted to {:type, :event}" do
+      action = %BulkAction{name: :notify, handler: :event}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == {:type, :event}
+      assert transformed.type == :event
+    end
+
+    test "handler: <unknown-atom> stays literal (custom Ash action name)" do
+      action = %BulkAction{name: :custom, handler: :my_custom_action}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == :my_custom_action
+      assert transformed.type == nil
+    end
+
+    test "handler: :parent is left unchanged when no type is set" do
+      action = %BulkAction{name: :send_event, handler: :parent}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == :parent
+      assert transformed.type == nil
+    end
+
+    test "type: set with handler: :parent — type-rule takes priority over auto-promotion" do
+      action = %BulkAction{name: :archive, type: :destroy, handler: :parent}
+      assert {:ok, transformed} = BulkAction.transform(action)
+      assert transformed.handler == {:type, :destroy}
+      assert transformed.type == :destroy
+    end
+
+    test "explicit handler: <type-atom> behaves identically to type: <type-atom>" do
+      from_handler =
+        %BulkAction{name: :a, handler: :destroy}
+        |> BulkAction.transform()
+        |> elem(1)
+
+      from_type =
+        %BulkAction{name: :a, type: :destroy, handler: :parent}
+        |> BulkAction.transform()
+        |> elem(1)
+
+      assert from_handler.handler == from_type.handler
+      assert from_handler.type == from_type.type
+    end
+  end
+
   defp get_ui(action) do
     case action.ui do
       [ui | _] -> ui

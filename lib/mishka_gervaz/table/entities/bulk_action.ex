@@ -119,11 +119,23 @@ defmodule MishkaGervaz.Table.Entities.BulkAction do
   @doc """
   Transform the bulk action after DSL compilation.
 
-  If `type` is set and `handler` is still the default `:parent`,
-  marks the handler as type-based for runtime resolution.
+  Two promotion rules apply, in order:
+
+    1. If `type:` is set and `handler:` is still the default `:parent`, mark the
+       handler as type-based: `handler: {:type, type}`.
+    2. If `handler:` is one of the built-in type atoms
+       (`:event`, `:destroy`, `:update`, `:unarchive`, `:permanent_destroy`),
+       it is treated as a type token, not a literal Ash action name. This keeps
+       `type: :destroy` and `handler: :destroy` behaving identically — both
+       route through the master/tenant resolver.
   """
   def transform(%__MODULE__{type: type, handler: :parent} = action) when not is_nil(type) do
     {:ok, %{action | handler: {:type, type}}}
+  end
+
+  def transform(%__MODULE__{type: nil, handler: handler} = action)
+      when handler in @builtin_action_types do
+    {:ok, %{action | type: handler, handler: {:type, handler}}}
   end
 
   def transform(action), do: {:ok, action}
