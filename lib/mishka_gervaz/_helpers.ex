@@ -231,9 +231,6 @@ defmodule MishkaGervaz.Helpers do
   def normalize_options(_), do: []
 
   @spec normalize_option({any(), any()} | atom() | any()) :: {String.t(), String.t()}
-  defp normalize_option({label, value}) when is_atom(value),
-    do: {to_string(label), to_string(value)}
-
   defp normalize_option({label, value}),
     do: {to_string(label), to_string(value)}
 
@@ -439,26 +436,18 @@ defmodule MishkaGervaz.Helpers do
   def known_name?(_, _), do: false
 
   @spec known_name?(String.t(), map(), :filters | :steps | :uploads) :: boolean()
-  def known_name?(name, %{static: %{filters: filters}}, :filters)
-      when is_binary(name) and is_list(filters) do
-    name_in_entities?(name, filters)
-  end
-
-  def known_name?(name, %{static: %{steps: steps}}, :steps)
-      when is_binary(name) and is_list(steps) do
-    name_in_entities?(name, steps)
-  end
-
-  def known_name?(name, %{static: %{uploads: uploads}}, :uploads)
-      when is_binary(name) and is_list(uploads) do
-    name_in_entities?(name, uploads)
+  def known_name?(name, %{static: static}, kind)
+      when is_binary(name) and kind in [:filters, :steps, :uploads] do
+    case Map.get(static, kind) do
+      list when is_list(list) -> name_in_entities?(name, list)
+      _ -> false
+    end
   end
 
   def known_name?(_, _, _), do: false
 
-  defp name_in_entities?(name, entities) do
-    Enum.any?(entities, &(Atom.to_string(&1.name) == name))
-  end
+  defp name_in_entities?(name, entities),
+    do: Enum.any?(entities, &(Atom.to_string(&1.name) == name))
 
   @doc """
   Checks if a value is present (not nil, empty string, or empty list).
@@ -550,8 +539,6 @@ defmodule MishkaGervaz.Helpers do
       "-"
   """
   @spec format_filesize(integer() | nil) :: String.t()
-  def format_filesize(nil), do: "-"
-
   def format_filesize(size) when is_integer(size) do
     cond do
       size < 1024 -> "#{size} B"

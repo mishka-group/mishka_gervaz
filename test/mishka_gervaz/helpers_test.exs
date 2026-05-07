@@ -43,4 +43,195 @@ defmodule MishkaGervaz.HelpersTest do
       assert Helpers.humanize(:some__field) == "Some Field"
     end
   end
+
+  describe "normalize_options/1" do
+    test "returns empty list for nil" do
+      assert Helpers.normalize_options(nil) == []
+    end
+
+    test "returns empty list for non-list input" do
+      assert Helpers.normalize_options(:not_a_list) == []
+      assert Helpers.normalize_options(%{}) == []
+    end
+
+    test "stringifies atom values from {label, atom} tuples" do
+      assert Helpers.normalize_options([{"API Only", :api_only}]) == [{"API Only", "api_only"}]
+
+      assert Helpers.normalize_options([{"API Only", :api_only}, {"Hybrid", :hybrid}]) ==
+               [{"API Only", "api_only"}, {"Hybrid", "hybrid"}]
+    end
+
+    test "stringifies non-atom values from {label, value} tuples" do
+      assert Helpers.normalize_options([{"One", 1}, {"Two", 2}]) ==
+               [{"One", "1"}, {"Two", "2"}]
+
+      assert Helpers.normalize_options([{"True", true}]) == [{"True", "true"}]
+    end
+
+    test "stringifies labels in {label, value} tuples" do
+      assert Helpers.normalize_options([{:atom_label, "v"}]) == [{"atom_label", "v"}]
+    end
+
+    test "humanizes bare atom values into {Humanized, stringified} pairs" do
+      assert Helpers.normalize_options([:active, :inactive]) ==
+               [{"Active", "active"}, {"Inactive", "inactive"}]
+
+      assert Helpers.normalize_options([:user_id, :created_at]) ==
+               [{"User Id", "user_id"}, {"Created At", "created_at"}]
+    end
+
+    test "stringifies bare non-atom values into {value, value} pairs" do
+      assert Helpers.normalize_options(["foo", "bar"]) ==
+               [{"foo", "foo"}, {"bar", "bar"}]
+
+      assert Helpers.normalize_options([1, 2, 3]) ==
+               [{"1", "1"}, {"2", "2"}, {"3", "3"}]
+    end
+
+    test "handles mixed forms in a single list" do
+      assert Helpers.normalize_options([{"A", :a}, :b, "c"]) ==
+               [{"A", "a"}, {"B", "b"}, {"c", "c"}]
+    end
+
+    test "handles empty list" do
+      assert Helpers.normalize_options([]) == []
+    end
+  end
+
+  describe "format_filesize/1" do
+    test "formats bytes" do
+      assert Helpers.format_filesize(0) == "0 B"
+      assert Helpers.format_filesize(1) == "1 B"
+      assert Helpers.format_filesize(500) == "500 B"
+      assert Helpers.format_filesize(1023) == "1023 B"
+    end
+
+    test "formats kilobytes at the boundary and above" do
+      assert Helpers.format_filesize(1024) == "1.0 KB"
+      assert Helpers.format_filesize(1536) == "1.5 KB"
+      assert Helpers.format_filesize(1_048_575) == "1024.0 KB"
+    end
+
+    test "formats megabytes" do
+      assert Helpers.format_filesize(1_048_576) == "1.0 MB"
+      assert Helpers.format_filesize(5 * 1_048_576) == "5.0 MB"
+    end
+
+    test "formats gigabytes" do
+      assert Helpers.format_filesize(1_073_741_824) == "1.0 GB"
+      assert Helpers.format_filesize(2 * 1_073_741_824) == "2.0 GB"
+    end
+
+    test "returns dash for nil" do
+      assert Helpers.format_filesize(nil) == "-"
+    end
+
+    test "returns dash for non-integer values" do
+      assert Helpers.format_filesize("100") == "-"
+      assert Helpers.format_filesize(:size) == "-"
+      assert Helpers.format_filesize(1.5) == "-"
+    end
+  end
+
+  describe "known_name?/2 (auto-detect by static map shape)" do
+    test "returns true for a known field name (form state)" do
+      state = %{static: %{fields: [%{name: :title}, %{name: :tags}]}}
+      assert Helpers.known_name?("title", state) == true
+      assert Helpers.known_name?("tags", state) == true
+    end
+
+    test "returns false for an unknown field name (form state)" do
+      state = %{static: %{fields: [%{name: :title}]}}
+      assert Helpers.known_name?("unknown", state) == false
+    end
+
+    test "returns true for a known column name (table state)" do
+      state = %{static: %{columns: [%{name: :id}, %{name: :status}]}}
+      assert Helpers.known_name?("id", state) == true
+      assert Helpers.known_name?("status", state) == true
+    end
+
+    test "returns false for unknown column name" do
+      state = %{static: %{columns: [%{name: :id}]}}
+      assert Helpers.known_name?("ghost", state) == false
+    end
+
+    test "returns false for non-binary name" do
+      state = %{static: %{fields: [%{name: :title}]}}
+      assert Helpers.known_name?(:title, state) == false
+      assert Helpers.known_name?(123, state) == false
+    end
+
+    test "returns false when static is missing or wrong shape" do
+      assert Helpers.known_name?("x", %{}) == false
+      assert Helpers.known_name?("x", %{static: %{}}) == false
+      assert Helpers.known_name?("x", %{static: %{fields: nil}}) == false
+    end
+
+    test "returns false when fields list is empty" do
+      state = %{static: %{fields: []}}
+      assert Helpers.known_name?("anything", state) == false
+    end
+  end
+
+  describe "known_name?/3 (explicit kind dispatch)" do
+    test ":filters — returns true for known filter name" do
+      state = %{static: %{filters: [%{name: :search}, %{name: :status}]}}
+      assert Helpers.known_name?("search", state, :filters) == true
+      assert Helpers.known_name?("status", state, :filters) == true
+    end
+
+    test ":filters — returns false for unknown filter" do
+      state = %{static: %{filters: [%{name: :search}]}}
+      assert Helpers.known_name?("ghost", state, :filters) == false
+    end
+
+    test ":steps — returns true for known step name" do
+      state = %{static: %{steps: [%{name: :basics}, %{name: :review}]}}
+      assert Helpers.known_name?("basics", state, :steps) == true
+      assert Helpers.known_name?("review", state, :steps) == true
+    end
+
+    test ":steps — returns false for unknown step" do
+      state = %{static: %{steps: [%{name: :basics}]}}
+      assert Helpers.known_name?("ghost", state, :steps) == false
+    end
+
+    test ":uploads — returns true for known upload name" do
+      state = %{static: %{uploads: [%{name: :avatar}, %{name: :document}]}}
+      assert Helpers.known_name?("avatar", state, :uploads) == true
+      assert Helpers.known_name?("document", state, :uploads) == true
+    end
+
+    test ":uploads — returns false for unknown upload" do
+      state = %{static: %{uploads: [%{name: :avatar}]}}
+      assert Helpers.known_name?("ghost", state, :uploads) == false
+    end
+
+    test "returns false for non-binary name regardless of kind" do
+      state = %{static: %{filters: [%{name: :search}]}}
+      assert Helpers.known_name?(:search, state, :filters) == false
+    end
+
+    test "returns false when static is missing the kind key" do
+      assert Helpers.known_name?("x", %{static: %{}}, :filters) == false
+      assert Helpers.known_name?("x", %{static: %{}}, :steps) == false
+      assert Helpers.known_name?("x", %{static: %{}}, :uploads) == false
+    end
+
+    test "returns false when kind list is nil or wrong type" do
+      assert Helpers.known_name?("x", %{static: %{filters: nil}}, :filters) == false
+      assert Helpers.known_name?("x", %{static: %{filters: %{}}}, :filters) == false
+    end
+
+    test "returns false when state shape is invalid" do
+      assert Helpers.known_name?("x", %{}, :filters) == false
+      assert Helpers.known_name?("x", nil, :filters) == false
+    end
+
+    test "returns false when kind list is empty" do
+      state = %{static: %{filters: []}}
+      assert Helpers.known_name?("anything", state, :filters) == false
+    end
+  end
 end
