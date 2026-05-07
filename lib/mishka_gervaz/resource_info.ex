@@ -3,62 +3,86 @@ defmodule MishkaGervaz.ResourceInfo do
   Delegate module for resource introspection.
 
   Provides a single entry point for reading both table and form configuration.
-  For direct access (and for newer accessors not delegated here), use
+  For direct access (and for the few accessors not delegated here), use
   `MishkaGervaz.Resource.Info.Table` or `MishkaGervaz.Resource.Info.Form`.
 
   ## Naming convention
 
-  - **Unprefixed** functions delegate to the Table info module (e.g. `columns/1`,
-    `filters/1`, `pagination/1`, `hooks/1`, `stream_name/1`, `detected_preloads/1`,
-    `all_preloads/2`, `pagination_enabled?/1`, …).
-  - **`table_*`** functions are the same Table accessors exposed under an
-    explicit prefix (e.g. `table_config/1`, `table_hooks/1`, `table_route/1`,
-    `table_filter_groups/1`, `table_action_for/3`, …).
-  - **`form_*`** functions delegate to the Form info module
-    (e.g. `form_config/1`, `form_fields/1`, `form_groups/1`, `form_layout/1`,
-    `form_steps/1`, `form_action_for/3`, `form_route/1`, …).
+  Every delegate follows one of three patterns:
 
-  Where the same name exists on both sides (e.g. `config`, `hooks`,
-  `detected_preloads`, `all_preloads`, `stream_name`, `route`, `action_for`),
-  use the explicit `table_*` / `form_*` form. The bare unprefixed form is
-  Table-only.
+  - **`table_<fn>`** — delegates to `Info.Table.<fn>` with the same name
+    (e.g. `table_config/1`, `table_hooks/1`, `table_route/1`, `table_state/1`,
+    `table_events/1`, `table_data_loader/1`, `table_action_for/3`, …).
+  - **`form_<fn>`** — delegates to `Info.Form.<fn>` with the same name
+    (e.g. `form_config/1`, `form_fields/1`, `form_groups/1`, `form_state/1`,
+    `form_events/1`, `form_data_loader/1`, `form_action_for/3`, …).
+  - **Unprefixed** (legacy Table shortcuts) — `columns/1`, `filters/1`,
+    `pagination/1`, `hooks/1`, `stream_name/1`, `detected_preloads/1`,
+    `all_preloads/2`, `pagination_enabled?/1`, etc. New code should prefer
+    `table_*` for clarity.
 
-  Note that the unprefixed Table action lookup is exposed as `get_action/3`
-  (delegating to `Info.Table.action_for/3`) — the Form equivalent is
-  `form_action_for/3`.
+  Where the same name exists on both sides, always use the explicit
+  `table_*` / `form_*` form.
+
+  ## Legacy / non-canonical names
+
+  Three older delegates do not follow the strict `<prefix>_<upstream_name>`
+  convention. They are kept for backwards compatibility:
+
+  - `get_action/3` — delegates to `Info.Table.action_for/3`. New code should use
+    `table_action_for/3`.
+  - `refresh_config/1` — delegates to `Info.Table.refresh/1`.
+  - `url_sync_config/1` — delegates to `Info.Table.url_sync/1`.
 
   ## Examples
 
-      # Table side
+      # Table — top-level config, columns, filters, pagination, hooks
       ResourceInfo.table_config(MyResource)
       ResourceInfo.columns(MyResource)
       ResourceInfo.filters(MyResource)
       ResourceInfo.pagination(MyResource)
       ResourceInfo.table_hooks(MyResource)
 
-      # Form side
+      # Table — chrome / notices / archive
+      ResourceInfo.table_header(MyResource)
+      ResourceInfo.table_footer(MyResource)
+      ResourceInfo.table_notices(MyResource)
+      ResourceInfo.table_archive_enabled?(MyResource)
+
+      # Table — overridable pillars (Phase A)
+      ResourceInfo.table_state(MyResource)
+      ResourceInfo.table_events(MyResource)
+      ResourceInfo.table_data_loader(MyResource)
+
+      # Form — top-level config, fields, groups, steps, hooks
       ResourceInfo.form_config(MyResource)
       ResourceInfo.form_fields(MyResource)
       ResourceInfo.form_groups(MyResource)
       ResourceInfo.form_steps(MyResource)
       ResourceInfo.form_hooks(MyResource)
 
-  ## Override-pillar accessors (not delegated here)
+      # Form — chrome / notices / component
+      ResourceInfo.form_header(MyResource)
+      ResourceInfo.form_notices(MyResource)
+      ResourceInfo.form_component_id(MyResource)
+      ResourceInfo.form_js_hook(MyResource, :on_save)
 
-  The Phase A override-pillar introspection — `events/1`, `state/1`,
-  `data_loader/1` — is available only on the underlying info modules:
+      # Form — overridable pillars (Phase A)
+      ResourceInfo.form_state(MyResource)
+      ResourceInfo.form_events(MyResource)
+      ResourceInfo.form_data_loader(MyResource)
 
-      MishkaGervaz.Resource.Info.Table.events(MyResource)
-      MishkaGervaz.Resource.Info.Table.state(MyResource)
-      MishkaGervaz.Resource.Info.Table.data_loader(MyResource)
+  ## Not delegated (internal-only)
 
-      MishkaGervaz.Resource.Info.Form.events(MyResource)
-      MishkaGervaz.Resource.Info.Form.state(MyResource)
-      MishkaGervaz.Resource.Info.Form.data_loader(MyResource)
+  These accessors are intentionally not exposed through this module — they
+  are framework-internal and only meaningful inside the dispatcher / hook
+  runner / query builder. Call them on the info modules directly if you
+  really need them:
 
-  Other Form helpers also live only on `Info.Form`: `notices/1`, `notice/2`,
-  `notices_at/2`, `header/1`, `footer/1`, `js_hook/2`, `preload_aliases/2`,
-  `component_id/1`.
+  - `Info.Table.builtins/1` — internal hook-builtin map.
+  - `Info.Table.get_hook/2` — internal sugar over `hooks/1`.
+  - `Info.Table.preload_aliases/2` — used by the table query builder.
+  - `Info.Form.preload_aliases/2` — used by the form data loader.
   """
 
   defdelegate table_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :config
@@ -121,6 +145,51 @@ defmodule MishkaGervaz.ResourceInfo do
     to: MishkaGervaz.Resource.Info.Table,
     as: :action_for
 
+  # Phase A — overridable-pillar introspection
+  defdelegate table_state(resource), to: MishkaGervaz.Resource.Info.Table, as: :state
+  defdelegate table_events(resource), to: MishkaGervaz.Resource.Info.Table, as: :events
+
+  defdelegate table_data_loader(resource),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :data_loader
+
+  # Layout / feature flags
+  defdelegate table_layout(resource), to: MishkaGervaz.Resource.Info.Table, as: :layout
+  defdelegate table_features(resource), to: MishkaGervaz.Resource.Info.Table, as: :features
+
+  defdelegate table_feature_enabled?(resource, feature),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :feature_enabled?
+
+  # Archive
+  defdelegate table_archive_enabled?(resource),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :archive_enabled?
+
+  defdelegate table_archive_action_for(resource, type, master?),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :archive_action_for
+
+  # Pagination UI
+  defdelegate table_pagination_ui(resource),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :pagination_ui
+
+  # Chrome
+  defdelegate table_header(resource), to: MishkaGervaz.Resource.Info.Table, as: :header
+  defdelegate table_footer(resource), to: MishkaGervaz.Resource.Info.Table, as: :footer
+
+  # Notices
+  defdelegate table_notices(resource), to: MishkaGervaz.Resource.Info.Table, as: :notices
+
+  defdelegate table_notice(resource, name),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :notice
+
+  defdelegate table_notices_at(resource, position),
+    to: MishkaGervaz.Resource.Info.Table,
+    as: :notices_at
+
   defdelegate form_config(resource), to: MishkaGervaz.Resource.Info.Form, as: :config
   defdelegate form_fields(resource), to: MishkaGervaz.Resource.Info.Form, as: :fields
   defdelegate form_field(resource, name), to: MishkaGervaz.Resource.Info.Form, as: :field
@@ -157,4 +226,36 @@ defmodule MishkaGervaz.ResourceInfo do
     as: :stream_name
 
   defdelegate form_route(resource), to: MishkaGervaz.Resource.Info.Form, as: :route
+
+  # Phase A — overridable-pillar introspection
+  defdelegate form_state(resource), to: MishkaGervaz.Resource.Info.Form, as: :state
+  defdelegate form_events(resource), to: MishkaGervaz.Resource.Info.Form, as: :events
+
+  defdelegate form_data_loader(resource),
+    to: MishkaGervaz.Resource.Info.Form,
+    as: :data_loader
+
+  # Component identity / JS hooks
+  defdelegate form_component_id(resource),
+    to: MishkaGervaz.Resource.Info.Form,
+    as: :component_id
+
+  defdelegate form_js_hook(resource, name),
+    to: MishkaGervaz.Resource.Info.Form,
+    as: :js_hook
+
+  # Chrome
+  defdelegate form_header(resource), to: MishkaGervaz.Resource.Info.Form, as: :header
+  defdelegate form_footer(resource), to: MishkaGervaz.Resource.Info.Form, as: :footer
+
+  # Notices
+  defdelegate form_notices(resource), to: MishkaGervaz.Resource.Info.Form, as: :notices
+
+  defdelegate form_notice(resource, name),
+    to: MishkaGervaz.Resource.Info.Form,
+    as: :notice
+
+  defdelegate form_notices_at(resource, position),
+    to: MishkaGervaz.Resource.Info.Form,
+    as: :notices_at
 end
