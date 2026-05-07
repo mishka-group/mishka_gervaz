@@ -4,10 +4,8 @@ defmodule MishkaGervaz.Errors do
 
   ## Error Classes
 
-  - `:data` - Data loading, query, and fetch errors
+  - `:data`   - Data loading, query, and fetch errors
   - `:action` - Action execution errors (destroy, update, etc.)
-  - `:config` - Runtime configuration errors
-  - `:validation` - Input validation errors
 
   ## Usage
 
@@ -17,11 +15,8 @@ defmodule MishkaGervaz.Errors do
       # Create error without raising
       error = MishkaGervaz.Errors.Data.LoadFailed.exception(resource: MyResource, reason: :timeout)
 
-      # Convert to Splode error
+      # Convert any value into a Splode error (unrecognized values become `Errors.Unknown`)
       MishkaGervaz.Errors.to_error(error)
-
-      # Get error class
-      MishkaGervaz.Errors.class(error)  # => :data
 
       # Format error for flash message
       MishkaGervaz.Errors.format_flash_message(error)
@@ -30,9 +25,7 @@ defmodule MishkaGervaz.Errors do
   use Splode,
     error_classes: [
       data: MishkaGervaz.Errors.Data,
-      action: MishkaGervaz.Errors.Action,
-      config: MishkaGervaz.Errors.Config,
-      validation: MishkaGervaz.Errors.Validation
+      action: MishkaGervaz.Errors.Action
     ],
     unknown_error: MishkaGervaz.Errors.Unknown
 
@@ -46,29 +39,10 @@ defmodule MishkaGervaz.Errors do
       iex> error = MishkaGervaz.Errors.Action.Failed.exception(action: :archive, reason: "forbidden")
       iex> MishkaGervaz.Errors.format_flash_message(error)
       "Archive failed: forbidden"
-
-      iex> error = MishkaGervaz.Errors.Action.BulkFailed.exception(action: :delete, total: 10, failed: 3)
-      iex> MishkaGervaz.Errors.format_flash_message(error)
-      "Delete failed: 3 of 10 records failed"
   """
-  @spec format_flash_message(Exception.t() | map()) :: String.t()
+  @spec format_flash_message(any()) :: String.t()
   def format_flash_message(%__MODULE__.Action.Failed{action: action, reason: reason}) do
-    action_name = humanize_action(action)
-    "#{action_name} failed: #{format_reason(reason)}"
-  end
-
-  def format_flash_message(%__MODULE__.Action.BulkFailed{
-        action: action,
-        total: total,
-        failed: failed
-      }) do
-    action_name = humanize_action(action)
-    "#{action_name} failed: #{failed} of #{total} records failed"
-  end
-
-  def format_flash_message(%__MODULE__.Action.Unauthorized{action: action}) do
-    action_name = humanize_action(action)
-    "#{action_name} failed: unauthorized"
+    "#{humanize_action(action)} failed: #{format_reason(reason)}"
   end
 
   def format_flash_message(%__MODULE__.Data.LoadFailed{reason: reason}) do
@@ -76,8 +50,7 @@ defmodule MishkaGervaz.Errors do
   end
 
   def format_flash_message(%Ash.Error.Invalid{errors: errors}) when is_list(errors) do
-    messages = errors |> Enum.map(&extract_error_message/1) |> Enum.take(3)
-    "Validation failed: #{Enum.join(messages, ", ")}"
+    "Validation failed: #{format_ash_errors(errors, 3)}"
   end
 
   def format_flash_message(%{message: message}) when is_binary(message), do: message
@@ -95,15 +68,17 @@ defmodule MishkaGervaz.Errors do
       iex> MishkaGervaz.Errors.extract_error_message(%{field: :email, message: "is invalid"})
       "email: is invalid"
   """
-  @spec extract_error_message(map() | String.t() | any()) :: String.t()
+  @spec extract_error_message(any()) :: String.t()
   def extract_error_message(%Ash.Error.Invalid{errors: errors}) when is_list(errors) do
-    errors |> Enum.map(&extract_error_message/1) |> Enum.join(", ")
+    format_ash_errors(errors, :all)
   end
 
-  def extract_error_message(%{message: message}) when is_binary(message), do: message
   def extract_error_message(%{field: field, message: message}), do: "#{field}: #{message}"
+  def extract_error_message(%{message: message}) when is_binary(message), do: message
   def extract_error_message(error) when is_binary(error), do: error
   def extract_error_message(error), do: inspect(error)
+
+  defp humanize_action(nil), do: "Action"
 
   defp humanize_action(action) when is_atom(action) do
     action |> to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -113,19 +88,26 @@ defmodule MishkaGervaz.Errors do
   defp humanize_action(_), do: "Action"
 
   defp format_reason({:bulk_action_failed, _status, errors}) when is_list(errors) do
-    error_count = length(errors)
-
-    if error_count == 1 do
-      extract_error_message(hd(errors))
-    else
-      "#{error_count} errors occurred"
+    case errors do
+      [single] -> extract_error_message(single)
+      list -> "#{length(list)} errors occurred"
     end
   end
 
   defp format_reason(%Ash.Error.Invalid{errors: errors}) when is_list(errors) do
-    errors |> Enum.map(&extract_error_message/1) |> Enum.take(3) |> Enum.join(", ")
+    format_ash_errors(errors, 3)
   end
 
   defp format_reason(reason) when is_binary(reason), do: reason
   defp format_reason(reason), do: inspect(reason)
+
+  defp format_ash_errors(errors, take) do
+    errors
+    |> Enum.map(&extract_error_message/1)
+    |> maybe_take(take)
+    |> Enum.join(", ")
+  end
+
+  defp maybe_take(list, :all), do: list
+  defp maybe_take(list, n) when is_integer(n), do: Enum.take(list, n)
 end
