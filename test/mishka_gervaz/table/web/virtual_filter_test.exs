@@ -47,50 +47,50 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
 
   describe "DSL compilation — virtual, load, apply stored correctly" do
     test "virtual filter has virtual: true" do
-      filter = ResourceInfo.filter(ArticleResource, :tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :tag)
 
       assert filter.virtual == true
     end
 
     test "non-virtual filter has virtual: false" do
-      filter = ResourceInfo.filter(ArticleResource, :category)
+      filter = ResourceInfo.table_filter(ArticleResource, :category)
 
       assert filter.virtual == false
     end
 
     test "filter with apply has a 3-arity function stored" do
-      filter = ResourceInfo.filter(ArticleResource, :tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :tag)
 
       assert is_function(filter.apply, 3)
     end
 
     test "filter without apply has nil" do
-      filter = ResourceInfo.filter(ArticleResource, :search)
+      filter = ResourceInfo.table_filter(ArticleResource, :search)
 
       assert is_nil(filter.apply)
     end
 
     test "relation filter with load has a 2-arity function stored" do
-      filter = ResourceInfo.filter(ArticleResource, :tag_id)
+      filter = ResourceInfo.table_filter(ArticleResource, :tag_id)
 
       assert is_function(filter.load, 2)
     end
 
     test "filter without load has nil" do
-      filter = ResourceInfo.filter(ArticleResource, :search)
+      filter = ResourceInfo.table_filter(ArticleResource, :search)
 
       assert is_nil(filter.load)
     end
 
     test "virtual relation filter has explicit resource set" do
-      filter = ResourceInfo.filter(ArticleResource, :external_tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :external_tag)
 
       assert filter.resource == TagResource
       assert filter.virtual == true
     end
 
     test "virtual boolean filter compiles correctly" do
-      filter = ResourceInfo.filter(ArticleResource, :has_author)
+      filter = ResourceInfo.table_filter(ArticleResource, :has_author)
 
       assert filter.virtual == true
       assert filter.type == :boolean
@@ -98,7 +98,7 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
 
     test "virtual relation filter with load + apply compiles correctly" do
-      filter = ResourceInfo.filter(ArticleResource, :external_tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :external_tag)
 
       assert filter.virtual == true
       assert filter.type == :relation
@@ -411,7 +411,7 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
 
     test "virtual relation filter resolves resource from explicit resource option" do
-      filter = ResourceInfo.filter(ArticleResource, :external_tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :external_tag)
 
       assert filter.resource == TagResource
     end
@@ -420,7 +420,7 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
   describe "load function — receives correct arguments" do
     test "load function receives an Ash.Query as first argument" do
       test_pid = self()
-      filter = ResourceInfo.filter(ArticleResource, :tag_id)
+      filter = ResourceInfo.table_filter(ArticleResource, :tag_id)
 
       query = Ash.Query.new(TagResource)
 
@@ -614,7 +614,7 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
 
     test "display_field 2-arity function is correctly stored in DSL" do
-      filter = ResourceInfo.filter(ArticleResource, :display_tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :display_tag)
 
       assert is_function(filter.display_field, 2)
     end
@@ -664,7 +664,7 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     end
 
     test "search mode filter compiles with correct mode" do
-      filter = ResourceInfo.filter(ArticleResource, :searchable_tag)
+      filter = ResourceInfo.table_filter(ArticleResource, :searchable_tag)
 
       assert filter.mode == :search
       assert filter.page_size == 5
@@ -676,12 +676,12 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
 
   describe "depends_on — DSL config" do
     test "child filter stores depends_on reference" do
-      filter = ResourceInfo.filter(ArticleResource, :city)
+      filter = ResourceInfo.table_filter(ArticleResource, :city)
       assert filter.depends_on == :region
     end
 
     test "parent filter has no depends_on" do
-      filter = ResourceInfo.filter(ArticleResource, :region)
+      filter = ResourceInfo.table_filter(ArticleResource, :region)
       assert filter.depends_on == nil
     end
 

@@ -66,13 +66,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "columns/1" do
     test "Post returns exactly 6 columns" do
-      columns = ResourceInfo.columns(Post)
+      columns = ResourceInfo.table_columns(Post)
 
       assert length(columns) == 6
     end
 
     test "Post column names are correct" do
-      columns = ResourceInfo.columns(Post)
+      columns = ResourceInfo.table_columns(Post)
       column_names = Enum.map(columns, & &1.name)
 
       assert :title in column_names
@@ -84,13 +84,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User returns exactly 5 columns" do
-      columns = ResourceInfo.columns(User)
+      columns = ResourceInfo.table_columns(User)
 
       assert length(columns) == 5
     end
 
     test "User column names are correct" do
-      columns = ResourceInfo.columns(User)
+      columns = ResourceInfo.table_columns(User)
       column_names = Enum.map(columns, & &1.name)
 
       assert :name in column_names
@@ -101,7 +101,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Comment returns exactly 5 columns" do
-      columns = ResourceInfo.columns(Comment)
+      columns = ResourceInfo.table_columns(Comment)
 
       assert length(columns) == 5
     end
@@ -109,7 +109,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "column/2" do
     test "Post :title column has correct properties" do
-      col = ResourceInfo.column(Post, :title)
+      col = ResourceInfo.table_column(Post, :title)
 
       assert col.name == :title
       assert col.sortable == true
@@ -119,7 +119,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :status column has badge type" do
-      col = ResourceInfo.column(Post, :status)
+      col = ResourceInfo.table_column(Post, :status)
 
       assert col.name == :status
       assert col.sortable == true
@@ -128,7 +128,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :user column has relationship source" do
-      col = ResourceInfo.column(Post, :user)
+      col = ResourceInfo.table_column(Post, :user)
 
       assert col.name == :user
       assert col.source == [:user, :name]
@@ -137,7 +137,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :view_count column has number type" do
-      col = ResourceInfo.column(Post, :view_count)
+      col = ResourceInfo.table_column(Post, :view_count)
 
       assert col.name == :view_count
       assert col.sortable == true
@@ -146,7 +146,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :inserted_at column has datetime type" do
-      col = ResourceInfo.column(Post, :inserted_at)
+      col = ResourceInfo.table_column(Post, :inserted_at)
 
       assert col.name == :inserted_at
       assert col.sortable == true
@@ -155,7 +155,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User :name column has correct properties" do
-      col = ResourceInfo.column(User, :name)
+      col = ResourceInfo.table_column(User, :name)
 
       assert col.name == :name
       assert col.sortable == true
@@ -164,7 +164,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User :role column has badge type" do
-      col = ResourceInfo.column(User, :role)
+      col = ResourceInfo.table_column(User, :role)
 
       assert col.name == :role
       assert col.sortable == true
@@ -173,7 +173,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "returns nil for non-existent column" do
-      col = ResourceInfo.column(Post, :non_existent)
+      col = ResourceInfo.table_column(Post, :non_existent)
 
       assert col == nil
     end
@@ -181,7 +181,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "column_order/1" do
     test "Post column_order matches exact definition order" do
-      order = ResourceInfo.column_order(Post)
+      order = ResourceInfo.table_column_order(Post)
 
       assert order == [:title, :status, :user, :view_count, :inserted_at, :view_count_formatted]
     end
@@ -191,13 +191,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "filters/1" do
     test "Post returns exactly 3 filters" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
 
       assert length(filters) == 3
     end
 
     test "Post filter names are correct" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
       filter_names = Enum.map(filters, & &1.name)
 
       assert :search in filter_names
@@ -206,13 +206,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User returns exactly 3 filters" do
-      filters = ResourceInfo.filters(User)
+      filters = ResourceInfo.table_filters(User)
 
       assert length(filters) == 3
     end
 
     test "Comment returns exactly 3 filters" do
-      filters = ResourceInfo.filters(Comment)
+      filters = ResourceInfo.table_filters(Comment)
 
       assert length(filters) == 3
     end
@@ -220,7 +220,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "filter/2" do
     test "Post :search filter has correct properties" do
-      filter = ResourceInfo.filter(Post, :search)
+      filter = ResourceInfo.table_filter(Post, :search)
 
       assert filter.name == :search
       assert filter.type == :text
@@ -229,7 +229,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :status filter has select type" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
 
       assert filter.name == :status
       assert filter.type == :select
@@ -238,7 +238,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :user_id filter has relation type" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
 
       assert filter.name == :user_id
       assert filter.type == :relation
@@ -248,7 +248,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User :search filter has correct fields" do
-      filter = ResourceInfo.filter(User, :search)
+      filter = ResourceInfo.table_filter(User, :search)
 
       assert filter.name == :search
       assert filter.type == :text
@@ -256,7 +256,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User :active filter has boolean type" do
-      filter = ResourceInfo.filter(User, :active)
+      filter = ResourceInfo.table_filter(User, :active)
 
       assert filter.name == :active
       assert filter.type == :boolean
@@ -264,14 +264,14 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Comment :user_id filter depends on :post_id" do
-      filter = ResourceInfo.filter(Comment, :user_id)
+      filter = ResourceInfo.table_filter(Comment, :user_id)
 
       assert filter.name == :user_id
       assert filter.depends_on == :post_id
     end
 
     test "returns nil for non-existent filter" do
-      filter = ResourceInfo.filter(Post, :non_existent)
+      filter = ResourceInfo.table_filter(Post, :non_existent)
 
       assert filter == nil
     end
@@ -281,13 +281,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "row_actions/1" do
     test "Post returns exactly 6 row actions" do
-      actions = ResourceInfo.row_actions(Post)
+      actions = ResourceInfo.table_row_actions(Post)
 
       assert length(actions) == 6
     end
 
     test "Post action names are correct" do
-      actions = ResourceInfo.row_actions(Post)
+      actions = ResourceInfo.table_row_actions(Post)
       action_names = Enum.map(actions, & &1.name)
 
       assert :show in action_names
@@ -297,13 +297,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User returns exactly 3 row actions" do
-      actions = ResourceInfo.row_actions(User)
+      actions = ResourceInfo.table_row_actions(User)
 
       assert length(actions) == 3
     end
 
     test "Comment returns exactly 2 row actions" do
-      actions = ResourceInfo.row_actions(Comment)
+      actions = ResourceInfo.table_row_actions(Comment)
 
       assert length(actions) == 2
     end
@@ -311,7 +311,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "row_action/2" do
     test "Post :show action has link type" do
-      action = ResourceInfo.row_action(Post, :show)
+      action = ResourceInfo.table_row_action(Post, :show)
 
       assert action.name == :show
       assert action.type == :link
@@ -320,7 +320,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :edit action has link type" do
-      action = ResourceInfo.row_action(Post, :edit)
+      action = ResourceInfo.table_row_action(Post, :edit)
 
       assert action.name == :edit
       assert action.type == :link
@@ -328,7 +328,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :publish action has event type with correct event name" do
-      action = ResourceInfo.row_action(Post, :publish)
+      action = ResourceInfo.table_row_action(Post, :publish)
 
       assert action.name == :publish
       assert action.type == :event
@@ -341,7 +341,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post :delete action has destroy type with confirm message" do
-      action = ResourceInfo.row_action(Post, :delete)
+      action = ResourceInfo.table_row_action(Post, :delete)
 
       assert action.name == :delete
       assert action.type == :destroy
@@ -350,7 +350,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User :show action has correct UI properties" do
-      action = ResourceInfo.row_action(User, :show)
+      action = ResourceInfo.table_row_action(User, :show)
 
       assert action.name == :show
       # ui is a list of UI structs
@@ -359,14 +359,14 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User :delete action has confirm message" do
-      action = ResourceInfo.row_action(User, :delete)
+      action = ResourceInfo.table_row_action(User, :delete)
 
       assert action.name == :delete
       assert action.confirm == "Are you sure you want to delete this user?"
     end
 
     test "Comment :approve action has correct event" do
-      action = ResourceInfo.row_action(Comment, :approve)
+      action = ResourceInfo.table_row_action(Comment, :approve)
 
       assert action.name == :approve
       assert action.type == :event
@@ -377,7 +377,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "returns nil for non-existent action" do
-      action = ResourceInfo.row_action(Post, :non_existent)
+      action = ResourceInfo.table_row_action(Post, :non_existent)
 
       assert action == nil
     end
@@ -387,13 +387,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "bulk_actions/1" do
     test "Post returns exactly 1 bulk action" do
-      actions = ResourceInfo.bulk_actions(Post)
+      actions = ResourceInfo.table_bulk_actions(Post)
 
       assert length(actions) == 1
     end
 
     test "Post bulk :delete action has correct confirm message" do
-      actions = ResourceInfo.bulk_actions(Post)
+      actions = ResourceInfo.table_bulk_actions(Post)
       delete_action = Enum.find(actions, &(&1.name == :delete))
 
       assert delete_action.name == :delete
@@ -401,13 +401,13 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User returns exactly 1 bulk action" do
-      actions = ResourceInfo.bulk_actions(User)
+      actions = ResourceInfo.table_bulk_actions(User)
 
       assert length(actions) == 1
     end
 
     test "User bulk :delete action has correct confirm message" do
-      actions = ResourceInfo.bulk_actions(User)
+      actions = ResourceInfo.table_bulk_actions(User)
       delete_action = Enum.find(actions, &(&1.name == :delete))
 
       assert delete_action.confirm == "Delete selected users?"
@@ -418,32 +418,32 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "get_action/3" do
     test "Post read action uses developer-configured tuple" do
-      master_action = ResourceInfo.get_action(Post, :read, true)
-      tenant_action = ResourceInfo.get_action(Post, :read, false)
+      master_action = ResourceInfo.table_action_for(Post, :read, true)
+      tenant_action = ResourceInfo.table_action_for(Post, :read, false)
 
       assert master_action == :master_read
       assert tenant_action == :tenant_read
     end
 
     test "Post destroy action uses developer-configured tuple" do
-      master_action = ResourceInfo.get_action(Post, :destroy, true)
-      tenant_action = ResourceInfo.get_action(Post, :destroy, false)
+      master_action = ResourceInfo.table_action_for(Post, :destroy, true)
+      tenant_action = ResourceInfo.table_action_for(Post, :destroy, false)
 
       assert master_action == :destroy
       assert tenant_action == :destroy
     end
 
     test "User read action uses domain defaults (no source section)" do
-      master_action = ResourceInfo.get_action(User, :read, true)
-      tenant_action = ResourceInfo.get_action(User, :read, false)
+      master_action = ResourceInfo.table_action_for(User, :read, true)
+      tenant_action = ResourceInfo.table_action_for(User, :read, false)
 
       assert master_action == :master_read
       assert tenant_action == :read
     end
 
     test "Comment read action uses domain defaults (no source section)" do
-      master_action = ResourceInfo.get_action(Comment, :read, true)
-      tenant_action = ResourceInfo.get_action(Comment, :read, false)
+      master_action = ResourceInfo.table_action_for(Comment, :read, true)
+      tenant_action = ResourceInfo.table_action_for(Comment, :read, false)
 
       assert master_action == :master_read
       assert tenant_action == :read
@@ -452,16 +452,16 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "get_action/3 edge cases" do
     test "MinimalResource inherits the domain tuple action" do
-      master = ResourceInfo.get_action(MinimalResource, :read, true)
-      tenant = ResourceInfo.get_action(MinimalResource, :read, false)
+      master = ResourceInfo.table_action_for(MinimalResource, :read, true)
+      tenant = ResourceInfo.table_action_for(MinimalResource, :read, false)
 
       assert master == :master_read
       assert tenant == :read
     end
 
     test "handles tuple action (Post)" do
-      master = ResourceInfo.get_action(Post, :read, true)
-      tenant = ResourceInfo.get_action(Post, :read, false)
+      master = ResourceInfo.table_action_for(Post, :read, true)
+      tenant = ResourceInfo.table_action_for(Post, :read, false)
 
       assert master == :master_read
       assert tenant == :tenant_read
@@ -469,8 +469,8 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
     test "handles all action types for MinimalResource" do
       for action_type <- [:read, :get, :destroy] do
-        master = ResourceInfo.get_action(MinimalResource, action_type, true)
-        tenant = ResourceInfo.get_action(MinimalResource, action_type, false)
+        master = ResourceInfo.table_action_for(MinimalResource, action_type, true)
+        tenant = ResourceInfo.table_action_for(MinimalResource, action_type, false)
 
         assert is_atom(master)
         assert is_atom(tenant)
@@ -479,8 +479,8 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
     test "handles all action types for Post" do
       for action_type <- [:read, :destroy] do
-        master = ResourceInfo.get_action(Post, action_type, true)
-        tenant = ResourceInfo.get_action(Post, action_type, false)
+        master = ResourceInfo.table_action_for(Post, action_type, true)
+        tenant = ResourceInfo.table_action_for(Post, action_type, false)
 
         assert is_atom(master)
         assert is_atom(tenant)
@@ -488,8 +488,8 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "DslOverrideResource get_action resolves tuples correctly" do
-      master_get = ResourceInfo.get_action(DslOverrideResource, :get, true)
-      tenant_get = ResourceInfo.get_action(DslOverrideResource, :get, false)
+      master_get = ResourceInfo.table_action_for(DslOverrideResource, :get, true)
+      tenant_get = ResourceInfo.table_action_for(DslOverrideResource, :get, false)
 
       assert master_get == :custom_master_get
       assert tenant_get == :custom_get
@@ -500,14 +500,14 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "detected_preloads/1" do
     test "Post detected_preloads is empty (list source doesn't extract)" do
-      preloads = ResourceInfo.detected_preloads(Post)
+      preloads = ResourceInfo.table_detected_preloads(Post)
 
       # Post uses [:user, :name] list format which doesn't extract preloads
       assert preloads == []
     end
 
     test "Comment detected_preloads is empty (list source doesn't extract)" do
-      preloads = ResourceInfo.detected_preloads(Comment)
+      preloads = ResourceInfo.table_detected_preloads(Comment)
 
       # Comment uses [:user, :name] and [:post, :title] list formats
       assert preloads == []
@@ -516,19 +516,19 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "all_preloads/2" do
     test "Post all_preloads for tenant includes :user from always preload" do
-      preloads = ResourceInfo.all_preloads(Post, false)
+      preloads = ResourceInfo.table_all_preloads(Post, false)
 
       assert :user in preloads
     end
 
     test "Post all_preloads for master includes :user from always preload" do
-      preloads = ResourceInfo.all_preloads(Post, true)
+      preloads = ResourceInfo.table_all_preloads(Post, true)
 
       assert :user in preloads
     end
 
     test "Comment all_preloads includes :user and :post from always preload" do
-      preloads = ResourceInfo.all_preloads(Comment, false)
+      preloads = ResourceInfo.table_all_preloads(Comment, false)
 
       assert :user in preloads
       assert :post in preloads
@@ -539,19 +539,19 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "stream_name/1" do
     test "Post stream_name is :posts_stream" do
-      name = ResourceInfo.stream_name(Post)
+      name = ResourceInfo.table_stream_name(Post)
 
       assert name == :posts_stream
     end
 
     test "User stream_name is auto-generated :users_stream" do
-      name = ResourceInfo.stream_name(User)
+      name = ResourceInfo.table_stream_name(User)
 
       assert name == :users_stream
     end
 
     test "Comment stream_name is auto-generated :comments_stream" do
-      name = ResourceInfo.stream_name(Comment)
+      name = ResourceInfo.table_stream_name(Comment)
 
       assert name == :comments_stream
     end
@@ -561,7 +561,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "hooks/1" do
     test "Post hooks has all expected keys" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert Map.has_key?(hooks, :on_load)
       assert Map.has_key?(hooks, :before_delete)
@@ -572,43 +572,43 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "Post on_load hook is a function with arity 2" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert is_function(hooks.on_load, 2)
     end
 
     test "Post before_delete hook is a function with arity 2" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert is_function(hooks.before_delete, 2)
     end
 
     test "Post after_delete hook is a function with arity 2" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert is_function(hooks.after_delete, 2)
     end
 
     test "Post on_filter hook is a function with arity 2" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert is_function(hooks.on_filter, 2)
     end
 
     test "Post on_select hook is a function with arity 2" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert is_function(hooks.on_select, 2)
     end
 
     test "Post on_sort hook is a function with arity 2" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
 
       assert is_function(hooks.on_sort, 2)
     end
 
     test "User hooks returns empty map when no hooks configured" do
-      hooks = ResourceInfo.hooks(User)
+      hooks = ResourceInfo.table_hooks(User)
 
       # User doesn't define any hooks
       assert hooks == %{}
@@ -619,7 +619,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "refresh_config/1" do
     test "Post refresh_config has enabled false" do
-      config = ResourceInfo.refresh_config(Post)
+      config = ResourceInfo.table_refresh(Post)
 
       assert config.enabled == false
     end
@@ -629,25 +629,25 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "url_sync_config/1" do
     test "Post url_sync_config has enabled true" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
 
       assert config.enabled == true
     end
 
     test "Post url_sync_config has correct params" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
 
       assert config.params == [:page, :sort, :search, :filters]
     end
 
     test "Post url_sync_config has max_filter_length with default value 500" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
 
       assert config.max_filter_length == 500
     end
 
     test "Post url_sync_config has mode :bidirectional" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
 
       assert config.mode == :bidirectional
     end
@@ -682,7 +682,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "pagination/1" do
     test "Post pagination returns full config" do
-      pagination = ResourceInfo.pagination(Post)
+      pagination = ResourceInfo.table_pagination(Post)
 
       assert is_map(pagination)
       assert pagination.page_size == 25
@@ -690,7 +690,7 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
     end
 
     test "User pagination returns full config" do
-      pagination = ResourceInfo.pagination(User)
+      pagination = ResourceInfo.table_pagination(User)
 
       assert pagination.page_size == 20
       assert pagination.type == :numbered
@@ -699,42 +699,42 @@ defmodule MishkaGervaz.Info.ResourceInfoTest do
 
   describe "pagination_enabled?/1" do
     test "returns true for resources with pagination" do
-      assert ResourceInfo.pagination_enabled?(Post)
-      assert ResourceInfo.pagination_enabled?(User)
+      assert ResourceInfo.table_pagination_enabled?(Post)
+      assert ResourceInfo.table_pagination_enabled?(User)
     end
   end
 
   describe "pagination_type/1" do
     test "Post pagination type is infinite" do
-      assert ResourceInfo.pagination_type(Post) == :infinite
+      assert ResourceInfo.table_pagination_type(Post) == :infinite
     end
 
     test "User pagination type is numbered" do
-      assert ResourceInfo.pagination_type(User) == :numbered
+      assert ResourceInfo.table_pagination_type(User) == :numbered
     end
   end
 
   describe "page_size/1" do
     test "Post page_size is 25" do
-      assert ResourceInfo.page_size(Post) == 25
+      assert ResourceInfo.table_page_size(Post) == 25
     end
 
     test "User page_size is 20" do
-      assert ResourceInfo.page_size(User) == 20
+      assert ResourceInfo.table_page_size(User) == 20
     end
   end
 
   describe "page_size_options/1" do
     test "returns nil when not configured" do
-      assert ResourceInfo.page_size_options(Post) == nil
-      assert ResourceInfo.page_size_options(User) == nil
+      assert ResourceInfo.table_page_size_options(Post) == nil
+      assert ResourceInfo.table_page_size_options(User) == nil
     end
   end
 
   describe "max_page_size/1" do
     test "returns default 150 when not explicitly set" do
-      assert ResourceInfo.max_page_size(Post) == 150
-      assert ResourceInfo.max_page_size(User) == 150
+      assert ResourceInfo.table_max_page_size(Post) == 150
+      assert ResourceInfo.table_max_page_size(User) == 150
     end
   end
 

@@ -67,7 +67,7 @@ defmodule MishkaGervaz.Types.Filter.SelectTest do
     end
 
     test "explicit options are stored as keyword lists" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       assert is_list(filter.options)
 
       first = hd(filter.options)
@@ -85,7 +85,7 @@ defmodule MishkaGervaz.Types.Filter.SelectTest do
     end
 
     test "function options are zero-arity functions in DSL config" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :language)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :language)
       assert is_function(filter.options, 0)
     end
   end
@@ -117,7 +117,7 @@ defmodule MishkaGervaz.Types.Filter.SelectTest do
     end
 
     test "raw DSL entity has nil options when auto-detected" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :priority)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :priority)
       assert filter.options == nil
     end
   end

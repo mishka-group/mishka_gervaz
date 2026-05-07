@@ -20,7 +20,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "stream_name is set correctly" do
-      stream_name = ResourceInfo.stream_name(ComplexTestResource)
+      stream_name = ResourceInfo.table_stream_name(ComplexTestResource)
       assert stream_name == :complex_posts_stream
     end
 
@@ -78,19 +78,19 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "get_action returns appropriate action based on user type" do
-      master_action = ResourceInfo.get_action(ComplexTestResource, :read, true)
-      tenant_action = ResourceInfo.get_action(ComplexTestResource, :read, false)
+      master_action = ResourceInfo.table_action_for(ComplexTestResource, :read, true)
+      tenant_action = ResourceInfo.table_action_for(ComplexTestResource, :read, false)
       assert master_action == :master_read
       assert tenant_action == :tenant_read
     end
 
     test "all_preloads includes always preloads" do
-      preloads = ResourceInfo.all_preloads(ComplexTestResource, false)
+      preloads = ResourceInfo.table_all_preloads(ComplexTestResource, false)
       assert :author in preloads
     end
 
     test "all_preloads includes always preloads for master user" do
-      preloads = ResourceInfo.all_preloads(ComplexTestResource, true)
+      preloads = ResourceInfo.table_all_preloads(ComplexTestResource, true)
       assert :author in preloads
     end
   end
@@ -126,17 +126,17 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
 
   describe "columns section" do
     test "returns all defined columns" do
-      columns = ResourceInfo.columns(ComplexTestResource)
+      columns = ResourceInfo.table_columns(ComplexTestResource)
       assert length(columns) >= 6
     end
 
     test "column_order is set correctly" do
-      order = ResourceInfo.column_order(ComplexTestResource)
+      order = ResourceInfo.table_column_order(ComplexTestResource)
       assert order == [:title, :status, :author, :view_count, :is_featured, :inserted_at]
     end
 
     test "title column has all expected properties" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.name == :title
       assert col.source == :title
       assert col.sortable == true
@@ -152,7 +152,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "title column ui properties are set correctly" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.label == "Title"
       assert col.ui.type == :text
       assert col.ui.width == "250px"
@@ -165,61 +165,61 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "status column has badge type" do
-      col = ResourceInfo.column(ComplexTestResource, :status)
+      col = ResourceInfo.table_column(ComplexTestResource, :status)
       assert col.ui.type == :badge
       assert is_map(col.ui.extra.colors)
     end
 
     test "author column has relationship source" do
-      col = ResourceInfo.column(ComplexTestResource, :author)
+      col = ResourceInfo.table_column(ComplexTestResource, :author)
       assert col.source == {:author, :name}
     end
 
     test "view_count column has number type" do
-      col = ResourceInfo.column(ComplexTestResource, :view_count)
+      col = ResourceInfo.table_column(ComplexTestResource, :view_count)
       assert col.ui.type == :number
       assert col.ui.align == :right
       assert col.ui.extra.suffix == " views"
     end
 
     test "is_featured column has boolean type" do
-      col = ResourceInfo.column(ComplexTestResource, :is_featured)
+      col = ResourceInfo.table_column(ComplexTestResource, :is_featured)
       assert col.ui.type == :boolean
       assert col.ui.extra.true_icon == "hero-star-solid"
     end
 
     test "inserted_at column has datetime type" do
-      col = ResourceInfo.column(ComplexTestResource, :inserted_at)
+      col = ResourceInfo.table_column(ComplexTestResource, :inserted_at)
       assert col.ui.type == :datetime
       assert col.ui.extra.format == "%Y-%m-%d %H:%M"
     end
 
     test "type_module is resolved for each column type" do
-      title_col = ResourceInfo.column(ComplexTestResource, :title)
+      title_col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert title_col.type_module == MishkaGervaz.Table.Types.Column.Text
 
-      status_col = ResourceInfo.column(ComplexTestResource, :status)
+      status_col = ResourceInfo.table_column(ComplexTestResource, :status)
       assert status_col.type_module == MishkaGervaz.Table.Types.Column.Badge
 
-      view_col = ResourceInfo.column(ComplexTestResource, :view_count)
+      view_col = ResourceInfo.table_column(ComplexTestResource, :view_count)
       assert view_col.type_module == MishkaGervaz.Table.Types.Column.Number
 
-      bool_col = ResourceInfo.column(ComplexTestResource, :is_featured)
+      bool_col = ResourceInfo.table_column(ComplexTestResource, :is_featured)
       assert bool_col.type_module == MishkaGervaz.Table.Types.Column.Boolean
 
-      dt_col = ResourceInfo.column(ComplexTestResource, :inserted_at)
+      dt_col = ResourceInfo.table_column(ComplexTestResource, :inserted_at)
       assert dt_col.type_module == MishkaGervaz.Table.Types.Column.DateTime
     end
   end
 
   describe "filters section" do
     test "returns all defined filters" do
-      filters = ResourceInfo.filters(ComplexTestResource)
+      filters = ResourceInfo.table_filters(ComplexTestResource)
       assert length(filters) >= 7
     end
 
     test "search filter has correct properties" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert filter.name == :search
       assert filter.type == :text
       assert filter.fields == [:title, :content]
@@ -228,7 +228,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "search filter ui properties are set correctly" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       ui = get_filter_ui(filter)
       assert ui.label == "Search"
       assert ui.placeholder == "Search posts..."
@@ -238,7 +238,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "status filter has select type with options" do
-      filter = ResourceInfo.filter(ComplexTestResource, :status)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :status)
       assert filter.type == :select
       assert filter.source == :status
       assert is_list(filter.options)
@@ -247,30 +247,30 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "is_featured filter has boolean type" do
-      filter = ResourceInfo.filter(ComplexTestResource, :is_featured)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :is_featured)
       assert filter.type == :boolean
       assert filter.source == :is_featured
     end
 
     test "view_count filter has number type with min/max" do
-      filter = ResourceInfo.filter(ComplexTestResource, :view_count)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :view_count)
       assert filter.type == :number
       assert filter.min == 0
       assert filter.max == 1_000_000
     end
 
     test "published_at filter has date type" do
-      filter = ResourceInfo.filter(ComplexTestResource, :published_at)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :published_at)
       assert filter.type == :date
     end
 
     test "date_range filter has date_range type" do
-      filter = ResourceInfo.filter(ComplexTestResource, :date_range)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :date_range)
       assert filter.type == :date_range
     end
 
     test "author_id filter has relation type" do
-      filter = ResourceInfo.filter(ComplexTestResource, :author_id)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :author_id)
       assert filter.type == :relation
       assert filter.display_field == :name
       assert filter.search_field == :name
@@ -278,25 +278,25 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "type_module is resolved for each filter type" do
-      search = ResourceInfo.filter(ComplexTestResource, :search)
+      search = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert search.type_module == MishkaGervaz.Table.Types.Filter.Text
 
-      status = ResourceInfo.filter(ComplexTestResource, :status)
+      status = ResourceInfo.table_filter(ComplexTestResource, :status)
       assert status.type_module == MishkaGervaz.Table.Types.Filter.Select
 
-      featured = ResourceInfo.filter(ComplexTestResource, :is_featured)
+      featured = ResourceInfo.table_filter(ComplexTestResource, :is_featured)
       assert featured.type_module == MishkaGervaz.Table.Types.Filter.Boolean
 
-      views = ResourceInfo.filter(ComplexTestResource, :view_count)
+      views = ResourceInfo.table_filter(ComplexTestResource, :view_count)
       assert views.type_module == MishkaGervaz.Table.Types.Filter.Number
 
-      date = ResourceInfo.filter(ComplexTestResource, :published_at)
+      date = ResourceInfo.table_filter(ComplexTestResource, :published_at)
       assert date.type_module == MishkaGervaz.Table.Types.Filter.Date
 
-      date_range = ResourceInfo.filter(ComplexTestResource, :date_range)
+      date_range = ResourceInfo.table_filter(ComplexTestResource, :date_range)
       assert date_range.type_module == MishkaGervaz.Table.Types.Filter.DateRange
 
-      author = ResourceInfo.filter(ComplexTestResource, :author_id)
+      author = ResourceInfo.table_filter(ComplexTestResource, :author_id)
       assert author.type_module == MishkaGervaz.Table.Types.Filter.Relation
     end
 
@@ -314,12 +314,12 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
 
   describe "row_actions section" do
     test "returns all defined row actions" do
-      actions = ResourceInfo.row_actions(ComplexTestResource)
+      actions = ResourceInfo.table_row_actions(ComplexTestResource)
       assert length(actions) >= 5
     end
 
     test "show action has correct properties" do
-      action = ResourceInfo.row_action(ComplexTestResource, :show)
+      action = ResourceInfo.table_row_action(ComplexTestResource, :show)
       assert action.name == :show
       assert action.type == :link
       assert action.path == "/admin/complex-posts/{id}"
@@ -328,7 +328,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "show action ui properties are set correctly" do
-      action = ResourceInfo.row_action(ComplexTestResource, :show)
+      action = ResourceInfo.table_row_action(ComplexTestResource, :show)
       ui = get_action_ui(action)
       assert ui.label == "View"
       assert ui.icon == "hero-eye"
@@ -337,7 +337,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "edit action has function path" do
-      action = ResourceInfo.row_action(ComplexTestResource, :edit)
+      action = ResourceInfo.table_row_action(ComplexTestResource, :edit)
       assert action.type == :link
       assert is_function(action.path, 1)
       assert action.visible == :active
@@ -345,13 +345,13 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "delete action has destroy type" do
-      action = ResourceInfo.row_action(ComplexTestResource, :delete)
+      action = ResourceInfo.table_row_action(ComplexTestResource, :delete)
       assert action.type == :destroy
       assert action.confirm == "Are you sure you want to delete this post?"
     end
 
     test "archive_action has event type with payload" do
-      action = ResourceInfo.row_action(ComplexTestResource, :archive_action)
+      action = ResourceInfo.table_row_action(ComplexTestResource, :archive_action)
       assert action.type == :event
       assert action.event == :archive
       assert is_function(action.payload, 1)
@@ -359,18 +359,18 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "restore action visible only for archived" do
-      action = ResourceInfo.row_action(ComplexTestResource, :restore)
+      action = ResourceInfo.table_row_action(ComplexTestResource, :restore)
       assert action.visible == :archived
     end
 
     test "type_module is resolved for each action type" do
-      show = ResourceInfo.row_action(ComplexTestResource, :show)
+      show = ResourceInfo.table_row_action(ComplexTestResource, :show)
       assert show.type_module == MishkaGervaz.Table.Types.Action.Link
 
-      delete = ResourceInfo.row_action(ComplexTestResource, :delete)
+      delete = ResourceInfo.table_row_action(ComplexTestResource, :delete)
       assert delete.type_module == MishkaGervaz.Table.Types.Action.Destroy
 
-      archive = ResourceInfo.row_action(ComplexTestResource, :archive_action)
+      archive = ResourceInfo.table_row_action(ComplexTestResource, :archive_action)
       assert archive.type_module == MishkaGervaz.Table.Types.Action.Event
     end
 
@@ -409,12 +409,12 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
 
   describe "bulk_actions section" do
     test "returns all defined bulk actions" do
-      actions = ResourceInfo.bulk_actions(ComplexTestResource)
+      actions = ResourceInfo.table_bulk_actions(ComplexTestResource)
       assert length(actions) == 3
     end
 
     test "bulk_delete action has correct properties" do
-      actions = ResourceInfo.bulk_actions(ComplexTestResource)
+      actions = ResourceInfo.table_bulk_actions(ComplexTestResource)
       action = Enum.find(actions, &(&1.name == :bulk_delete))
       assert action.confirm == "Delete {count} selected posts?"
       assert action.event == :bulk_delete
@@ -423,7 +423,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "bulk_delete action ui properties" do
-      actions = ResourceInfo.bulk_actions(ComplexTestResource)
+      actions = ResourceInfo.table_bulk_actions(ComplexTestResource)
       action = Enum.find(actions, &(&1.name == :bulk_delete))
       ui = get_bulk_action_ui(action)
       assert ui.label == "Delete Selected"
@@ -433,13 +433,13 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "bulk_archive action has boolean confirm" do
-      actions = ResourceInfo.bulk_actions(ComplexTestResource)
+      actions = ResourceInfo.table_bulk_actions(ComplexTestResource)
       action = Enum.find(actions, &(&1.name == :bulk_archive))
       assert action.confirm == true
     end
 
     test "bulk_publish action has no confirm" do
-      actions = ResourceInfo.bulk_actions(ComplexTestResource)
+      actions = ResourceInfo.table_bulk_actions(ComplexTestResource)
       action = Enum.find(actions, &(&1.name == :bulk_publish))
       assert action.confirm == false
     end
@@ -597,91 +597,91 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
 
   describe "refresh section" do
     test "refresh config is accessible" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert is_map(config)
     end
 
     test "enabled is true" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.enabled == true
     end
 
     test "interval is 30000" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.interval == 30_000
     end
 
     test "pause_on_interaction is true" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.pause_on_interaction == true
     end
 
     test "show_indicator is true" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.show_indicator == true
     end
 
     test "pause_on_blur is true" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.pause_on_blur == true
     end
   end
 
   describe "url_sync section" do
     test "url_sync config is accessible" do
-      config = ResourceInfo.url_sync_config(ComplexTestResource)
+      config = ResourceInfo.table_url_sync(ComplexTestResource)
       assert is_map(config)
     end
 
     test "enabled is true" do
-      config = ResourceInfo.url_sync_config(ComplexTestResource)
+      config = ResourceInfo.table_url_sync(ComplexTestResource)
       assert config.enabled == true
     end
 
     test "params are set correctly" do
-      config = ResourceInfo.url_sync_config(ComplexTestResource)
+      config = ResourceInfo.table_url_sync(ComplexTestResource)
       assert config.params == [:filters, :sort, :page, :search]
     end
 
     test "prefix is set" do
-      config = ResourceInfo.url_sync_config(ComplexTestResource)
+      config = ResourceInfo.table_url_sync(ComplexTestResource)
       assert config.prefix == "posts"
     end
   end
 
   describe "hooks section" do
     test "hooks are accessible" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_map(hooks)
     end
 
     test "on_load hook is set" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_function(hooks.on_load, 2)
     end
 
     test "before_delete hook is set" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_function(hooks.before_delete, 2)
     end
 
     test "after_delete hook is set" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_function(hooks.after_delete, 2)
     end
 
     test "on_filter hook is set" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_function(hooks.on_filter, 2)
     end
 
     test "on_select hook is set" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_function(hooks.on_select, 2)
     end
 
     test "on_sort hook is set" do
-      hooks = ResourceInfo.hooks(ComplexTestResource)
+      hooks = ResourceInfo.table_hooks(ComplexTestResource)
       assert is_function(hooks.on_sort, 2)
     end
   end
@@ -710,7 +710,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
     end
 
     test "detected_preloads contains author from relationship column" do
-      preloads = ResourceInfo.detected_preloads(ComplexTestResource)
+      preloads = ResourceInfo.table_detected_preloads(ComplexTestResource)
       assert :author in preloads
     end
   end

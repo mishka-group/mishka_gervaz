@@ -19,12 +19,12 @@ defmodule MishkaGervaz.DSL.IdentityTest do
     end
 
     test "returns stream_name when configured" do
-      assert ResourceInfo.stream_name(Post) == :posts_stream
+      assert ResourceInfo.table_stream_name(Post) == :posts_stream
     end
 
     test "stream_name returns atom when configured" do
       # All test resources have stream_name, so just verify it's an atom
-      stream_name = ResourceInfo.stream_name(Post)
+      stream_name = ResourceInfo.table_stream_name(Post)
       assert is_atom(stream_name)
     end
 

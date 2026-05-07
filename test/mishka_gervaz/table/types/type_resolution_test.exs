@@ -14,32 +14,32 @@ defmodule MishkaGervaz.Table.Types.TypeResolutionTest do
   describe "Column type resolution" do
     test "user-specified type via DSL is respected" do
       # Post has :inserted_at with explicit ui type :datetime
-      col = ResourceInfo.column(Post, :inserted_at)
+      col = ResourceInfo.table_column(Post, :inserted_at)
       assert col.ui.type == :datetime
       assert col.type_module == ColumnType.DateTime
     end
 
     test "user-specified :badge type is respected" do
-      col = ResourceInfo.column(Post, :status)
+      col = ResourceInfo.table_column(Post, :status)
       assert col.ui.type == :badge
       assert col.type_module == ColumnType.Badge
     end
 
     test "user-specified :number type is respected" do
-      col = ResourceInfo.column(Post, :view_count)
+      col = ResourceInfo.table_column(Post, :view_count)
       assert col.ui.type == :number
       assert col.type_module == ColumnType.Number
     end
 
     test "user-specified :boolean type is respected" do
-      col = ResourceInfo.column(User, :active)
+      col = ResourceInfo.table_column(User, :active)
       assert col.ui.type == :boolean
       assert col.type_module == ColumnType.Boolean
     end
 
     test "column without explicit type gets auto-detected from Ash attribute" do
       # User.name has no explicit type, should auto-detect from Ash.Type.String
-      col = ResourceInfo.column(User, :name)
+      col = ResourceInfo.table_column(User, :name)
       # name has no ui.type set (or defaults to :text)
       assert col.type_module == ColumnType.Text
     end
@@ -181,25 +181,25 @@ defmodule MishkaGervaz.Table.Types.TypeResolutionTest do
 
   describe "Filter type resolution" do
     test "user-specified filter type is respected" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       assert filter.type == :select
       assert filter.type_module == FilterType.Select
     end
 
     test "text filter gets correct type module" do
-      filter = ResourceInfo.filter(Post, :search)
+      filter = ResourceInfo.table_filter(Post, :search)
       assert filter.type == :text
       assert filter.type_module == FilterType.Text
     end
 
     test "relation filter gets correct type module" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       assert filter.type == :relation
       assert filter.type_module == FilterType.Relation
     end
 
     test "boolean filter gets correct type module" do
-      filter = ResourceInfo.filter(User, :active)
+      filter = ResourceInfo.table_filter(User, :active)
       assert filter.type == :boolean
       assert filter.type_module == FilterType.Boolean
     end
@@ -233,21 +233,21 @@ defmodule MishkaGervaz.Table.Types.TypeResolutionTest do
 
   describe "Action type resolution" do
     test "user-specified action type is respected" do
-      actions = ResourceInfo.row_actions(Post)
+      actions = ResourceInfo.table_row_actions(Post)
       show_action = Enum.find(actions, &(&1.name == :show))
       assert show_action.type == :link
       assert show_action.type_module == ActionType.Link
     end
 
     test "destroy action gets correct type module" do
-      actions = ResourceInfo.row_actions(Post)
+      actions = ResourceInfo.table_row_actions(Post)
       delete_action = Enum.find(actions, &(&1.name == :delete))
       assert delete_action.type == :destroy
       assert delete_action.type_module == ActionType.Destroy
     end
 
     test "event action gets correct type module" do
-      actions = ResourceInfo.row_actions(Post)
+      actions = ResourceInfo.table_row_actions(Post)
       publish_action = Enum.find(actions, &(&1.name == :publish))
       assert publish_action.type == :event
       assert publish_action.type_module == ActionType.Event
@@ -350,7 +350,7 @@ defmodule MishkaGervaz.Table.Types.TypeResolutionTest do
 
   describe "Custom type modules in DSL" do
     test "custom column type module is respected in DSL" do
-      col = ResourceInfo.column(CustomTypesResource, :custom_field)
+      col = ResourceInfo.table_column(CustomTypesResource, :custom_field)
       assert col.type_module == MishkaGervaz.Test.CustomColumnType
     end
 
@@ -380,7 +380,7 @@ defmodule MishkaGervaz.Table.Types.TypeResolutionTest do
     end
 
     test "custom filter type module is respected in DSL" do
-      filter = ResourceInfo.filter(CustomTypesResource, :custom_filter)
+      filter = ResourceInfo.table_filter(CustomTypesResource, :custom_filter)
       assert filter.type_module == MishkaGervaz.Test.CustomFilterType
     end
 
@@ -399,14 +399,14 @@ defmodule MishkaGervaz.Table.Types.TypeResolutionTest do
     end
 
     test "custom action type module is respected in DSL" do
-      actions = ResourceInfo.row_actions(CustomTypesResource)
+      actions = ResourceInfo.table_row_actions(CustomTypesResource)
       custom_action = Enum.find(actions, &(&1.name == :custom_action))
 
       assert custom_action.type_module == MishkaGervaz.Test.CustomActionType
     end
 
     test "built-in action type still works alongside custom types" do
-      actions = ResourceInfo.row_actions(CustomTypesResource)
+      actions = ResourceInfo.table_row_actions(CustomTypesResource)
       show_action = Enum.find(actions, &(&1.name == :show))
 
       assert show_action.type_module == ActionType.Link

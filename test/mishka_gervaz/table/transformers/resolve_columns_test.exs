@@ -9,33 +9,33 @@ defmodule MishkaGervaz.Transformers.ResolveColumnsTest do
 
   describe "column source resolution" do
     test "columns without explicit source get source from name" do
-      col = ResourceInfo.column(User, :name)
+      col = ResourceInfo.table_column(User, :name)
       assert col.source == :name
     end
 
     test "columns with explicit source path preserve it" do
-      col = ResourceInfo.column(Post, :user)
+      col = ResourceInfo.table_column(Post, :user)
       assert col.source == [:user, :name]
     end
 
     test "Comment columns with relationship sources" do
-      user_col = ResourceInfo.column(Comment, :user)
+      user_col = ResourceInfo.table_column(Comment, :user)
       assert user_col.source == [:user, :name]
 
-      post_col = ResourceInfo.column(Comment, :post)
+      post_col = ResourceInfo.table_column(Comment, :post)
       assert post_col.source == [:post, :title]
     end
   end
 
   describe "column ordering" do
     test "column_order respects DSL definition" do
-      order = ResourceInfo.column_order(Post)
+      order = ResourceInfo.table_column_order(Post)
       assert order == [:title, :status, :user, :view_count, :inserted_at, :view_count_formatted]
     end
 
     test "all columns in order exist in columns list" do
-      order = ResourceInfo.column_order(Post)
-      columns = ResourceInfo.columns(Post)
+      order = ResourceInfo.table_column_order(Post)
+      columns = ResourceInfo.table_columns(Post)
       column_names = Enum.map(columns, & &1.name)
 
       Enum.each(order, fn name ->
@@ -46,19 +46,19 @@ defmodule MishkaGervaz.Transformers.ResolveColumnsTest do
 
   describe "preload detection" do
     test "detected_preloads extracts relationship columns" do
-      preloads = ResourceInfo.detected_preloads(Post)
+      preloads = ResourceInfo.table_detected_preloads(Post)
       # Post has user column with source [:user, :name]
       assert is_list(preloads)
     end
 
     test "Comment detected_preloads include user and post" do
-      preloads = ResourceInfo.detected_preloads(Comment)
+      preloads = ResourceInfo.table_detected_preloads(Comment)
       # Comment has user and post relationship columns
       assert is_list(preloads)
     end
 
     test "all_preloads combines always and detected" do
-      preloads = ResourceInfo.all_preloads(Post, true)
+      preloads = ResourceInfo.table_all_preloads(Post, true)
       assert is_list(preloads)
       assert :user in preloads
     end
@@ -66,27 +66,27 @@ defmodule MishkaGervaz.Transformers.ResolveColumnsTest do
 
   describe "column type module resolution" do
     test "text columns get Text type module" do
-      col = ResourceInfo.column(Post, :title)
+      col = ResourceInfo.table_column(Post, :title)
       assert col.type_module == MishkaGervaz.Table.Types.Column.Text
     end
 
     test "badge columns get Badge type module" do
-      col = ResourceInfo.column(Post, :status)
+      col = ResourceInfo.table_column(Post, :status)
       assert col.type_module == MishkaGervaz.Table.Types.Column.Badge
     end
 
     test "number columns get Number type module" do
-      col = ResourceInfo.column(Post, :view_count)
+      col = ResourceInfo.table_column(Post, :view_count)
       assert col.type_module == MishkaGervaz.Table.Types.Column.Number
     end
 
     test "datetime columns get DateTime type module" do
-      col = ResourceInfo.column(Post, :inserted_at)
+      col = ResourceInfo.table_column(Post, :inserted_at)
       assert col.type_module == MishkaGervaz.Table.Types.Column.DateTime
     end
 
     test "boolean columns get Boolean type module" do
-      col = ResourceInfo.column(User, :active)
+      col = ResourceInfo.table_column(User, :active)
       assert col.type_module == MishkaGervaz.Table.Types.Column.Boolean
     end
   end
@@ -99,7 +99,7 @@ defmodule MishkaGervaz.Transformers.ResolveColumnsTest do
     end
 
     test "auto_columns respects except option" do
-      columns = ResourceInfo.columns(AutoColumnsResource)
+      columns = ResourceInfo.table_columns(AutoColumnsResource)
       column_names = Enum.map(columns, & &1.name)
 
       # internal_field and updated_at are in except list
@@ -110,7 +110,7 @@ defmodule MishkaGervaz.Transformers.ResolveColumnsTest do
     end
 
     test "auto_columns creates valid column structs" do
-      columns = ResourceInfo.columns(AutoColumnsResource)
+      columns = ResourceInfo.table_columns(AutoColumnsResource)
 
       Enum.each(columns, fn col ->
         assert is_atom(col.name)
@@ -121,20 +121,20 @@ defmodule MishkaGervaz.Transformers.ResolveColumnsTest do
 
   describe "column position resolution" do
     test "columns are sorted by position" do
-      order = ResourceInfo.column_order(Post)
+      order = ResourceInfo.table_column_order(Post)
       # Verify order is a list of atoms
       assert is_list(order)
       assert Enum.all?(order, &is_atom/1)
     end
 
     test "explicit column_order takes precedence" do
-      order = ResourceInfo.column_order(Post)
+      order = ResourceInfo.table_column_order(Post)
       # Post has explicit column ordering
       assert :title == List.first(order)
     end
 
     test "columns without position maintain original order" do
-      columns = ResourceInfo.columns(User)
+      columns = ResourceInfo.table_columns(User)
       # User columns should be in a consistent order
       assert is_list(columns)
     end

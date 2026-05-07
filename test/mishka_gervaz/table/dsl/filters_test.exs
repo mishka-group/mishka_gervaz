@@ -36,13 +36,13 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "filter definitions" do
     test "returns all filters for a resource" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
       assert is_list(filters)
       assert length(filters) > 0
     end
 
     test "each filter is a Filter struct" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
 
       Enum.each(filters, fn filter ->
         assert is_struct(filter, MishkaGervaz.Table.Entities.Filter)
@@ -50,35 +50,35 @@ defmodule MishkaGervaz.DSL.FiltersTest do
     end
 
     test "retrieves specific filter by name" do
-      filter = ResourceInfo.filter(Post, :search)
+      filter = ResourceInfo.table_filter(Post, :search)
       assert filter.name == :search
     end
 
     test "returns nil for non-existent filter" do
-      filter = ResourceInfo.filter(Post, :non_existent)
+      filter = ResourceInfo.table_filter(Post, :non_existent)
       assert filter == nil
     end
   end
 
   describe "text filter type" do
     test "text filter has correct type" do
-      filter = ResourceInfo.filter(Post, :search)
+      filter = ResourceInfo.table_filter(Post, :search)
       assert filter.type == :text
     end
 
     test "text filter has fields configuration" do
-      filter = ResourceInfo.filter(Post, :search)
+      filter = ResourceInfo.table_filter(Post, :search)
       assert filter.fields == [:title, :content]
     end
 
     test "text filter ui configuration" do
-      filter = ResourceInfo.filter(Post, :search)
+      filter = ResourceInfo.table_filter(Post, :search)
       ui = get_ui(filter)
       assert ui.placeholder == "Search posts..."
     end
 
     test "User text filter configuration" do
-      filter = ResourceInfo.filter(User, :search)
+      filter = ResourceInfo.table_filter(User, :search)
       ui = get_ui(filter)
       assert filter.type == :text
       assert filter.fields == [:name, :email]
@@ -89,12 +89,12 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "select filter type" do
     test "select filter has correct type" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       assert filter.type == :select
     end
 
     test "select filter has options" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       assert is_list(filter.options)
       assert length(filter.options) == 3
 
@@ -105,18 +105,18 @@ defmodule MishkaGervaz.DSL.FiltersTest do
     end
 
     test "select filter options have labels" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       draft_option = Enum.find(filter.options, &(&1[:value] == "draft"))
       assert draft_option[:label] == "Draft"
     end
 
     test "select filter has default value" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       assert filter.default == "published"
     end
 
     test "User role select filter" do
-      filter = ResourceInfo.filter(User, :role)
+      filter = ResourceInfo.table_filter(User, :role)
       assert filter.type == :select
       option_values = Enum.map(filter.options, & &1[:value])
       assert "admin" in option_values
@@ -146,13 +146,13 @@ defmodule MishkaGervaz.DSL.FiltersTest do
     end
 
     test "raw DSL entity has nil options before transformer resolves them" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :priority)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :priority)
       assert filter.type == :select
       assert filter.options == nil
     end
 
     test "Post status select with explicit options ignores attribute constraint" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
 
       # Post uses explicit keyword-list options, not auto-detected tuples
       option_values = Enum.map(filter.options, & &1[:value])
@@ -178,13 +178,13 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "select filter with runtime callback function" do
     test "function options are stored as function in DSL config" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :language)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :language)
       assert filter.type == :select
       assert is_function(filter.options, 0)
     end
 
     test "calling function options returns expected list" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :language)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :language)
       result = filter.options.()
 
       assert {"English", "en"} in result
@@ -195,18 +195,18 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "boolean filter type" do
     test "boolean filter has correct type" do
-      filter = ResourceInfo.filter(User, :active)
+      filter = ResourceInfo.table_filter(User, :active)
       assert filter.type == :boolean
     end
 
     test "boolean filter ui configuration" do
-      filter = ResourceInfo.filter(User, :active)
+      filter = ResourceInfo.table_filter(User, :active)
       ui = get_ui(filter)
       assert ui.label == "Active Only"
     end
 
     test "Comment approved boolean filter" do
-      filter = ResourceInfo.filter(Comment, :approved)
+      filter = ResourceInfo.table_filter(Comment, :approved)
       ui = get_ui(filter)
       assert filter.type == :boolean
       assert ui.label == "Approved Only"
@@ -215,22 +215,22 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "relation filter type" do
     test "relation filter has correct type" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       assert filter.type == :relation
     end
 
     test "relation filter has resource reference" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       assert filter.resource == MishkaGervaz.Test.Resources.User
     end
 
     test "relation filter has display_field" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       assert filter.display_field == :name
     end
 
     test "relation filter ui configuration" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       ui = get_ui(filter)
       assert ui.label == "Author"
     end
@@ -238,35 +238,35 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "filter dependencies (depends_on)" do
     test "Comment user_id filter depends on post_id" do
-      filter = ResourceInfo.filter(Comment, :user_id)
+      filter = ResourceInfo.table_filter(Comment, :user_id)
       assert filter.depends_on == :post_id
     end
 
     test "dependent filter has disabled prompt" do
-      filter = ResourceInfo.filter(Comment, :user_id)
+      filter = ResourceInfo.table_filter(Comment, :user_id)
       ui = get_ui(filter)
       assert ui.disabled_prompt == "Select a post first"
     end
 
     test "Comment post_id filter has no dependency" do
-      filter = ResourceInfo.filter(Comment, :post_id)
+      filter = ResourceInfo.table_filter(Comment, :post_id)
       assert filter.depends_on == nil
     end
   end
 
   describe "filter count by resource" do
     test "Post has correct number of filters" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
       assert length(filters) == 3
     end
 
     test "User has correct number of filters" do
-      filters = ResourceInfo.filters(User)
+      filters = ResourceInfo.table_filters(User)
       assert length(filters) == 3
     end
 
     test "Comment has correct number of filters" do
-      filters = ResourceInfo.filters(Comment)
+      filters = ResourceInfo.table_filters(Comment)
       assert length(filters) == 3
     end
   end
@@ -286,100 +286,100 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "all Filter entity keys (ComplexTestResource)" do
     test "name key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert filter.name == :search
     end
 
     test "type key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert filter.type == :text
     end
 
     test "source key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :status)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :status)
       assert filter.source == :status
     end
 
     test "fields key is configured for text filter" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert filter.fields == [:title, :content]
     end
 
     test "visible key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert filter.visible == true
     end
 
     test "min_chars key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       assert filter.min_chars == 3
     end
 
     test "options key is configured for select filter" do
-      filter = ResourceInfo.filter(ComplexTestResource, :status)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :status)
       assert is_list(filter.options)
       assert length(filter.options) == 3
     end
 
     test "include_nil key is configured with string value" do
-      filter = ResourceInfo.filter(ComplexTestResource, :status)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :status)
       assert filter.include_nil == "All Statuses"
     end
 
     test "min key is configured for number filter" do
-      filter = ResourceInfo.filter(ComplexTestResource, :view_count)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :view_count)
       assert filter.min == 0
     end
 
     test "max key is configured for number filter" do
-      filter = ResourceInfo.filter(ComplexTestResource, :view_count)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :view_count)
       assert filter.max == 1_000_000
     end
 
     test "display_field key is configured for relation filter" do
-      filter = ResourceInfo.filter(ComplexTestResource, :author_id)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :author_id)
       assert filter.display_field == :name
     end
 
     test "search_field key is configured for relation filter" do
-      filter = ResourceInfo.filter(ComplexTestResource, :author_id)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :author_id)
       assert filter.search_field == :name
     end
   end
 
   describe "all Filter.Ui keys (ComplexTestResource)" do
     test "ui label key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       ui = get_ui(filter)
       assert ui.label == "Search"
     end
 
     test "ui placeholder key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       ui = get_ui(filter)
       assert ui.placeholder == "Search posts..."
     end
 
     test "ui icon key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       ui = get_ui(filter)
       assert ui.icon == "hero-magnifying-glass"
     end
 
     test "ui debounce key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       ui = get_ui(filter)
       assert ui.debounce == 400
     end
 
     test "ui extra key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :search)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :search)
       ui = get_ui(filter)
       assert ui.extra == %{autofocus: true}
     end
 
     test "ui prompt key is configured" do
-      filter = ResourceInfo.filter(ComplexTestResource, :status)
+      filter = ResourceInfo.table_filter(ComplexTestResource, :status)
       ui = get_ui(filter)
       assert ui.prompt == "All"
     end
@@ -457,38 +457,38 @@ defmodule MishkaGervaz.DSL.FiltersTest do
 
   describe "filter preload DSL" do
     test "relation filter can have preload configuration" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       preload = get_preload(filter)
       assert preload != nil
       assert is_struct(preload, MishkaGervaz.Table.Entities.Filter.Preload)
     end
 
     test "preload always is accessible from filter" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       preload = get_preload(filter)
       assert preload.always == [:posts]
     end
 
     test "preload master defaults to nil when not set" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       preload = get_preload(filter)
       assert preload.master == nil
     end
 
     test "preload tenant defaults to nil when not set" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       preload = get_preload(filter)
       assert preload.tenant == nil
     end
 
     test "filter without preload returns nil from get_preload" do
-      filter = ResourceInfo.filter(Post, :status)
+      filter = ResourceInfo.table_filter(Post, :status)
       preload = get_preload(filter)
       assert preload == nil
     end
 
     test "Filter.Preload entity has correct struct fields" do
-      filter = ResourceInfo.filter(Post, :user_id)
+      filter = ResourceInfo.table_filter(Post, :user_id)
       preload = get_preload(filter)
       assert Map.has_key?(preload, :always)
       assert Map.has_key?(preload, :master)

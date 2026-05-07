@@ -60,18 +60,18 @@ defmodule MishkaGervaz.DSL.SourceTest do
     end
 
     test "action_for returns master action for master user" do
-      action = ResourceInfo.get_action(Post, :read, true)
+      action = ResourceInfo.table_action_for(Post, :read, true)
       assert action == :master_read
     end
 
     test "action_for returns tenant action for tenant user" do
-      action = ResourceInfo.get_action(Post, :read, false)
+      action = ResourceInfo.table_action_for(Post, :read, false)
       assert action == :tenant_read
     end
 
     test "action_for with destroy actions" do
-      master_action = ResourceInfo.get_action(Post, :destroy, true)
-      tenant_action = ResourceInfo.get_action(Post, :destroy, false)
+      master_action = ResourceInfo.table_action_for(Post, :destroy, true)
+      tenant_action = ResourceInfo.table_action_for(Post, :destroy, false)
       assert master_action == :destroy
       assert tenant_action == :destroy
     end
@@ -84,12 +84,12 @@ defmodule MishkaGervaz.DSL.SourceTest do
     end
 
     test "all_preloads includes always preloads for master" do
-      preloads = ResourceInfo.all_preloads(Post, true)
+      preloads = ResourceInfo.table_all_preloads(Post, true)
       assert :user in preloads
     end
 
     test "all_preloads includes always preloads for tenant" do
-      preloads = ResourceInfo.all_preloads(Post, false)
+      preloads = ResourceInfo.table_all_preloads(Post, false)
       assert :user in preloads
     end
 
@@ -102,13 +102,13 @@ defmodule MishkaGervaz.DSL.SourceTest do
 
   describe "detected_preloads" do
     test "detected_preloads are extracted from column sources" do
-      preloads = ResourceInfo.detected_preloads(Post)
+      preloads = ResourceInfo.table_detected_preloads(Post)
       # The user column has source [:user, :name], so :user should be detected
       assert is_list(preloads)
     end
 
     test "all_preloads combines always and detected preloads" do
-      preloads = ResourceInfo.all_preloads(Post, true)
+      preloads = ResourceInfo.table_all_preloads(Post, true)
       assert is_list(preloads)
       # Should include manually configured preloads
       assert :user in preloads
@@ -130,8 +130,8 @@ defmodule MishkaGervaz.DSL.SourceTest do
     end
 
     test "get_action returns the master/tenant tuple values" do
-      master_read = ResourceInfo.get_action(MinimalResource, :read, true)
-      tenant_read = ResourceInfo.get_action(MinimalResource, :read, false)
+      master_read = ResourceInfo.table_action_for(MinimalResource, :read, true)
+      tenant_read = ResourceInfo.table_action_for(MinimalResource, :read, false)
 
       assert master_read == :master_read
       assert tenant_read == :read
@@ -139,8 +139,8 @@ defmodule MishkaGervaz.DSL.SourceTest do
 
     test "get_action returns inherited values for all action types" do
       for action_type <- [:read, :get, :destroy] do
-        master = ResourceInfo.get_action(MinimalResource, action_type, true)
-        tenant = ResourceInfo.get_action(MinimalResource, action_type, false)
+        master = ResourceInfo.table_action_for(MinimalResource, action_type, true)
+        tenant = ResourceInfo.table_action_for(MinimalResource, action_type, false)
 
         assert is_atom(master)
         assert is_atom(tenant)
@@ -171,20 +171,20 @@ defmodule MishkaGervaz.DSL.SourceTest do
     end
 
     test "get_action resolves all action types correctly" do
-      master_get = ResourceInfo.get_action(DslOverrideResource, :get, true)
-      tenant_get = ResourceInfo.get_action(DslOverrideResource, :get, false)
+      master_get = ResourceInfo.table_action_for(DslOverrideResource, :get, true)
+      tenant_get = ResourceInfo.table_action_for(DslOverrideResource, :get, false)
 
       assert master_get == :custom_master_get
       assert tenant_get == :custom_get
 
-      master_read = ResourceInfo.get_action(DslOverrideResource, :read, true)
-      tenant_read = ResourceInfo.get_action(DslOverrideResource, :read, false)
+      master_read = ResourceInfo.table_action_for(DslOverrideResource, :read, true)
+      tenant_read = ResourceInfo.table_action_for(DslOverrideResource, :read, false)
 
       assert master_read == :custom_master
       assert tenant_read == :custom_tenant
 
-      master_destroy = ResourceInfo.get_action(DslOverrideResource, :destroy, true)
-      tenant_destroy = ResourceInfo.get_action(DslOverrideResource, :destroy, false)
+      master_destroy = ResourceInfo.table_action_for(DslOverrideResource, :destroy, true)
+      tenant_destroy = ResourceInfo.table_action_for(DslOverrideResource, :destroy, false)
 
       assert master_destroy == :custom_master_destroy
       assert tenant_destroy == :custom_destroy

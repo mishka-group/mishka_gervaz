@@ -31,7 +31,7 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
     end
 
     test "stream_name is auto-generated when not set" do
-      stream_name = ResourceInfo.stream_name(Post)
+      stream_name = ResourceInfo.table_stream_name(Post)
       assert is_atom(stream_name)
     end
 

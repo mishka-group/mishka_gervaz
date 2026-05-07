@@ -17,13 +17,13 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
 
   describe "column definitions" do
     test "returns all columns for a resource" do
-      columns = ResourceInfo.columns(Post)
+      columns = ResourceInfo.table_columns(Post)
       assert is_list(columns)
       assert length(columns) > 0
     end
 
     test "each column is a Column struct" do
-      columns = ResourceInfo.columns(Post)
+      columns = ResourceInfo.table_columns(Post)
 
       Enum.each(columns, fn column ->
         assert is_struct(column, MishkaGervaz.Table.Entities.Column)
@@ -31,7 +31,7 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "column names are atoms" do
-      columns = ResourceInfo.columns(Post)
+      columns = ResourceInfo.table_columns(Post)
       column_names = Enum.map(columns, & &1.name)
       assert :title in column_names
       assert :status in column_names
@@ -41,59 +41,59 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "retrieves specific column by name" do
-      column = ResourceInfo.column(Post, :title)
+      column = ResourceInfo.table_column(Post, :title)
       assert column.name == :title
     end
 
     test "returns nil for non-existent column" do
-      column = ResourceInfo.column(Post, :non_existent)
+      column = ResourceInfo.table_column(Post, :non_existent)
       assert column == nil
     end
   end
 
   describe "column properties" do
     test "sortable attribute is correctly set" do
-      title_col = ResourceInfo.column(Post, :title)
+      title_col = ResourceInfo.table_column(Post, :title)
       assert title_col.sortable == true
 
-      user_col = ResourceInfo.column(Post, :user)
+      user_col = ResourceInfo.table_column(Post, :user)
       assert user_col.sortable == false
     end
 
     test "searchable attribute is correctly set" do
-      title_col = ResourceInfo.column(Post, :title)
+      title_col = ResourceInfo.table_column(Post, :title)
       assert title_col.searchable == true
 
-      status_col = ResourceInfo.column(Post, :status)
+      status_col = ResourceInfo.table_column(Post, :status)
       assert status_col.searchable != true
     end
 
     test "source attribute for relationship columns" do
-      user_col = ResourceInfo.column(Post, :user)
+      user_col = ResourceInfo.table_column(Post, :user)
       assert user_col.source == [:user, :name]
     end
 
     test "ui configuration is captured" do
-      title_col = ResourceInfo.column(Post, :title)
+      title_col = ResourceInfo.table_column(Post, :title)
       assert title_col.ui.label == "Title"
       assert title_col.ui.class == "font-semibold"
     end
 
     test "ui type is correctly set" do
-      status_col = ResourceInfo.column(Post, :status)
+      status_col = ResourceInfo.table_column(Post, :status)
       assert status_col.ui.type == :badge
 
-      view_count_col = ResourceInfo.column(Post, :view_count)
+      view_count_col = ResourceInfo.table_column(Post, :view_count)
       assert view_count_col.ui.type == :number
 
-      inserted_at_col = ResourceInfo.column(Post, :inserted_at)
+      inserted_at_col = ResourceInfo.table_column(Post, :inserted_at)
       assert inserted_at_col.ui.type == :datetime
     end
   end
 
   describe "column_order" do
     test "returns ordered column names" do
-      column_order = ResourceInfo.column_order(Post)
+      column_order = ResourceInfo.table_column_order(Post)
 
       assert column_order == [
                :title,
@@ -106,8 +106,8 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "column_order matches defined columns" do
-      column_order = ResourceInfo.column_order(Post)
-      columns = ResourceInfo.columns(Post)
+      column_order = ResourceInfo.table_column_order(Post)
+      columns = ResourceInfo.table_columns(Post)
       column_names = Enum.map(columns, & &1.name)
 
       # All columns in column_order should exist
@@ -127,30 +127,30 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
 
   describe "format option" do
     test "format function (1-arity) is correctly set" do
-      col = ResourceInfo.column(Post, :inserted_at)
+      col = ResourceInfo.table_column(Post, :inserted_at)
       assert is_function(col.format, 1)
     end
 
     test "format function (3-arity) is correctly set" do
-      col = ResourceInfo.column(Post, :view_count_formatted)
+      col = ResourceInfo.table_column(Post, :view_count_formatted)
       assert is_function(col.format, 3)
     end
 
     test "format 1-arity transforms value" do
-      col = ResourceInfo.column(Post, :inserted_at)
+      col = ResourceInfo.table_column(Post, :inserted_at)
       datetime = ~U[2026-01-01 21:32:44Z]
       result = col.format.(datetime)
       assert result == "2026/01/01 21:32"
     end
 
     test "format 3-arity transforms value with state and record" do
-      col = ResourceInfo.column(Post, :view_count_formatted)
+      col = ResourceInfo.table_column(Post, :view_count_formatted)
       result = col.format.(nil, %{id: 1}, 42)
       assert result == "42 views"
     end
 
     test "column without format has nil format field" do
-      col = ResourceInfo.column(Post, :title)
+      col = ResourceInfo.table_column(Post, :title)
       assert Map.get(col, :format) == nil
     end
 
@@ -190,7 +190,7 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
 
   describe "User resource columns" do
     test "has expected columns" do
-      columns = ResourceInfo.columns(User)
+      columns = ResourceInfo.table_columns(User)
       column_names = Enum.map(columns, & &1.name)
       assert :name in column_names
       assert :email in column_names
@@ -200,27 +200,27 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "name column is searchable" do
-      col = ResourceInfo.column(User, :name)
+      col = ResourceInfo.table_column(User, :name)
       assert col.searchable == true
     end
 
     test "email column is searchable" do
-      col = ResourceInfo.column(User, :email)
+      col = ResourceInfo.table_column(User, :email)
       assert col.searchable == true
     end
 
     test "active column has boolean type" do
-      col = ResourceInfo.column(User, :active)
+      col = ResourceInfo.table_column(User, :active)
       assert col.ui.type == :boolean
     end
   end
 
   describe "Comment resource columns" do
     test "has relationship columns with source paths" do
-      user_col = ResourceInfo.column(Comment, :user)
+      user_col = ResourceInfo.table_column(Comment, :user)
       assert user_col.source == [:user, :name]
 
-      post_col = ResourceInfo.column(Comment, :post)
+      post_col = ResourceInfo.table_column(Comment, :post)
       assert post_col.source == [:post, :title]
     end
   end
@@ -233,7 +233,7 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "auto_columns respects except list" do
-      columns = ResourceInfo.columns(AutoColumnsResource)
+      columns = ResourceInfo.table_columns(AutoColumnsResource)
       column_names = Enum.map(columns, & &1.name)
 
       # If columns exist, check that excluded fields are not present
@@ -244,7 +244,7 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "auto_columns creates column structs when present" do
-      columns = ResourceInfo.columns(AutoColumnsResource)
+      columns = ResourceInfo.table_columns(AutoColumnsResource)
 
       Enum.each(columns, fn column ->
         assert is_struct(column, MishkaGervaz.Table.Entities.Column)
@@ -252,7 +252,7 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
     end
 
     test "auto_columns override passes format option" do
-      col = ResourceInfo.column(AutoColumnsResource, :inserted_at)
+      col = ResourceInfo.table_column(AutoColumnsResource, :inserted_at)
       assert is_function(col.format, 1)
       datetime = ~U[2026-01-01 21:32:44Z]
       result = col.format.(datetime)
@@ -262,109 +262,109 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
 
   describe "all Column entity keys (ComplexTestResource)" do
     test "name key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.name == :title
     end
 
     test "source key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.source == :title
     end
 
     test "sortable key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.sortable == true
     end
 
     test "searchable key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.searchable == true
     end
 
     test "filterable key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.filterable == false
     end
 
     test "visible key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.visible == true
     end
 
     test "position key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.position == :first
     end
 
     test "export key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.export == true
     end
 
     test "export_as key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.export_as == :post_title
     end
 
     test "default key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.default == "Untitled"
     end
 
     test "separator key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.separator == " - "
     end
 
     test "label key at column level is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.label == "Post Title"
     end
   end
 
   describe "all Column.Ui keys (ComplexTestResource)" do
     test "ui label key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.label == "Title"
     end
 
     test "ui type key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.type == :text
     end
 
     test "ui width key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.width == "250px"
     end
 
     test "ui min_width key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.min_width == "150px"
     end
 
     test "ui max_width key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.max_width == "400px"
     end
 
     test "ui align key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.align == :left
     end
 
     test "ui class key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.class == "font-semibold"
     end
 
     test "ui header_class key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.header_class == "text-primary"
     end
 
     test "ui extra key is configured" do
-      col = ResourceInfo.column(ComplexTestResource, :title)
+      col = ResourceInfo.table_column(ComplexTestResource, :title)
       assert col.ui.extra == %{truncate: 50}
     end
   end

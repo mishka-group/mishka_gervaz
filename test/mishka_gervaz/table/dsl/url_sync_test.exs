@@ -10,17 +10,17 @@ defmodule MishkaGervaz.DSL.UrlSyncTest do
 
   describe "url_sync configuration" do
     test "url_sync config is present" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert config != nil
     end
 
     test "url_sync enabled key is configured" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert config.enabled == true
     end
 
     test "url_sync params key is configured" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert is_list(config.params)
       assert :page in config.params
       assert :sort in config.params
@@ -29,17 +29,17 @@ defmodule MishkaGervaz.DSL.UrlSyncTest do
     end
 
     test "url_sync mode key is configured to bidirectional" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert config.mode == :bidirectional
     end
 
     test "url_sync prefix key is nil when not specified" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert Map.get(config, :prefix) == nil
     end
 
     test "url_sync max_filter_length key uses default 500 when not specified" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert config.max_filter_length == 500
     end
   end

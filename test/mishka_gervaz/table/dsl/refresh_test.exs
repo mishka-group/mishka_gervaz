@@ -11,32 +11,32 @@ defmodule MishkaGervaz.DSL.RefreshTest do
 
   describe "refresh configuration" do
     test "refresh config is present" do
-      config = ResourceInfo.refresh_config(Post)
+      config = ResourceInfo.table_refresh(Post)
       assert config != nil
     end
 
     test "refresh enabled key is configured" do
-      config = ResourceInfo.refresh_config(Post)
+      config = ResourceInfo.table_refresh(Post)
       assert config.enabled == false
     end
 
     test "refresh interval key is configured" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.interval == 30_000
     end
 
     test "refresh pause_on_interaction key is configured" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.pause_on_interaction == true
     end
 
     test "refresh show_indicator key is configured" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.show_indicator == true
     end
 
     test "refresh pause_on_blur key is configured" do
-      config = ResourceInfo.refresh_config(ComplexTestResource)
+      config = ResourceInfo.table_refresh(ComplexTestResource)
       assert config.pause_on_blur == true
     end
   end

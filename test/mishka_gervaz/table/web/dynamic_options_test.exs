@@ -15,18 +15,18 @@ defmodule MishkaGervaz.Table.Web.DynamicOptionsTest do
 
   describe "DSL acceptance of function options" do
     test "filter with function options stores a function in DSL config" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :language)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :language)
       assert is_function(filter.options, 0)
     end
 
     test "filter with static list options stores a list in DSL config" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :category)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :category)
       assert is_list(filter.options)
       assert length(filter.options) == 2
     end
 
     test "calling the function options returns the expected list" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :language)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :language)
       result = filter.options.()
       assert result == [{"English", "en"}, {"Persian", "fa"}, {"Arabic", "ar"}]
     end
@@ -72,7 +72,7 @@ defmodule MishkaGervaz.Table.Web.DynamicOptionsTest do
 
   describe "auto-detect options from attribute one_of constraint" do
     test "raw DSL entity has nil options for auto-detected filter" do
-      filter = ResourceInfo.filter(DynamicOptionsResource, :priority)
+      filter = ResourceInfo.table_filter(DynamicOptionsResource, :priority)
       assert filter.options == nil
     end
 
@@ -157,9 +157,9 @@ defmodule MishkaGervaz.Table.Web.DynamicOptionsTest do
     end
 
     test "all three are select type" do
-      category = ResourceInfo.filter(DynamicOptionsResource, :category)
-      language = ResourceInfo.filter(DynamicOptionsResource, :language)
-      priority = ResourceInfo.filter(DynamicOptionsResource, :priority)
+      category = ResourceInfo.table_filter(DynamicOptionsResource, :category)
+      language = ResourceInfo.table_filter(DynamicOptionsResource, :language)
+      priority = ResourceInfo.table_filter(DynamicOptionsResource, :priority)
 
       assert category.type == :select
       assert language.type == :select

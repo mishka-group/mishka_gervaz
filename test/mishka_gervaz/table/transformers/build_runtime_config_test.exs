@@ -95,7 +95,7 @@ defmodule MishkaGervaz.Transformers.BuildRuntimeConfigTest do
     end
 
     test "hooks are a map" do
-      hooks = ResourceInfo.hooks(Post)
+      hooks = ResourceInfo.table_hooks(Post)
       assert is_map(hooks)
     end
   end
@@ -130,7 +130,7 @@ defmodule MishkaGervaz.Transformers.BuildRuntimeConfigTest do
     end
 
     test "url_sync config is built correctly" do
-      config = ResourceInfo.url_sync_config(Post)
+      config = ResourceInfo.table_url_sync(Post)
       assert is_map(config)
       assert Map.has_key?(config, :enabled)
       assert Map.has_key?(config, :params)
@@ -144,7 +144,7 @@ defmodule MishkaGervaz.Transformers.BuildRuntimeConfigTest do
     end
 
     test "refresh config is built correctly" do
-      config = ResourceInfo.refresh_config(Post)
+      config = ResourceInfo.table_refresh(Post)
       assert is_map(config)
     end
   end
@@ -156,12 +156,12 @@ defmodule MishkaGervaz.Transformers.BuildRuntimeConfigTest do
     end
 
     test "filters contain list of filter definitions" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
       assert is_list(filters)
     end
 
     test "filter has required fields" do
-      filters = ResourceInfo.filters(Post)
+      filters = ResourceInfo.table_filters(Post)
 
       if filters && length(filters) > 0 do
         filter = List.first(filters)
