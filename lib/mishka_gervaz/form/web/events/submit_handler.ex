@@ -310,7 +310,6 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         {socket, Map.put(params, param_key, uploaded_files)}
       end
 
-
       defoverridable submit: 3, transform_params: 2, after_save: 3, consume_and_merge_uploads: 3
     end
   end

@@ -11,19 +11,19 @@ defmodule MishkaGervaz.DSL.DomainTest do
 
   describe "domain configuration" do
     test "domain config is present" do
-      config = DomainInfo.domain_config(Domain)
+      config = DomainInfo.table_config(Domain)
       assert config != nil
     end
 
     test "defaults are configured" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
       assert is_map(defaults)
     end
   end
 
   describe "domain defaults" do
     test "default pagination is configured" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
       assert pagination != nil
       assert pagination.page_size == 20
       # Check that type is one of the valid pagination types
@@ -31,25 +31,25 @@ defmodule MishkaGervaz.DSL.DomainTest do
     end
 
     test "default ui_adapter is configured" do
-      adapter = DomainInfo.default_ui_adapter(Domain)
+      adapter = DomainInfo.table_ui_adapter(Domain)
       assert adapter == MishkaGervaz.UIAdapters.Tailwind
     end
   end
 
   describe "domain defaults inheritance" do
     test "domain pagination type is :numbered" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
       assert pagination.type == :numbered
     end
 
     test "domain pagination page_size is 20" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
       assert pagination.page_size == 20
     end
 
     test "resource without pagination uses domain pagination type" do
       config = ResourceInfo.table_config(MinimalResource)
-      domain_pagination = DomainInfo.default_pagination(Domain)
+      domain_pagination = DomainInfo.table_pagination(Domain)
 
       assert config.pagination.type == domain_pagination.type
       assert config.pagination.type == :numbered
@@ -57,14 +57,14 @@ defmodule MishkaGervaz.DSL.DomainTest do
 
     test "resource without pagination uses domain pagination page_size" do
       config = ResourceInfo.table_config(MinimalResource)
-      domain_pagination = DomainInfo.default_pagination(Domain)
+      domain_pagination = DomainInfo.table_pagination(Domain)
 
       assert config.pagination.page_size == domain_pagination.page_size
     end
 
     test "resource with explicit pagination overrides domain defaults" do
       config = ResourceInfo.table_config(Post)
-      domain_pagination = DomainInfo.default_pagination(Domain)
+      domain_pagination = DomainInfo.table_pagination(Domain)
 
       # Post has type: :infinite, domain has type: :numbered
       assert config.pagination.type == :infinite
@@ -78,18 +78,18 @@ defmodule MishkaGervaz.DSL.DomainTest do
 
   describe "navigation" do
     test "navigation config is present" do
-      navigation = DomainInfo.navigation(Domain)
+      navigation = DomainInfo.table_navigation(Domain)
       assert is_map(navigation)
     end
 
     test "menu_groups are configured" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
       assert is_list(groups)
       assert length(groups) >= 1
     end
 
     test "content menu group exists" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
       content_group = Enum.find(groups, &(&1.name == :content))
       assert content_group != nil
       assert content_group.label == "Content"
@@ -97,7 +97,7 @@ defmodule MishkaGervaz.DSL.DomainTest do
     end
 
     test "users menu group exists" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
       users_group = Enum.find(groups, &(&1.name == :users))
       assert users_group != nil
       assert users_group.label == "Users"

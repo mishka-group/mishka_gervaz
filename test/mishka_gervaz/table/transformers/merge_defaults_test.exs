@@ -11,7 +11,7 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
 
   describe "domain defaults inheritance" do
     test "resources inherit ui_adapter from domain" do
-      domain_adapter = DomainInfo.default_ui_adapter(Domain)
+      domain_adapter = DomainInfo.table_ui_adapter(Domain)
       config = ResourceInfo.table_config(User)
 
       assert config.presentation.ui_adapter == domain_adapter
@@ -81,7 +81,7 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
   describe "pagination defaults" do
     test "pagination inherits from domain" do
       config = ResourceInfo.table_config(User)
-      domain_pagination = DomainInfo.default_pagination(Domain)
+      domain_pagination = DomainInfo.table_pagination(Domain)
 
       assert config.pagination.page_size == domain_pagination.page_size
     end

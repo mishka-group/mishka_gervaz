@@ -29,7 +29,8 @@ defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
 
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
-      import MishkaGervaz.Helpers, only: [humanize: 1, get_ui_label: 1, get_resource_attributes: 1]
+      import MishkaGervaz.Helpers,
+        only: [humanize: 1, get_ui_label: 1, get_resource_attributes: 1]
 
       @doc """
       Builds fields from config and resource.

@@ -9,19 +9,19 @@ defmodule MishkaGervaz.Verifiers.ValidateDomainDefaultsTest do
   describe "domain defaults validation" do
     test "valid domain config compiles successfully" do
       # Test.Domain has valid ui_adapter
-      config = DomainInfo.domain_config(MishkaGervaz.Test.Domain)
+      config = DomainInfo.table_config(MishkaGervaz.Test.Domain)
 
       assert config.table.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
       assert config.table.pagination.page_size == 20
     end
 
     test "valid ui_adapter is configured correctly" do
-      ui_adapter = DomainInfo.default_ui_adapter(MishkaGervaz.Test.Domain)
+      ui_adapter = DomainInfo.table_ui_adapter(MishkaGervaz.Test.Domain)
       assert ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "valid pagination page_size is configured correctly" do
-      pagination = DomainInfo.default_pagination(MishkaGervaz.Test.Domain)
+      pagination = DomainInfo.table_pagination(MishkaGervaz.Test.Domain)
       assert pagination.page_size == 20
     end
 
@@ -153,7 +153,7 @@ defmodule MishkaGervaz.Verifiers.ValidateDomainDefaultsTest do
     end
 
     test "navigation menu_groups are configured correctly" do
-      menu_groups = DomainInfo.menu_groups(MishkaGervaz.Test.Domain)
+      menu_groups = DomainInfo.table_menu_groups(MishkaGervaz.Test.Domain)
 
       assert length(menu_groups) == 2
 

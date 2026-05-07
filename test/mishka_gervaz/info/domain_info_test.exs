@@ -9,14 +9,14 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "domain_config/1" do
     test "returns full config with all expected top-level keys" do
-      config = DomainInfo.domain_config(Domain)
+      config = DomainInfo.table_config(Domain)
 
       assert Map.has_key?(config, :table)
       assert Map.has_key?(config, :navigation)
     end
 
     test "config table section has expected structure" do
-      config = DomainInfo.domain_config(Domain)
+      config = DomainInfo.table_config(Domain)
 
       # Defined sections
       assert Map.has_key?(config.table, :pagination)
@@ -35,13 +35,13 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "config navigation section has expected menu groups" do
-      config = DomainInfo.domain_config(Domain)
+      config = DomainInfo.table_config(Domain)
 
       assert length(config.navigation.menu_groups) == 2
     end
 
     test "config table section persists the domain archive defaults" do
-      config = DomainInfo.domain_config(Domain)
+      config = DomainInfo.table_config(Domain)
 
       assert is_map(config.table.archive)
       assert config.table.archive.read_action == {:master_archived, :archived}
@@ -55,7 +55,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "defaults/1" do
     test "returns defaults with pagination map" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert is_map(defaults.pagination)
       assert Map.has_key?(defaults.pagination, :page_size)
@@ -63,37 +63,37 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "returns defaults with exact ui_adapter" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert defaults.ui_adapter == MishkaGervaz.UIAdapters.Tailwind
     end
 
     test "returns defaults with actor_key" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert defaults.actor_key == :current_user
     end
 
     test "returns nil for realtime when not defined in domain" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert defaults.realtime == nil
     end
 
     test "returns nil for theme when not defined in domain" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert defaults.theme == nil
     end
 
     test "returns nil for refresh when not defined in domain" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert defaults.refresh == nil
     end
 
     test "returns nil for url_sync when not defined in domain" do
-      defaults = DomainInfo.defaults(Domain)
+      defaults = DomainInfo.table_defaults(Domain)
 
       assert defaults.url_sync == nil
     end
@@ -101,13 +101,13 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "navigation/1" do
     test "returns navigation with exact menu_groups count" do
-      nav = DomainInfo.navigation(Domain)
+      nav = DomainInfo.table_navigation(Domain)
 
       assert length(nav.menu_groups) == 2
     end
 
     test "navigation contains content menu group with correct properties" do
-      nav = DomainInfo.navigation(Domain)
+      nav = DomainInfo.table_navigation(Domain)
       content_group = Enum.find(nav.menu_groups, &(&1.name == :content))
 
       assert content_group != nil
@@ -117,7 +117,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "navigation contains users menu group with correct properties" do
-      nav = DomainInfo.navigation(Domain)
+      nav = DomainInfo.table_navigation(Domain)
       users_group = Enum.find(nav.menu_groups, &(&1.name == :users))
 
       assert users_group != nil
@@ -129,13 +129,13 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "menu_groups/1" do
     test "returns exactly 2 menu groups" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
 
       assert length(groups) == 2
     end
 
     test "content menu group has all expected keys" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
       content_group = Enum.find(groups, &(&1.name == :content))
 
       assert content_group.name == :content
@@ -147,7 +147,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "users menu group has all expected keys" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
       users_group = Enum.find(groups, &(&1.name == :users))
 
       assert users_group.name == :users
@@ -156,7 +156,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "menu groups are returned in order" do
-      groups = DomainInfo.menu_groups(Domain)
+      groups = DomainInfo.table_menu_groups(Domain)
       group_names = Enum.map(groups, & &1.name)
 
       assert group_names == [:content, :users]
@@ -165,7 +165,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_ui_adapter/1" do
     test "returns exact Tailwind adapter module" do
-      adapter = DomainInfo.default_ui_adapter(Domain)
+      adapter = DomainInfo.table_ui_adapter(Domain)
 
       assert adapter == MishkaGervaz.UIAdapters.Tailwind
     end
@@ -173,7 +173,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_pagination/1" do
     test "returns pagination map with expected keys" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
 
       assert Map.has_key?(pagination, :page_size)
       assert Map.has_key?(pagination, :type)
@@ -181,20 +181,20 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "pagination page_size is 20" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
 
       assert pagination.page_size == 20
     end
 
     test "pagination type is numbered (set in domain)" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
 
       # Domain sets type: :numbered
       assert pagination.type == :numbered
     end
 
     test "pagination page_size_options defaults to nil" do
-      pagination = DomainInfo.default_pagination(Domain)
+      pagination = DomainInfo.table_pagination(Domain)
 
       assert pagination.page_size_options == nil
     end
@@ -202,7 +202,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_realtime/1" do
     test "returns nil when realtime not defined in domain" do
-      realtime = DomainInfo.default_realtime(Domain)
+      realtime = DomainInfo.table_realtime(Domain)
 
       assert realtime == nil
     end
@@ -210,7 +210,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_theme/1" do
     test "returns nil when theme not defined in domain" do
-      theme = DomainInfo.default_theme(Domain)
+      theme = DomainInfo.table_theme(Domain)
 
       assert theme == nil
     end
@@ -218,7 +218,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_refresh/1" do
     test "returns nil when refresh not defined in domain" do
-      refresh = DomainInfo.default_refresh(Domain)
+      refresh = DomainInfo.table_refresh(Domain)
 
       assert refresh == nil
     end
@@ -226,7 +226,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_url_sync/1" do
     test "returns nil when url_sync not defined in domain" do
-      url_sync = DomainInfo.default_url_sync(Domain)
+      url_sync = DomainInfo.table_url_sync(Domain)
 
       assert url_sync == nil
     end
@@ -234,7 +234,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_page_size/1" do
     test "returns page_size from domain pagination" do
-      page_size = DomainInfo.default_page_size(Domain)
+      page_size = DomainInfo.table_page_size(Domain)
 
       assert page_size == 20
     end
@@ -242,7 +242,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_page_size_options/1" do
     test "returns nil when page_size_options not set in domain" do
-      options = DomainInfo.default_page_size_options(Domain)
+      options = DomainInfo.table_page_size_options(Domain)
 
       assert options == nil
     end
@@ -250,7 +250,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "default_max_page_size/1" do
     test "returns default 150 from pagination defaults when not explicitly set" do
-      max = DomainInfo.default_max_page_size(Domain)
+      max = DomainInfo.table_max_page_size(Domain)
 
       assert max == 150
     end
