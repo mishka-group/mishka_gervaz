@@ -64,11 +64,8 @@ defmodule MishkaGervaz.Table.Web.State.Access do
 
         - `true` if user is a master user, `false` otherwise
       """
-      @spec master_user?(map()) :: boolean()
-      def master_user?(%{site_id: nil}), do: true
-
-      @spec master_user?(term()) :: boolean()
-      def master_user?(_), do: false
+      @spec master_user?(map() | nil) :: boolean()
+      def master_user?(user), do: MishkaGervaz.Helpers.master_user?(user)
 
       @doc """
       Checks if user can modify a record based on tenant permissions.

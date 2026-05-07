@@ -276,7 +276,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
   @doc false
   @spec get_tenant(map()) :: any()
   def get_tenant(%{master_user?: true}), do: nil
-  def get_tenant(%{current_user: user}), do: Map.get(user, :site_id)
+  def get_tenant(%{current_user: user}), do: MishkaGervaz.Helpers.user_tenant(user)
   def get_tenant(_), do: nil
 
   defmacro __using__(_opts) do

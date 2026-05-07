@@ -779,6 +779,25 @@ defmodule MishkaGervaz.Helpers do
   end
 
   @doc """
+  Returns `true` when the user has no tenant — i.e. is a master user.
+
+  Canonical default for `master_user?/1` across the framework. The tenant
+  attribute is currently `:site_id`.
+  """
+  @spec master_user?(map() | struct() | nil) :: boolean()
+  def master_user?(%{site_id: nil}), do: true
+  def master_user?(_), do: false
+
+  @doc """
+  Extracts the tenant value from a user map/struct (currently `:site_id`).
+
+  Returns `nil` for nil users or users without the tenant attribute.
+  """
+  @spec user_tenant(map() | struct() | nil) :: any()
+  def user_tenant(%{site_id: site_id}), do: site_id
+  def user_tenant(_), do: nil
+
+  @doc """
   Merges form-state relation field values into a params map.
 
   For each relation field with a value in `state.field_values`, places the

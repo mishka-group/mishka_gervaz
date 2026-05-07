@@ -136,7 +136,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
 
   defp resolve_default_master_check(config) do
     update_in(config, [:source, :master_check], fn _ ->
-      fn user -> MishkaGervaz.Defaults.default_master_check(user) end
+      fn user -> MishkaGervaz.Helpers.master_user?(user) end
     end)
   end
 

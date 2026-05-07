@@ -458,7 +458,7 @@ defmodule MishkaGervaz.Table.Web.Live do
 
   @spec pubsub_topics_for_resource(String.t(), map() | nil) :: list(String.t())
   defp pubsub_topics_for_resource(prefix, current_user) do
-    site_id = if current_user, do: Map.get(current_user, :site_id), else: nil
+    site_id = MishkaGervaz.Helpers.user_tenant(current_user)
 
     case site_id do
       nil ->

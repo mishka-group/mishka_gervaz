@@ -34,10 +34,9 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaultsTest do
           :mishka_gervaz_form_default_master_check
         )
 
-      # The default MFA is persisted as a tuple
       assert is_tuple(persisted)
-      assert elem(persisted, 0) == MishkaGervaz.Defaults
-      assert elem(persisted, 1) == :default_master_check
+      assert elem(persisted, 0) == MishkaGervaz.Helpers
+      assert elem(persisted, 1) == :master_user?
     end
 
     test "resolved master_check is a function on NoMasterCheckForm" do
