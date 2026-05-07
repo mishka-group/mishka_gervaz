@@ -28,6 +28,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
       end
   """
 
+  require Ash.Query
+
   @type load_result :: %{
           options: list({String.t(), any()}),
           page: pos_integer(),
@@ -48,10 +50,294 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
   @callback load_with_selected(filter(), state(), list(), keyword()) ::
               {:ok, load_result()} | {:error, term()}
 
+  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
+
+  @doc false
+  @spec get_nil_option(map()) :: list({String.t(), String.t()})
+  def get_nil_option(%{include_nil: label}) when is_binary(label), do: [{label, "__nil__"}]
+  def get_nil_option(%{include_nil: true}), do: [{"(None)", "__nil__"}]
+  def get_nil_option(_), do: []
+
+  @doc false
+  @spec load_all_options(map(), map(), module(), atom() | (struct() -> String.t())) ::
+          {:ok, map()} | {:error, term()}
+  def load_all_options(filter, state, resource, display_field) do
+    action = resolve_load_action(filter, state, resource)
+    actor = state.current_user
+    tenant = get_tenant(state)
+
+    query =
+      resource
+      |> Ash.Query.new()
+      |> maybe_apply_custom_load(filter, state)
+
+    opts = [action: action, actor: actor, authorize?: false, page: false]
+    opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
+
+    case Ash.read(query, opts) do
+      {:ok, records} ->
+        options = build_options(records, display_field, filter[:include_nil], state)
+        {:ok, %{options: options, page: 1, has_more?: false, total_count: length(records)}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc false
+  @spec load_paginated_options(
+          map(),
+          map(),
+          module(),
+          atom() | (struct() -> String.t()),
+          pos_integer(),
+          tuple() | nil
+        ) :: {:ok, map()} | {:error, term()}
+  def load_paginated_options(filter, state, resource, display_field, page, search) do
+    actor = state.current_user
+    tenant = get_tenant(state)
+    page_size = filter[:page_size] || 20
+
+    action = resolve_load_action(filter, state, resource)
+
+    query =
+      resource
+      |> Ash.Query.new()
+      |> maybe_apply_search(search)
+      |> maybe_apply_custom_load(filter, state)
+
+    page_opts = [limit: page_size + 1, offset: (page - 1) * page_size]
+
+    opts = [action: action, actor: actor, authorize?: false, page: page_opts]
+    opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
+
+    case Ash.read(query, opts) do
+      {:ok, %{results: records} = page_result} ->
+        has_more? = length(records) > page_size
+        actual_records = if has_more?, do: Enum.take(records, page_size), else: records
+        include_nil = if page == 1, do: filter[:include_nil], else: false
+        options = build_options(actual_records, display_field, include_nil, state)
+
+        {:ok,
+         %{
+           options: options,
+           page: page,
+           has_more?: has_more?,
+           total_count: Map.get(page_result, :count)
+         }}
+
+      {:ok, records} when is_list(records) ->
+        has_more? = length(records) > page_size
+        actual_records = if has_more?, do: Enum.take(records, page_size), else: records
+        include_nil = if page == 1, do: filter[:include_nil], else: false
+        options = build_options(actual_records, display_field, include_nil, state)
+
+        {:ok, %{options: options, page: page, has_more?: has_more?, total_count: nil}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc false
+  @spec maybe_apply_search(Ash.Query.t(), tuple() | nil) :: Ash.Query.t()
+  def maybe_apply_search(query, nil), do: query
+
+  def maybe_apply_search(query, {field, term}) when is_binary(term) and term != "" do
+    Ash.Query.filter(query, contains(^Ash.Expr.ref(field), ^term))
+  end
+
+  def maybe_apply_search(query, _), do: query
+
+  @doc false
+  @spec maybe_apply_custom_load(Ash.Query.t(), map(), map()) :: Ash.Query.t()
+  def maybe_apply_custom_load(query, %{load: load_fn} = filter, state)
+      when is_function(load_fn, 2) do
+    query
+    |> load_fn.(state)
+    |> maybe_apply_preloads(filter, state)
+  end
+
+  def maybe_apply_custom_load(query, filter, state) do
+    maybe_apply_preloads(query, filter, state)
+  end
+
+  @doc false
+  @spec maybe_apply_preloads(Ash.Query.t(), map(), map()) :: Ash.Query.t()
+  def maybe_apply_preloads(query, %{preload: preload}, state) when is_struct(preload) do
+    preloads = build_preloads(preload, state)
+    if preloads == [], do: query, else: Ash.Query.load(query, preloads)
+  end
+
+  def maybe_apply_preloads(query, %{preload: [preload_struct | _]}, state)
+      when is_struct(preload_struct) do
+    preloads = build_preloads(preload_struct, state)
+    if preloads == [], do: query, else: Ash.Query.load(query, preloads)
+  end
+
+  def maybe_apply_preloads(query, _, _), do: query
+
+  @doc false
+  @spec build_preloads(struct(), map()) :: list()
+  def build_preloads(preload, state) do
+    always = preload.always || []
+    user_specific = if state.master_user?, do: preload.master, else: preload.tenant
+    user_specific = user_specific || []
+
+    (always ++ user_specific)
+    |> List.flatten()
+    |> Enum.uniq()
+  end
+
+  @doc false
+  @spec build_preloads_list(map(), map()) :: list()
+  def build_preloads_list(%{preload: preload}, state) when is_struct(preload) do
+    build_preloads(preload, state)
+  end
+
+  def build_preloads_list(%{preload: [preload_struct | _]}, state)
+      when is_struct(preload_struct) do
+    build_preloads(preload_struct, state)
+  end
+
+  def build_preloads_list(_, _), do: []
+
+  @doc false
+  @spec build_options(
+          list(struct()),
+          atom() | (struct() -> String.t()) | (struct(), map() -> String.t()),
+          boolean() | String.t() | nil,
+          map()
+        ) :: list({String.t(), String.t()})
+  def build_options(records, display_field, include_nil, state) do
+    base_options =
+      Enum.map(records, fn record ->
+        label = get_display_value(record, display_field, state)
+        {label, to_string(record.id)}
+      end)
+
+    prepend_nil_option(base_options, include_nil)
+  end
+
+  @doc false
+  @spec prepend_nil_option(list(), boolean() | String.t() | nil) :: list()
+  def prepend_nil_option(options, nil), do: options
+  def prepend_nil_option(options, false), do: options
+  def prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
+
+  def prepend_nil_option(options, label) when is_binary(label) do
+    [{label, "__nil__"} | options]
+  end
+
+  @doc false
+  @spec get_display_value(
+          struct(),
+          atom() | (struct() -> String.t()) | (struct(), map() -> String.t()),
+          map()
+        ) ::
+          String.t()
+  def get_display_value(record, display_field, state) do
+    MishkaGervaz.Helpers.resolve_label(record, display_field, state)
+  end
+
+  @doc false
+  @spec resolve_resource(map(), map()) :: module()
+  def resolve_resource(%{resource: resource}, _state) when not is_nil(resource), do: resource
+
+  def resolve_resource(%{name: name, source: source}, %{static: %{resource: table_resource}}) do
+    field_name = source || name
+    relationships = Ash.Resource.Info.relationships(table_resource)
+
+    case Enum.find(relationships, &(&1.source_attribute == field_name)) do
+      %{destination: dest} -> dest
+      nil -> raise "Cannot resolve resource for filter #{name}"
+    end
+  end
+
+  @doc false
+  @spec resolve_display_field(map(), module()) ::
+          atom() | (struct() -> String.t()) | (struct(), map() -> String.t())
+  def resolve_display_field(%{display_field: field}, _resource)
+      when is_function(field, 1) or is_function(field, 2) or
+             (is_atom(field) and not is_nil(field)) do
+    field
+  end
+
+  def resolve_display_field(_filter, resource) do
+    attrs = Ash.Resource.Info.attributes(resource)
+
+    Enum.find_value([:name, :title, :label], :id, fn field ->
+      if Enum.any?(attrs, &(&1.name == field)), do: field
+    end)
+  end
+
+  @doc false
+  @spec get_tenant(map()) :: any()
+  def get_tenant(%{master_user?: true}), do: nil
+  def get_tenant(%{current_user: user}), do: Map.get(user, :site_id)
+  def get_tenant(_), do: nil
+
+  @doc false
+  @spec resolve_load_action(map(), map(), module()) :: atom()
+  def resolve_load_action(
+        %{load_action: {master_action, _tenant_action}},
+        %{master_user?: true},
+        _resource
+      ) do
+    master_action
+  end
+
+  def resolve_load_action(%{load_action: {_master_action, tenant_action}}, _state, _resource) do
+    tenant_action
+  end
+
+  def resolve_load_action(%{load_action: :read}, %{master_user?: true}, resource) do
+    actions = Ash.Resource.Info.actions(resource)
+
+    cond do
+      Enum.any?(actions, &(&1.name == :master_read)) -> :master_read
+      Enum.any?(actions, &(&1.name == :read_any)) -> :read_any
+      true -> :read
+    end
+  end
+
+  def resolve_load_action(%{load_action: action}, _state, _resource)
+      when is_atom(action) and not is_nil(action) do
+    action
+  end
+
+  def resolve_load_action(_filter, %{master_user?: true}, resource) do
+    actions = Ash.Resource.Info.actions(resource)
+
+    cond do
+      Enum.any?(actions, &(&1.name == :master_read)) -> :master_read
+      Enum.any?(actions, &(&1.name == :read_any)) -> :read_any
+      true -> :read
+    end
+  end
+
+  def resolve_load_action(_filter, _state, _resource) do
+    :read
+  end
+
   defmacro __using__(_opts) do
     quote do
       @behaviour MishkaGervaz.Table.Web.DataLoader.RelationLoader
       require Ash.Query
+
+      import MishkaGervaz.Table.Web.DataLoader.RelationLoader,
+        only: [
+          get_nil_option: 1,
+          load_all_options: 4,
+          load_paginated_options: 6,
+          maybe_apply_custom_load: 3,
+          build_preloads_list: 2,
+          get_display_value: 3,
+          resolve_resource: 2,
+          resolve_display_field: 2,
+          get_tenant: 1,
+          resolve_load_action: 3
+        ]
 
       @impl true
       @spec load_options(map(), map(), keyword()) :: {:ok, map()} | {:error, term()}
@@ -191,259 +477,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
 
           {:ok, %{result | options: merged_options}}
         end
-      end
-
-      @spec get_nil_option(map()) :: list({String.t(), String.t()})
-      defp get_nil_option(%{include_nil: label}) when is_binary(label), do: [{label, "__nil__"}]
-      defp get_nil_option(%{include_nil: true}), do: [{"(None)", "__nil__"}]
-      defp get_nil_option(_), do: []
-
-      @spec load_all_options(map(), map(), module(), atom() | (struct() -> String.t())) ::
-              {:ok, map()} | {:error, term()}
-      defp load_all_options(filter, state, resource, display_field) do
-        action = resolve_load_action(filter, state, resource)
-        actor = state.current_user
-        tenant = get_tenant(state)
-
-        query =
-          resource
-          |> Ash.Query.new()
-          |> maybe_apply_custom_load(filter, state)
-
-        opts = [action: action, actor: actor, authorize?: false, page: false]
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        case Ash.read(query, opts) do
-          {:ok, records} ->
-            options = build_options(records, display_field, filter[:include_nil], state)
-            {:ok, %{options: options, page: 1, has_more?: false, total_count: length(records)}}
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-      end
-
-      @spec load_paginated_options(
-              map(),
-              map(),
-              module(),
-              atom() | (struct() -> String.t()),
-              pos_integer(),
-              tuple() | nil
-            ) :: {:ok, map()} | {:error, term()}
-      defp load_paginated_options(filter, state, resource, display_field, page, search) do
-        actor = state.current_user
-        tenant = get_tenant(state)
-        page_size = filter[:page_size] || 20
-
-        action = resolve_load_action(filter, state, resource)
-
-        query =
-          resource
-          |> Ash.Query.new()
-          |> maybe_apply_search(search)
-          |> maybe_apply_custom_load(filter, state)
-
-        page_opts = [limit: page_size + 1, offset: (page - 1) * page_size]
-
-        opts = [action: action, actor: actor, authorize?: false, page: page_opts]
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        case Ash.read(query, opts) do
-          {:ok, %{results: records} = page_result} ->
-            has_more? = length(records) > page_size
-            actual_records = if has_more?, do: Enum.take(records, page_size), else: records
-            include_nil = if page == 1, do: filter[:include_nil], else: false
-            options = build_options(actual_records, display_field, include_nil, state)
-
-            {:ok,
-             %{
-               options: options,
-               page: page,
-               has_more?: has_more?,
-               total_count: Map.get(page_result, :count)
-             }}
-
-          {:ok, records} when is_list(records) ->
-            has_more? = length(records) > page_size
-            actual_records = if has_more?, do: Enum.take(records, page_size), else: records
-            include_nil = if page == 1, do: filter[:include_nil], else: false
-            options = build_options(actual_records, display_field, include_nil, state)
-
-            {:ok, %{options: options, page: page, has_more?: has_more?, total_count: nil}}
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-      end
-
-      @spec maybe_apply_search(Ash.Query.t(), tuple() | nil) :: Ash.Query.t()
-      defp maybe_apply_search(query, nil), do: query
-
-      defp maybe_apply_search(query, {field, term}) when is_binary(term) and term != "" do
-        Ash.Query.filter(query, contains(^Ash.Expr.ref(field), ^term))
-      end
-
-      defp maybe_apply_search(query, _), do: query
-
-      @spec maybe_apply_custom_load(Ash.Query.t(), map(), map()) :: Ash.Query.t()
-      defp maybe_apply_custom_load(query, %{load: load_fn} = filter, state)
-           when is_function(load_fn, 2) do
-        query
-        |> load_fn.(state)
-        |> maybe_apply_preloads(filter, state)
-      end
-
-      defp maybe_apply_custom_load(query, filter, state) do
-        maybe_apply_preloads(query, filter, state)
-      end
-
-      @spec maybe_apply_preloads(Ash.Query.t(), map(), map()) :: Ash.Query.t()
-      defp maybe_apply_preloads(query, %{preload: preload}, state) when is_struct(preload) do
-        preloads = build_preloads(preload, state)
-        if preloads == [], do: query, else: Ash.Query.load(query, preloads)
-      end
-
-      defp maybe_apply_preloads(query, %{preload: [preload_struct | _]}, state)
-           when is_struct(preload_struct) do
-        preloads = build_preloads(preload_struct, state)
-        if preloads == [], do: query, else: Ash.Query.load(query, preloads)
-      end
-
-      defp maybe_apply_preloads(query, _, _), do: query
-
-      @spec build_preloads(struct(), map()) :: list()
-      defp build_preloads(preload, state) do
-        always = preload.always || []
-        user_specific = if state.master_user?, do: preload.master, else: preload.tenant
-        user_specific = user_specific || []
-
-        (always ++ user_specific)
-        |> List.flatten()
-        |> Enum.uniq()
-      end
-
-      @spec build_preloads_list(map(), map()) :: list()
-      defp build_preloads_list(%{preload: preload}, state) when is_struct(preload) do
-        build_preloads(preload, state)
-      end
-
-      defp build_preloads_list(%{preload: [preload_struct | _]}, state)
-           when is_struct(preload_struct) do
-        build_preloads(preload_struct, state)
-      end
-
-      defp build_preloads_list(_, _), do: []
-
-      @spec build_options(
-              list(struct()),
-              atom() | (struct() -> String.t()) | (struct(), map() -> String.t()),
-              boolean() | String.t() | nil,
-              map()
-            ) :: list({String.t(), String.t()})
-      defp build_options(records, display_field, include_nil, state) do
-        base_options =
-          Enum.map(records, fn record ->
-            label = get_display_value(record, display_field, state)
-            {label, to_string(record.id)}
-          end)
-
-        prepend_nil_option(base_options, include_nil)
-      end
-
-      @spec prepend_nil_option(list(), boolean() | String.t() | nil) :: list()
-      defp prepend_nil_option(options, nil), do: options
-      defp prepend_nil_option(options, false), do: options
-      defp prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
-
-      defp prepend_nil_option(options, label) when is_binary(label) do
-        [{label, "__nil__"} | options]
-      end
-
-      @spec get_display_value(
-              struct(),
-              atom() | (struct() -> String.t()) | (struct(), map() -> String.t()),
-              map()
-            ) ::
-              String.t()
-      defp get_display_value(record, display_field, state) do
-        MishkaGervaz.Helpers.resolve_label(record, display_field, state)
-      end
-
-      @spec resolve_resource(map(), map()) :: module()
-      defp resolve_resource(%{resource: resource}, _state) when not is_nil(resource), do: resource
-
-      defp resolve_resource(%{name: name, source: source}, %{static: %{resource: table_resource}}) do
-        field_name = source || name
-        relationships = Ash.Resource.Info.relationships(table_resource)
-
-        case Enum.find(relationships, &(&1.source_attribute == field_name)) do
-          %{destination: dest} -> dest
-          nil -> raise "Cannot resolve resource for filter #{name}"
-        end
-      end
-
-      @spec resolve_display_field(map(), module()) ::
-              atom() | (struct() -> String.t()) | (struct(), map() -> String.t())
-      defp resolve_display_field(%{display_field: field}, _resource)
-           when is_function(field, 1) or is_function(field, 2) or
-                  (is_atom(field) and not is_nil(field)) do
-        field
-      end
-
-      defp resolve_display_field(_filter, resource) do
-        attrs = Ash.Resource.Info.attributes(resource)
-
-        Enum.find_value([:name, :title, :label], :id, fn field ->
-          if Enum.any?(attrs, &(&1.name == field)), do: field
-        end)
-      end
-
-      @spec get_tenant(map()) :: any()
-      defp get_tenant(%{master_user?: true}), do: nil
-      defp get_tenant(%{current_user: user}), do: Map.get(user, :site_id)
-      defp get_tenant(_), do: nil
-
-      @spec resolve_load_action(map(), map(), module()) :: atom()
-      defp resolve_load_action(
-             %{load_action: {master_action, _tenant_action}},
-             %{master_user?: true},
-             _resource
-           ) do
-        master_action
-      end
-
-      defp resolve_load_action(%{load_action: {_master_action, tenant_action}}, _state, _resource) do
-        tenant_action
-      end
-
-      defp resolve_load_action(%{load_action: :read}, %{master_user?: true}, resource) do
-        actions = Ash.Resource.Info.actions(resource)
-
-        cond do
-          Enum.any?(actions, &(&1.name == :master_read)) -> :master_read
-          Enum.any?(actions, &(&1.name == :read_any)) -> :read_any
-          true -> :read
-        end
-      end
-
-      defp resolve_load_action(%{load_action: action}, _state, _resource)
-           when is_atom(action) and not is_nil(action) do
-        action
-      end
-
-      defp resolve_load_action(_filter, %{master_user?: true}, resource) do
-        actions = Ash.Resource.Info.actions(resource)
-
-        cond do
-          Enum.any?(actions, &(&1.name == :master_read)) -> :master_read
-          Enum.any?(actions, &(&1.name == :read_any)) -> :read_any
-          true -> :read
-        end
-      end
-
-      defp resolve_load_action(_filter, _state, _resource) do
-        :read
       end
 
       defoverridable load_options: 2,

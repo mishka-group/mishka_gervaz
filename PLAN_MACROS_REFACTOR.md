@@ -120,38 +120,32 @@ Wired the form-side override surfaces to match the table-side DSL→runtime look
 
 Highest compile-time payoff. Do these first.
 
-- [ ] **`lib/mishka_gervaz/form/web/events.ex`** — 67 defp, 1 def (`handle/3`)
-  - Only `handle/3` is in `defoverridable` (line 886).
-  - All 67 `defp` are dispatcher internals (`do_handle/4` clauses, `sanitize_params/2`, `strip_empty_list_values/1`, etc.).
-  - 7 handler accessors (`defp sanitization_handler`, `validation_handler`, `submit_handler`, `step_handler`, `upload_handler`, `relation_handler`, `hook_runner`) are **(C) Discuss** — currently not overridable; flag with TODO comment, leave as-is for now.
-  - Action: extract all `do_handle/4` clauses + helpers to `MishkaGervaz.Form.Web.Events.Internal`. Public `handle/3` stays in quote and calls `Internal.do_handle(event, params, state, socket, __MODULE__)`.
-  - Risk: `do_handle` may reference handler accessors; pass them in or have `Internal` look up via `consumer_module.__some_accessor__()`. Prefer keeping accessors in quote and passing the consumer module to `Internal`.
+- [x] **`lib/mishka_gervaz/form/web/events.ex`** — 67 defp, 1 def (`handle/3`) — DONE (May 2026)
+  - All 67 `defp` (handler accessors + `do_handle/4` clauses + utility helpers) moved to outer level as `def` with `@doc false`. Macro body now just `handle/3` delegating to `MishkaGervaz.Form.Web.Events.do_handle/4`. `defoverridable handle: 3` retained.
 
-- [ ] **`lib/mishka_gervaz/table/web/events.ex`** — 70 defp, 1 def
-  - Mirror of form/web/events.ex. Same approach.
+- [x] **`lib/mishka_gervaz/table/web/events.ex`** — 70 defp, 1 def — DONE (May 2026)
+  - All 70 `defp` moved to outer level. Macro body just `handle/3` delegating to `Events.do_handle/4`. Same pattern as form events.
 
-- [ ] **`lib/mishka_gervaz/table/web/data_loader/relation_loader.ex`** — 36 defp, 7 def
-  - Check which of the 7 `def` are in `defoverridable`. Keep those in quote.
-  - Remaining `def` not in `defoverridable` are also (B) — move out.
-  - Move all 36 `defp` to `RelationLoader.Internal`.
+- [x] **`lib/mishka_gervaz/table/web/data_loader/relation_loader.ex`** — 36 defp, 7 def — DONE (May 2026)
+  - All 36 `defp` moved to outer level as public `def` with `@doc false`. The 9 overridable `def`s (`load_options/2,3`, `search_options/3,4`, `load_more_options/2,3`, `resolve_selected/3`, `load_with_selected/3,4`) stay in the quote and `import` the outer helpers via `import RelationLoader, only: [...]`.
 
-- [ ] **`lib/mishka_gervaz/form/web/data_loader/relation_loader.ex`** — 32 defp, 5 def
-  - Same approach.
+- [x] **`lib/mishka_gervaz/form/web/data_loader/relation_loader.ex`** — 32 defp, 5 def — DONE (May 2026)
+  - All 32 `defp` moved to outer level. The 5 overridables (`load_options/2,3`, `search_options/3,4`, `resolve_selected/3`) stay in the quote and import the outer helpers.
 
-- [ ] **`lib/mishka_gervaz/form/web/events/relation_handler.ex`** — 25 defp, 1 def
-  - One public `def` (likely the entry point in `defoverridable`). All 25 `defp` move to `RelationHandler.Internal`.
+- [x] **`lib/mishka_gervaz/form/web/events/relation_handler.ex`** — 25 defp, 1 def — DONE (May 2026)
+  - All 25 `defp` moved to outer level. Macro body now just `handle/4` delegating to `RelationHandler.do_handle/4`.
 
-- [ ] **`lib/mishka_gervaz/table/web/events/relation_filter_handler.ex`** — 24 defp, 1 def
-  - Mirror of above.
+- [x] **`lib/mishka_gervaz/table/web/events/relation_filter_handler.ex`** — 24 defp, 1 def — DONE (May 2026)
+  - All 24 `defp` moved to outer level. Macro body now just `handle/4` delegating to `RelationFilterHandler.do_handle/4`.
 
-- [ ] **`lib/mishka_gervaz/table/web/events/bulk_action_handler.ex`** — 21 defp, 13 def
-  - Audit each `def`: is it in `defoverridable`? If not and it's purely internal, move it.
+- [x] **`lib/mishka_gervaz/table/web/events/bulk_action_handler.ex`** — 21 defp, 13 def — DONE (May 2026)
+  - 10 outer-level helpers extracted (`put_error_flash/2`, `hook_runner_for/1`, `run_lifecycle_hook/4`, `apply_lifecycle_socket/5`, `adapt_lifecycle_args/4`, `builtin_enabled?/2`, `resolve_action_spec/2`, `get_action_type/2`, `soft_delete_action?/3`, `execute_bulk_by_type/3`). `run_ash_bulk_action/5` stays in quote because it calls overridable `build_bulk_query/3`.
 
-- [ ] **`lib/mishka_gervaz/table/web/state/url_sync.ex`** — 18 defp, 4 def
-  - Likely 4 `def` are public encode/decode entry points. Move 18 `defp` to `UrlSync.Internal`.
+- [x] **`lib/mishka_gervaz/table/web/state/url_sync.ex`** — 18 defp, 4 def — DONE (May 2026)
+  - 8 outer-level helpers extracted (`apply_url_filters/2`, `apply_url_sort/2`, `apply_url_page/2`, `apply_url_search/2`, `apply_url_path/2`, `apply_url_path_params/2`, `apply_url_preserved_params/2`, `apply_url_page_size/2`). `validate_url_filters/2` kept as `defp` at outer level (only used by `apply_url_filters`).
 
 - [x] **`lib/mishka_gervaz/form/web/events/submit_handler.ex`** — 17 defp, 5 def — DONE (May 2026)
-  - Moved to `MishkaGervaz.Helpers`: `format_form_errors/1` (was `build_submit_errors/1`), `extract_form_level_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`, `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`. Used existing `merge_relation_field_values/2` from earlier work. Kept in quote: `consume_upload_entries/4`, `merge_uploaded_files/4` (3 clauses) — tightly bound to upload-flow.
+  - 8 outer-level helpers in same file (`format_form_errors/1`, `extract_form_level_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`, `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`). Uses `MishkaGervaz.Helpers.merge_relation_field_values/2` (multi-use). Kept in quote: `consume_upload_entries/4`, `merge_uploaded_files/4` — tightly bound to upload-flow.
 
 ---
 
@@ -239,14 +233,17 @@ After Tier 1 completes, optionally measure compile time on a clean build (`mix d
 
 - [x] **Tier 0 audit complete** — Form had 1 reachable, 8 dead, 9 partial. Table had 21/21 reachable.
 - [x] **Phase A — Form/Table parity wiring complete** (May 2026). All 18 form-side broken/partial surfaces flipped to **reachable** via runtime `Info.Form.{events,state,data_loader}/1` lookups. New tests: 33 (form/dsl/state, events, data_loader). Full suite 2877/2877 green.
-- [ ] Open questions resolved (#2 handler accessor promotion answered: form events handlers ARE now accessor-style but still defp; promote in Phase B if desired).
-- [ ] Tier 1 partial (6/9 files):
+- [x] Open questions resolved (handler accessors are now public outer-level defs callable as `Events.{sanitization,validation,...}_handler(state)`).
+- [x] **Tier 1 complete (9/9 files)** — May 2026:
   - [x] `form/web/events/submit_handler.ex` (17 defp → 8 outer-level defs + uses existing `Helpers.merge_relation_field_values/2`)
   - [x] `table/web/state/url_sync.ex` (18 defp → 8 outer-level defs; `validate_url_filters/2` kept as defp at outer level)
   - [x] `table/web/events/bulk_action_handler.ex` (21 defp → 10 outer-level defs; `run_ash_bulk_action/5` stays in quote — calls overridable `build_bulk_query/3`)
   - [x] `table/web/events/relation_filter_handler.ex` (24 defp → all 24 moved to outer level; macro body now just `handle/4` delegating to `RelationFilterHandler.do_handle/4`)
   - [x] `form/web/events/relation_handler.ex` (25 defp → all 25 moved to outer level; macro body now just `handle/4` delegating to `RelationHandler.do_handle/4`)
-  - [x] `form/web/data_loader/relation_loader.ex` (32 defp → all 32 moved to outer level; macro body keeps overridables `load_options/2,3`, `search_options/3,4`, `resolve_selected/3` and imports outer helpers)
+  - [x] `form/web/data_loader/relation_loader.ex` (32 defp → all 32 moved to outer level; macro body keeps overridables and imports outer helpers)
+  - [x] `table/web/data_loader/relation_loader.ex` (36 defp → all 36 moved to outer level; macro body keeps 9 overridables and imports outer helpers)
+  - [x] `form/web/events.ex` (67 defp → all 67 moved to outer level; macro body now just `handle/3` delegating to `Events.do_handle/4`)
+  - [x] `table/web/events.ex` (70 defp → all 70 moved to outer level; macro body now just `handle/3` delegating to `Events.do_handle/4`)
   - [ ] `table/web/events/bulk_action_handler.ex` (21 defp)
   - [ ] `table/web/events/relation_filter_handler.ex` (24 defp)
   - [ ] `form/web/events/relation_handler.ex` (25 defp)
