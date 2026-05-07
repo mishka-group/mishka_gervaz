@@ -23,13 +23,45 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
 
   alias MishkaGervaz.Form.Web.State
 
+  @doc false
+  @spec find_next_step(list(map()), atom()) :: atom() | nil
+  def find_next_step(steps, current) do
+    step_names = Enum.map(steps, & &1.name)
+    current_idx = Enum.find_index(step_names, &(&1 == current))
+
+    case current_idx do
+      nil -> nil
+      idx -> Enum.at(step_names, idx + 1)
+    end
+  end
+
+  @doc false
+  @spec find_prev_step(list(map()), atom()) :: atom() | nil
+  def find_prev_step(steps, current) do
+    step_names = Enum.map(steps, & &1.name)
+    current_idx = Enum.find_index(step_names, &(&1 == current))
+
+    case current_idx do
+      nil -> nil
+      0 -> nil
+      idx -> Enum.at(step_names, idx - 1)
+    end
+  end
+
+  @doc false
+  @spec step_exists?(map(), atom()) :: boolean()
+  def step_exists?(state, step_name) do
+    Enum.any?(state.static.steps, &(&1.name == step_name))
+  end
+
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Form.Web.Events.Builder
 
       alias MishkaGervaz.Form.Web.State
 
-      import MishkaGervaz.Helpers, only: [find_next_step: 2, find_prev_step: 2, step_exists?: 2]
+      import MishkaGervaz.Form.Web.Events.StepHandler,
+        only: [find_next_step: 2, find_prev_step: 2, step_exists?: 2]
 
       @doc """
       Check if the user can advance past the current step.

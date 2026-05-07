@@ -23,6 +23,20 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Resource.Info.Form, as: Info
 
+  @doc false
+  @spec keyword_put_if_set(keyword(), atom(), any()) :: keyword()
+  def keyword_put_if_set(opts, _key, nil), do: opts
+  def keyword_put_if_set(opts, key, value), do: Keyword.put(opts, key, value)
+
+  @doc false
+  @spec resolve_tenant_from_record(module(), map()) :: any() | nil
+  def resolve_tenant_from_record(resource, record) do
+    case Ash.Resource.Info.multitenancy_attribute(resource) do
+      nil -> nil
+      attr -> Map.get(record, attr)
+    end
+  end
+
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Form.Web.DataLoader.Builder
@@ -30,7 +44,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       alias MishkaGervaz.Form.Web.State
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
-      import MishkaGervaz.Helpers,
+      import MishkaGervaz.Form.Web.DataLoader.RecordLoader,
         only: [keyword_put_if_set: 3, resolve_tenant_from_record: 2]
 
       @doc """

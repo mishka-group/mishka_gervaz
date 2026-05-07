@@ -31,13 +31,19 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
 
   alias MishkaGervaz.Table.Web.State
 
+  @doc false
+  @spec extract_results(any()) :: list()
+  def extract_results(%{results: results}) when is_list(results), do: results
+  def extract_results(results) when is_list(results), do: results
+  def extract_results(_), do: []
+
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Table.Web.DataLoader.Builder
 
       alias MishkaGervaz.Table.Web.State
 
-      import MishkaGervaz.Helpers, only: [extract_results: 1]
+      import MishkaGervaz.Table.Web.DataLoader.PaginationHandler, only: [extract_results: 1]
 
       @doc """
       Load a page of data with the given query, action, and tenant.

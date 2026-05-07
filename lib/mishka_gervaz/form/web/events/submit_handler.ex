@@ -22,12 +22,134 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
 
+  @doc false
+  @spec format_form_errors(Phoenix.HTML.Form.t()) :: map()
+  def format_form_errors(form) do
+    form.errors
+    |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+  end
+
+  @doc false
+  @spec extract_form_level_errors(Phoenix.HTML.Form.t(), MapSet.t()) :: list(String.t())
+  def extract_form_level_errors(form, field_names) do
+    form.errors
+    |> Enum.reject(fn {field, _} -> MapSet.member?(field_names, field) end)
+    |> Enum.map(fn {_field, {msg, opts}} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+  end
+
+  @doc false
+  @spec cleanup_temp_uploads(map()) :: :ok
+  def cleanup_temp_uploads(form_params) do
+    tmp_dir = System.tmp_dir!()
+
+    form_params
+    |> Enum.each(fn
+      {_key, files} when is_list(files) ->
+        Enum.each(files, fn
+          %{path: path} when is_binary(path) ->
+            if String.starts_with?(path, tmp_dir), do: File.rm(path)
+
+          _ ->
+            :ok
+        end)
+
+      _ ->
+        :ok
+    end)
+  end
+
+  @doc false
+  @spec push_js_hook(Phoenix.LiveView.Socket.t(), map(), atom(), any()) ::
+          Phoenix.LiveView.Socket.t()
+  def push_js_hook(socket, state, hook_name, record_id) do
+    case state.static do
+      %{hooks: %{js: %{^hook_name => func}}} when is_function(func, 1) ->
+        js = func.(record_id)
+
+        Phoenix.LiveView.push_event(socket, "gervaz:exec-js", %{
+          js: Jason.encode!(js.ops),
+          target: state.static.id <> "-form-wrapper"
+        })
+
+      _ ->
+        socket
+    end
+  end
+
+  @doc false
+  @spec merge_defaults(map(), map()) :: map()
+  def merge_defaults(%{mode: :create, defaults: defaults}, params)
+      when is_map(defaults) and defaults != %{} do
+    defaults
+    |> Enum.reduce(params, fn {key, value}, acc ->
+      str_key = to_string(key)
+
+      if Map.has_key?(acc, str_key) and acc[str_key] not in [nil, ""] do
+        acc
+      else
+        Map.put(acc, str_key, value)
+      end
+    end)
+  end
+
+  def merge_defaults(_state, params), do: params
+
+  @doc false
+  @spec drop_protected_fields(map(), map()) :: map()
+  def drop_protected_fields(state, params) do
+    state.static.fields
+    |> Enum.reduce(params, fn field, acc ->
+      field_key = to_string(field.name)
+
+      cond do
+        field_restricted?(field, state) -> Map.delete(acc, field_key)
+        field_readonly?(field, state) -> Map.delete(acc, field_key)
+        true -> acc
+      end
+    end)
+  end
+
+  @doc false
+  @spec field_restricted?(map(), map()) :: boolean()
+  def field_restricted?(%{restricted: true}, %{master_user?: false}), do: true
+
+  def field_restricted?(%{restricted: f}, state) when is_function(f, 1),
+    do: not f.(state)
+
+  def field_restricted?(_, _), do: false
+
+  @doc false
+  @spec field_readonly?(map(), map()) :: boolean()
+  def field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
+  def field_readonly?(%{readonly: true}, _), do: true
+  def field_readonly?(_, _), do: false
+
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Form.Web.Events.Builder
 
       alias MishkaGervaz.Form.Web.{State, DataLoader}
       alias MishkaGervaz.Form.Web.UploadHelpers
+
+      import MishkaGervaz.Helpers, only: [merge_relation_field_values: 2]
+
+      import MishkaGervaz.Form.Web.Events.SubmitHandler,
+        only: [
+          format_form_errors: 1,
+          extract_form_level_errors: 2,
+          cleanup_temp_uploads: 1,
+          push_js_hook: 4,
+          merge_defaults: 2,
+          drop_protected_fields: 2
+        ]
 
       @doc """
       Submit the form for create or update.
@@ -77,7 +199,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
               {:error, updated_form} ->
                 updated_form = Phoenix.Component.to_form(updated_form)
-                errors = build_submit_errors(updated_form)
+                errors = format_form_errors(updated_form)
                 field_names = MapSet.new(state.static.fields, & &1.name)
                 form_errors = extract_form_level_errors(updated_form, field_names)
 
@@ -137,27 +259,6 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         |> DataLoader.new_record(reset_state)
       end
 
-      @spec build_submit_errors(Phoenix.HTML.Form.t()) :: map()
-      defp build_submit_errors(form) do
-        form.errors
-        |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
-          Enum.reduce(opts, msg, fn {key, value}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(value))
-          end)
-        end)
-      end
-
-      @spec extract_form_level_errors(Phoenix.HTML.Form.t(), MapSet.t()) :: list(String.t())
-      defp extract_form_level_errors(form, field_names) do
-        form.errors
-        |> Enum.reject(fn {field, _} -> MapSet.member?(field_names, field) end)
-        |> Enum.map(fn {_field, {msg, opts}} ->
-          Enum.reduce(opts, msg, fn {key, value}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(value))
-          end)
-        end)
-      end
-
       @spec consume_and_merge_uploads(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               {Phoenix.LiveView.Socket.t(), map()}
       def consume_and_merge_uploads(%{static: %{uploads: uploads}} = state, form_params, socket)
@@ -209,93 +310,6 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         {socket, Map.put(params, param_key, uploaded_files)}
       end
 
-      defp cleanup_temp_uploads(form_params) do
-        tmp_dir = System.tmp_dir!()
-
-        form_params
-        |> Enum.each(fn
-          {_key, files} when is_list(files) ->
-            Enum.each(files, fn
-              %{path: path} when is_binary(path) ->
-                if String.starts_with?(path, tmp_dir), do: File.rm(path)
-
-              _ ->
-                :ok
-            end)
-
-          _ ->
-            :ok
-        end)
-      end
-
-      defp push_js_hook(socket, state, hook_name, record_id) do
-        case state.static do
-          %{hooks: %{js: %{^hook_name => func}}} when is_function(func, 1) ->
-            js = func.(record_id)
-
-            Phoenix.LiveView.push_event(socket, "gervaz:exec-js", %{
-              js: Jason.encode!(js.ops),
-              target: state.static.id <> "-form-wrapper"
-            })
-
-          _ ->
-            socket
-        end
-      end
-
-      defp merge_relation_field_values(params, state) do
-        state.static.fields
-        |> Enum.filter(&(&1.type == :relation))
-        |> Enum.reduce(params, fn field, acc ->
-          case Map.get(state.field_values, field.name) do
-            "__nil__" -> Map.put(acc, to_string(field.name), nil)
-            v when v not in [nil, ""] -> Map.put(acc, to_string(field.name), v)
-            _ -> acc
-          end
-        end)
-      end
-
-      @spec drop_protected_fields(State.t(), map()) :: map()
-      @spec merge_defaults(State.t(), map()) :: map()
-      defp merge_defaults(%{mode: :create, defaults: defaults}, params)
-           when is_map(defaults) and defaults != %{} do
-        defaults
-        |> Enum.reduce(params, fn {key, value}, acc ->
-          str_key = to_string(key)
-
-          if Map.has_key?(acc, str_key) and acc[str_key] not in [nil, ""] do
-            acc
-          else
-            Map.put(acc, str_key, value)
-          end
-        end)
-      end
-
-      defp merge_defaults(_state, params), do: params
-
-      defp drop_protected_fields(state, params) do
-        state.static.fields
-        |> Enum.reduce(params, fn field, acc ->
-          field_key = to_string(field.name)
-
-          cond do
-            field_restricted?(field, state) -> Map.delete(acc, field_key)
-            field_readonly?(field, state) -> Map.delete(acc, field_key)
-            true -> acc
-          end
-        end)
-      end
-
-      defp field_restricted?(%{restricted: true}, %{master_user?: false}), do: true
-
-      defp field_restricted?(%{restricted: f}, state) when is_function(f, 1),
-        do: not f.(state)
-
-      defp field_restricted?(_, _), do: false
-
-      defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
-      defp field_readonly?(%{readonly: true}, _), do: true
-      defp field_readonly?(_, _), do: false
 
       defoverridable submit: 3, transform_params: 2, after_save: 3, consume_and_merge_uploads: 3
     end

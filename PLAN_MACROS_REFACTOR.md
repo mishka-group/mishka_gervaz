@@ -150,8 +150,8 @@ Highest compile-time payoff. Do these first.
 - [ ] **`lib/mishka_gervaz/table/web/state/url_sync.ex`** — 18 defp, 4 def
   - Likely 4 `def` are public encode/decode entry points. Move 18 `defp` to `UrlSync.Internal`.
 
-- [ ] **`lib/mishka_gervaz/form/web/events/submit_handler.ex`** — 17 defp, 5 def
-  - Audit each `def` for overridability.
+- [x] **`lib/mishka_gervaz/form/web/events/submit_handler.ex`** — 17 defp, 5 def — DONE (May 2026)
+  - Moved to `MishkaGervaz.Helpers`: `format_form_errors/1` (was `build_submit_errors/1`), `extract_form_level_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`, `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`. Used existing `merge_relation_field_values/2` from earlier work. Kept in quote: `consume_upload_entries/4`, `merge_uploaded_files/4` (3 clauses) — tightly bound to upload-flow.
 
 ---
 
@@ -240,14 +240,28 @@ After Tier 1 completes, optionally measure compile time on a clean build (`mix d
 - [x] **Tier 0 audit complete** — Form had 1 reachable, 8 dead, 9 partial. Table had 21/21 reachable.
 - [x] **Phase A — Form/Table parity wiring complete** (May 2026). All 18 form-side broken/partial surfaces flipped to **reachable** via runtime `Info.Form.{events,state,data_loader}/1` lookups. New tests: 33 (form/dsl/state, events, data_loader). Full suite 2877/2877 green.
 - [ ] Open questions resolved (#2 handler accessor promotion answered: form events handlers ARE now accessor-style but still defp; promote in Phase B if desired).
-- [ ] Tier 1 complete (9 files).
+- [ ] Tier 1 partial (2/9 files):
+  - [x] `form/web/events/submit_handler.ex` (17 defp → 8 outer-level defs in same file + uses existing `Helpers.merge_relation_field_values/2`)
+  - [x] `table/web/state/url_sync.ex` (18 defp → 8 outer-level defs in same file; `validate_url_filters/2` kept as defp at outer level since used only by `apply_url_filters`)
+  - [ ] `table/web/events/bulk_action_handler.ex` (21 defp)
+  - [ ] `table/web/events/relation_filter_handler.ex` (24 defp)
+  - [ ] `form/web/events/relation_handler.ex` (25 defp)
+  - [ ] `form/web/data_loader/relation_loader.ex` (32 defp)
+  - [ ] `table/web/data_loader/relation_loader.ex` (36 defp)
+  - [ ] `form/web/events.ex` (67 defp)
+  - [ ] `table/web/events.ex` (70 defp)
 - [x] **Tier 2 complete (2/2 files)** — May 2026.
 - [x] **Tier 3 complete (10/10 files)** — May 2026. 9 extracted (1 candidate skipped: dispatches to overridable funcs). 7 helpers consolidated into `MishkaGervaz.Helpers` (no per-file `Internal` modules — see notes).
 - [ ] Final compile-time measurement recorded.
 
 ## Phase B Implementation Notes (May 2026)
 
-**Centralization decision:** All extracted helpers go into the existing `lib/mishka_gervaz/_helpers.ex` (`MishkaGervaz.Helpers`) module — NOT into per-file `Foo.Internal` siblings. This keeps shared utilities in one place and is consistent with the project's existing pattern (Helpers already housed `humanize`, `get_ui_label`, `map_put_if_set`, etc.).
+**Centralization rule (revised):** Only **multi-use** helpers go into `MishkaGervaz.Helpers`. A helper that is called from a single file lives at the **outer module level of that file** (above the `defmacro __using__`), not inside the quote and not in `Helpers`. This keeps Helpers meaningful (truly shared utilities) and avoids polluting it with single-use functions.
+
+**Three placements for an extracted `defp`:**
+1. **Inside the quote (don't extract)** — calls overridable functions, OR uses module attributes / consumer-module compile-time context.
+2. **Outer module level of same file** (private helper for that macro only) — single-use, but must be moved out of the quote to avoid per-consumer compile cost. Imported back into the quote with `import ParentModule, only: [fn: arity]`.
+3. **`MishkaGervaz.Helpers`** — used by 2+ files, or generic enough that future files would benefit (e.g. `map_put_if_set`).
 
 **Recipe (per file):**
 1. For each candidate `defp` inside the macro's `quote do`: classify.
@@ -261,12 +275,18 @@ After Tier 1 completes, optionally measure compile time on a clean build (`mix d
 - `column_builder.ex` `maybe_resolve_type/2` calls overridable `resolve_type/2` → kept.
 - `sanitization_handler.ex` `sanitize_list_item/1` calls overridable `sanitize/1` and `sanitize_params/1` → kept (whole file skipped — only candidate had this issue).
 
-**Helpers added in Tier 3:**
-- `get_resource_attributes/1` — Ash attribute map by name.
-- `merge_relation_field_values/2` — form params with relation values from state.
-- `resolve_upload_name/2` — namespaced LiveView upload name.
-- `find_next_step/2`, `find_prev_step/2`, `step_exists?/2` — wizard navigation.
-- `get_tenant_field/1`, `default_record_visible?/2` — multitenancy access checks.
-- `extract_results/1` — Ash read result → list.
+**Helpers actually added to `MishkaGervaz.Helpers` (multi-use only):**
+- `get_resource_attributes/1` — used by `field_builder`, `column_builder`, `filter_builder`.
+- `merge_relation_field_values/2` — used by `validation_handler`, `submit_handler`.
+
+**Single-use helpers placed at outer module level of their file** (NOT in Helpers):
+- `submit_handler.ex` — `format_form_errors/1`, `extract_form_level_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`, `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`.
+- `step_handler.ex` — `find_next_step/2`, `find_prev_step/2`, `step_exists?/2`.
+- `upload_handler.ex` — `resolve_upload_name/2`.
+- `record_loader.ex` — `keyword_put_if_set/3`, `resolve_tenant_from_record/2`.
+- `pagination_handler.ex` — `extract_results/1`.
+- `access.ex` (table state) — `get_tenant_field/1`, `default_record_visible?/2`.
+- `filter_builder.ex` — `get_resource_calculations/1`, `get_resource_relationships/1`, `find_display_field/1`, `maybe_resolve_options/1`.
+- `dynamic.ex` — uses existing `MishkaGervaz.Helpers.map_put_if_set/3` (the original `defp maybe_put` was duplicated; consolidated).
 
 **Risk in Tier 1:** Files like `form/web/events.ex` have many interconnected `defp`s where extraction safety must be checked per-function. Recommend doing those one-by-one with full test runs between, not bulk-extracting.

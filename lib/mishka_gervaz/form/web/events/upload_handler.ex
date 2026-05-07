@@ -21,13 +21,21 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
 
   alias MishkaGervaz.Form.Web.State
 
+  @doc false
+  @spec resolve_upload_name(map(), atom()) :: atom()
+  def resolve_upload_name(%{static: %{id: id}}, upload_key) do
+    MishkaGervaz.Form.Web.UploadHelpers.namespaced_upload_name(upload_key, id)
+  end
+
+  def resolve_upload_name(_state, upload_key), do: upload_key
+
   defmacro __using__(_opts) do
     quote do
       use MishkaGervaz.Form.Web.Events.Builder
 
       alias MishkaGervaz.Form.Web.State
 
-      import MishkaGervaz.Helpers, only: [resolve_upload_name: 2]
+      import MishkaGervaz.Form.Web.Events.UploadHandler, only: [resolve_upload_name: 2]
 
       @doc """
       Process completed uploads for a given upload key.
