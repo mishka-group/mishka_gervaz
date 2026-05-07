@@ -349,14 +349,15 @@ defmodule MishkaGervaz.Table.Web.Events do
   def do_handle("remove_filter", %{"name" => name}, state, socket) do
     filter_name = String.to_existing_atom(name)
     new_filter_values = Map.delete(state.filter_values, filter_name)
-    new_relation_state = Map.delete(state.relation_filter_state || %{}, filter_name)
 
-    {new_filter_values, new_relation_state} =
+    {new_filter_values, cleaned_relation_state} =
       MishkaGervaz.Helpers.invalidate_dependents(
         new_filter_values,
         state.filter_values,
         state
       )
+
+    new_relation_state = Map.delete(cleaned_relation_state, filter_name)
 
     state =
       %{
