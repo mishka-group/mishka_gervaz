@@ -7,10 +7,12 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
 
   alias MishkaGervaz.Test.Resources.{
+    ChromeForm,
     FormPost,
     WizardForm,
     TabsForm,
     MinimalForm,
+    NoMasterCheckForm,
     SubmitOptionsForm,
     NoButtonsForm
   }
@@ -419,6 +421,102 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
     test "NoButtonsForm preserves the resource position" do
       submit = FormInfo.submit(NoButtonsForm)
       assert submit.position == :bottom
+    end
+  end
+
+  describe "header/1 — negative cases" do
+    test "returns nil for resource without header" do
+      assert FormInfo.header(FormPost) == nil
+    end
+
+    test "returns nil for resource without layout" do
+      assert FormInfo.header(MinimalForm) == nil
+    end
+  end
+
+  describe "footer/1 — negative cases" do
+    test "returns nil for resource without footer" do
+      assert FormInfo.footer(FormPost) == nil
+    end
+
+    test "returns nil for resource without layout" do
+      assert FormInfo.footer(MinimalForm) == nil
+    end
+  end
+
+  describe "notices/1 — negative cases" do
+    test "returns empty list for resource without notices" do
+      assert FormInfo.notices(FormPost) == []
+    end
+
+    test "returns empty list for resource without layout" do
+      assert FormInfo.notices(MinimalForm) == []
+    end
+  end
+
+  describe "notice/2 — negative cases" do
+    test "returns nil for non-existent notice" do
+      assert FormInfo.notice(ChromeForm, :missing) == nil
+    end
+
+    test "returns nil for resource without layout" do
+      assert FormInfo.notice(MinimalForm, :anything) == nil
+    end
+  end
+
+  describe "state/1, events/1, data_loader/1 — empty defaults" do
+    test "state returns empty map for resource without overrides" do
+      assert FormInfo.state(FormPost) == %{}
+    end
+
+    test "events returns empty map for resource without overrides" do
+      assert FormInfo.events(FormPost) == %{}
+    end
+
+    test "data_loader returns empty map for resource without overrides" do
+      assert FormInfo.data_loader(FormPost) == %{}
+    end
+
+    test "all three return empty map for resource without form layout" do
+      assert FormInfo.state(MinimalForm) == %{}
+      assert FormInfo.events(MinimalForm) == %{}
+      assert FormInfo.data_loader(MinimalForm) == %{}
+    end
+  end
+
+  describe "domain layout merge — responsive fallback" do
+    test "FormPost preserves explicit responsive: true" do
+      layout = FormInfo.layout(FormPost)
+      assert layout.responsive == true
+    end
+
+    test "WizardForm picks up domain default responsive: true" do
+      layout = FormInfo.layout(WizardForm)
+      assert layout.responsive == true
+    end
+
+    test "TabsForm picks up domain default responsive: true" do
+      layout = FormInfo.layout(TabsForm)
+      assert layout.responsive == true
+    end
+
+    test "MinimalForm has no layout (domain layout merge no-op)" do
+      assert FormInfo.layout(MinimalForm) == nil
+    end
+  end
+
+  describe "default master_check resolution" do
+    test "NoMasterCheckForm inherits domain master_check" do
+      config = FormInfo.config(NoMasterCheckForm)
+      assert is_function(config.source.master_check, 1)
+      assert config.source.master_check.(%{role: :admin}) == true
+      assert config.source.master_check.(%{role: :user}) == false
+    end
+
+    test "FormPost preserves resource master_check" do
+      config = FormInfo.config(FormPost)
+      assert is_function(config.source.master_check, 1)
+      assert config.source.master_check.(%{role: :admin}) == true
     end
   end
 end
