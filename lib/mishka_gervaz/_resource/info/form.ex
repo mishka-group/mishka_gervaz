@@ -22,7 +22,11 @@ defmodule MishkaGervaz.Resource.Info.Form do
     sections: [:mishka_gervaz]
 
   alias Spark.Dsl.Extension
+
   import MishkaGervaz.Helpers, only: [map_put_if_set: 3]
+
+  import MishkaGervaz.Resource.Info.Helpers,
+    only: [map_get: 3, extract_preload_source: 1, get_domain_defaults: 2]
 
   @default_submit %{
     create: nil,
@@ -42,29 +46,9 @@ defmodule MishkaGervaz.Resource.Info.Form do
     config = Extension.get_persisted(resource, :mishka_gervaz_form_config)
 
     if config do
-      domain_defaults = get_domain_defaults(resource)
-      merge_domain_defaults(config, domain_defaults)
+      merge_domain_defaults(config, get_domain_defaults(resource, :form))
     else
       config
-    end
-  end
-
-  @spec get_domain_defaults(module()) :: map()
-  defp get_domain_defaults(resource) do
-    with {:ok, domain} <- get_domain(resource),
-         config when not is_nil(config) <-
-           Extension.get_persisted(domain, :mishka_gervaz_domain_config) do
-      Map.get(config, :form, %{})
-    else
-      _ -> %{}
-    end
-  end
-
-  @spec get_domain(module()) :: {:ok, module()} | :error
-  defp get_domain(resource) do
-    case Ash.Resource.Info.domain(resource) do
-      nil -> :error
-      domain -> {:ok, domain}
     end
   end
 
@@ -126,22 +110,6 @@ defmodule MishkaGervaz.Resource.Info.Form do
     put_in(config, [:source, :master_check], &MishkaGervaz.Helpers.master_user?/1)
   end
 
-  @spec config_get(module(), atom(), term()) :: term()
-  defp config_get(resource, key, default) do
-    case config(resource) do
-      %{^key => value} when not is_nil(value) -> value
-      _ -> default
-    end
-  end
-
-  @spec layout_get(module(), atom(), term()) :: term()
-  defp layout_get(resource, key, default) do
-    case layout(resource) do
-      %{^key => value} when not is_nil(value) -> value
-      _ -> default
-    end
-  end
-
   @spec identity_get(module(), atom()) :: term()
   defp identity_get(resource, key) do
     case config(resource) do
@@ -155,7 +123,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
   """
   @spec fields(module()) :: [map()]
   def fields(resource) do
-    case config_get(resource, :fields, %{}) do
+    case map_get(config(resource), :fields, %{}) do
       %{list: list} when is_list(list) -> list
       _ -> []
     end
@@ -181,31 +149,31 @@ defmodule MishkaGervaz.Resource.Info.Form do
   Get all groups for a resource form.
   """
   @spec groups(module()) :: [map()]
-  def groups(resource), do: config_get(resource, :groups, [])
+  def groups(resource), do: map_get(config(resource), :groups, [])
 
   @doc """
   Get all uploads for a resource form.
   """
   @spec uploads(module()) :: [map()]
-  def uploads(resource), do: config_get(resource, :uploads, [])
+  def uploads(resource), do: map_get(config(resource), :uploads, [])
 
   @doc """
   Get the submit configuration for a resource form.
   """
   @spec submit(module()) :: map()
-  def submit(resource), do: config_get(resource, :submit, @default_submit)
+  def submit(resource), do: map_get(config(resource), :submit, @default_submit)
 
   @doc """
   Get the layout configuration for a resource form.
   """
   @spec layout(module()) :: map() | nil
-  def layout(resource), do: config_get(resource, :layout, nil)
+  def layout(resource), do: map_get(config(resource), :layout, nil)
 
   @doc """
   Get all steps for a resource form.
   """
   @spec steps(module()) :: [map()]
-  def steps(resource), do: layout_get(resource, :steps, [])
+  def steps(resource), do: map_get(layout(resource), :steps, [])
 
   @doc """
   Get a specific step by name.
@@ -219,19 +187,19 @@ defmodule MishkaGervaz.Resource.Info.Form do
   Get the form header configuration. Returns nil when no header is declared.
   """
   @spec header(module()) :: map() | nil
-  def header(resource), do: layout_get(resource, :header, nil)
+  def header(resource), do: map_get(layout(resource), :header, nil)
 
   @doc """
   Get the form footer configuration. Returns nil when no footer is declared.
   """
   @spec footer(module()) :: map() | nil
-  def footer(resource), do: layout_get(resource, :footer, nil)
+  def footer(resource), do: map_get(layout(resource), :footer, nil)
 
   @doc """
   Get all notices declared in the form layout.
   """
   @spec notices(module()) :: [map()]
-  def notices(resource), do: layout_get(resource, :notices, [])
+  def notices(resource), do: map_get(layout(resource), :notices, [])
 
   @doc """
   Get a specific notice by name.
@@ -256,7 +224,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
   Returns `:sequential` or `:free`.
   """
   @spec navigation(module()) :: :sequential | :free
-  def navigation(resource), do: layout_get(resource, :navigation, :sequential)
+  def navigation(resource), do: map_get(layout(resource), :navigation, :sequential)
 
   @doc """
   Get the persistence strategy for a resource form.
@@ -264,7 +232,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
   Returns `:none`, `:ets`, or `:client_token`.
   """
   @spec persistence(module()) :: :none | :ets | :client_token
-  def persistence(resource), do: layout_get(resource, :persistence, :none)
+  def persistence(resource), do: map_get(layout(resource), :persistence, :none)
 
   @doc """
   Get the group maps for a given step name.
@@ -316,7 +284,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
   Get all hooks as a map.
   """
   @spec hooks(module()) :: map()
-  def hooks(resource), do: config_get(resource, :hooks, %{})
+  def hooks(resource), do: map_get(config(resource), :hooks, %{})
 
   @doc """
   Get a JS hook function by name from the form config.
@@ -383,10 +351,6 @@ defmodule MishkaGervaz.Resource.Info.Form do
     end
   end
 
-  @spec extract_preload_source(atom() | {atom(), atom()}) :: atom()
-  defp extract_preload_source({source, _alias}), do: source
-  defp extract_preload_source(source) when is_atom(source), do: source
-
   @doc """
   Get the stream name for a resource form.
   """
@@ -437,7 +401,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
   `:relation`, `:hooks`. Returns an empty map if no events configuration is set.
   """
   @spec events(module()) :: map()
-  def events(resource), do: config_get(resource, :events, %{})
+  def events(resource), do: map_get(config(resource), :events, %{})
 
   @doc """
   Get the data_loader configuration.
@@ -447,5 +411,5 @@ defmodule MishkaGervaz.Resource.Info.Form do
   Returns an empty map if no data_loader configuration is set.
   """
   @spec data_loader(module()) :: map()
-  def data_loader(resource), do: config_get(resource, :data_loader, %{})
+  def data_loader(resource), do: map_get(config(resource), :data_loader, %{})
 end

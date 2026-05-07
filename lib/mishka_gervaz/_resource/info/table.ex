@@ -24,6 +24,9 @@ defmodule MishkaGervaz.Resource.Info.Table do
 
   import MishkaGervaz.Helpers, only: [map_put_if_set: 3, module_to_snake: 1]
 
+  import MishkaGervaz.Resource.Info.Helpers,
+    only: [map_get: 3, extract_preload_source: 1, get_domain_defaults: 2]
+
   @default_max_filter_length 500
 
   @doc """
@@ -36,7 +39,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
     config = Extension.get_persisted(resource, :mishka_gervaz_config)
 
     if config do
-      domain_defaults = get_domain_defaults(resource)
+      domain_defaults = get_domain_defaults(resource, :table)
 
       config
       |> merge_domain_defaults(domain_defaults)
@@ -84,25 +87,6 @@ defmodule MishkaGervaz.Resource.Info.Table do
     _ -> config
   end
 
-  @spec get_domain_defaults(module()) :: map()
-  defp get_domain_defaults(resource) do
-    with {:ok, domain} <- get_domain(resource),
-         config when not is_nil(config) <-
-           Extension.get_persisted(domain, :mishka_gervaz_domain_config) do
-      config.table
-    else
-      _ -> %{}
-    end
-  end
-
-  @spec get_domain(module()) :: {:ok, module()} | :error
-  defp get_domain(resource) do
-    case Ash.Resource.Info.domain(resource) do
-      nil -> :error
-      domain -> {:ok, domain}
-    end
-  end
-
   @spec merge_domain_defaults(map(), map()) :: map()
   defp merge_domain_defaults(%{pagination: :disabled} = config, domain_defaults)
        when domain_defaults == %{} do
@@ -120,10 +104,10 @@ defmodule MishkaGervaz.Resource.Info.Table do
     config
     |> ensure_section(:realtime)
     |> merge_pagination(pagination_defaults)
-    |> update_in([:realtime, :pubsub], fn v -> v || realtime_defaults[:pubsub] end)
-    |> update_in([:realtime, :enabled], fn v -> v || realtime_defaults[:enabled] end)
-    |> update_in([:source, :actor_key], fn v -> v || domain_defaults[:actor_key] end)
-    |> update_in([:source, :master_check], fn v -> v || domain_defaults[:master_check] end)
+    |> update_in([:realtime, :pubsub], &(&1 || realtime_defaults[:pubsub]))
+    |> update_in([:realtime, :enabled], &(&1 || realtime_defaults[:enabled]))
+    |> update_in([:source, :actor_key], &(&1 || domain_defaults[:actor_key]))
+    |> update_in([:source, :master_check], &(&1 || domain_defaults[:master_check]))
     |> merge_optional_section(:refresh, refresh_defaults)
     |> merge_optional_section(:url_sync, url_sync_defaults)
   end
@@ -179,16 +163,15 @@ defmodule MishkaGervaz.Resource.Info.Table do
   defp apply_realtime_defaults(config, resource) do
     case get_in(config, [:realtime, :prefix]) do
       nil ->
-        default_prefix = resource_to_prefix(resource)
-        update_in(config, [:realtime, :prefix], fn _ -> default_prefix end)
+        update_in(config, [:realtime, :prefix], fn _ -> module_to_snake(resource) end)
 
       _ ->
         config
     end
   end
 
-  @spec resource_to_prefix(module()) :: String.t()
-  defp resource_to_prefix(resource), do: module_to_snake(resource)
+  @spec raw_config(module()) :: map() | nil
+  defp raw_config(resource), do: Extension.get_persisted(resource, :mishka_gervaz_config)
 
   @doc """
   Get enabled features for a resource.
@@ -315,25 +298,25 @@ defmodule MishkaGervaz.Resource.Info.Table do
   def action_for(resource, action_type, master_user?) do
     case config(resource) do
       %{source: %{actions: actions}} when is_map(actions) ->
-        action_value = Map.get(actions, action_type)
-        resolve_action_value(action_value, master_user?, action_type)
+        resolve_action_value(Map.get(actions, action_type), master_user?, action_type)
 
       _ ->
         get_action_from_dsl(resource, action_type, master_user?)
     end
   end
 
-  @spec resolve_action_value({atom(), atom()} | atom() | nil, boolean(), atom()) :: atom()
-  defp resolve_action_value({master_action, tenant_action}, master_user?, _action_type) do
+  @spec resolve_action_value({atom(), atom()} | atom() | nil, boolean(), atom() | nil) ::
+          atom() | nil
+  defp resolve_action_value({master_action, tenant_action}, master_user?, _fallback) do
     if master_user?, do: master_action, else: tenant_action
   end
 
-  defp resolve_action_value(action, _master_user?, _action_type) when is_atom(action) do
+  defp resolve_action_value(action, _master_user?, _fallback) when is_atom(action) and not is_nil(action) do
     action
   end
 
-  defp resolve_action_value(nil, _master_user?, action_type) do
-    action_type
+  defp resolve_action_value(nil, _master_user?, fallback) do
+    fallback
   end
 
   @spec get_action_from_dsl(module(), :read | :get | :destroy, boolean()) :: atom()
@@ -359,25 +342,11 @@ defmodule MishkaGervaz.Resource.Info.Table do
   def archive_action_for(resource, action_type, master_user?) do
     case config(resource) do
       %{source: %{archive: %{actions: actions}}} when is_map(actions) ->
-        action_value = Map.get(actions, action_type)
-        resolve_archive_action_value(action_value, master_user?)
+        resolve_action_value(Map.get(actions, action_type), master_user?, nil)
 
       _ ->
         nil
     end
-  end
-
-  @spec resolve_archive_action_value({atom(), atom()} | atom() | nil, boolean()) :: atom() | nil
-  defp resolve_archive_action_value({master_action, tenant_action}, master_user?) do
-    if master_user?, do: master_action, else: tenant_action
-  end
-
-  defp resolve_archive_action_value(action, _master_user?) when is_atom(action) do
-    action
-  end
-
-  defp resolve_archive_action_value(nil, _master_user?) do
-    nil
   end
 
   @doc """
@@ -385,10 +354,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   """
   @spec archive_enabled?(module()) :: boolean()
   def archive_enabled?(resource) do
-    case config(resource) do
-      %{source: %{archive: %{enabled: true}}} -> true
-      _ -> false
-    end
+    match?(%{source: %{archive: %{enabled: true}}}, config(resource))
   end
 
   @doc """
@@ -407,14 +373,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   """
   @spec all_preloads(module(), boolean()) :: [atom()]
   def all_preloads(resource, master_user?) do
-    always = mishka_gervaz_table_source_preload_always!(resource)
-
-    specific =
-      if master_user?,
-        do: mishka_gervaz_table_source_preload_master!(resource),
-        else: mishka_gervaz_table_source_preload_tenant!(resource)
-
-    (always ++ specific ++ detected_preloads(resource))
+    (preload_entries(resource, master_user?) ++ detected_preloads(resource))
     |> Enum.map(&extract_preload_source/1)
     |> Enum.uniq()
   end
@@ -433,6 +392,16 @@ defmodule MishkaGervaz.Resource.Info.Table do
   """
   @spec preload_aliases(module(), boolean()) :: %{atom() => atom()}
   def preload_aliases(resource, master_user?) do
+    resource
+    |> preload_entries(master_user?)
+    |> Enum.reduce(%{}, fn
+      {source, alias_key}, acc when source != alias_key -> Map.put(acc, alias_key, source)
+      _, acc -> acc
+    end)
+  end
+
+  @spec preload_entries(module(), boolean()) :: [atom() | {atom(), atom()}]
+  defp preload_entries(resource, master_user?) do
     always = mishka_gervaz_table_source_preload_always!(resource)
 
     specific =
@@ -440,19 +409,8 @@ defmodule MishkaGervaz.Resource.Info.Table do
         do: mishka_gervaz_table_source_preload_master!(resource),
         else: mishka_gervaz_table_source_preload_tenant!(resource)
 
-    (always ++ specific)
-    |> Enum.reduce(%{}, fn
-      {source, alias_key}, acc when source != alias_key ->
-        Map.put(acc, alias_key, source)
-
-      _, acc ->
-        acc
-    end)
+    always ++ specific
   end
-
-  @spec extract_preload_source(atom() | {atom(), atom()}) :: atom()
-  defp extract_preload_source({source, _alias}), do: source
-  defp extract_preload_source(source) when is_atom(source), do: source
 
   @doc """
   Get the stream name for a resource.
@@ -481,45 +439,25 @@ defmodule MishkaGervaz.Resource.Info.Table do
   block is declared.
   """
   @spec layout(module()) :: map() | nil
-  def layout(resource) do
-    case Extension.get_persisted(resource, :mishka_gervaz_config) do
-      %{layout: layout} when is_map(layout) -> layout
-      _ -> nil
-    end
-  end
+  def layout(resource), do: map_get(raw_config(resource), :layout, nil)
 
   @doc """
   Get the table header configuration. Returns nil when no header is declared.
   """
   @spec header(module()) :: map() | nil
-  def header(resource) do
-    case layout(resource) do
-      %{header: header} when is_map(header) -> header
-      _ -> nil
-    end
-  end
+  def header(resource), do: map_get(layout(resource), :header, nil)
 
   @doc """
   Get the table footer configuration. Returns nil when no footer is declared.
   """
   @spec footer(module()) :: map() | nil
-  def footer(resource) do
-    case layout(resource) do
-      %{footer: footer} when is_map(footer) -> footer
-      _ -> nil
-    end
-  end
+  def footer(resource), do: map_get(layout(resource), :footer, nil)
 
   @doc """
   Get all notices declared in the table layout.
   """
   @spec notices(module()) :: [map()]
-  def notices(resource) do
-    case layout(resource) do
-      %{notices: notices} when is_list(notices) -> notices
-      _ -> []
-    end
-  end
+  def notices(resource), do: map_get(layout(resource), :notices, [])
 
   @doc """
   Get a specific notice by name.
@@ -546,12 +484,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   state-transition flags.
   """
   @spec hooks(module()) :: map()
-  def hooks(resource) do
-    case Extension.get_persisted(resource, :mishka_gervaz_config) do
-      %{hooks: hooks} when is_map(hooks) -> hooks
-      _ -> %{}
-    end
-  end
+  def hooks(resource), do: map_get(raw_config(resource), :hooks, %{})
 
   @doc """
   Get a single hook entry by key.
@@ -646,12 +579,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   Keys can include: `:module`, `:query`, `:filter_parser`, `:pagination`, `:tenant`, `:hooks`
   """
   @spec data_loader(module()) :: map()
-  def data_loader(resource) do
-    case Extension.get_persisted(resource, :mishka_gervaz_config) do
-      %{data_loader: data_loader} when is_map(data_loader) -> data_loader
-      _ -> %{}
-    end
-  end
+  def data_loader(resource), do: map_get(raw_config(resource), :data_loader, %{})
 
   @doc """
   Get the events configuration from the resource.
@@ -667,12 +595,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   Returns an empty map if no events configuration is set.
   """
   @spec events(module()) :: map()
-  def events(resource) do
-    case Extension.get_persisted(resource, :mishka_gervaz_config) do
-      %{events: events} when is_map(events) -> events
-      _ -> %{}
-    end
-  end
+  def events(resource), do: map_get(raw_config(resource), :events, %{})
 
   @doc """
   Get the filter mode for a resource.
@@ -689,12 +612,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   Get all filter groups for a resource.
   """
   @spec filter_groups(module()) :: [map()]
-  def filter_groups(resource) do
-    case config(resource) do
-      %{filter_groups: groups} when is_list(groups) -> groups
-      _ -> []
-    end
-  end
+  def filter_groups(resource), do: map_get(config(resource), :filter_groups, [])
 
   @doc """
   Get a specific filter group by name.
@@ -709,12 +627,7 @@ defmodule MishkaGervaz.Resource.Info.Table do
   Returns nil when pagination is disabled or not configured.
   """
   @spec pagination(module()) :: map() | nil
-  def pagination(resource) do
-    case config(resource) do
-      %{pagination: pagination} -> pagination
-      _ -> nil
-    end
-  end
+  def pagination(resource), do: map_get(config(resource), :pagination, nil)
 
   @doc """
   Check if pagination is enabled for a resource.
@@ -726,46 +639,26 @@ defmodule MishkaGervaz.Resource.Info.Table do
   Get the pagination type for a resource.
   """
   @spec pagination_type(module()) :: :numbered | :infinite | :load_more | nil
-  def pagination_type(resource) do
-    case pagination(resource) do
-      %{type: type} -> type
-      _ -> nil
-    end
-  end
+  def pagination_type(resource), do: map_get(pagination(resource), :type, nil)
 
   @doc """
   Get the page size for a resource.
   """
   @spec page_size(module()) :: pos_integer() | nil
-  def page_size(resource) do
-    case pagination(resource) do
-      %{page_size: size} -> size
-      _ -> nil
-    end
-  end
+  def page_size(resource), do: map_get(pagination(resource), :page_size, nil)
 
   @doc """
   Get the page size options for a resource.
   Returns nil when no options are configured (no dropdown shown).
   """
   @spec page_size_options(module()) :: [pos_integer()] | nil
-  def page_size_options(resource) do
-    case pagination(resource) do
-      %{page_size_options: opts} -> opts
-      _ -> nil
-    end
-  end
+  def page_size_options(resource), do: map_get(pagination(resource), :page_size_options, nil)
 
   @doc """
   Get the max page size for a resource.
   """
   @spec max_page_size(module()) :: pos_integer() | nil
-  def max_page_size(resource) do
-    case pagination(resource) do
-      %{max_page_size: max} -> max
-      _ -> nil
-    end
-  end
+  def max_page_size(resource), do: map_get(pagination(resource), :max_page_size, nil)
 
   @doc """
   Get the pagination UI configuration for a resource.
