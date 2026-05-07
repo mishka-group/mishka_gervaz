@@ -240,9 +240,13 @@ After Tier 1 completes, optionally measure compile time on a clean build (`mix d
 - [x] **Tier 0 audit complete** — Form had 1 reachable, 8 dead, 9 partial. Table had 21/21 reachable.
 - [x] **Phase A — Form/Table parity wiring complete** (May 2026). All 18 form-side broken/partial surfaces flipped to **reachable** via runtime `Info.Form.{events,state,data_loader}/1` lookups. New tests: 33 (form/dsl/state, events, data_loader). Full suite 2877/2877 green.
 - [ ] Open questions resolved (#2 handler accessor promotion answered: form events handlers ARE now accessor-style but still defp; promote in Phase B if desired).
-- [ ] Tier 1 partial (2/9 files):
-  - [x] `form/web/events/submit_handler.ex` (17 defp → 8 outer-level defs in same file + uses existing `Helpers.merge_relation_field_values/2`)
-  - [x] `table/web/state/url_sync.ex` (18 defp → 8 outer-level defs in same file; `validate_url_filters/2` kept as defp at outer level since used only by `apply_url_filters`)
+- [ ] Tier 1 partial (6/9 files):
+  - [x] `form/web/events/submit_handler.ex` (17 defp → 8 outer-level defs + uses existing `Helpers.merge_relation_field_values/2`)
+  - [x] `table/web/state/url_sync.ex` (18 defp → 8 outer-level defs; `validate_url_filters/2` kept as defp at outer level)
+  - [x] `table/web/events/bulk_action_handler.ex` (21 defp → 10 outer-level defs; `run_ash_bulk_action/5` stays in quote — calls overridable `build_bulk_query/3`)
+  - [x] `table/web/events/relation_filter_handler.ex` (24 defp → all 24 moved to outer level; macro body now just `handle/4` delegating to `RelationFilterHandler.do_handle/4`)
+  - [x] `form/web/events/relation_handler.ex` (25 defp → all 25 moved to outer level; macro body now just `handle/4` delegating to `RelationHandler.do_handle/4`)
+  - [x] `form/web/data_loader/relation_loader.ex` (32 defp → all 32 moved to outer level; macro body keeps overridables `load_options/2,3`, `search_options/3,4`, `resolve_selected/3` and imports outer helpers)
   - [ ] `table/web/events/bulk_action_handler.ex` (21 defp)
   - [ ] `table/web/events/relation_filter_handler.ex` (24 defp)
   - [ ] `form/web/events/relation_handler.ex` (25 defp)

@@ -31,9 +31,136 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}
+  alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Errors
 
   require Ash.Query
+
+  @doc false
+  @spec put_error_flash(Phoenix.LiveView.Socket.t(), Exception.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def put_error_flash(socket, error) do
+    message = Errors.format_flash_message(error)
+    send(self(), {:put_flash, :error, message})
+    socket
+  end
+
+  @doc false
+  @spec hook_runner_for(State.t()) :: module()
+  def hook_runner_for(state) do
+    case Info.events(state.static.resource) do
+      %{hooks: mod} when is_atom(mod) and not is_nil(mod) -> mod
+      _ -> MishkaGervaz.Table.Web.Events.HookRunner.Default
+    end
+  end
+
+  @doc false
+  @spec run_lifecycle_hook(State.t(), atom(), map() | nil, list()) :: any()
+  def run_lifecycle_hook(_state, _phase, nil, _args), do: nil
+
+  def run_lifecycle_hook(state, phase, %{name: action_name}, args) do
+    hooks = state.static.hooks
+    runner = hook_runner_for(state)
+    runner.run_hook(hooks, {phase, action_name}, args)
+  end
+
+  @doc false
+  @spec apply_lifecycle_socket(
+          State.t(),
+          atom(),
+          map() | nil,
+          list(),
+          Phoenix.LiveView.Socket.t()
+        ) :: Phoenix.LiveView.Socket.t()
+  def apply_lifecycle_socket(_state, _phase, nil, _args, socket), do: socket
+
+  def apply_lifecycle_socket(state, phase, %{name: action_name}, args, socket) do
+    hooks = state.static.hooks
+    runner = hook_runner_for(state)
+    full_args = adapt_lifecycle_args(hooks, {phase, action_name}, args, socket)
+
+    case runner.apply_hook_result(hooks, {phase, action_name}, full_args, socket) do
+      {:halt, sock} -> sock
+      sock -> sock
+    end
+  end
+
+  @doc false
+  @spec adapt_lifecycle_args(
+          map() | nil,
+          {atom(), atom()},
+          list(),
+          Phoenix.LiveView.Socket.t()
+        ) :: list()
+  def adapt_lifecycle_args(hooks, hook_key, args, socket) when is_map(hooks) do
+    case Map.get(hooks, hook_key) do
+      fun when is_function(fun, 3) -> args ++ [socket]
+      _ -> args
+    end
+  end
+
+  def adapt_lifecycle_args(_hooks, _hook_key, args, _socket), do: args
+
+  @doc false
+  @spec builtin_enabled?(State.t(), atom()) :: boolean()
+  def builtin_enabled?(state, key) do
+    case state.static.hooks do
+      %{__builtins__: %{} = b} -> Map.get(b, key) == true
+      _ -> key == :clear_selection_after_bulk
+    end
+  end
+
+  @doc false
+  @spec resolve_action_spec({atom(), atom()} | atom() | nil, boolean()) :: atom()
+  def resolve_action_spec({master_action, tenant_action}, master_user?) do
+    if master_user?, do: master_action, else: tenant_action
+  end
+
+  def resolve_action_spec(action, _master_user?) when is_atom(action), do: action
+  def resolve_action_spec(nil, _master_user?), do: :update
+
+  @doc false
+  @spec get_action_type(module(), atom()) :: atom()
+  def get_action_type(resource, action_name) do
+    case Ash.Resource.Info.action(resource, action_name) do
+      %{type: type} -> type
+      _ -> :update
+    end
+  end
+
+  @doc false
+  @spec soft_delete_action?(module(), atom(), atom()) :: boolean()
+  def soft_delete_action?(resource, action_name, :destroy) do
+    case Ash.Resource.Info.action(resource, action_name) do
+      %{soft?: true} -> true
+      _ -> false
+    end
+  end
+
+  def soft_delete_action?(_resource, _action_name, _action_type), do: false
+
+  @doc false
+  @spec execute_bulk_by_type(Ash.Query.t(), keyword(), atom()) :: Ash.BulkResult.t()
+  def execute_bulk_by_type(query, opts, :destroy) do
+    {action, opts} = Keyword.pop!(opts, :action)
+    opts = Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
+    opts = Keyword.put_new(opts, :allow_stream_with, :full_read)
+    Ash.bulk_destroy(query, action, %{}, opts)
+  end
+
+  def execute_bulk_by_type(query, opts, :soft_delete) do
+    {action, opts} = Keyword.pop!(opts, :action)
+    opts = Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
+    opts = Keyword.put_new(opts, :allow_stream_with, :full_read)
+    Ash.bulk_update(query, action, %{}, opts)
+  end
+
+  def execute_bulk_by_type(query, opts, _action_type) do
+    {action, opts} = Keyword.pop!(opts, :action)
+    opts = Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
+    opts = Keyword.put_new(opts, :allow_stream_with, :full_read)
+    Ash.bulk_update(query, action, %{}, opts)
+  end
 
   @type state :: State.t()
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -86,13 +213,17 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
 
       require Ash.Query
 
-      @spec put_error_flash(Phoenix.LiveView.Socket.t(), Exception.t()) ::
-              Phoenix.LiveView.Socket.t()
-      defp put_error_flash(socket, error) do
-        message = Errors.format_flash_message(error)
-        send(self(), {:put_flash, :error, message})
-        socket
-      end
+      import MishkaGervaz.Table.Web.Events.BulkActionHandler,
+        only: [
+          put_error_flash: 2,
+          run_lifecycle_hook: 4,
+          apply_lifecycle_socket: 5,
+          builtin_enabled?: 2,
+          resolve_action_spec: 2,
+          get_action_type: 2,
+          soft_delete_action?: 3,
+          execute_bulk_by_type: 3
+        ]
 
       @impl true
       @spec execute(
@@ -321,67 +452,6 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
         end
       end
 
-      @spec run_lifecycle_hook(State.t(), atom(), map() | nil, list()) :: any()
-      defp run_lifecycle_hook(_state, _phase, nil, _args), do: nil
-
-      defp run_lifecycle_hook(state, phase, %{name: action_name}, args) do
-        hooks = state.static.hooks
-        runner = hook_runner_for(state)
-        runner.run_hook(hooks, {phase, action_name}, args)
-      end
-
-      @spec apply_lifecycle_socket(
-              State.t(),
-              atom(),
-              map() | nil,
-              list(),
-              Phoenix.LiveView.Socket.t()
-            ) :: Phoenix.LiveView.Socket.t()
-      defp apply_lifecycle_socket(_state, _phase, nil, _args, socket), do: socket
-
-      defp apply_lifecycle_socket(state, phase, %{name: action_name}, args, socket) do
-        hooks = state.static.hooks
-        runner = hook_runner_for(state)
-        full_args = adapt_lifecycle_args(hooks, {phase, action_name}, args, socket)
-
-        case runner.apply_hook_result(hooks, {phase, action_name}, full_args, socket) do
-          {:halt, sock} -> sock
-          sock -> sock
-        end
-      end
-
-      @spec adapt_lifecycle_args(
-              map() | nil,
-              {atom(), atom()},
-              list(),
-              Phoenix.LiveView.Socket.t()
-            ) ::
-              list()
-      defp adapt_lifecycle_args(hooks, hook_key, args, socket) when is_map(hooks) do
-        case Map.get(hooks, hook_key) do
-          fun when is_function(fun, 3) -> args ++ [socket]
-          _ -> args
-        end
-      end
-
-      defp adapt_lifecycle_args(_hooks, _hook_key, args, _socket), do: args
-
-      @spec builtin_enabled?(State.t(), atom()) :: boolean()
-      defp builtin_enabled?(state, key) do
-        case state.static.hooks do
-          %{__builtins__: %{} = b} -> Map.get(b, key) == true
-          _ -> key == :clear_selection_after_bulk
-        end
-      end
-
-      @spec hook_runner_for(State.t()) :: module()
-      defp hook_runner_for(state) do
-        case Info.events(state.static.resource) do
-          %{hooks: mod} when is_atom(mod) and not is_nil(mod) -> mod
-          _ -> MishkaGervaz.Table.Web.Events.HookRunner.Default
-        end
-      end
-
       @impl true
       @spec build_bulk_query(module(), State.t(), {:exclude, list()} | nil) :: Ash.Query.t()
       def build_bulk_query(resource, state, filter) do
@@ -409,32 +479,6 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
         end
       end
 
-      @spec resolve_action_spec({atom(), atom()} | atom() | nil, boolean()) :: atom()
-      defp resolve_action_spec({master_action, tenant_action}, master_user?) do
-        if master_user?, do: master_action, else: tenant_action
-      end
-
-      defp resolve_action_spec(action, _master_user?) when is_atom(action), do: action
-      defp resolve_action_spec(nil, _master_user?), do: :update
-
-      @spec get_action_type(module(), atom()) :: atom()
-      defp get_action_type(resource, action_name) do
-        case Ash.Resource.Info.action(resource, action_name) do
-          %{type: type} -> type
-          _ -> :update
-        end
-      end
-
-      @spec soft_delete_action?(module(), atom(), atom()) :: boolean()
-      defp soft_delete_action?(resource, action_name, :destroy) do
-        case Ash.Resource.Info.action(resource, action_name) do
-          %{soft?: true} -> true
-          _ -> false
-        end
-      end
-
-      defp soft_delete_action?(_resource, _action_name, _action_type), do: false
-
       @spec run_ash_bulk_action(
               module(),
               :all | {:all_except, list()} | list(),
@@ -458,28 +502,6 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           |> Ash.Query.filter_input(%{id: %{in: ids}})
 
         execute_bulk_by_type(query, opts, action_type)
-      end
-
-      @spec execute_bulk_by_type(Ash.Query.t(), keyword(), atom()) :: Ash.BulkResult.t()
-      defp execute_bulk_by_type(query, opts, :destroy) do
-        {action, opts} = Keyword.pop!(opts, :action)
-        opts = Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
-        opts = Keyword.put_new(opts, :allow_stream_with, :full_read)
-        Ash.bulk_destroy(query, action, %{}, opts)
-      end
-
-      defp execute_bulk_by_type(query, opts, :soft_delete) do
-        {action, opts} = Keyword.pop!(opts, :action)
-        opts = Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
-        opts = Keyword.put_new(opts, :allow_stream_with, :full_read)
-        Ash.bulk_update(query, action, %{}, opts)
-      end
-
-      defp execute_bulk_by_type(query, opts, _action_type) do
-        {action, opts} = Keyword.pop!(opts, :action)
-        opts = Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
-        opts = Keyword.put_new(opts, :allow_stream_with, :full_read)
-        Ash.bulk_update(query, action, %{}, opts)
       end
 
       defoverridable execute: 4,
