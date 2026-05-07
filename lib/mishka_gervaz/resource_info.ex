@@ -2,25 +2,63 @@ defmodule MishkaGervaz.ResourceInfo do
   @moduledoc """
   Delegate module for resource introspection.
 
-  Provides prefixed access to both table and form info modules.
-  For direct access, use `MishkaGervaz.Resource.Info.Table` or
-  `MishkaGervaz.Resource.Info.Form`.
+  Provides a single entry point for reading both table and form configuration.
+  For direct access (and for newer accessors not delegated here), use
+  `MishkaGervaz.Resource.Info.Table` or `MishkaGervaz.Resource.Info.Form`.
 
-  ## Table Functions
+  ## Naming convention
 
-      ResourceInfo.table_config(resource)
-      ResourceInfo.columns(resource)
-      ResourceInfo.table_hooks(resource)
+  - **Unprefixed** functions delegate to the Table info module (e.g. `columns/1`,
+    `filters/1`, `pagination/1`, `hooks/1`, `stream_name/1`, `detected_preloads/1`,
+    `all_preloads/2`, `pagination_enabled?/1`, …).
+  - **`table_*`** functions are the same Table accessors exposed under an
+    explicit prefix (e.g. `table_config/1`, `table_hooks/1`, `table_route/1`,
+    `table_filter_groups/1`, `table_action_for/3`, …).
+  - **`form_*`** functions delegate to the Form info module
+    (e.g. `form_config/1`, `form_fields/1`, `form_groups/1`, `form_layout/1`,
+    `form_steps/1`, `form_action_for/3`, `form_route/1`, …).
 
-  ## Form Functions
+  Where the same name exists on both sides (e.g. `config`, `hooks`,
+  `detected_preloads`, `all_preloads`, `stream_name`, `route`, `action_for`),
+  use the explicit `table_*` / `form_*` form. The bare unprefixed form is
+  Table-only.
 
-      ResourceInfo.form_config(resource)
-      ResourceInfo.form_fields(resource)
-      ResourceInfo.form_hooks(resource)
+  Note that the unprefixed Table action lookup is exposed as `get_action/3`
+  (delegating to `Info.Table.action_for/3`) — the Form equivalent is
+  `form_action_for/3`.
 
-  Overlapping functions (config, hooks, detected_preloads, all_preloads,
-  stream_name, route, action_for) are available with explicit `table_` or
-  `form_` prefixes. The unprefixed versions delegate to Table.
+  ## Examples
+
+      # Table side
+      ResourceInfo.table_config(MyResource)
+      ResourceInfo.columns(MyResource)
+      ResourceInfo.filters(MyResource)
+      ResourceInfo.pagination(MyResource)
+      ResourceInfo.table_hooks(MyResource)
+
+      # Form side
+      ResourceInfo.form_config(MyResource)
+      ResourceInfo.form_fields(MyResource)
+      ResourceInfo.form_groups(MyResource)
+      ResourceInfo.form_steps(MyResource)
+      ResourceInfo.form_hooks(MyResource)
+
+  ## Override-pillar accessors (not delegated here)
+
+  The Phase A override-pillar introspection — `events/1`, `state/1`,
+  `data_loader/1` — is available only on the underlying info modules:
+
+      MishkaGervaz.Resource.Info.Table.events(MyResource)
+      MishkaGervaz.Resource.Info.Table.state(MyResource)
+      MishkaGervaz.Resource.Info.Table.data_loader(MyResource)
+
+      MishkaGervaz.Resource.Info.Form.events(MyResource)
+      MishkaGervaz.Resource.Info.Form.state(MyResource)
+      MishkaGervaz.Resource.Info.Form.data_loader(MyResource)
+
+  Other Form helpers also live only on `Info.Form`: `notices/1`, `notice/2`,
+  `notices_at/2`, `header/1`, `footer/1`, `js_hook/2`, `preload_aliases/2`,
+  `component_id/1`.
   """
 
   defdelegate table_config(resource), to: MishkaGervaz.Resource.Info.Table, as: :config
