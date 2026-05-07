@@ -5,11 +5,6 @@ defmodule MishkaGervaz.Gettext do
   This provides pre-translated UI strings for table components like pagination,
   filters, actions, and states.
 
-  ## Supported Languages
-
-  - English (default)
-  - Persian (fa)
-
   ## Using Your Own Gettext Backend
 
   Configure your application to use a custom Gettext backend:
