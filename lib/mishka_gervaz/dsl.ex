@@ -3,13 +3,13 @@ defmodule MishkaGervaz.Dsl do
   DSL definitions for MishkaGervaz.
 
   This module assembles all MishkaGervaz DSL sections into a top-level
-  `mishka_gervaz` section. Currently supports:
+  `mishka_gervaz` section. Supports:
 
-  - `table` - Admin table configuration (see `MishkaGervaz.Table.Dsl`)
+  - `table` - Admin list-view configuration (see `MishkaGervaz.Table.Dsl`)
+  - `form`  - Create/edit form configuration (see `MishkaGervaz.Form.Dsl`)
 
-  Future planned additions:
-  - `form` - Form builder configuration
-  - `validation` - Advanced validation rules
+  Both sections are siblings inside `mishka_gervaz do … end` and may be
+  used independently or together on a single resource.
 
   ## Usage
 
@@ -30,6 +30,17 @@ defmodule MishkaGervaz.Dsl do
 
         row_actions do
           action :edit, type: :link
+        end
+      end
+
+      form do
+        identity do
+          name :resource_form
+          route "/admin/resources"
+        end
+
+        fields do
+          field :name, :text, required: true
         end
       end
     end
