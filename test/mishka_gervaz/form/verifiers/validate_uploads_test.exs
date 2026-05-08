@@ -76,6 +76,178 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateUploadsTest do
     end
   end
 
+  describe "positive: list-form accept" do
+    test "list of MIME types and extensions compiles" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.UploadListAccept#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :upload_list_#{unique_id}
+              route "/admin/upload-list-#{unique_id}"
+            end
+
+            columns do
+              column :title
+            end
+          end
+
+          form do
+            fields do
+              field :title, :text
+            end
+
+            uploads do
+              upload :doc do
+                accept [".pdf", "image/*"]
+              end
+            end
+          end
+        end
+      end
+      """
+
+      ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        Code.compile_string(code)
+      end)
+
+      module = Module.concat(MishkaGervaz.Test, :"UploadListAccept#{unique_id}")
+      doc = Enum.find(FormInfo.uploads(module), &(&1.name == :doc))
+      assert doc.accept == [".pdf", "image/*"]
+    end
+  end
+
+  describe "negative: invalid accept format" do
+    test "emits DslError for accept with bare words" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.UploadBadAccept#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :upload_bad_accept_#{unique_id}
+              route "/admin/upload-bad-accept-#{unique_id}"
+            end
+
+            columns do
+              column :title
+            end
+          end
+
+          form do
+            fields do
+              field :title, :text
+            end
+
+            uploads do
+              upload :doc do
+                accept "totally,not,a,format"
+              end
+            end
+          end
+        end
+      end
+      """
+
+      output =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string(code)
+        end)
+
+      assert output =~ "invalid accept format"
+      assert output =~ "Spark.Error.DslError"
+    end
+  end
+
+  describe "negative: writer module cannot be loaded" do
+    test "emits DslError when writer points to a non-existent module" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.UploadBadWriter#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :upload_bad_writer_#{unique_id}
+              route "/admin/upload-bad-writer-#{unique_id}"
+            end
+
+            columns do
+              column :title
+            end
+          end
+
+          form do
+            fields do
+              field :title, :text
+            end
+
+            uploads do
+              upload :doc do
+                accept "image/*"
+                writer MishkaGervaz.NoSuchWriter
+              end
+            end
+          end
+        end
+      end
+      """
+
+      output =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string(code)
+        end)
+
+      assert output =~ "writer module"
+      assert output =~ "could not be loaded"
+    end
+  end
+
   describe "negative: bad field reference" do
     test "emits DslError for upload referencing non-existent field" do
       unique_id = System.unique_integer([:positive])

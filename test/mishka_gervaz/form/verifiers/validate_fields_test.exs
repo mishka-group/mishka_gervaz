@@ -239,6 +239,61 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFieldsTest do
     end
   end
 
+  describe "negative: nested_field on non-:nested type" do
+    test "emits DslError when nested_field is declared inside a non-nested field" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.NestedOnText#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, allow_nil?: false, public?: true
+          attribute :metadata, :map, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :nested_on_text_#{unique_id}
+              route "/admin/nested-on-text-#{unique_id}"
+            end
+
+            columns do
+              column :title
+            end
+          end
+
+          form do
+            fields do
+              field :title, :text
+              field :metadata, :text do
+                nested_field :item, :text
+              end
+            end
+          end
+        end
+      end
+      """
+
+      output =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string(code)
+        end)
+
+      assert output =~ "`nested_field` is only allowed inside fields with type `:nested`"
+      assert output =~ "Spark.Error.DslError"
+    end
+  end
+
   describe "negative: virtual select without resource" do
     test "emits DslError for virtual :select without resource option" do
       unique_id = System.unique_integer([:positive])
