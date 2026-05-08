@@ -2,8 +2,10 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   @moduledoc """
   Behaviour for form field type renderers.
 
-  Implement this behaviour to create custom field types that render
-  form inputs in specific ways.
+  A field type is a module that knows how to render an input, sanitize and
+  parse incoming params, validate the resulting value, and supply a default
+  UI configuration. The DSL accepts either a built-in token (`:text`,
+  `:textarea`, `:select`, …) or a module implementing this behaviour.
 
   ## Example
 
@@ -12,17 +14,20 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
         use Phoenix.Component
 
         @impl true
-        def render(assigns, config) do
+        def render(assigns, _config) do
           ~H\"\"\"
           <input type="color" name={@name} value={@value} />
           \"\"\"
         end
 
         @impl true
-        def validate(value, _config), do: {:ok, value}
+        def sanitize(value, _config), do: value
 
         @impl true
         def parse_params(value, _config), do: value
+
+        @impl true
+        def validate(value, _config), do: {:ok, value}
 
         @impl true
         def default_ui, do: %{type: :color}
@@ -31,40 +36,58 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   Then use in DSL:
 
       field :background_color, MyApp.FieldTypes.Color
+
+  Built-in implementations live under `MishkaGervaz.Form.Types.Field.*`
+  (e.g. `MishkaGervaz.Form.Types.Field.Hidden`,
+  `MishkaGervaz.Form.Types.Field.Relation`) and serve as reference
+  implementations.
+
+  See `MishkaGervaz.Form.Behaviours.Template`,
+  `MishkaGervaz.Form.Entities.Field`, and the `MishkaGervaz.Form.Types.Field`
+  directory.
   """
+
+  @typedoc "Phoenix LiveView assigns map passed to `render/2`."
+  @type assigns :: map()
+
+  @typedoc "Field configuration map produced by the DSL."
+  @type config :: map()
+
+  @typedoc "Result of a Phoenix render."
+  @type rendered :: Phoenix.LiveView.Rendered.t()
 
   @doc """
   Render the form field input.
 
   ## Parameters
 
-  - `assigns` - Phoenix assigns with field data
-  - `config` - Field configuration map from DSL
+  - `assigns` — Phoenix assigns with field data
+  - `config`  — field configuration map from the DSL
   """
-  @callback render(assigns :: map(), config :: map()) :: Phoenix.LiveView.Rendered.t()
+  @callback render(assigns(), config()) :: rendered()
 
   @doc """
   Validate a field value.
 
   Returns `{:ok, value}` for valid values or `{:error, message}` for invalid.
   """
-  @callback validate(value :: any(), config :: map()) :: {:ok, any()} | {:error, String.t()}
+  @callback validate(value :: any(), config()) :: {:ok, any()} | {:error, String.t()}
 
   @doc """
-  Parse raw parameter value into the expected type.
+  Parse a raw parameter value into the expected type.
   """
-  @callback parse_params(raw_value :: any(), config :: map()) :: any()
+  @callback parse_params(raw_value :: any(), config()) :: any()
 
   @doc """
   Sanitize a raw parameter value for this field type.
 
-  Called before validation/submission. Text fields strip HTML tags,
-  textarea/json/nested fields pass through unchanged.
+  Called before validation/submission. Text fields strip HTML tags;
+  textarea / json / nested fields pass through unchanged.
   """
-  @callback sanitize(value :: any(), config :: map()) :: any()
+  @callback sanitize(value :: any(), config()) :: any()
 
   @doc """
-  Return default UI configuration for this field type.
+  Return the default UI configuration for this field type.
   """
   @callback default_ui() :: map()
 

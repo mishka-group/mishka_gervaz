@@ -2,16 +2,21 @@ defmodule MishkaGervaz.Form.Behaviours.Template do
   @moduledoc """
   Behaviour for form layout templates.
 
-  Templates define HOW the form is structured and arranged:
-  - Standard: Single-page form with groups
-  - Wizard: Multi-step form with progress indicator
-  - Tabs: Tabbed form layout
+  Templates define **how the form is structured**:
 
-  Templates work together with UIAdapters:
-  - Template = WHERE things go (structure/layout)
-  - UIAdapter = HOW things look (styling/CSS)
+    - Standard — single-page form with groups
+    - Wizard   — multi-step form with progress indicator
+    - Tabs     — tabbed form layout
 
-  ## Creating a Custom Template
+  Templates pair with UI adapters along orthogonal axes:
+
+    - **Template**   — *where* things go (structure / layout)
+    - **UIAdapter**  — *how* things look (styling / CSS)
+
+  ## Two ways to implement
+
+  Bare behaviour — implement every required callback yourself. The default
+  template `MishkaGervaz.Form.Templates.Standard` follows this path:
 
       defmodule MyApp.Form.Templates.Custom do
         @behaviour MishkaGervaz.Form.Behaviours.Template
@@ -29,15 +34,44 @@ defmodule MishkaGervaz.Form.Behaviours.Template do
         @impl true
         def render(assigns) do
           ~H\"\"\"
-          <div class="my-custom-form">
-            ...
-          </div>
+          <div class="my-custom-form">...</div>
           \"\"\"
         end
+
+        # render_loading/1, render_field/1, render_group/1,
+        # render_step_indicator/1 must be implemented or `use`-d below.
       end
+
+  Or `use` this module to inherit `Standard`'s implementations of the
+  optional callbacks (overridable). Most custom templates only need to
+  override `render/1`:
+
+      defmodule MyApp.Form.Templates.Sidebar do
+        use MishkaGervaz.Form.Behaviours.Template
+
+        @impl true
+        def name,  do: :sidebar
+        @impl true
+        def label, do: "Sidebar"
+        @impl true
+        def icon,  do: "hero-bars-3"
+
+        @impl true
+        def render(assigns), do: ~H"<aside>...</aside>"
+
+        # render_loading, render_field, render_group, render_step_indicator
+        # delegate to Standard. Override any of them as needed.
+      end
+
+  See `MishkaGervaz.Form.Templates.Standard`,
+  `MishkaGervaz.Form.Behaviours.FieldType`, and
+  `MishkaGervaz.Behaviours.UIAdapter`.
   """
 
+  @typedoc "Phoenix LiveView assigns map."
   @type assigns :: map()
+
+  @typedoc "Result of a Phoenix render."
   @type rendered :: Phoenix.LiveView.Rendered.t()
 
   @doc "Unique template identifier atom."
@@ -53,13 +87,15 @@ defmodule MishkaGervaz.Form.Behaviours.Template do
   Render the complete form.
 
   Assigns include:
-  - `@static` - Static form configuration (fields, groups, steps, ui_adapter, etc.)
-  - `@state` - Dynamic form state (form, errors, current_step, etc.)
-  - `@myself` - LiveComponent reference for targeting events
+
+    - `@static`  — static form configuration (fields, groups, steps,
+      ui_adapter, …)
+    - `@state`   — dynamic form state (form, errors, current_step, …)
+    - `@myself`  — `LiveComponent` reference for targeting events
   """
   @callback render(assigns()) :: rendered()
 
-  @doc "Render the loading state while form is being initialized."
+  @doc "Render the loading state while the form is being initialized."
   @callback render_loading(assigns()) :: rendered()
 
   @doc "Render a single field by dispatching to its type."
@@ -68,7 +104,7 @@ defmodule MishkaGervaz.Form.Behaviours.Template do
   @doc "Render a group of fields."
   @callback render_group(assigns()) :: rendered()
 
-  @doc "Render the step indicator for wizard/tabs mode."
+  @doc "Render the step indicator for wizard / tabs mode."
   @callback render_step_indicator(assigns()) :: rendered()
 
   @optional_callbacks [
