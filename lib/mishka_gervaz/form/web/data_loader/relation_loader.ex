@@ -25,13 +25,24 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           super(field, state, opts)
         end
       end
+
+  Top-level helpers (`load_all_options/4`, `load_paginated_options/6`,
+  `build_options/4`, `prepend_nil_option/2`, `resolve_display_field/2`,
+  `resolve_load_action/3`, `get_tenant/1`, `maybe_apply_search/2`,
+  `maybe_apply_custom_load/3`, `resolve_selected_fallback/7`) are public
+  so user overrides can reuse them — they live outside the `__using__`
+  macro to avoid per-consumer compile cost.
+
+  See `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Form.Web.State`, and the sibling sub-builders
+  `RecordLoader`, `TenantResolver`, `HookRunner`. The table-side
+  counterpart is `MishkaGervaz.Table.Web.DataLoader.RelationLoader`.
   """
 
   alias MishkaGervaz.Form.Web.State
 
   require Ash.Query
-
-  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
 
   @doc false
   def load_all_options(field, state, resource, display_field) do
@@ -281,8 +292,6 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.DataLoader.Builder
-
       alias MishkaGervaz.Form.Web.State
       require Ash.Query
 

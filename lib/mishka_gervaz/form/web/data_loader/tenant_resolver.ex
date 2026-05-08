@@ -22,14 +22,14 @@ defmodule MishkaGervaz.Form.Web.DataLoader.TenantResolver do
           end
         end
       end
-  """
 
-  alias MishkaGervaz.Form.Web.State
+  See `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Web.State` (for `State.get_action/2`), and the
+  sibling sub-builders `RecordLoader`, `RelationLoader`, `HookRunner`.
+  """
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.DataLoader.Builder
-
       alias MishkaGervaz.Form.Web.State
 
       @doc """

@@ -62,6 +62,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       alias MishkaGervaz.Form.Web.State
+      alias MishkaGervaz.Form.Web.DataLoader.Helpers, as: DataLoaderHelpers
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
       require Phoenix.LiveView
@@ -133,8 +134,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
         case record_mod.new_for_create(state, tenant: tenant, actor: actor) do
           {:ok, form} ->
-            form = run_on_init_hook(state, form)
-            field_values = extract_defaults_to_field_values(state)
+            form = DataLoaderHelpers.run_on_init_hook(state, form)
+            field_values = DataLoaderHelpers.extract_defaults_to_field_values(state)
 
             state =
               State.update(state,
@@ -163,7 +164,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
       @spec load_relation_options(Phoenix.LiveView.Socket.t(), State.t(), atom()) ::
               Phoenix.LiveView.Socket.t()
       def load_relation_options(socket, state, field_name) do
-        field = find_field(state, field_name)
+        field = DataLoaderHelpers.find_field(state, field_name)
 
         if field do
           tenant = resolve_tenant_resolver(state.static.resource).get_tenant(state)
@@ -199,7 +200,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
               String.t()
             ) :: Phoenix.LiveView.Socket.t()
       def search_relation_options(socket, state, field_name, search_term) do
-        field = find_field(state, field_name)
+        field = DataLoaderHelpers.find_field(state, field_name)
 
         if field do
           tenant = resolve_tenant_resolver(state.static.resource).get_tenant(state)
@@ -235,9 +236,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
             ) :: Phoenix.LiveView.Socket.t()
       def handle_async_result(:load_record, {:ok, {:ok, form}}, socket) do
         state = socket.assigns.form_state
-        form = run_on_init_hook(state, form)
-        existing_files = extract_existing_files(state, form)
-        field_values = extract_dependency_values(state, form)
+        form = DataLoaderHelpers.run_on_init_hook(state, form)
+        existing_files = DataLoaderHelpers.extract_existing_files(state, form)
+        field_values = DataLoaderHelpers.extract_dependency_values(state, form)
 
         state =
           State.update(state,
@@ -337,197 +338,14 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
       def handle_async_result(_, _, socket), do: socket
 
-      @spec find_field(State.t(), atom()) :: map() | nil
-      defp find_field(state, field_name) do
-        Enum.find(state.static.fields, &(&1.name == field_name))
-      end
-
-      @spec extract_existing_files(State.t(), Phoenix.HTML.Form.t()) :: %{atom() => list(map())}
-      defp extract_existing_files(%{static: %{uploads: uploads}}, form)
-           when is_list(uploads) and uploads != [] do
-        extract_from_record(uploads, form)
-      end
-
-      defp extract_existing_files(_state, _form), do: %{}
-
-      defp extract_from_record(uploads, %{source: %{source: %{data: record}}})
-           when not is_nil(record) do
-        Map.new(uploads, fn upload_config ->
-          files = read_existing_files(upload_config, record)
-          {upload_config.name, normalize_file_list(files)}
-        end)
-      end
-
-      defp extract_from_record(_uploads, _form), do: %{}
-
-      defp read_existing_files(upload_config, record) do
-        case upload_config[:existing] do
-          nil ->
-            field = upload_config[:field] || upload_config.name
-            Map.get(record, field)
-
-          field_name when is_atom(field_name) ->
-            Map.get(record, field_name)
-
-          fun when is_function(fun, 1) ->
-            fun.(record)
-
-          _ ->
-            nil
-        end
-      end
-
-      defp normalize_file_list(nil), do: []
-      defp normalize_file_list(value) when is_binary(value), do: [%{filename: value}]
-
-      defp normalize_file_list(value) when is_list(value),
-        do: Enum.map(value, &normalize_file_info/1)
-
-      defp normalize_file_list(value) when is_map(value), do: [normalize_file_info(value)]
-      defp normalize_file_list(_), do: []
-
-      defp normalize_file_info(%{filename: _} = file), do: file
-      defp normalize_file_info(%{name: name} = file), do: Map.put(file, :filename, name)
-
-      defp normalize_file_info(%{"filename" => filename} = file),
-        do: %{filename: filename, id: file["id"]}
-
-      defp normalize_file_info(%{"name" => name} = file), do: %{filename: name, id: file["id"]}
-      defp normalize_file_info(value) when is_binary(value), do: %{filename: value}
-      defp normalize_file_info(other), do: %{filename: inspect(other)}
-
-      @spec extract_dependency_values(State.t(), Phoenix.HTML.Form.t()) :: map()
-      defp extract_dependency_values(state, form) do
-        record =
-          case form do
-            %{source: %{source: %{data: data}}} when not is_nil(data) -> data
-            _ -> nil
-          end
-
-        if is_nil(record) do
-          %{}
-        else
-          dependency_names =
-            state.static.fields
-            |> Enum.map(& &1.depends_on)
-            |> Enum.reject(&is_nil/1)
-            |> Enum.uniq()
-
-          relation_names =
-            state.static.fields
-            |> Enum.filter(&(&1.type == :relation))
-            |> Enum.map(& &1.name)
-
-          derive_fns =
-            state.static.fields
-            |> Enum.filter(&(not is_nil(&1[:derive_value])))
-            |> Map.new(&{&1.name, &1.derive_value})
-
-          (dependency_names ++ relation_names)
-          |> Enum.uniq()
-          |> Enum.reduce(%{}, fn field_name, acc ->
-            value = Map.get(record, field_name)
-
-            value =
-              case value do
-                nil ->
-                  case Map.get(derive_fns, field_name) do
-                    nil -> nil
-                    derive_fn -> derive_fn.(record)
-                  end
-
-                other ->
-                  other
-              end
-
-            case value do
-              nil -> acc
-              "" -> acc
-              _ -> Map.put(acc, field_name, value)
-            end
-          end)
-        end
-      end
-
-      @spec load_dependent_relations(Phoenix.LiveView.Socket.t(), State.t()) ::
-              Phoenix.LiveView.Socket.t()
       defp load_dependent_relations(socket, state) do
-        state.static.fields
-        |> Enum.filter(fn field ->
-          field.depends_on != nil and
-            Map.has_key?(state.field_values, field.depends_on) and
-            field.type == :relation
-        end)
-        |> Enum.reduce(socket, fn field, acc ->
-          load_relation_options(acc, state, field.name)
-        end)
+        DataLoaderHelpers.load_dependent_relations(socket, state, &load_relation_options/3)
       end
 
-      @spec run_on_init_hook(State.t(), Phoenix.HTML.Form.t()) :: Phoenix.HTML.Form.t()
-      defp run_on_init_hook(%{static: %{hooks: %{on_init: on_init}}} = state, form)
-           when is_function(on_init, 2) do
-        case on_init.(form, state) do
-          %Phoenix.HTML.Form{} = modified_form -> modified_form
-          _ -> form
-        end
+      defp load_readonly_relation_options(socket, state) do
+        relation_mod = resolve_relation_loader(state.static.resource)
+        DataLoaderHelpers.load_readonly_relation_options(socket, state, relation_mod)
       end
-
-      defp run_on_init_hook(_state, form), do: form
-
-      @spec extract_defaults_to_field_values(State.t()) :: map()
-      defp extract_defaults_to_field_values(%{defaults: defaults})
-           when is_map(defaults) and defaults != %{} do
-        defaults
-        |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
-        |> Map.new()
-      end
-
-      defp extract_defaults_to_field_values(_state), do: %{}
-
-      @spec load_readonly_relation_options(Phoenix.LiveView.Socket.t(), State.t()) ::
-              Phoenix.LiveView.Socket.t()
-      defp load_readonly_relation_options(socket, original_state) do
-        relation_mod = resolve_relation_loader(original_state.static.resource)
-
-        original_state.static.fields
-        |> Enum.filter(fn field ->
-          field.type == :relation and
-            field_readonly?(field, original_state) and
-            Map.has_key?(original_state.field_values, field.name)
-        end)
-        |> Enum.reduce(socket, fn field, acc ->
-          value = Map.get(original_state.field_values, field.name)
-          ids = if is_list(value), do: Enum.map(value, &to_string/1), else: [to_string(value)]
-
-          case relation_mod.resolve_selected(field, original_state, ids) do
-            {:ok, resolved} when resolved != [] ->
-              current_state = acc.assigns.form_state
-              current_opts = Map.get(current_state.relation_options, field.name, %{})
-
-              new_opts =
-                Map.merge(current_opts, %{
-                  options: resolved,
-                  selected_options: resolved,
-                  loading?: false
-                })
-
-              relation_options = Map.put(current_state.relation_options, field.name, new_opts)
-
-              Phoenix.Component.assign(
-                acc,
-                :form_state,
-                State.update(current_state, relation_options: relation_options)
-              )
-
-            _ ->
-              acc
-          end
-        end)
-      end
-
-      defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
-      defp field_readonly?(%{readonly: true}, _), do: true
-      defp field_readonly?(_, _), do: false
 
       @spec resolve_record_loader(module() | nil) :: module()
       defp resolve_record_loader(nil), do: record_loader()

@@ -18,10 +18,17 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
           super(state, record_id, opts)
         end
       end
-  """
 
-  alias MishkaGervaz.Form.Web.State
-  alias MishkaGervaz.Resource.Info.Form, as: Info
+  Top-level helpers `keyword_put_if_set/3` and
+  `resolve_tenant_from_record/2` are public so user overrides can reuse
+  them without redefining.
+
+  See `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Form.Web.State` (for `State.get_action/2` and
+  `State.get_preloads/1`), and the sibling sub-builders `RelationLoader`,
+  `TenantResolver`, `HookRunner`.
+  """
 
   @doc false
   @spec keyword_put_if_set(keyword(), atom(), any()) :: keyword()
@@ -39,8 +46,6 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.DataLoader.Builder
-
       alias MishkaGervaz.Form.Web.State
       alias MishkaGervaz.Resource.Info.Form, as: Info
 

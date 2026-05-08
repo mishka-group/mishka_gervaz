@@ -17,12 +17,14 @@ defmodule MishkaGervaz.Form.Web.DataLoader.HookRunner do
           super(hooks, hook_name, args)
         end
       end
+
+  See `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Web.DataLoader.Helpers`, and the sibling sub-builders
+  `RecordLoader`, `RelationLoader`, `TenantResolver`.
   """
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.DataLoader.Builder
-
       @doc """
       Run a hook by name with the given arguments.
       Returns the hook result or nil if hook doesn't exist.
