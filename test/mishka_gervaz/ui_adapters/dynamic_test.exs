@@ -52,7 +52,8 @@ defmodule MishkaGervaz.UIAdapters.DynamicTest do
       <span
         data-renderer={@component_name}
         data-site={@site}
-      ></span>
+      >
+      </span>
       """
     end
   end
@@ -122,6 +123,7 @@ defmodule MishkaGervaz.UIAdapters.DynamicTest do
 
       assert html =~ ~s(data-renderer="button")
       assert html =~ ~s(data-site="TestSite")
+
       refute html =~ "data-fallback",
              "renderer path should not delegate to fallback"
     end

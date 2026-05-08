@@ -1,8 +1,35 @@
 defmodule MishkaGervaz.Form.Dsl.Uploads do
   @moduledoc """
-  Uploads section DSL definition for form configuration.
+  Uploads section — file upload entities tied to fields of type
+  `:upload`.
 
-  Defines file upload configuration for form fields.
+  Each `upload` entity declares accept rules, count and size limits, and
+  optional dropzone text and preview UI. A `field :name, :upload` with a
+  matching name binds the LiveView upload config to the rendered control.
+
+  ## Example
+
+      uploads do
+        upload :cover do
+          accept "image/*"
+          max_entries 1
+          max_file_size 5_000_000
+          show_preview true
+          auto_upload true
+          dropzone_text "Drop image here"
+
+          ui do
+            label "Cover Image"
+            icon "hero-photo"
+            class "border-dashed"
+            preview_class "w-32 h-32"
+          end
+        end
+      end
+
+  See `MishkaGervaz.Form.Entities.Upload` for the full option list,
+  including `auto_upload`, `chunk_size`, `progress`, and the `ui`
+  sub-entity.
   """
 
   alias MishkaGervaz.Form.Entities.Upload

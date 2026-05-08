@@ -1,13 +1,80 @@
 defmodule MishkaGervaz.Form.Dsl.Layout do
   @moduledoc """
-  Layout section DSL definition for form configuration.
+  Layout section — grid, mode, step navigation, and the form chrome
+  (`header` / `footer` / `notice`).
 
-  Defines form layout structure including grid columns, wizard/tabs mode,
-  step definitions, navigation, responsiveness, and the form chrome —
-  header, footer, and notices (alerts/banners).
+  Three modes drive the rendering shape:
 
-  Each chrome entity (`header`, `footer`, `notice`) supports `visible` and
-  `restricted` for the same access conventions used by `field`/`group`.
+    * `:standard` — single page, all groups visible.
+    * `:wizard` — step-by-step, only the current step renders.
+    * `:tabs` — every step rendered as a tab/accordion.
+
+  `:wizard` and `:tabs` require one or more `step` entities. Step flow is
+  controlled by `navigation` (`:sequential` enforces order, `:free` lets
+  users jump) and step state is held according to `persistence`
+  (`:none`, `:ets`, or `:client_token`).
+
+  ## Example — standard layout
+
+      layout do
+        columns 2
+        mode :standard
+        responsive true
+      end
+
+  ## Example — wizard with steps
+
+      layout do
+        mode :wizard
+        columns 2
+        navigation :sequential
+        persistence :ets
+
+        step :details do
+          groups [:basic]
+
+          ui do
+            label "Details"
+            icon "hero-information-circle"
+          end
+        end
+
+        step :review do
+          groups [:flags]
+          summary true
+
+          ui do
+            label "Review"
+          end
+        end
+      end
+
+  ## Chrome entities
+
+  `header`, `footer`, and `notice` render around (or between) the form
+  fields. Each supports `visible` and `restricted` predicates with the
+  same access conventions used by `field` / `group`. `notice` accepts a
+  `position` (e.g. `:before_fields`, `:before_submit`,
+  `{:after_group, :basic}`), a `type` (`:info` / `:warning` / `:error` /
+  `:success` / `:neutral`), and an optional `bind_to` for binding to
+  validation state.
+
+      layout do
+        header do
+          title "Account Permissions"
+          description "Configure what this account can access."
+        end
+
+        notice :read_only_banner do
+          position :before_fields
+          type :warning
+          title "Read-Only Access"
+          visible fn state -> state.master_user? == false end
+        end
+      end
+
+  See `MishkaGervaz.Form.Entities.{Step, Header, Footer, Notice}` for
+  the full option list per entity.
   """
 
   alias MishkaGervaz.Form.Entities.{Step, Header, Footer, Notice}

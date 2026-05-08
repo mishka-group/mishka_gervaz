@@ -1,8 +1,78 @@
 defmodule MishkaGervaz.Form.Dsl.Fields do
   @moduledoc """
-  Fields section DSL definition for form configuration.
+  Fields section — declares form fields manually or via auto-discovery.
 
-  Defines form fields with support for manual fields and auto-discovery.
+  Two top-level entities live here:
+
+    * `field :name, :type do … end` — explicit field with full control.
+    * `auto_fields do … end` — discover fields from the resource's
+      public Ash attributes, with `override` for per-field tweaks.
+
+  The `field_order` schema key sets display order; fields not listed
+  appear at the end in declaration order.
+
+  ## Example — explicit fields
+
+      fields do
+        field :title, :text do
+          required true
+          position :first
+
+          ui do
+            label "Post Title"
+            placeholder "Enter title..."
+            span 2
+          end
+        end
+
+        field :status, :select do
+          required true
+          default :draft
+          options [{:draft, "Draft"}, {:published, "Published"}]
+        end
+
+        field :user_id, :relation do
+          load_action {:master_read, :tenant_read}
+          mode :search
+          display_field :email
+        end
+      end
+
+  ## Example — auto-discovery
+
+      fields do
+        auto_fields do
+          except [:id, :internal_only]
+          position :end
+
+          defaults required: false, visible: true
+
+          override :age, type: :range, required: true
+
+          override :bio do
+            ui do
+              label "Biography"
+              rows 8
+            end
+          end
+        end
+      end
+
+  ## Field types
+
+  Built-in types live under `MishkaGervaz.Form.Types.Field.*` —
+  `:text`, `:textarea`, `:select`, `:multi_select`, `:combobox`,
+  `:relation`, `:nested`, `:upload`, `:toggle`, `:checkbox`, `:date`,
+  `:datetime`, `:number`, `:json`, `:string_list`, `:password`, `:range`.
+  When `type` is omitted, it is inferred from the matching Ash
+  attribute.
+
+  ## Nested fields
+
+  For `:nested` fields (embedded resources or constrained `{:array, :map}`
+  attributes), declare per-sub-field overrides with
+  `nested_field :name do … end` inside the parent field. See
+  `MishkaGervaz.Form.Entities.NestedField`.
   """
 
   alias MishkaGervaz.Form.Entities.Field

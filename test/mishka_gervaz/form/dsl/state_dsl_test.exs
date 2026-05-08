@@ -2,7 +2,7 @@ defmodule MishkaGervaz.Form.Dsl.StateDslTest do
   @moduledoc """
   Tests the form `state` DSL section: per-sub-builder overrides
   (field/group/step/presentation/access) and the whole-module override
-  (`state module: ...`). Mirrors the table-side state DSL test.
+  (`state do module ... end`). Mirrors the table-side state DSL test.
   """
   use ExUnit.Case, async: true
 
@@ -144,7 +144,7 @@ defmodule MishkaGervaz.Form.Dsl.StateDslTest do
     end
   end
 
-  describe "whole-state module override (state module: …)" do
+  describe "whole-state module override (state do module ... end)" do
     test "init delegates to the custom module" do
       state = State.init("test-id", WholeStateOverrideResource, master_user())
 

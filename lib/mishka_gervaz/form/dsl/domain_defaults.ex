@@ -1,16 +1,58 @@
 defmodule MishkaGervaz.Form.Dsl.DomainDefaults do
   @moduledoc """
-  DSL section for domain-level form configuration.
+  Domain-level form defaults inherited by every resource that uses
+  `MishkaGervaz.Resource` under this domain.
 
-  These form defaults are inherited by all resources in the domain
-  that use `MishkaGervaz.Resource`.
+  Used by the `MishkaGervaz.Domain` extension. Resource-level
+  configuration takes priority on a per-key basis; missing keys fall
+  back to the domain defaults. The `submit` entity is the same one
+  exposed at the resource level (`MishkaGervaz.Form.Dsl.Submit`) — both
+  layers accept identical syntax, and submit inheritance is per-button,
+  not whole-block.
 
-  Used by `MishkaGervaz.Domain` extension.
+  ## Example
 
-  Domain `submit` mirrors the resource `submit` DSL — the same entity is
-  reused so both layers accept identical syntax. Resource-level configuration
-  takes priority on a per-button basis; missing buttons fall back to the
-  domain configuration.
+      defmodule MyApp.Domain do
+        use Ash.Domain, extensions: [MishkaGervaz.Domain]
+
+        mishka_gervaz do
+          form do
+            actor_key :current_user
+            master_check fn user -> user && user.role == :admin end
+            ui_adapter MishkaGervaz.UIAdapters.Tailwind
+            template MishkaGervaz.Form.Templates.Standard
+            features :all
+
+            actions do
+              create {:master_create, :create}
+              update {:master_update, :update}
+              read   {:master_get, :read}
+            end
+
+            layout do
+              responsive true
+            end
+
+            submit do
+              create label: "Save"
+              update label: "Save Changes"
+              cancel label: "Cancel"
+              position :bottom
+            end
+          end
+        end
+      end
+
+  ## Sub-sections and entity
+
+    * `actions` — same shape as the resource-level `source.actions`.
+    * `theme` — default theme classes inherited by every form.
+    * `layout` — defaults for `navigation`, `persistence`, `columns`,
+      `responsive`.
+    * `submit` — domain-wide default buttons. Resource buttons override
+      per-button, not as a whole block.
+
+  Read accessors live on `MishkaGervaz.Domain.Info.Form`.
   """
 
   alias MishkaGervaz.Form.Dsl.Submit, as: SubmitDsl

@@ -1,11 +1,43 @@
 defmodule MishkaGervaz.Form.Dsl.Presentation do
   @moduledoc """
-  Presentation section DSL definition for form configuration.
+  Presentation section — UI adapter, template, features, and theming.
 
-  Defines UI adapter, templates, and theming configuration.
+  Controls how the form renders: which `ui_adapter` supplies the
+  per-component renderers (button, text_input, etc.), which `template`
+  arranges them, what subset of `features` to enable, and the default
+  theme classes used by every field/group/error slot.
 
-  Structure mirrors the table DSL:
-  - `presentation > theme` for form theming
+  ## Example
+
+      presentation do
+        ui_adapter MyApp.UIAdapter
+        template MishkaGervaz.Form.Templates.Standard
+        features :all
+        debounce 300
+
+        theme do
+          form_class "max-w-4xl"
+          field_class "rounded-md"
+          label_class "text-sm font-medium"
+          error_class "text-red-600"
+        end
+      end
+
+  ## Notable options
+
+    * `ui_adapter` — module implementing
+      `MishkaGervaz.Behaviours.UIAdapter`. Defaults to
+      `MishkaGervaz.UIAdapters.Tailwind`.
+    * `template` — module implementing the form template behaviour.
+      Defaults to `MishkaGervaz.Form.Templates.Standard`.
+    * `features` — `:all` (use everything the template supports) or an
+      explicit list:
+      `[:validation, :uploads, :groups, :wizard, :autosave, :inline_errors]`.
+    * `debounce` — global default phx-debounce in ms; overridable
+      per field via `field :foo do ui do debounce 500 end end`.
+    * `theme do …` — string-class slots (`form_class`, `field_class`,
+      `label_class`, `error_class`); template-specific options go in
+      `extra: %{…}`.
   """
 
   @theme_schema [

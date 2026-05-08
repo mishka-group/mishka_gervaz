@@ -1,12 +1,52 @@
 defmodule MishkaGervaz.Form.Dsl.Source do
   @moduledoc """
-  Source section DSL definition for form configuration.
+  Source section — action mapping, preloading, actor resolution, and
+  per-mode access control.
 
-  Defines action mapping and preloading configuration for form data operations.
+  Tells the form which Ash actions to call for each mode (`create`,
+  `update`, `read`), what relationships to preload for master vs. tenant
+  users, and who counts as a master user. Mirrors the table-side
+  `source` section.
 
-  Structure mirrors the table DSL pattern:
-  - `source > actions` for create/update/read action mapping
-  - `source > preload` for three-tier preload configuration
+  ## Example
+
+      source do
+        actor_key :current_user
+        master_check fn user -> user && user.role == :admin end
+
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read   {:master_get, :read}
+        end
+
+        preload do
+          always [:user]
+          master [:comments, master_category: :category]
+          tenant tenant_category: :category
+        end
+      end
+
+  ## Sub-sections and entities
+
+    * `actions` — `create` / `update` / `read`. Atom (used for both
+      master and tenant) or `{master_action, tenant_action}` tuple. The
+      action used at runtime is selected by `master_check`.
+
+    * `preload` — three-tier (`always` / `master` / `tenant`). Each list
+      accepts atoms or `{source, alias}` tuples. The relationship's read
+      action must NOT have `pagination required?: true` — preloads do
+      not pass pagination params and `LimitRequired` will be raised at
+      runtime.
+
+    * `access` — entity gating individual modes by role. See
+      `MishkaGervaz.Form.Entities.Access`.
+
+  ## Inheritance
+
+  `actor_key`, `master_check`, and `actions` can be set at the domain
+  level (see `MishkaGervaz.Form.Dsl.DomainDefaults`); resource-level
+  values override them.
   """
 
   @actions_schema [

@@ -1,8 +1,42 @@
 defmodule MishkaGervaz.Form.Dsl.Groups do
   @moduledoc """
-  Groups section DSL definition for form configuration.
+  Groups section — bundles fields into named groups for layout and
+  access control.
 
-  Defines field grouping for form layout organization.
+  A group references field names; the layout (and any wizard/tabs steps)
+  arranges the fields inside each group. Groups also carry the standard
+  `visible` / `restricted` predicates and an optional `ui` sub-entity
+  for label, icon, description, and CSS classes. Groups are reusable
+  units — wizard `step do groups [:basic, :meta] end` maps a step to a
+  set of groups by name.
+
+  ## Example
+
+      groups do
+        group :general do
+          fields [:title, :content, :status, :language]
+          position :first
+
+          ui do
+            label "General"
+            icon "hero-pencil"
+            description "Core fields"
+            class "border p-4"
+          end
+        end
+
+        group :settings do
+          fields [:priority, :featured, :metadata, :user_id]
+          collapsible true
+          collapsed true
+
+          ui do
+            label "Settings"
+          end
+        end
+      end
+
+  See `MishkaGervaz.Form.Entities.Group` for the full option list.
   """
 
   alias MishkaGervaz.Form.Entities.Group

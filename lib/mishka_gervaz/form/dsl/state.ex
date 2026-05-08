@@ -24,7 +24,9 @@ defmodule MishkaGervaz.Form.Dsl.State do
 
       mishka_gervaz do
         form do
-          state module: MyApp.Form.CustomState
+          state do
+            module MyApp.Form.CustomState
+          end
         end
       end
 

@@ -1,8 +1,19 @@
 defmodule MishkaGervaz.Form.Dsl.Identity do
   @moduledoc """
-  Identity section DSL definition for form configuration.
+  Identity section — naming and routing for a form.
 
-  Defines naming and routing configuration for the form.
+  Every form must declare an identity. `name` is required and is used as
+  the LiveComponent id and as the lookup key for `Info.Form` accessors;
+  `route` powers post-save redirects; `stream_name` defaults to a value
+  derived from `name` when omitted.
+
+  ## Example
+
+      identity do
+        name :form_post
+        route "/admin/posts"
+        stream_name :form_post_stream
+      end
   """
 
   @schema [
