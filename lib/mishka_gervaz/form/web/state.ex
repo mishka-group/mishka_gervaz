@@ -1,35 +1,40 @@
 defmodule MishkaGervaz.Form.Web.State do
   @moduledoc """
-  Single state struct for MishkaGervaz form.
+  Single state struct for a MishkaGervaz form LiveView.
 
-  Instead of scattered assigns, all form state is managed in this struct.
-  This provides:
+  All per-request form state lives on `t:t/0`. Instead of scattering values
+  across LiveView assigns, every consumer of the form pipeline reads from
+  and writes to this struct, giving:
 
-  - Clear state structure
-  - Easy state updates
-  - Type safety
-  - Single source of truth
+  - One clearly-typed shape (`t:t/0` and `t:Static.t/0`).
+  - One place to thread updates (`update/2`).
+  - One source of truth for events, the renderer, and tests.
 
-  ## Performance Optimization
+  ## Performance split
 
-  State is split into two parts:
-  - `static` - Configuration that never changes (same reference for O(1) comparison)
-  - Dynamic fields - User interaction state that triggers re-renders
+  State is partitioned into two halves:
 
-  This separation allows LiveView to skip re-rendering static parts (fields, groups, etc.)
-  when only dynamic state (form values, current step, etc.) changes.
+  - `static` (`t:Static.t/0`) — configuration that never changes after
+    `init/3`. Same struct reference for the lifetime of the form, which
+    lets LiveView skip re-rendering nodes that depend only on it.
+  - Dynamic fields — user-interaction state (form values, current step,
+    relation options, errors, …) that drive re-renders.
 
   ## Sub-builders
 
-  State initialization is composed of sub-builders that can be overridden:
+  `init/3` composes its work from five overridable sub-builder modules.
+  The DSL (`state do … end`) can override any of them per-resource, and
+  the `use` macro accepts the same set as compile-time options.
 
-  - `FieldBuilder` - Builds field configs from DSL and resource
-  - `GroupBuilder` - Builds group layout
-  - `StepBuilder` - Builds wizard steps
-  - `Presentation` - Resolves UI adapter and templates
-  - `Access` - Handles access control
+  - `MishkaGervaz.Form.Web.State.FieldBuilder` — resolved field configs.
+  - `MishkaGervaz.Form.Web.State.GroupBuilder` — group layout.
+  - `MishkaGervaz.Form.Web.State.StepBuilder` — wizard / tabs step plan.
+  - `MishkaGervaz.Form.Web.State.Presentation` — UI adapter, template,
+    theme, features, debounce.
+  - `MishkaGervaz.Form.Web.State.Access` — master gate, action mapping,
+    preload selection.
 
-  ## User Override
+  ## Override patterns
 
   Override the entire state module:
 
@@ -38,9 +43,14 @@ defmodule MishkaGervaz.Form.Web.State do
 
         def init(id, resource, user) do
           state = super(id, resource, user)
-          %{state | custom_field: :value}
+          MishkaGervaz.Form.Web.State.update(state, mode: :update)
         end
       end
+
+  Use `update/2` (or `struct/2`) to mutate fields — the struct shape is
+  fixed and there is no `:custom_field`. To carry your own data, attach
+  it to `state.static.config` (read-only, set at build time) or stage it
+  on `state.field_values`.
 
   Override specific sub-builders:
 
@@ -68,19 +78,26 @@ defmodule MishkaGervaz.Form.Web.State do
           state module: MyApp.Form.CustomState
         end
       end
+
+  See `MishkaGervaz.Form.Web.State.Helpers` (shared utilities exposed to
+  the macro and to user overrides), `MishkaGervaz.Form.Web.Live`,
+  `MishkaGervaz.Form.Web.Events`, `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Behaviours.Template`, and the table-side counterpart
+  `MishkaGervaz.Table.Web.State`.
   """
-
-  alias MishkaGervaz.Resource.Info.Form, as: Info
-
-  import MishkaGervaz.Helpers, only: [module_to_snake: 2]
 
   defmodule Static do
     @moduledoc """
     Static form configuration that never changes after initialization.
 
-    Stored as a separate struct so LiveView can skip re-rendering when only
-    dynamic state changes. The reference to this struct stays the same across
-    all state updates, enabling O(1) equality comparison.
+    Held on `MishkaGervaz.Form.Web.State`'s `:static` field as a separate
+    struct so LiveView can skip re-rendering nodes that depend only on
+    it — the reference stays identical across every dynamic update,
+    enabling O(1) equality comparison.
+
+    Populated once by `MishkaGervaz.Form.Web.State.Default.init/3`. See
+    the parent module `MishkaGervaz.Form.Web.State` for the dynamic
+    counterpart.
     """
 
     defstruct [
@@ -90,7 +107,6 @@ defmodule MishkaGervaz.Form.Web.State do
       :config,
       :source,
       :fields,
-      :field_order,
       :groups,
       :steps,
       :uploads,
@@ -106,7 +122,6 @@ defmodule MishkaGervaz.Form.Web.State do
       :layout_mode,
       :layout_columns,
       :layout_navigation,
-      :layout_persistence,
       :header,
       :footer,
       :notices
@@ -119,7 +134,6 @@ defmodule MishkaGervaz.Form.Web.State do
             config: map(),
             source: map() | nil,
             fields: list(map()),
-            field_order: list(atom()),
             groups: list(map()),
             steps: list(map()),
             uploads: list(map()),
@@ -135,7 +149,6 @@ defmodule MishkaGervaz.Form.Web.State do
             layout_mode: :standard | :wizard | :tabs,
             layout_columns: 1 | 2 | 3 | 4,
             layout_navigation: :sequential | :free,
-            layout_persistence: :none | :ets | :client_token,
             header: map() | nil,
             footer: map() | nil,
             notices: list(map())
@@ -223,14 +236,31 @@ defmodule MishkaGervaz.Form.Web.State do
 
   defmodule Helpers do
     @moduledoc """
-    Helper functions for Form State module operations.
+    Shared helpers for `MishkaGervaz.Form.Web.State`.
 
-    These are extracted from the macro to allow users to reuse them
-    when overriding state functions.
+    Two reasons these live outside the `__using__` macro:
+
+    1. **Reuse across the macro and user overrides.** A user module that
+       overrides `init/3` (via `use MishkaGervaz.Form.Web.State`) can
+       call any helper here without redefining it. The macro itself
+       imports them as `StateHelpers`.
+    2. **Smaller compiled bytecode per consumer.** Helpers compile once
+       in this module rather than being re-emitted into every macro
+       expansion.
+
+    Two functional groups:
+
+    - **Config getters** (`get_layout_mode/1`, `get_uploads/1`,
+      `get_submit/1`, …) — pull a typed value out of the runtime
+      `Info.config(resource)` map with sensible defaults.
+    - **Step helpers** (`groups_for_step/3`) and **access**
+      (`mode_allowed?/3`, `resolve_access/1`) — the bits of logic the
+      macro and external callers (e.g. `Form.Web.Live`) both need.
+
+    See `MishkaGervaz.Form.Web.State`,
+    `MishkaGervaz.Form.Web.State.Access.Default`, and
+    `MishkaGervaz.Form.Web.Live`.
     """
-
-    alias MishkaGervaz.Form.Web.State
-    alias MishkaGervaz.Resource.Info.Form, as: Info
 
     import MishkaGervaz.Helpers, only: [module_to_snake: 2]
 
@@ -240,108 +270,53 @@ defmodule MishkaGervaz.Form.Web.State do
     end
 
     @spec get_layout_mode(map()) :: :standard | :wizard | :tabs
-    def get_layout_mode(config) do
-      case config do
-        %{layout: %{mode: mode}} when mode in [:standard, :wizard, :tabs] -> mode
-        _ -> :standard
-      end
-    end
+    def get_layout_mode(%{layout: %{mode: mode}}) when mode in [:standard, :wizard, :tabs],
+      do: mode
+
+    def get_layout_mode(_config), do: :standard
 
     @spec get_layout_columns(map()) :: 1 | 2 | 3 | 4
-    def get_layout_columns(config) do
-      case config do
-        %{layout: %{columns: cols}} when cols in [1, 2, 3, 4] -> cols
-        _ -> 1
-      end
-    end
+    def get_layout_columns(%{layout: %{columns: cols}}) when cols in [1, 2, 3, 4], do: cols
+    def get_layout_columns(_config), do: 1
 
     @spec get_layout_navigation(map()) :: :sequential | :free
-    def get_layout_navigation(config) do
-      case config do
-        %{layout: %{navigation: nav}} when nav in [:sequential, :free] -> nav
-        _ -> :sequential
-      end
-    end
+    def get_layout_navigation(%{layout: %{navigation: nav}}) when nav in [:sequential, :free],
+      do: nav
 
-    @spec get_layout_persistence(map()) :: :none | :ets | :client_token
-    def get_layout_persistence(config) do
-      case config do
-        %{layout: %{persistence: p}} when p in [:none, :ets, :client_token] -> p
-        _ -> :none
-      end
-    end
+    def get_layout_navigation(_config), do: :sequential
 
     @spec get_uploads(map()) :: list(map())
-    def get_uploads(config) do
-      case config do
-        %{uploads: uploads} when is_list(uploads) -> uploads
-        _ -> []
-      end
-    end
+    def get_uploads(%{uploads: uploads}) when is_list(uploads), do: uploads
+    def get_uploads(_config), do: []
 
     @spec get_header(map()) :: map() | nil
-    def get_header(config) do
-      case config do
-        %{layout: %{header: header}} when is_map(header) -> header
-        _ -> nil
-      end
-    end
+    def get_header(%{layout: %{header: header}}) when is_map(header), do: header
+    def get_header(_config), do: nil
 
     @spec get_footer(map()) :: map() | nil
-    def get_footer(config) do
-      case config do
-        %{layout: %{footer: footer}} when is_map(footer) -> footer
-        _ -> nil
-      end
-    end
+    def get_footer(%{layout: %{footer: footer}}) when is_map(footer), do: footer
+    def get_footer(_config), do: nil
 
     @spec get_notices(map()) :: list(map())
-    def get_notices(config) do
-      case config do
-        %{layout: %{notices: notices}} when is_list(notices) -> notices
-        _ -> []
-      end
-    end
+    def get_notices(%{layout: %{notices: notices}}) when is_list(notices), do: notices
+    def get_notices(_config), do: []
 
     @spec get_submit(map()) :: map()
-    def get_submit(config) do
-      case config do
-        %{submit: submit} when is_map(submit) ->
-          submit
+    def get_submit(%{submit: submit}) when is_map(submit), do: submit
 
-        _ ->
-          %{
-            create: %{label: "Create", disabled: false, restricted: false, visible: true},
-            update: %{label: "Update", disabled: false, restricted: false, visible: true},
-            cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
-            position: :bottom,
-            ui: nil
-          }
-      end
+    def get_submit(_config) do
+      %{
+        create: %{label: "Create", disabled: false, restricted: false, visible: true},
+        update: %{label: "Update", disabled: false, restricted: false, visible: true},
+        cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        position: :bottom,
+        ui: nil
+      }
     end
 
     @spec get_hooks(map()) :: map()
-    def get_hooks(config) do
-      case config do
-        %{hooks: hooks} when is_map(hooks) -> hooks
-        _ -> %{}
-      end
-    end
-
-    @spec fields_for_step(list(map()), list(map()), atom()) :: list(map())
-    def fields_for_step(groups, fields, _step_name) do
-      step_group_names =
-        groups
-        |> Enum.filter(fn g -> g.name in (Map.get(g, :step, nil) |> List.wrap()) end)
-        |> Enum.flat_map(&(&1[:fields] || []))
-
-      if step_group_names == [] do
-        fields
-      else
-        field_names = MapSet.new(step_group_names)
-        Enum.filter(fields, &MapSet.member?(field_names, &1.name))
-      end
-    end
+    def get_hooks(%{hooks: hooks}) when is_map(hooks), do: hooks
+    def get_hooks(_config), do: %{}
 
     @spec groups_for_step(list(map()), list(map()), atom()) :: list(map())
     def groups_for_step(groups, steps, step_name) do
@@ -388,6 +363,8 @@ defmodule MishkaGervaz.Form.Web.State do
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
+      require Logger
+
       alias MishkaGervaz.Form.Web.State
       alias MishkaGervaz.Form.Web.State.Static
       alias MishkaGervaz.Form.Web.State.Helpers, as: StateHelpers
@@ -468,7 +445,6 @@ defmodule MishkaGervaz.Form.Web.State do
         preload_aliases = Info.preload_aliases(resource, master_user?)
 
         fields = field_mod.build(config, resource)
-        field_order = Enum.map(fields, & &1.name)
         groups = group_mod.build(config, resource)
         groups = group_mod.assign_fields_to_groups(groups, fields)
 
@@ -485,7 +461,6 @@ defmodule MishkaGervaz.Form.Web.State do
           config: config,
           source: config[:source],
           fields: fields,
-          field_order: field_order,
           groups: groups,
           steps: steps,
           uploads: StateHelpers.get_uploads(config),
@@ -501,7 +476,6 @@ defmodule MishkaGervaz.Form.Web.State do
           layout_mode: layout_mode,
           layout_columns: StateHelpers.get_layout_columns(config),
           layout_navigation: StateHelpers.get_layout_navigation(config),
-          layout_persistence: StateHelpers.get_layout_persistence(config),
           header: StateHelpers.get_header(config),
           footer: StateHelpers.get_footer(config),
           notices: StateHelpers.get_notices(config)
@@ -572,7 +546,13 @@ defmodule MishkaGervaz.Form.Web.State do
                 dropdown_open?: false
               })
 
-            {:error, _reason} ->
+            {:error, reason} ->
+              Logger.warning(
+                "[mishka_gervaz] static relation options for field " <>
+                  "#{inspect(field.name)} (resource #{inspect(field.resource)}) " <>
+                  "failed to load: #{inspect(reason)}"
+              )
+
               acc
           end
         end)

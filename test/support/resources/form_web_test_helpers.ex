@@ -37,7 +37,6 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       stream_name: Keyword.get(opts, :stream_name, :test_form_stream),
       config: Keyword.get(opts, :config, %{}),
       fields: Keyword.get(opts, :fields, default_fields()),
-      field_order: Keyword.get(opts, :field_order, [:title, :content, :status]),
       groups: Keyword.get(opts, :groups, default_groups()),
       steps: Keyword.get(opts, :steps, []),
       uploads: Keyword.get(opts, :uploads, []),
@@ -58,8 +57,7 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       preloads: Keyword.get(opts, :preloads, []),
       layout_mode: Keyword.get(opts, :layout_mode, :standard),
       layout_columns: Keyword.get(opts, :layout_columns, 1),
-      layout_navigation: Keyword.get(opts, :layout_navigation, :sequential),
-      layout_persistence: Keyword.get(opts, :layout_persistence, :none)
+      layout_navigation: Keyword.get(opts, :layout_navigation, :sequential)
     }
   end
 
