@@ -7,6 +7,12 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   - Generate namespaced upload names to avoid collisions
   - Parse accept strings
   - Check if a form config has uploads
+
+  See `MishkaGervaz.Form.Web.Live` (calls `build_allow_upload_opts/2` +
+  `namespaced_upload_name/2` at mount), `MishkaGervaz.Form.Web.Events.UploadHandler`
+  (uses `namespaced_upload_name/2` for `consume_uploaded_entries`),
+  `MishkaGervaz.Form.Templates.Standard` (uses `find_upload_for_field/2` +
+  `upload_error_to_string/1`), and `MishkaGervaz.Form.Entities.Upload`.
   """
 
   @doc """
@@ -48,7 +54,7 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
       max_file_size: upload_config[:max_file_size] || 8_000_000,
       auto_upload: upload_config[:auto_upload] || false
     ]
-    |> maybe_put_opt(:accept, upload_config[:accept], &parse_accept_to_opt/1)
+    |> maybe_put_opt(:accept, upload_config[:accept], &parse_accept/1)
     |> maybe_put_opt(:chunk_size, upload_config[:chunk_size])
     |> maybe_put_opt(:chunk_timeout, upload_config[:chunk_timeout])
     |> maybe_put_opt(:external, upload_config[:external])
@@ -110,13 +116,4 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
 
   defp maybe_put_opt(opts, _key, nil, _transform), do: opts
   defp maybe_put_opt(opts, key, value, transform), do: Keyword.put(opts, key, transform.(value))
-
-  defp parse_accept_to_opt(accept) when is_list(accept), do: accept
-
-  defp parse_accept_to_opt(accept) when is_binary(accept) do
-    accept
-    |> String.split(",")
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-  end
 end
