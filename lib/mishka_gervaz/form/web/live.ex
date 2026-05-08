@@ -50,6 +50,13 @@ defmodule MishkaGervaz.Form.Web.Live do
       def handle_info({:form_event, event, params}, socket), do: ...
       def handle_info({:add_nested_field, field_name}, socket), do: ...
       def handle_info({:remove_nested_field, field_name, index}, socket), do: ...
+
+  See `MishkaGervaz.Form.Web.State` (state shape + override surface),
+  `MishkaGervaz.Form.Web.DataLoader` (record + relation loading),
+  `MishkaGervaz.Form.Web.Events` (event handling),
+  `MishkaGervaz.Form.Web.Renderer` (template dispatch),
+  `MishkaGervaz.Form.Web.UploadHelpers`, and
+  `MishkaGervaz.Form.Behaviours.Template`.
   """
 
   use Phoenix.LiveComponent
