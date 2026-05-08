@@ -23,10 +23,13 @@ defmodule MishkaGervaz.Resource.Info.Form do
 
   alias Spark.Dsl.Extension
 
-  import MishkaGervaz.Helpers, only: [map_put_if_set: 3]
-
-  import MishkaGervaz.Resource.Info.Helpers,
-    only: [map_get: 3, extract_preload_source: 1, get_domain_defaults: 2]
+  import MishkaGervaz.Helpers,
+    only: [
+      map_put_if_set: 3,
+      map_get: 3,
+      extract_preload_source: 1,
+      get_domain_defaults: 2
+    ]
 
   @default_submit %{
     create: nil,

@@ -22,10 +22,14 @@ defmodule MishkaGervaz.Resource.Info.Table do
   alias MishkaGervaz.Table.Entities.Pagination
   alias MishkaGervaz.Table.Behaviours.Template, as: TemplateBehaviour
 
-  import MishkaGervaz.Helpers, only: [map_put_if_set: 3, module_to_snake: 1]
-
-  import MishkaGervaz.Resource.Info.Helpers,
-    only: [map_get: 3, extract_preload_source: 1, get_domain_defaults: 2]
+  import MishkaGervaz.Helpers,
+    only: [
+      map_put_if_set: 3,
+      module_to_snake: 1,
+      map_get: 3,
+      extract_preload_source: 1,
+      get_domain_defaults: 2
+    ]
 
   @default_max_filter_length 500
 

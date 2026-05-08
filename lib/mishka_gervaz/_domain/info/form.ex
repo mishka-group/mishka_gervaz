@@ -20,6 +20,8 @@ defmodule MishkaGervaz.Domain.Info.Form do
 
   alias Spark.Dsl.Extension
 
+  import MishkaGervaz.Helpers, only: [map_get: 3]
+
   @doc """
   Get the full domain configuration.
   """
@@ -33,8 +35,8 @@ defmodule MishkaGervaz.Domain.Info.Form do
   """
   @spec defaults(module()) :: map()
   def defaults(domain) do
-    case config(domain) do
-      %{form: form} when is_map(form) -> form
+    case map_get(config(domain), :form, %{}) do
+      form when is_map(form) -> form
       _ -> %{}
     end
   end

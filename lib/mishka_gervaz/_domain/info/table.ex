@@ -20,6 +20,8 @@ defmodule MishkaGervaz.Domain.Info.Table do
 
   alias Spark.Dsl.Extension
 
+  import MishkaGervaz.Helpers, only: [map_get: 3]
+
   @doc """
   Get the full domain table configuration.
   """
@@ -32,36 +34,20 @@ defmodule MishkaGervaz.Domain.Info.Table do
   These settings are inherited by all resources in the domain.
   """
   @spec defaults(module()) :: map()
-  def defaults(domain) do
-    case config(domain) do
-      %{table: table} -> table
-      _ -> %{}
-    end
-  end
+  def defaults(domain), do: map_get(config(domain), :table, %{})
 
   @doc """
   Get the navigation configuration for a domain.
   Returns nil if navigation is not defined.
   """
   @spec navigation(module()) :: map() | nil
-  def navigation(domain) do
-    case config(domain) do
-      %{navigation: navigation} -> navigation
-      _ -> nil
-    end
-  end
+  def navigation(domain), do: map_get(config(domain), :navigation, nil)
 
   @doc """
   Get the menu groups for a domain.
   """
   @spec menu_groups(module()) :: [map()]
-  def menu_groups(domain) do
-    case navigation(domain) do
-      %{menu_groups: groups} -> groups
-      nil -> []
-      _ -> []
-    end
-  end
+  def menu_groups(domain), do: map_get(navigation(domain), :menu_groups, [])
 
   @doc """
   Get the UI adapter.
@@ -98,34 +84,19 @@ defmodule MishkaGervaz.Domain.Info.Table do
   Get the default page size.
   """
   @spec page_size(module()) :: pos_integer() | nil
-  def page_size(domain) do
-    case pagination(domain) do
-      %{page_size: size} -> size
-      _ -> nil
-    end
-  end
+  def page_size(domain), do: map_get(pagination(domain), :page_size, nil)
 
   @doc """
   Get the default page size options.
   """
   @spec page_size_options(module()) :: [pos_integer()] | nil
-  def page_size_options(domain) do
-    case pagination(domain) do
-      %{page_size_options: opts} -> opts
-      _ -> nil
-    end
-  end
+  def page_size_options(domain), do: map_get(pagination(domain), :page_size_options, nil)
 
   @doc """
   Get the default max page size.
   """
   @spec max_page_size(module()) :: pos_integer() | nil
-  def max_page_size(domain) do
-    case pagination(domain) do
-      %{max_page_size: max} -> max
-      _ -> nil
-    end
-  end
+  def max_page_size(domain), do: map_get(pagination(domain), :max_page_size, nil)
 
   @doc """
   Get the realtime config.
