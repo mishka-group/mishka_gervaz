@@ -310,4 +310,49 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
       assert field.max == 100
     end
   end
+
+  describe "Field.Preload entity (direct API)" do
+    alias MishkaGervaz.Form.Entities.Field.Preload
+
+    test "opt_schema declares always / master / tenant keys with default []" do
+      schema = Preload.opt_schema()
+
+      for key <- [:always, :master, :tenant] do
+        config = Keyword.fetch!(schema, key)
+        assert Keyword.get(config, :default) == [], "#{key} default should be []"
+
+        assert Keyword.get(config, :type) == {:list, {:or, [:atom, {:tuple, [:atom, :atom]}]}},
+               "#{key} should accept atoms or {source, alias} tuples"
+      end
+    end
+
+    test "default struct has every list empty" do
+      preload = %Preload{}
+      assert preload.always == []
+      assert preload.master == []
+      assert preload.tenant == []
+    end
+
+    test "transform/1 returns {:ok, struct} for the struct shape" do
+      preload = %Preload{always: [:role], master: [:permissions], tenant: []}
+      assert {:ok, ^preload} = Preload.transform(preload)
+    end
+
+    test "transform/1 preserves atom and tuple entries verbatim" do
+      preload = %Preload{
+        always: [:role, {:role_assoc, :role}],
+        master: [{:permissions, :perms}]
+      }
+
+      assert {:ok, returned} = Preload.transform(preload)
+      assert returned.always == [:role, {:role_assoc, :role}]
+      assert returned.master == [{:permissions, :perms}]
+      assert returned.tenant == []
+    end
+
+    test "transform/1 is a passthrough for non-struct inputs" do
+      assert Preload.transform(:not_a_preload) == {:ok, :not_a_preload}
+      assert Preload.transform(%{always: [:foo]}) == {:ok, %{always: [:foo]}}
+    end
+  end
 end

@@ -1,11 +1,14 @@
 defmodule MishkaGervaz.Form.Entities.Notice do
   @moduledoc """
-  Entity struct for static form notices (alerts/banners).
+  Static form notice — alerts and banners with a known position,
+  validation binding, dismiss tracking, and master-only restriction.
 
-  A notice is a declared-statically, rendered-dynamically piece of UI placed
-  at a known position relative to the form. It supports validation binding,
-  per-user dismiss, master-only restriction, and a custom HEEx render
-  escape hatch.
+  A notice is declared statically and rendered dynamically: the
+  position, type, and binding are pinned at compile time, while
+  `visible` / `show_when` / `bind_to` decide whether to actually render
+  on each frame. Five visual types (`:info`, `:warning`, `:error`,
+  `:success`, `:neutral`) and a custom HEEx render escape hatch cover
+  the common cases.
 
   ## Positions
 
@@ -48,7 +51,12 @@ defmodule MishkaGervaz.Form.Entities.Notice do
           title fn _state -> "Please fix the errors below" end
         end
       end
+
+  See `MishkaGervaz.Form.Dsl.Layout` for the surrounding section and
+  `MishkaGervaz.Form.Entities.Notice.Ui` for the `ui` sub-entity.
   """
+
+  alias MishkaGervaz.Form.Entities.Schema
 
   @valid_types ~w(info warning error success neutral)a
   @valid_position_atoms ~w(
@@ -111,68 +119,59 @@ defmodule MishkaGervaz.Form.Entities.Notice do
   ]
 
   @opt_schema [
-    name: [
-      type: :atom,
-      required: true,
-      doc: "Unique notice identifier (used for dismiss tracking)."
-    ],
-    position: [
-      type: :any,
-      default: :form_top,
-      doc:
-        "Where the notice is rendered. See module docs for the list of valid atom positions and `{:before_group, name}` / `{:after_group, name}` tuples."
-    ],
-    type: [
-      type: {:in, @valid_types},
-      default: :info,
-      doc: "Visual style: `:info`, `:warning`, `:error`, `:success`, or `:neutral`."
-    ],
-    title: [
-      type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
-      doc: "Notice title. String, `fn -> _ end`, or `fn state -> _ end`."
-    ],
-    content: [
-      type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
-      doc: "Notice body. String, `fn -> _ end`, or `fn state -> _ end`."
-    ],
-    icon: [
-      type: :string,
-      doc: "Heroicon name."
-    ],
-    dismissible: [
-      type: :boolean,
-      default: false,
-      doc: "Whether the user can dismiss this notice."
-    ],
-    bind_to: [
-      type: {:in, [nil | @valid_bind_to]},
-      doc:
-        "Auto-activation source. `:validation` (form errors), `:uploads` (upload errors), `:dirty` (dirty form). When set, the notice renders only when the bound condition is true."
-    ],
-    show_when: [
-      type: {:fun, 1},
-      doc: "Custom predicate `fn state -> boolean() end`. Combined with `bind_to` (AND)."
-    ],
-    visible: [
-      type: {:or, [:boolean, {:fun, 1}]},
-      default: true,
-      doc: "Static or dynamic visibility. `fn state -> boolean() end`."
-    ],
-    restricted: [
-      type: {:or, [:boolean, {:fun, 1}]},
-      default: false,
-      doc: "Restrict to master users. `true` or `fn state -> boolean() end`."
-    ],
-    only_steps: [
-      type: {:list, :atom},
-      doc: "Wizard/tabs scoping: only render on these step names."
-    ],
-    render: [
-      type: {:or, [{:fun, 1}, {:fun, 2}]},
-      doc:
-        "Custom HEEx render. `fn assigns -> ~H\"...\" end` or `fn assigns, state -> ~H\"...\" end`."
-    ]
-  ]
+                name: [
+                  type: :atom,
+                  required: true,
+                  doc: "Unique notice identifier (used for dismiss tracking)."
+                ],
+                position: [
+                  type: :any,
+                  default: :form_top,
+                  doc:
+                    "Where the notice is rendered. See module docs for the list of valid atom positions and `{:before_group, name}` / `{:after_group, name}` tuples."
+                ],
+                type: [
+                  type: {:in, @valid_types},
+                  default: :info,
+                  doc: "Visual style: `:info`, `:warning`, `:error`, `:success`, or `:neutral`."
+                ],
+                title: [
+                  type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
+                  doc: "Notice title. String, `fn -> _ end`, or `fn state -> _ end`."
+                ],
+                content: [
+                  type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
+                  doc: "Notice body. String, `fn -> _ end`, or `fn state -> _ end`."
+                ],
+                icon: [
+                  type: :string,
+                  doc: "Heroicon name."
+                ],
+                dismissible: [
+                  type: :boolean,
+                  default: false,
+                  doc: "Whether the user can dismiss this notice."
+                ],
+                bind_to: [
+                  type: {:in, [nil | @valid_bind_to]},
+                  doc:
+                    "Auto-activation source. `:validation` (form errors), `:uploads` (upload errors), `:dirty` (dirty form). When set, the notice renders only when the bound condition is true."
+                ],
+                show_when: [
+                  type: {:fun, 1},
+                  doc:
+                    "Custom predicate `fn state -> boolean() end`. Combined with `bind_to` (AND)."
+                ],
+                only_steps: [
+                  type: {:list, :atom},
+                  doc: "Wizard/tabs scoping: only render on these step names."
+                ],
+                render: [
+                  type: {:or, [{:fun, 1}, {:fun, 2}]},
+                  doc:
+                    "Custom HEEx render. `fn assigns -> ~H\"...\" end` or `fn assigns, state -> ~H\"...\" end`."
+                ]
+              ] ++ Schema.access_predicates()
 
   @doc false
   def opt_schema, do: @opt_schema
@@ -200,19 +199,16 @@ defmodule MishkaGervaz.Form.Entities.Notice do
        "invalid notice position #{inspect(other)}. Expected one of #{inspect(@valid_position_atoms)} or `{:before_group, atom}` / `{:after_group, atom}`."}
 
   def transform(%__MODULE__{} = notice) do
-    {:ok, extract_ui(notice)}
+    {:ok, MishkaGervaz.Helpers.extract_singleton_entity(notice, :ui)}
   end
 
   def transform(notice), do: {:ok, notice}
-
-  defp extract_ui(%{ui: [ui | _]} = notice), do: %{notice | ui: ui}
-  defp extract_ui(%{ui: ui} = notice) when is_struct(ui), do: notice
-  defp extract_ui(notice), do: notice
 end
 
 defmodule MishkaGervaz.Form.Entities.Notice.Ui do
   @moduledoc """
-  UI/presentation configuration for a form notice.
+  UI/presentation configuration for a `MishkaGervaz.Form.Entities.Notice`
+  — wrapper CSS classes and template-specific extras.
   """
 
   @type t :: %__MODULE__{

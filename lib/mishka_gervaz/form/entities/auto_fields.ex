@@ -1,6 +1,38 @@
 defmodule MishkaGervaz.Form.Entities.AutoFields do
   @moduledoc """
-  Configuration for auto-discovering fields from Ash resource attributes.
+  Auto-discover form fields from the resource's public Ash attributes.
+
+  Use inside the `fields` section to bring in every public attribute as
+  a field, with `except` / `only` to scope the set, `defaults` and
+  `ui_defaults` to set baseline behaviour, and `override :name do … end`
+  for per-field tweaks. Auto fields are appended at `:end` (default) or
+  prepended at `:start` so explicit `field` declarations keep their
+  position.
+
+  ## Example
+
+      fields do
+        field :title, :text, required: true
+
+        auto_fields do
+          except [:id, :internal_only]
+          position :end
+
+          defaults required: false, visible: true
+
+          override :age, type: :range, required: true
+
+          override :bio do
+            ui do
+              label "Biography"
+              rows 8
+            end
+          end
+        end
+      end
+
+  See `MishkaGervaz.Form.Dsl.Fields` for the surrounding section, and
+  the sub-modules below for `defaults`, `ui_defaults`, and `override`.
   """
 
   @type t :: %__MODULE__{
@@ -46,7 +78,9 @@ end
 
 defmodule MishkaGervaz.Form.Entities.AutoFields.Defaults do
   @moduledoc """
-  Default options for auto-discovered fields.
+  Per-field defaults applied to every auto-discovered field unless an
+  explicit `override` block changes them. Lives inside
+  `MishkaGervaz.Form.Entities.AutoFields`.
   """
 
   @type t :: %__MODULE__{
@@ -87,7 +121,9 @@ end
 
 defmodule MishkaGervaz.Form.Entities.AutoFields.UiDefaults do
   @moduledoc """
-  Default UI options for auto-discovered fields.
+  Default UI options applied to every auto-discovered field — boolean
+  widget choice, textarea threshold, select prompt, and similar
+  rendering hints. Lives inside `MishkaGervaz.Form.Entities.AutoFields`.
   """
 
   @type t :: %__MODULE__{
@@ -142,7 +178,10 @@ end
 
 defmodule MishkaGervaz.Form.Entities.AutoFields.Override do
   @moduledoc """
-  Override configuration for a specific auto-discovered field.
+  Per-field override applied on top of an auto-discovered field. Lets
+  you change the inferred type, flip required / visible / readonly
+  flags, attach a custom `format` function, or replace the `ui` block
+  outright. Lives inside `MishkaGervaz.Form.Entities.AutoFields`.
   """
 
   @builtin_field_types [
@@ -220,12 +259,8 @@ defmodule MishkaGervaz.Form.Entities.AutoFields.Override do
   def opt_schema, do: @opt_schema
 
   def transform(%__MODULE__{} = override) do
-    {:ok, extract_ui(override)}
+    {:ok, MishkaGervaz.Helpers.extract_singleton_entity(override, :ui)}
   end
 
   def transform(override), do: {:ok, override}
-
-  defp extract_ui(%{ui: [ui | _]} = override), do: %{override | ui: ui}
-  defp extract_ui(%{ui: ui} = override) when is_struct(ui), do: override
-  defp extract_ui(override), do: override
 end

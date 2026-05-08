@@ -1,17 +1,16 @@
 defmodule MishkaGervaz.Form.Entities.DataLoader do
   @moduledoc """
-  Entity struct for form data_loader configuration.
+  Data-loader module overrides — replace the default record / tenant /
+  relation / hook loaders with your own implementations.
 
-  Allows overriding data loading modules at DSL level.
+  Two calling styles. Pass a module positionally to override the entire
+  data loader, or use the block form to swap individual sub-builders
+  while keeping the defaults for the rest:
 
-  ## Usage
-
-  Override entire data_loader module (positional argument):
-
+      # Whole-module override
       data_loader MyApp.Form.CustomDataLoader
 
-  Override specific sub-builders (block syntax):
-
+      # Per-sub-builder overrides
       data_loader do
         record MyApp.Form.DataLoader.RecordLoader
         tenant MyApp.Form.DataLoader.TenantResolver
@@ -23,10 +22,12 @@ defmodule MishkaGervaz.Form.Entities.DataLoader do
 
   When no overrides are specified, the following defaults are used:
 
-  - `record` - `MishkaGervaz.Form.Web.DataLoader.RecordLoader.Default`
-  - `tenant` - `MishkaGervaz.Form.Web.DataLoader.TenantResolver.Default`
-  - `relation` - `MishkaGervaz.Form.Web.DataLoader.RelationLoader.Default`
-  - `hooks` - `MishkaGervaz.Form.Web.DataLoader.HookRunner.Default`
+    * `record`   — `MishkaGervaz.Form.Web.DataLoader.RecordLoader.Default`
+    * `tenant`   — `MishkaGervaz.Form.Web.DataLoader.TenantResolver.Default`
+    * `relation` — `MishkaGervaz.Form.Web.DataLoader.RelationLoader.Default`
+    * `hooks`    — `MishkaGervaz.Form.Web.DataLoader.HookRunner.Default`
+
+  See `MishkaGervaz.Form.Dsl.DataLoader` for the DSL declaration.
   """
 
   @type t :: %__MODULE__{

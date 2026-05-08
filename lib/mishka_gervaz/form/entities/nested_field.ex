@@ -1,10 +1,40 @@
 defmodule MishkaGervaz.Form.Entities.NestedField do
   @moduledoc """
-  Entity struct for nested/embedded sub-field configuration.
+  Sub-field declaration inside a `:nested` form field — used for
+  embedded resources and constrained `{:array, :map}` attributes.
 
-  Defines the schema for individual fields within a `:nested` form field,
-  allowing per-sub-field type overrides, visibility, and UI customization.
+  Lets you customize each sub-field's type, required-ness, default,
+  position, options, and UI without re-declaring the entire embedded
+  shape. Sub-fields not explicitly declared are auto-detected when the
+  parent field has `auto_fields true`.
+
+  ## Example
+
+      field :items, :nested do
+        nested_field :name, :text do
+          required true
+
+          ui do
+            label "Item name"
+            placeholder "e.g. Widget"
+          end
+        end
+
+        nested_field :count, :number do
+          position :last
+
+          ui do
+            label "Quantity"
+          end
+        end
+      end
+
+  See `MishkaGervaz.Form.Entities.Field` for the parent field,
+  `MishkaGervaz.Form.Dsl.Fields` for the surrounding DSL, and
+  `MishkaGervaz.Form.Entities.NestedField.Ui` for the `ui` sub-entity.
   """
+
+  alias MishkaGervaz.Helpers
 
   @builtin_field_types [
     :text,
@@ -93,20 +123,18 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
   def opt_schema, do: @opt_schema
 
   def transform(%__MODULE__{} = nested_field) do
-    {:ok, extract_ui(nested_field)}
+    {:ok, Helpers.extract_singleton_entity(nested_field, :ui)}
   end
 
   def transform(nested_field), do: {:ok, nested_field}
-
-  defp extract_ui(%{ui: [ui | _]} = nf), do: %{nf | ui: ui}
-  defp extract_ui(%{ui: ui} = nf) when is_struct(ui), do: nf
-  defp extract_ui(%{ui: []} = nf), do: %{nf | ui: nil}
-  defp extract_ui(nf), do: nf
 end
 
 defmodule MishkaGervaz.Form.Entities.NestedField.Ui do
   @moduledoc """
-  UI/presentation configuration for a nested sub-field.
+  UI/presentation configuration for a
+  `MishkaGervaz.Form.Entities.NestedField` — label, placeholder,
+  description, CSS class, rows (for textarea sub-fields), and grid
+  span.
   """
 
   @type t :: %__MODULE__{

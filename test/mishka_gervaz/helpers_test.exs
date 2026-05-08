@@ -234,4 +234,64 @@ defmodule MishkaGervaz.HelpersTest do
       assert Helpers.known_name?("anything", state, :filters) == false
     end
   end
+
+  describe "extract_singleton_entity/2" do
+    defmodule SomeStruct do
+      @moduledoc false
+      defstruct [:value]
+    end
+
+    test "single-element list collapses to the head element" do
+      ui = %SomeStruct{value: :ok}
+      assert Helpers.extract_singleton_entity(%{ui: [ui]}, :ui) == %{ui: ui}
+    end
+
+    test "multi-element list still collapses to the head (first wins)" do
+      first = %SomeStruct{value: :first}
+      second = %SomeStruct{value: :second}
+
+      assert Helpers.extract_singleton_entity(%{ui: [first, second]}, :ui) == %{ui: first}
+    end
+
+    test "empty list collapses to nil" do
+      assert Helpers.extract_singleton_entity(%{ui: []}, :ui) == %{ui: nil}
+    end
+
+    test "already-extracted struct is left untouched (idempotent)" do
+      ui = %SomeStruct{value: :existing}
+      input = %{ui: ui}
+      assert Helpers.extract_singleton_entity(input, :ui) == input
+    end
+
+    test "missing key is a no-op (no key inserted)" do
+      assert Helpers.extract_singleton_entity(%{other: 1}, :ui) == %{other: 1}
+    end
+
+    test "non-list / non-struct value is left untouched" do
+      assert Helpers.extract_singleton_entity(%{ui: :atom_value}, :ui) == %{ui: :atom_value}
+      assert Helpers.extract_singleton_entity(%{ui: nil}, :ui) == %{ui: nil}
+    end
+
+    test "operates on the requested key only — other keys untouched" do
+      ui = %SomeStruct{value: :u}
+      preload = %SomeStruct{value: :p}
+
+      assert Helpers.extract_singleton_entity(%{ui: [ui], preload: [preload]}, :ui) ==
+               %{ui: ui, preload: [preload]}
+    end
+
+    test "chains cleanly via the pipe operator" do
+      ui = %SomeStruct{value: :u}
+      create = %SomeStruct{value: :c}
+
+      result =
+        %{ui: [ui], create: [create], update: [], cancel: nil}
+        |> Helpers.extract_singleton_entity(:ui)
+        |> Helpers.extract_singleton_entity(:create)
+        |> Helpers.extract_singleton_entity(:update)
+        |> Helpers.extract_singleton_entity(:cancel)
+
+      assert result == %{ui: ui, create: create, update: nil, cancel: nil}
+    end
+  end
 end

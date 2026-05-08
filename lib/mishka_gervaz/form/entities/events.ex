@@ -1,17 +1,16 @@
 defmodule MishkaGervaz.Form.Entities.Events do
   @moduledoc """
-  Entity struct for form events configuration.
+  Event-handler module overrides — replace the default event-handling
+  pipeline (or any sub-handler) with your own implementations.
 
-  Allows overriding event handling modules at DSL level.
+  Two calling styles. Pass a module positionally to override the entire
+  events handler, or use the block form to swap individual sub-handlers
+  while keeping the defaults for the rest:
 
-  ## Usage
-
-  Override entire events module (positional argument):
-
+      # Whole-module override
       events MyApp.Form.CustomEvents
 
-  Override specific sub-builders (block syntax):
-
+      # Per-sub-handler overrides
       events do
         sanitization MyApp.Form.Events.SanitizationHandler
         validation MyApp.Form.Events.ValidationHandler
@@ -26,13 +25,15 @@ defmodule MishkaGervaz.Form.Entities.Events do
 
   When no overrides are specified, the following defaults are used:
 
-  - `sanitization` - `MishkaGervaz.Form.Web.Events.SanitizationHandler.Default`
-  - `validation` - `MishkaGervaz.Form.Web.Events.ValidationHandler.Default`
-  - `submit` - `MishkaGervaz.Form.Web.Events.SubmitHandler.Default`
-  - `step` - `MishkaGervaz.Form.Web.Events.StepHandler.Default`
-  - `upload` - `MishkaGervaz.Form.Web.Events.UploadHandler.Default`
-  - `relation` - `MishkaGervaz.Form.Web.Events.RelationHandler.Default`
-  - `hooks` - `MishkaGervaz.Form.Web.Events.HookRunner.Default`
+    * `sanitization` — `MishkaGervaz.Form.Web.Events.SanitizationHandler.Default`
+    * `validation`   — `MishkaGervaz.Form.Web.Events.ValidationHandler.Default`
+    * `submit`       — `MishkaGervaz.Form.Web.Events.SubmitHandler.Default`
+    * `step`         — `MishkaGervaz.Form.Web.Events.StepHandler.Default`
+    * `upload`       — `MishkaGervaz.Form.Web.Events.UploadHandler.Default`
+    * `relation`     — `MishkaGervaz.Form.Web.Events.RelationHandler.Default`
+    * `hooks`        — `MishkaGervaz.Form.Web.Events.HookRunner.Default`
+
+  See `MishkaGervaz.Form.Dsl.Events` for the DSL declaration.
   """
 
   @type t :: %__MODULE__{

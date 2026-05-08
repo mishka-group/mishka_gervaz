@@ -1,14 +1,22 @@
 defmodule MishkaGervaz.Form.Entities.Submit.Button do
   @moduledoc """
-  Entity struct for a single submit/cancel button configuration.
+  Single submit / cancel button configuration.
 
-  Each button (create, update, cancel) is an independent entity with its own
-  `label`, `active`, `disabled`, `restricted`, and `visible` options.
+  Each button (create / update / cancel) is an independent entity with
+  its own `label`, `active`, `disabled`, `restricted`, and `visible`
+  options. Every option except `label` accepts a boolean or a
+  `fn state -> boolean() end` predicate.
 
-  The `active` option is intended for resources only — it suppresses a button
-  that would otherwise be inherited from the domain. Use `active: false` to
-  opt out of a domain-defined button on a per-resource basis.
+  The `active` option is intended for resources: setting `active: false`
+  suppresses a button that would otherwise be inherited from the domain
+  default — a per-button opt-out without re-declaring the entire submit
+  block.
+
+  See `MishkaGervaz.Form.Entities.Submit` for the parent entity and
+  `MishkaGervaz.Form.Dsl.Submit` for the DSL definition.
   """
+
+  alias MishkaGervaz.Form.Entities.Schema
 
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
@@ -27,33 +35,23 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
             __spark_metadata__: nil
 
   @opt_schema [
-    label: [
-      type: {:or, [:string, {:fun, 0}]},
-      doc: "Button label. String or zero-arity function."
-    ],
-    active: [
-      type: {:or, [:boolean, {:fun, 1}]},
-      default: true,
-      doc:
-        "Whether the button is active. Boolean or `fn state -> boolean end`. " <>
-          "Set to `false` to suppress a button inherited from the domain. Resource-only."
-    ],
-    disabled: [
-      type: {:or, [:boolean, {:fun, 1}]},
-      default: false,
-      doc: "Disable button. Boolean or `fn state -> boolean end`."
-    ],
-    restricted: [
-      type: {:or, [:boolean, {:fun, 1}]},
-      default: false,
-      doc: "Master-only visibility. Boolean or `fn state -> boolean end`."
-    ],
-    visible: [
-      type: {:or, [:boolean, {:fun, 1}]},
-      default: true,
-      doc: "Button visibility. Boolean or `fn state -> boolean end`."
-    ]
-  ]
+                label: [
+                  type: {:or, [:string, {:fun, 0}]},
+                  doc: "Button label. String or zero-arity function."
+                ],
+                active: [
+                  type: {:or, [:boolean, {:fun, 1}]},
+                  default: true,
+                  doc:
+                    "Whether the button is active. Boolean or `fn state -> boolean end`. " <>
+                      "Set to `false` to suppress a button inherited from the domain. Resource-only."
+                ],
+                disabled: [
+                  type: {:or, [:boolean, {:fun, 1}]},
+                  default: false,
+                  doc: "Disable button. Boolean or `fn state -> boolean end`."
+                ]
+              ] ++ Schema.access_predicates()
 
   @doc false
   def opt_schema, do: @opt_schema
@@ -63,17 +61,41 @@ end
 
 defmodule MishkaGervaz.Form.Entities.Submit do
   @moduledoc """
-  Entity struct for form submit button configuration.
+  Submit / cancel button block — the singleton entity that owns the
+  three button sub-entities (`create`, `update`, `cancel`), the `ui`
+  styling sub-entity, and the `position` field (`:top`, `:bottom`, or
+  `:both`).
 
-  This module defines the struct and schema for submit buttons, following Ash's
-  entity pattern with `opt_schema` and `transform/1`.
+  When no `submit` block is declared on a resource, all three buttons
+  fall back to the domain defaults (see
+  `MishkaGervaz.Form.Dsl.DomainDefaults`). When a `submit` block exists
+  but defines no buttons, no buttons render — declaring an empty submit
+  is a deliberate "render nothing" signal. Partial blocks inherit
+  per-button: missing buttons fall back to the domain, present ones
+  override.
 
-  Each button (create, update, cancel) is an independent entity. If no `submit`
-  block is defined, all 3 buttons render with domain/fallback defaults. If a
-  `submit` block exists but no buttons are defined inside it, no buttons render.
+  ## Example
+
+      submit do
+        create label: "Create Post"
+        update label: "Save Post"
+        cancel label: "Discard"
+        position :bottom
+
+        ui do
+          submit_class "bg-blue-600 text-white"
+          cancel_class "bg-gray-200"
+          wrapper_class "flex gap-4"
+        end
+      end
+
+  See `MishkaGervaz.Form.Dsl.Submit` for the DSL entity declaration,
+  `MishkaGervaz.Form.Entities.Submit.Button` for per-button options,
+  and `MishkaGervaz.Form.Entities.Submit.Ui` for shared button styling.
   """
 
   alias __MODULE__.Button
+  alias MishkaGervaz.Helpers
 
   @type t :: %__MODULE__{
           create: Button.t() | nil,
@@ -110,27 +132,20 @@ defmodule MishkaGervaz.Form.Entities.Submit do
   def transform(%__MODULE__{} = submit) do
     {:ok,
      submit
-     |> extract_singleton(:ui)
-     |> extract_singleton(:create)
-     |> extract_singleton(:update)
-     |> extract_singleton(:cancel)}
+     |> Helpers.extract_singleton_entity(:ui)
+     |> Helpers.extract_singleton_entity(:create)
+     |> Helpers.extract_singleton_entity(:update)
+     |> Helpers.extract_singleton_entity(:cancel)}
   end
 
   def transform(submit), do: {:ok, submit}
-
-  defp extract_singleton(submit, key) do
-    case Map.get(submit, key) do
-      [value | _] -> Map.put(submit, key, value)
-      [] -> Map.put(submit, key, nil)
-      value when is_struct(value) -> submit
-      _ -> submit
-    end
-  end
 end
 
 defmodule MishkaGervaz.Form.Entities.Submit.Ui do
   @moduledoc """
-  UI configuration for form submit buttons.
+  Shared button styling for a `MishkaGervaz.Form.Entities.Submit`
+  block — submit-button class, cancel-button class, and the wrapper
+  container class.
   """
 
   @type t :: %__MODULE__{

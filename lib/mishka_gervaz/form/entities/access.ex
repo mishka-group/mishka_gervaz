@@ -1,17 +1,27 @@
 defmodule MishkaGervaz.Form.Entities.Access do
   @moduledoc """
-  Entity struct for access control in form source configuration.
+  Per-mode (or global) access gate inside the `source` block.
 
-  Supports three calling styles:
+  `access` declarations live alongside `actor_key` and `master_check`
+  inside `MishkaGervaz.Form.Dsl.Source`. Each entry decides whether a
+  given form mode (`:create` or `:update`) is reachable for the current
+  user.
 
-      # Style A: per-mode with keyword opts
+  Three calling styles are supported:
+
+      # Style A — per-mode with keyword opts
       access :create, restricted: true
 
-      # Style B: per-mode with condition function
+      # Style B — per-mode with condition function
       access :create, fn state -> state.master_user? end
 
-      # Style C: global gate function (fn/2 goes into mode position)
+      # Style C — global gate (`fn mode, state -> bool` in the mode slot)
       access fn mode, state -> mode == :update or state.master_user? end
+
+  Style C is the catch-all: it runs for every mode and is useful when
+  you want one rule covering both `:create` and `:update`.
+
+  See `MishkaGervaz.Form.Dsl.Source` for the surrounding section.
   """
 
   @type t :: %__MODULE__{

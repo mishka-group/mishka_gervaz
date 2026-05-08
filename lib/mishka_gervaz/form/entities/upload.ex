@@ -1,9 +1,36 @@
 defmodule MishkaGervaz.Form.Entities.Upload do
   @moduledoc """
-  Entity struct for file upload configuration.
+  File upload configuration — accept rules, count and size limits, plus
+  optional dropzone text and preview UI.
 
-  This module defines the struct and schema for uploads, following Ash's
-  entity pattern with `opt_schema` and `transform/1`.
+  An `upload` entity is paired with a `field :name, :upload` of the
+  matching name, which binds the LiveView upload config to the rendered
+  control. Three rendering styles are supported (`:dropzone`,
+  `:file_input`, `:custom`), and external uploaders / chunked
+  transports / custom upload writers are all available for production
+  workloads.
+
+  ## Example
+
+      uploads do
+        upload :cover do
+          accept "image/*"
+          max_entries 1
+          max_file_size 5_000_000
+          show_preview true
+          auto_upload true
+          dropzone_text "Drop image here"
+
+          ui do
+            label "Cover Image"
+            icon "hero-photo"
+            preview_class "w-32 h-32"
+          end
+        end
+      end
+
+  See `MishkaGervaz.Form.Dsl.Uploads` for the surrounding section and
+  `MishkaGervaz.Form.Entities.Upload.Ui` for the `ui` sub-entity.
   """
 
   @type t :: %__MODULE__{
@@ -122,19 +149,16 @@ defmodule MishkaGervaz.Form.Entities.Upload do
   Extracts the nested ui entity from the list wrapper.
   """
   def transform(%__MODULE__{} = upload) do
-    {:ok, extract_ui(upload)}
+    {:ok, MishkaGervaz.Helpers.extract_singleton_entity(upload, :ui)}
   end
 
   def transform(upload), do: {:ok, upload}
-
-  defp extract_ui(%{ui: [ui | _]} = upload), do: %{upload | ui: ui}
-  defp extract_ui(%{ui: ui} = upload) when is_struct(ui), do: upload
-  defp extract_ui(upload), do: upload
 end
 
 defmodule MishkaGervaz.Form.Entities.Upload.Ui do
   @moduledoc """
-  UI configuration for file uploads.
+  UI/presentation configuration for a `MishkaGervaz.Form.Entities.Upload`
+  — label, icon, dropzone classes, and preview-area classes.
   """
 
   @type t :: %__MODULE__{

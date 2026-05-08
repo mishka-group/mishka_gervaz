@@ -860,4 +860,26 @@ defmodule MishkaGervaz.Helpers do
       _ -> %{}
     end
   end
+
+  @doc """
+  Unwraps a Spark singleton sub-entity wrapper into the entity itself.
+
+  Spark stores DSL singleton entities under `key` as a single-element
+  list during parse. After the parent entity's `transform/1` runs, the
+  list is collapsed to the entity struct (or `nil` if absent). Used by
+  every entity that owns one or more singleton sub-entities (e.g. `:ui`,
+  `:preload`, plus `submit`'s `:create` / `:update` / `:cancel`).
+
+  Idempotent: if the value is already a struct (transform already ran)
+  or absent, the map is returned unchanged.
+  """
+  @spec extract_singleton_entity(map(), atom()) :: map()
+  def extract_singleton_entity(map, key) do
+    do_extract_singleton(Map.get(map, key), map, key)
+  end
+
+  defp do_extract_singleton([value | _], map, key), do: Map.put(map, key, value)
+  defp do_extract_singleton([], map, key), do: Map.put(map, key, nil)
+  defp do_extract_singleton(value, map, _key) when is_struct(value), do: map
+  defp do_extract_singleton(_value, map, _key), do: map
 end
