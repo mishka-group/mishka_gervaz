@@ -17,12 +17,15 @@ defmodule MishkaGervaz.Form.Dsl do
   - `MishkaGervaz.Form.Dsl.Hooks` - Lifecycle callbacks
   - `MishkaGervaz.Form.Dsl.State` - State management module overrides
 
-  ## Entities
+  ## Top-level entities
 
-  - `MishkaGervaz.Form.Entities.Submit` - Submit/cancel button configuration
-  - `MishkaGervaz.Form.Entities.Step` - Wizard/tab step configuration
-  - `MishkaGervaz.Form.Entities.Events` - Event handling module overrides
-  - `MishkaGervaz.Form.Entities.DataLoader` - Data loading module overrides
+  - `MishkaGervaz.Form.Dsl.Submit`     - Submit/cancel button configuration
+  - `MishkaGervaz.Form.Dsl.DataLoader` - Data loader module overrides
+  - `MishkaGervaz.Form.Dsl.Events`     - Event handler module overrides
+
+  `Step` is a sub-entity declared inside `MishkaGervaz.Form.Dsl.Layout` —
+  use it as `step :name do … end` inside the `layout` block, not at the
+  top level of `form`.
 
   ## Form Modes
 
@@ -126,8 +129,13 @@ defmodule MishkaGervaz.Form.Dsl do
       end
 
       groups do
-        group :general, fields: [:name, :description]
-        group :metadata, fields: [:category]
+        group :general do
+          fields [:name, :description]
+        end
+
+        group :metadata do
+          fields [:category]
+        end
       end
 
       layout do
