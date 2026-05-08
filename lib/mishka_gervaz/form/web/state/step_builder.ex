@@ -25,15 +25,15 @@ defmodule MishkaGervaz.Form.Web.State.StepBuilder do
           end
         end
       end
-  """
 
-  alias MishkaGervaz.Resource.Info.Form, as: Info
+  See `MishkaGervaz.Form.Web.State`,
+  `MishkaGervaz.Form.Entities.Step`, and the sibling builders
+  `FieldBuilder`, `GroupBuilder`, `Access`, `Presentation`.
+  """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.State.Builder
-
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
       import MishkaGervaz.Helpers, only: [get_ui_label: 1]

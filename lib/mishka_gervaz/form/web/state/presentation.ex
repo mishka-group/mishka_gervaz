@@ -21,13 +21,20 @@ defmodule MishkaGervaz.Form.Web.State.Presentation do
           end
         end
       end
+
+  See `MishkaGervaz.Form.Web.State`,
+  `MishkaGervaz.Form.Behaviours.Template`,
+  `MishkaGervaz.Behaviours.UIAdapter`, and the sibling builders
+  `FieldBuilder`, `GroupBuilder`, `StepBuilder`, `Access`.
   """
+
+  @default_features [:validation, :uploads, :groups, :wizard, :autosave, :inline_errors]
 
   @doc false
   defmacro __using__(_opts) do
-    quote do
-      use MishkaGervaz.Form.Web.State.Builder
+    default_features = @default_features
 
+    quote do
       @doc """
       Resolves UI adapter module from form config.
       """
@@ -95,20 +102,14 @@ defmodule MishkaGervaz.Form.Web.State.Presentation do
       @spec get_features(map()) :: list(atom())
       def get_features(config) when is_map(config) do
         case get_in(config, [:presentation, :features]) do
-          :all ->
-            [:validation, :uploads, :groups, :wizard, :autosave, :inline_errors]
-
-          list when is_list(list) ->
-            list
-
-          _ ->
-            [:validation, :uploads, :groups, :wizard, :autosave, :inline_errors]
+          :all -> unquote(default_features)
+          list when is_list(list) -> list
+          _ -> unquote(default_features)
         end
       end
 
       @spec get_features(term()) :: list(atom())
-      def get_features(_),
-        do: [:validation, :uploads, :groups, :wizard, :autosave, :inline_errors]
+      def get_features(_), do: unquote(default_features)
 
       @doc """
       Gets the global default debounce from config. Returns nil if not set.

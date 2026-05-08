@@ -19,15 +19,15 @@ defmodule MishkaGervaz.Form.Web.State.GroupBuilder do
           super(config, resource) |> Enum.reject(&(&1.name == :hidden_group))
         end
       end
-  """
 
-  alias MishkaGervaz.Resource.Info.Form, as: Info
+  See `MishkaGervaz.Form.Web.State`,
+  `MishkaGervaz.Form.Entities.Group`, and the sibling builders
+  `FieldBuilder`, `StepBuilder`, `Access`, `Presentation`.
+  """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.State.Builder
-
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
       import MishkaGervaz.Helpers, only: [resolve_ui_label: 1]

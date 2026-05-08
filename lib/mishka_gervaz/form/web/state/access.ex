@@ -17,15 +17,17 @@ defmodule MishkaGervaz.Form.Web.State.Access do
         def master_user?(%{role: :admin}), do: true
         def master_user?(user), do: super(user)
       end
-  """
 
-  alias MishkaGervaz.Resource.Info.Form, as: Info
+  See `MishkaGervaz.Form.Web.State`,
+  `MishkaGervaz.Form.Web.State.Helpers`,
+  `MishkaGervaz.Helpers` (for `master_user?/1` and `user_tenant/1`),
+  and the sibling builders `FieldBuilder`, `GroupBuilder`, `StepBuilder`,
+  `Presentation`.
+  """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.State.Builder
-
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
       @doc """

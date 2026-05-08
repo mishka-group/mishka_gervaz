@@ -18,15 +18,16 @@ defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
           super(config, resource) |> Enum.reject(&(&1.name == :hidden_field))
         end
       end
-  """
 
-  alias MishkaGervaz.Resource.Info.Form, as: Info
+  See `MishkaGervaz.Form.Web.State`,
+  `MishkaGervaz.Form.Web.State.Helpers`,
+  `MishkaGervaz.Form.Entities.Field`, and the sibling builders
+  `GroupBuilder`, `StepBuilder`, `Access`, `Presentation`.
+  """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.State.Builder
-
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
       import MishkaGervaz.Helpers,
