@@ -85,12 +85,11 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
   defp build_section(dsl_state, section, defaults) do
     path = @form_path ++ [section]
 
-    values =
-      defaults
-      |> Map.keys()
-      |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
-
-    case compact_to_nil(values) do
+    defaults
+    |> Map.keys()
+    |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
+    |> compact_to_nil()
+    |> case do
       nil -> nil
       cleaned -> Map.merge(defaults, cleaned)
     end

@@ -76,13 +76,8 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaults do
 
   defp merge_domain_defaults(dsl_state, defaults) do
     Enum.reduce(@domain_mappings, dsl_state, fn {path_suffix, key}, acc ->
-      apply_domain_mapping(acc, defaults, path_suffix, key)
+      maybe_set_from_domain(acc, @form_path ++ path_suffix, key, defaults[key])
     end)
-  end
-
-  @spec apply_domain_mapping(Spark.Dsl.t(), map(), [atom()], atom()) :: Spark.Dsl.t()
-  defp apply_domain_mapping(dsl_state, defaults, path_suffix, key) do
-    maybe_set_from_domain(dsl_state, @form_path ++ path_suffix, key, defaults[key])
   end
 
   @spec maybe_set_from_domain(Spark.Dsl.t(), [atom()], atom(), term()) :: Spark.Dsl.t()

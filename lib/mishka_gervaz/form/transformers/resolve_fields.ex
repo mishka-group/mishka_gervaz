@@ -119,23 +119,19 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     Enum.map(discovered, fn attr_name ->
       override = Enum.find(config.overrides || [], &(&1.name == attr_name))
       ash_attr = Map.get(ash_attrs, attr_name)
-      detected_type = infer_field_type(ash_attr, ui_defaults)
 
-      final_type = (override && override.type) || detected_type
+      final_type = (override && override.type) || infer_field_type(ash_attr, ui_defaults)
       override_options = if override, do: Map.get(override, :options), else: nil
-      options = maybe_infer_options(final_type, override_options, ash_attr)
       nested_fields = maybe_infer_nested_fields(final_type, [], ash_attr, false)
 
       ui =
         if final_type == :nested and nested_fields != [] do
-          nested_mode = detect_nested_mode(ash_attr)
-          nested_source = detect_nested_source(ash_attr)
           base_ui = normalize_ui(override && override.ui)
 
           extra =
             (base_ui.extra || %{})
-            |> Map.put(:nested_mode, nested_mode)
-            |> Map.put(:nested_source, nested_source)
+            |> Map.put(:nested_mode, detect_nested_mode(ash_attr))
+            |> Map.put(:nested_source, detect_nested_source(ash_attr))
 
           %{base_ui | extra: extra}
         else
@@ -146,7 +142,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         name: attr_name,
         source: attr_name,
         type: final_type,
-        options: options,
+        options: maybe_infer_options(final_type, override_options, ash_attr),
         nested_fields: nested_fields,
         required: default_if_nil(override && override.required, defaults.required),
         visible: default_if_nil(override && override.visible, defaults.visible),
@@ -292,95 +288,86 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   @spec resolve_explicit_field_types(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp resolve_explicit_field_types(dsl_state) do
-    fields = filter_fields(get_entities(dsl_state, @fields_path))
     ash_attrs = get_ash_attributes(dsl_state)
     ui_defaults = %AutoFields.UiDefaults{}
 
-    {updated, changed?} =
-      Enum.map_reduce(fields, false, fn field, changed? ->
-        ash_attr = Map.get(ash_attrs, field.source || field.name)
+    dsl_state
+    |> get_entities(@fields_path)
+    |> filter_fields()
+    |> Enum.reduce(dsl_state, fn field, acc ->
+      case maybe_resolve_field_type(field, ash_attrs, ui_defaults) do
+        ^field -> acc
+        updated -> Transformer.replace_entity(acc, @fields_path, updated)
+      end
+    end)
+  end
 
-        cond do
-          is_nil(field.type) ->
-            detected = infer_field_type(ash_attr, ui_defaults)
-            type_module = MishkaGervaz.Form.Types.Field.get_or_passthrough(detected)
-            options = maybe_infer_options(detected, field.options, ash_attr)
+  @spec maybe_resolve_field_type(Field.t(), map(), AutoFields.UiDefaults.t()) :: Field.t()
+  defp maybe_resolve_field_type(%Field{type: nil} = field, ash_attrs, ui_defaults) do
+    ash_attr = Map.get(ash_attrs, field.source || field.name)
+    detected = infer_field_type(ash_attr, ui_defaults)
 
-            nested_fields =
-              maybe_infer_nested_fields(
-                detected,
-                field.nested_fields,
-                ash_attr,
-                field.auto_fields
-              )
+    nested_fields =
+      maybe_infer_nested_fields(detected, field.nested_fields, ash_attr, field.auto_fields)
 
-            ui =
-              if detected == :nested and nested_fields != [] do
-                nested_mode = detect_nested_mode(ash_attr)
-                nested_source = detect_nested_source(ash_attr)
-                base_ui = normalize_ui(field.ui)
+    %{
+      field
+      | type: detected,
+        type_module: MishkaGervaz.Form.Types.Field.get_or_passthrough(detected),
+        options: maybe_infer_options(detected, field.options, ash_attr),
+        nested_fields: nested_fields,
+        ui: maybe_inject_nested_ui_extras(field.ui, detected, nested_fields, ash_attr)
+    }
+  end
 
-                extra =
-                  (base_ui.extra || %{})
-                  |> Map.put(:nested_mode, nested_mode)
-                  |> Map.put(:nested_source, nested_source)
+  defp maybe_resolve_field_type(%Field{type: :nested} = field, ash_attrs, _ui_defaults) do
+    ash_attr = Map.get(ash_attrs, field.source || field.name)
 
-                %{base_ui | extra: extra}
-              else
-                field.ui
-              end
+    nested_fields =
+      maybe_infer_nested_fields(:nested, field.nested_fields, ash_attr, field.auto_fields)
 
-            {%{
-               field
-               | type: detected,
-                 type_module: type_module,
-                 options: options,
-                 nested_fields: nested_fields,
-                 ui: ui
-             }, true}
+    case nested_fields do
+      [] ->
+        field
 
-          field.type == :nested ->
-            nested_fields =
-              maybe_infer_nested_fields(
-                :nested,
-                field.nested_fields,
-                ash_attr,
-                field.auto_fields
-              )
-
-            if nested_fields != [] do
-              nested_mode = detect_nested_mode(ash_attr)
-              nested_source = detect_nested_source(ash_attr)
-              ui = normalize_ui(field.ui)
-
-              extra =
-                (ui.extra || %{})
-                |> Map.put(:nested_mode, nested_mode)
-                |> Map.put(:nested_source, nested_source)
-
-              ui = %{ui | extra: extra}
-              {%{field | nested_fields: nested_fields, ui: ui}, true}
-            else
-              {field, changed?}
-            end
-
-          field.type == :select and is_nil(field.options) ->
-            options = extract_one_of_options(ash_attr)
-            if options, do: {%{field | options: options}, true}, else: {field, changed?}
-
-          true ->
-            {field, changed?}
-        end
-      end)
-
-    if changed? do
-      dsl_state
-      |> remove_field_entities(fields)
-      |> add_field_entities(updated)
-    else
-      dsl_state
+      _ ->
+        %{
+          field
+          | nested_fields: nested_fields,
+            ui: maybe_inject_nested_ui_extras(field.ui, :nested, nested_fields, ash_attr)
+        }
     end
   end
+
+  defp maybe_resolve_field_type(
+         %Field{type: :select, options: nil} = field,
+         ash_attrs,
+         _ui_defaults
+       ) do
+    Map.get(ash_attrs, field.source || field.name)
+    |> extract_one_of_options()
+    |> case do
+      nil -> field
+      options -> %{field | options: options}
+    end
+  end
+
+  defp maybe_resolve_field_type(field, _ash_attrs, _ui_defaults), do: field
+
+  @spec maybe_inject_nested_ui_extras(Field.Ui.t() | nil, atom(), list(), map() | nil) ::
+          Field.Ui.t() | nil
+  defp maybe_inject_nested_ui_extras(field_ui, :nested, [_ | _] = _nested_fields, ash_attr) do
+    base_ui = normalize_ui(field_ui)
+
+    extra =
+      (base_ui.extra || %{})
+      |> Map.put(:nested_mode, detect_nested_mode(ash_attr))
+      |> Map.put(:nested_source, detect_nested_source(ash_attr))
+
+    %{base_ui | extra: extra}
+  end
+
+  defp maybe_inject_nested_ui_extras(field_ui, _detected, _nested_fields, _ash_attr), do: field_ui
 
   @spec maybe_infer_options(atom(), list() | nil, map() | nil) :: list() | nil
   defp maybe_infer_options(:select, nil, ash_attr), do: extract_one_of_options(ash_attr)
@@ -430,12 +417,11 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     |> Enum.filter(& &1.public?)
     |> Enum.reject(&(&1.name in [:id, :inserted_at, :updated_at]))
     |> Enum.map(fn attr ->
-      sub_type = infer_field_type(%{type: attr.type, constraints: attr.constraints}, ui_defaults)
       label = attr.name |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
       %{
         name: attr.name,
-        type: sub_type,
+        type: infer_field_type(%{type: attr.type, constraints: attr.constraints}, ui_defaults),
         label: label,
         placeholder: label,
         required: !attr.allow_nil?
@@ -450,12 +436,11 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
          fields when is_list(fields) <- Keyword.get(items, :fields) do
       Enum.map(fields, fn {field_name, field_config} ->
         field_type = Keyword.get(field_config, :type, :string)
-        sub_type = constraint_type_to_field_type(field_type)
         label = humanize_name(field_name)
 
         %{
           name: field_name,
-          type: sub_type,
+          type: constraint_type_to_field_type(field_type),
           ash_type: field_type,
           label: label,
           placeholder: label,
@@ -503,8 +488,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       apply_nested_positions(merged ++ extra)
     else
       Enum.map(explicit, fn nf ->
-        base = Enum.find(inferred, &(&1.name == nf.name))
-        resolve_nested_field(nf, base)
+        Enum.find(inferred, &(&1.name == nf.name))
+        |> then(&resolve_nested_field(nf, &1))
       end)
     end
   end
@@ -622,65 +607,48 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   @spec resolve_field_sources(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp resolve_field_sources(dsl_state) do
-    entities = get_entities(dsl_state, @fields_path)
-
-    updated =
-      Enum.map(entities, fn
-        %Field{source: nil, name: name} = field -> %{field | source: name}
-        other -> other
-      end)
-
     dsl_state
-    |> remove_field_entities(entities)
-    |> add_field_entities(Enum.filter(updated, &match?(%Field{}, &1)))
-  end
+    |> get_entities(@fields_path)
+    |> filter_fields()
+    |> Enum.reduce(dsl_state, fn
+      %Field{source: nil, name: name} = field, acc ->
+        Transformer.replace_entity(acc, @fields_path, %{field | source: name})
 
-  @spec remove_field_entities(Spark.Dsl.t(), [struct()]) :: Spark.Dsl.t()
-  defp remove_field_entities(dsl_state, entities) do
-    Enum.reduce(entities, dsl_state, fn entity, acc ->
-      if match?(%Field{}, entity) do
-        Transformer.remove_entity(acc, @fields_path, &(&1.name == entity.name))
-      else
+      _field, acc ->
         acc
-      end
     end)
   end
 
   @spec resolve_relation_resources(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp resolve_relation_resources(dsl_state) do
-    entities = get_entities(dsl_state, @fields_path)
-    fields = filter_fields(entities)
     relationships = get_relationships(dsl_state)
 
-    {updated, changed?} =
-      Enum.map_reduce(fields, false, fn field, changed? ->
-        if field.type == :relation and is_nil(field.resource) do
-          case resolve_related_resource(field, relationships) do
-            nil -> {field, changed?}
-            resource -> {%{field | resource: resource}, true}
-          end
-        else
-          {field, changed?}
-        end
-      end)
-
-    if changed? do
-      dsl_state
-      |> remove_field_entities(fields)
-      |> add_field_entities(updated)
-    else
-      dsl_state
-    end
+    dsl_state
+    |> get_entities(@fields_path)
+    |> filter_fields()
+    |> Enum.reduce(dsl_state, fn field, acc ->
+      case maybe_resolve_relation_resource(field, relationships) do
+        nil -> acc
+        resource -> Transformer.replace_entity(acc, @fields_path, %{field | resource: resource})
+      end
+    end)
   end
 
-  defp resolve_related_resource(field, relationships) do
+  @spec maybe_resolve_relation_resource(Field.t(), [map()]) :: module() | nil
+  defp maybe_resolve_relation_resource(
+         %Field{type: :relation, resource: nil} = field,
+         relationships
+       ),
+       do: resolve_related_resource(field, relationships)
+
+  defp maybe_resolve_relation_resource(_field, _relationships), do: nil
+
+  defp resolve_related_resource(%Field{} = field, relationships) do
     field_name = field.source || field.name
 
-    relationships
-    |> Enum.find(&(&1.source_attribute == field_name))
-    |> case do
+    case Enum.find(relationships, &(&1.source_attribute == field_name)) do
       %{destination: dest} -> dest
-      nil -> nil
+      _ -> nil
     end
   end
 
@@ -715,12 +683,10 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   defp sort_fields(fields, field_order) do
     {in_order, not_in_order} = Enum.split_with(fields, &(&1.name in field_order))
 
-    ordered =
-      field_order
-      |> Enum.map(fn name -> Enum.find(in_order, &(&1.name == name)) end)
-      |> Enum.reject(&is_nil/1)
-
-    ordered ++ not_in_order
+    field_order
+    |> Enum.map(fn name -> Enum.find(in_order, &(&1.name == name)) end)
+    |> Enum.reject(&is_nil/1)
+    |> Kernel.++(not_in_order)
   end
 
   @spec position_sort_key(atom() | integer() | {atom(), atom()} | nil, non_neg_integer()) ::

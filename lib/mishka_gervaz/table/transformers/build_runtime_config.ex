@@ -26,6 +26,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
+
+  import MishkaGervaz.Helpers, only: [relation_id_type: 2]
   import MishkaGervaz.Table.Transformers.Helpers
 
   alias MishkaGervaz.Table.Entities.{
@@ -356,7 +358,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   defp filter_to_map(filter, ash_attrs, table_resource) do
     ui = extract_nested_entity(filter.ui, Filter.Ui)
     options = resolve_filter_options(filter, ash_attrs)
-    id_type = resolve_relation_id_type(filter, table_resource)
+    id_type = relation_id_type(filter, table_resource)
 
     %{
       name: filter.name,
@@ -388,81 +390,6 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       preload: filter.preload
     }
   end
-
-  defp resolve_relation_id_type(%{type: :relation} = filter, table_resource) do
-    related_resource = resolve_related_resource(filter, table_resource)
-
-    if related_resource do
-      get_primary_key_type(related_resource)
-    else
-      :uuid
-    end
-  end
-
-  defp resolve_relation_id_type(_, _), do: nil
-
-  defp resolve_related_resource(%{resource: resource}, _) when not is_nil(resource), do: resource
-
-  defp resolve_related_resource(%{name: name, source: source}, table_resource)
-       when not is_nil(table_resource) do
-    field_name = source || name
-
-    table_resource
-    |> Ash.Resource.Info.relationships()
-    |> Enum.find(&(&1.source_attribute == field_name))
-    |> case do
-      %{destination: dest} -> dest
-      nil -> nil
-    end
-  rescue
-    _ -> nil
-  end
-
-  defp resolve_related_resource(_, _), do: nil
-
-  defp get_primary_key_type(resource) do
-    case Ash.Resource.Info.primary_key(resource) do
-      [pk_field | _] ->
-        case Ash.Resource.Info.attribute(resource, pk_field) do
-          %{type: type} -> normalize_id_type(type)
-          _ -> :uuid
-        end
-
-      _ ->
-        :uuid
-    end
-  rescue
-    _ -> :uuid
-  end
-
-  defp normalize_id_type(type) when is_atom(type) do
-    type_string = Atom.to_string(type)
-
-    cond do
-      type == :uuid or type == Ash.Type.UUID ->
-        :uuid
-
-      type == :integer or type == Ash.Type.Integer ->
-        :integer
-
-      type == :string or type == Ash.Type.String ->
-        :string
-
-      String.contains?(type_string, "UUIDv7") or String.contains?(type_string, "UUID7") ->
-        :uuid_v7
-
-      String.contains?(type_string, "UUID") ->
-        :uuid
-
-      String.contains?(type_string, "Integer") ->
-        :integer
-
-      true ->
-        :uuid
-    end
-  end
-
-  defp normalize_id_type(_), do: :uuid
 
   defp resolve_filter_options(%{options: opts}, _) when not is_nil(opts), do: opts
 

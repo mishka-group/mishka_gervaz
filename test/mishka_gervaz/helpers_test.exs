@@ -322,4 +322,108 @@ defmodule MishkaGervaz.HelpersTest do
       assert result == %{a: %{b: nil}}
     end
   end
+
+  describe "normalize_id_type/1" do
+    test "bare atoms" do
+      assert Helpers.normalize_id_type(:uuid) == :uuid
+      assert Helpers.normalize_id_type(:integer) == :integer
+      assert Helpers.normalize_id_type(:string) == :string
+    end
+
+    test "Ash.Type.* modules" do
+      assert Helpers.normalize_id_type(Ash.Type.UUID) == :uuid
+      assert Helpers.normalize_id_type(Ash.Type.Integer) == :integer
+      assert Helpers.normalize_id_type(Ash.Type.String) == :string
+    end
+
+    test "UUIDv7 module is detected as :uuid_v7" do
+      uuid_v7_module = Module.concat([Ash, Type, UUIDv7])
+      assert Helpers.normalize_id_type(uuid_v7_module) == :uuid_v7
+    end
+
+    test "vendor UUID variants fall back to :uuid" do
+      assert Helpers.normalize_id_type(Module.concat([Ash, Type, UUIDFancy])) == :uuid
+    end
+
+    test "vendor Integer variants fall back to :integer" do
+      assert Helpers.normalize_id_type(Module.concat([Ash, Type, IntegerFancy])) == :integer
+    end
+
+    test "unknown atoms default to :uuid" do
+      assert Helpers.normalize_id_type(:something_weird) == :uuid
+    end
+
+    test "non-atom inputs default to :uuid" do
+      assert Helpers.normalize_id_type(nil) == :uuid
+      assert Helpers.normalize_id_type("uuid") == :uuid
+      assert Helpers.normalize_id_type(42) == :uuid
+    end
+  end
+
+  describe "primary_key_type/1" do
+    test "returns :uuid for the standard test resource (uuid_primary_key :id)" do
+      assert Helpers.primary_key_type(MishkaGervaz.Test.Resources.Post) == :uuid
+    end
+
+    test "returns :uuid for an unknown module (introspection rescues)" do
+      assert Helpers.primary_key_type(NonExistentModule) == :uuid
+    end
+  end
+
+  describe "relation_target_resource/2" do
+    test "returns :resource directly when set on the entity" do
+      entity = %{name: :user_id, source: nil, resource: MishkaGervaz.Test.Resources.User}
+
+      assert Helpers.relation_target_resource(entity, nil) ==
+               MishkaGervaz.Test.Resources.User
+    end
+
+    test "looks up via parent's Ash relationships when :resource is nil" do
+      # FormPost has belongs_to :user, MishkaGervaz.Test.Resources.User
+      entity = %{name: :user_id, source: nil, resource: nil}
+
+      assert Helpers.relation_target_resource(entity, MishkaGervaz.Test.Resources.FormPost) ==
+               MishkaGervaz.Test.Resources.User
+    end
+
+    test "honors `source` when it differs from `name`" do
+      entity = %{name: :author, source: :user_id, resource: nil}
+
+      assert Helpers.relation_target_resource(entity, MishkaGervaz.Test.Resources.FormPost) ==
+               MishkaGervaz.Test.Resources.User
+    end
+
+    test "returns nil when no relationship matches the source/name" do
+      entity = %{name: :nonexistent, source: nil, resource: nil}
+      assert Helpers.relation_target_resource(entity, MishkaGervaz.Test.Resources.FormPost) == nil
+    end
+
+    test "returns nil when parent is nil and no :resource is set" do
+      entity = %{name: :anything, source: nil, resource: nil}
+      assert Helpers.relation_target_resource(entity, nil) == nil
+    end
+
+    test "returns nil for entities missing the expected keys" do
+      assert Helpers.relation_target_resource(%{}, nil) == nil
+      assert Helpers.relation_target_resource(:not_a_map, nil) == nil
+    end
+  end
+
+  describe "relation_id_type/2" do
+    test "returns the primary-key type of the related resource" do
+      entity = %{type: :relation, name: :user_id, source: nil, resource: nil}
+
+      assert Helpers.relation_id_type(entity, MishkaGervaz.Test.Resources.FormPost) == :uuid
+    end
+
+    test "falls back to :uuid when the relation cannot be resolved" do
+      entity = %{type: :relation, name: :nonexistent, source: nil, resource: nil}
+      assert Helpers.relation_id_type(entity, MishkaGervaz.Test.Resources.FormPost) == :uuid
+    end
+
+    test "returns nil for non-relation entities" do
+      assert Helpers.relation_id_type(%{type: :text}, nil) == nil
+      assert Helpers.relation_id_type(%{type: :select}, nil) == nil
+    end
+  end
 end

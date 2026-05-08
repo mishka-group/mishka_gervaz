@@ -898,4 +898,104 @@ defmodule MishkaGervaz.Helpers do
     cleaned = Map.reject(map, fn {_, v} -> is_nil(v) end)
     if cleaned == %{}, do: nil, else: cleaned
   end
+
+  @doc """
+  Normalizes an Ash primary-key type to one of `:uuid`, `:uuid_v7`,
+  `:integer`, or `:string`. Falls back to `:uuid` for anything else,
+  matching the conservative default Phoenix uses for `<input>` shapes.
+
+  Recognises both the bare atom forms (`:uuid`, `:integer`, `:string`)
+  and the `Ash.Type.*` modules. Future `Ash.Type.UUIDv7` / `UUID7` /
+  `UUID` / `Integer` modules are matched by name string so a Spark
+  release that adds new vendor variants (`Ash.Type.UUIDv7Foo`) still
+  routes correctly.
+  """
+  @spec normalize_id_type(any()) :: :uuid | :uuid_v7 | :integer | :string
+  def normalize_id_type(type) when is_atom(type) do
+    type_string = Atom.to_string(type)
+
+    cond do
+      type == :uuid or type == Ash.Type.UUID -> :uuid
+      type == :integer or type == Ash.Type.Integer -> :integer
+      type == :string or type == Ash.Type.String -> :string
+      String.contains?(type_string, "UUIDv7") -> :uuid_v7
+      String.contains?(type_string, "UUID7") -> :uuid_v7
+      String.contains?(type_string, "UUID") -> :uuid
+      String.contains?(type_string, "Integer") -> :integer
+      true -> :uuid
+    end
+  end
+
+  def normalize_id_type(_), do: :uuid
+
+  @doc """
+  Returns the normalized type of `resource`'s primary key as one of
+  `:uuid`, `:uuid_v7`, `:integer`, or `:string`. Defaults to `:uuid`
+  when introspection fails or the resource has no primary key.
+  """
+  @spec primary_key_type(module()) :: :uuid | :uuid_v7 | :integer | :string
+  def primary_key_type(resource) do
+    case Ash.Resource.Info.primary_key(resource) do
+      [pk_field | _] ->
+        case Ash.Resource.Info.attribute(resource, pk_field) do
+          %{type: type} -> normalize_id_type(type)
+          _ -> :uuid
+        end
+
+      _ ->
+        :uuid
+    end
+  rescue
+    _ -> :uuid
+  end
+
+  @doc """
+  Resolves the destination resource of a relation field/filter.
+
+  Accepts any map with `:name` / `:source` / `:resource` keys (the
+  shape Form.Field and Table.Filter both have):
+
+    * If `:resource` is set on the entity, returns it directly.
+    * Otherwise looks up `parent_resource`'s Ash relationships for the
+      one whose `source_attribute` matches `entity.source || entity.name`
+      and returns its `:destination`.
+    * Returns `nil` when no match is found, when `parent_resource` is
+      `nil`, or on any introspection failure.
+  """
+  @spec relation_target_resource(map(), module() | nil) :: module() | nil
+  def relation_target_resource(%{resource: resource}, _parent) when not is_nil(resource),
+    do: resource
+
+  def relation_target_resource(%{name: name, source: source}, parent) when not is_nil(parent) do
+    field_name = source || name
+
+    case parent
+         |> Ash.Resource.Info.relationships()
+         |> Enum.find(&(&1.source_attribute == field_name)) do
+      %{destination: dest} -> dest
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  def relation_target_resource(_, _), do: nil
+
+  @doc """
+  Returns the normalized id-type for a `:relation` entity, defaulting
+  to `:uuid` when the related resource cannot be found.
+
+  Combines `relation_target_resource/2` and `primary_key_type/1`. For
+  non-relation entities returns `nil`.
+  """
+  @spec relation_id_type(map(), module() | nil) ::
+          :uuid | :uuid_v7 | :integer | :string | nil
+  def relation_id_type(%{type: :relation} = entity, parent) do
+    case relation_target_resource(entity, parent) do
+      nil -> :uuid
+      resource -> primary_key_type(resource)
+    end
+  end
+
+  def relation_id_type(_entity, _parent), do: nil
 end

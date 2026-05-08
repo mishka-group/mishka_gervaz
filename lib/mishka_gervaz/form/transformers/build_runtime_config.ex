@@ -33,7 +33,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     Notice
   }
 
-  import MishkaGervaz.Helpers, only: [compact_to_nil: 1]
+  import MishkaGervaz.Helpers, only: [compact_to_nil: 1, relation_id_type: 2]
   import MishkaGervaz.Table.Transformers.Helpers
 
   @form_path [:mishka_gervaz, :form]
@@ -186,7 +186,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
   defp field_to_map(field, ash_attrs, module) do
     attr = Map.get(ash_attrs, field.name, %{})
-    id_type = resolve_relation_id_type(field, module)
 
     %{
       name: field.name,
@@ -224,86 +223,11 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       add_label: field.add_label,
       remove_label: field.remove_label,
       type_module: field.type_module,
-      id_type: id_type,
+      id_type: relation_id_type(field, module),
       ui: maybe_ui(field.ui),
       preload: maybe_preload(field.preload)
     }
   end
-
-  defp resolve_relation_id_type(%{type: :relation} = field, module) do
-    related_resource = resolve_related_resource(field, module)
-
-    if related_resource do
-      get_primary_key_type(related_resource)
-    else
-      :uuid
-    end
-  end
-
-  defp resolve_relation_id_type(_, _), do: nil
-
-  defp resolve_related_resource(%{resource: resource}, _) when not is_nil(resource), do: resource
-
-  defp resolve_related_resource(%{name: name, source: source}, module)
-       when not is_nil(module) do
-    field_name = source || name
-
-    module
-    |> Ash.Resource.Info.relationships()
-    |> Enum.find(&(&1.source_attribute == field_name))
-    |> case do
-      %{destination: dest} -> dest
-      nil -> nil
-    end
-  rescue
-    _ -> nil
-  end
-
-  defp resolve_related_resource(_, _), do: nil
-
-  defp get_primary_key_type(resource) do
-    case Ash.Resource.Info.primary_key(resource) do
-      [pk_field | _] ->
-        case Ash.Resource.Info.attribute(resource, pk_field) do
-          %{type: type} -> normalize_id_type(type)
-          _ -> :uuid
-        end
-
-      _ ->
-        :uuid
-    end
-  rescue
-    _ -> :uuid
-  end
-
-  defp normalize_id_type(type) when is_atom(type) do
-    type_string = Atom.to_string(type)
-
-    cond do
-      type == :uuid or type == Ash.Type.UUID ->
-        :uuid
-
-      type == :integer or type == Ash.Type.Integer ->
-        :integer
-
-      type == :string or type == Ash.Type.String ->
-        :string
-
-      String.contains?(type_string, "UUIDv7") or String.contains?(type_string, "UUID7") ->
-        :uuid_v7
-
-      String.contains?(type_string, "UUID") ->
-        :uuid
-
-      String.contains?(type_string, "Integer") ->
-        :integer
-
-      true ->
-        :uuid
-    end
-  end
-
-  defp normalize_id_type(_), do: :uuid
 
   defp maybe_preload(nil), do: nil
 
@@ -566,8 +490,11 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
 
   defp build_js_hooks(dsl_state) do
     path = @form_path ++ [:hooks, :js]
-    keys = [:on_init, :after_save, :on_cancel, :on_error]
-    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
+
+    values =
+      [:on_init, :after_save, :on_cancel, :on_error]
+      |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
+
     if any_set?(Map.values(values)), do: values, else: nil
   end
 
