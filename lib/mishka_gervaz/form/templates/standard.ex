@@ -2,8 +2,53 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   @moduledoc """
   Default form template for MishkaGervaz.
 
-  Renders forms using the configured UI adapter for component styling.
-  Supports standard, wizard, and tabs layout modes.
+  Implements `MishkaGervaz.Form.Behaviours.Template` and serves as the
+  out-of-the-box renderer for every `mishka_gervaz form do … end` block.
+  Custom templates inherit from this module via `use
+  MishkaGervaz.Form.Behaviours.Template`, which delegates the four
+  optional callbacks (`render_loading/1`, `render_field/1`,
+  `render_group/1`, `render_step_indicator/1`) here.
+
+  ## Layout modes
+
+    * `:standard` — single-page form, fields rendered in their declared
+      groups (or flat when no groups are declared).
+    * `:wizard`   — multi-step form with a sequential step indicator and
+      step-aware submit / next / previous buttons.
+    * `:tabs`     — same step structure as `:wizard` but with free
+      navigation between tabs.
+
+  Mode selection is read from `@state.static.layout_mode`. The render
+  pipeline (`render/1`) dispatches notices (`render_notices_at/2`),
+  the form header / footer chrome, the body (`render_groups/1` or
+  `render_current_step_groups/1`), upload sections, and submit buttons
+  in a fixed order so notice positioning stays predictable.
+
+  ## Two-axis composition
+
+    * **Template** (this module) — *where* things go: groups, steps,
+      notices, submit area.
+    * **UI adapter** (e.g. `MishkaGervaz.UIAdapters.Tailwind`) — *how*
+      things look: every concrete element (`field_group`, `alert`,
+      `button`, `step_indicator`, …) is dispatched through
+      `MishkaGervaz.Helpers.dynamic_component/1`, which forwards to the
+      adapter declared on the resource.
+
+  ## Field-type dispatch
+
+  `render_field/1` delegates per-type rendering to modules under
+  `MishkaGervaz.Form.Types.Field.*` (e.g.
+  `MishkaGervaz.Form.Types.Field.Hidden`,
+  `MishkaGervaz.Form.Types.Field.Relation`). Built-in types are wired
+  through `render_input/4`; custom types implement
+  `MishkaGervaz.Form.Behaviours.FieldType` and are referenced directly
+  in the field DSL (`field :foo, MyApp.FieldTypes.Color`).
+
+  See `MishkaGervaz.Form.Behaviours.Template`,
+  `MishkaGervaz.Form.Behaviours.FieldType`,
+  `MishkaGervaz.Behaviours.UIAdapter`,
+  `MishkaGervaz.Helpers`, and
+  `MishkaGervaz.Form.Web.UploadHelpers`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.Template
@@ -622,48 +667,45 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     ~H"""
     <div class="mt-6 flex items-center justify-between">
       <div class="flex gap-2">
-        <%= if @show_step_nav do %>
-          <.dynamic_component
-            module={@ui}
-            function={:step_navigation}
-            current_step={@state.current_step}
-            steps={@static.steps}
-            step_states={@state.step_states}
-            myself={@myself}
-          />
-        <% end %>
+        <.dynamic_component
+          :if={@show_step_nav}
+          module={@ui}
+          function={:step_navigation}
+          current_step={@state.current_step}
+          steps={@static.steps}
+          step_states={@state.step_states}
+          myself={@myself}
+        />
       </div>
 
       <div class="flex gap-2">
-        <%= if @show_cancel do %>
-          <.dynamic_component
-            module={@ui}
-            function={:button}
-            label={@cancel_label}
-            variant={:secondary}
-            type="button"
-            disabled={@cancel_disabled}
-            phx_click={@cancel_js}
-            phx_target={@myself}
-          />
-        <% end %>
+        <.dynamic_component
+          :if={@show_cancel}
+          module={@ui}
+          function={:button}
+          label={@cancel_label}
+          variant={:secondary}
+          type="button"
+          disabled={@cancel_disabled}
+          phx_click={@cancel_js}
+          phx_target={@myself}
+        />
 
-        <%= if @show_submit and (not @show_step_nav or last_step?(assigns)) do %>
-          <button
-            type="submit"
-            disabled={@submit_disabled}
-            class={[
-              "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white",
-              if(@submit_disabled,
-                do: "bg-gray-400 cursor-not-allowed",
-                else:
-                  "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              )
-            ]}
-          >
-            {@submit_label}
-          </button>
-        <% end %>
+        <button
+          :if={@show_submit and (not @show_step_nav or last_step?(assigns))}
+          type="submit"
+          disabled={@submit_disabled}
+          class={[
+            "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white",
+            if(@submit_disabled,
+              do: "bg-gray-400 cursor-not-allowed",
+              else:
+                "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            )
+          ]}
+        >
+          {@submit_label}
+        </button>
       </div>
     </div>
     """
@@ -1113,17 +1155,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
                 {Phoenix.Naming.humanize(@nested_field.name)}
               <% end %>
             </span>
-            <%= if @nested_mode == :array and not @parent_readonly do %>
-              <button
-                type="button"
-                phx-click="remove_nested"
-                phx-value-path={nested_form.name}
-                phx-target={@target}
-                class="text-red-600 hover:text-red-800 text-sm"
-              >
-                {@remove_label}
-              </button>
-            <% end %>
+            <button
+              :if={@nested_mode == :array and not @parent_readonly}
+              type="button"
+              phx-click="remove_nested"
+              phx-value-path={nested_form.name}
+              phx-target={@target}
+              class="text-red-600 hover:text-red-800 text-sm"
+            >
+              {@remove_label}
+            </button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <%= for sub_field <- @nested_fields do %>
@@ -1134,17 +1175,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         </div>
       </.inputs_for>
 
-      <%= if @nested_mode == :array and not @parent_readonly do %>
-        <button
-          type="button"
-          phx-click="add_nested"
-          phx-value-path={@form_path}
-          phx-target={@target}
-          class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
-        >
-          {@add_label}
-        </button>
-      <% end %>
+      <button
+        :if={@nested_mode == :array and not @parent_readonly}
+        type="button"
+        phx-click="add_nested"
+        phx-value-path={@form_path}
+        phx-target={@target}
+        class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+      >
+        {@add_label}
+      </button>
     </div>
     """
   end
@@ -1184,18 +1224,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             <span class="text-sm font-medium text-gray-600">
               {Phoenix.Naming.humanize(@nested_field.name)} {idx + 1}
             </span>
-            <%= if @nested_mode == :array and not @parent_readonly do %>
-              <button
-                type="button"
-                phx-click="remove_nested"
-                phx-value-field={to_string(@nested_field.name)}
-                phx-value-index={to_string(idx)}
-                phx-target={@target}
-                class="text-red-600 hover:text-red-800 text-sm"
-              >
-                {@remove_label}
-              </button>
-            <% end %>
+            <button
+              :if={@nested_mode == :array and not @parent_readonly}
+              type="button"
+              phx-click="remove_nested"
+              phx-value-field={to_string(@nested_field.name)}
+              phx-value-index={to_string(idx)}
+              phx-target={@target}
+              class="text-red-600 hover:text-red-800 text-sm"
+            >
+              {@remove_label}
+            </button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <%= for sub_field <- @nested_fields do %>
@@ -1207,17 +1246,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         </div>
       <% end %>
 
-      <%= if @nested_mode == :array and not @parent_readonly do %>
-        <button
-          type="button"
-          phx-click="add_nested"
-          phx-value-field={to_string(@nested_field.name)}
-          phx-target={@target}
-          class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
-        >
-          {@add_label}
-        </button>
-      <% end %>
+      <button
+        :if={@nested_mode == :array and not @parent_readonly}
+        type="button"
+        phx-click="add_nested"
+        phx-value-field={to_string(@nested_field.name)}
+        phx-target={@target}
+        class="w-full py-2 px-4 border border-dashed border-gray-300 rounded-md text-sm text-gray-600 hover:border-gray-400 hover:text-gray-700"
+      >
+        {@add_label}
+      </button>
     </div>
     """
   end
@@ -1260,9 +1298,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <div class={nested_span_class(@sf.span)}>
         <label class="block text-xs font-medium text-gray-500 mb-1">
           {@sf.label}
-          <%= if @sf.required do %>
-            <span class="text-red-500">*</span>
-          <% end %>
+          <span :if={@sf.required} class="text-red-500">*</span>
         </label>
         <%= case @sf.type do %>
           <% :textarea -> %>
@@ -1348,11 +1384,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
               class={@input_class}
             />
         <% end %>
-        <%= if @sub_errors != [] do %>
-          <div class="mt-1">
-            <p :for={err <- @sub_errors} class="text-sm text-red-600">{err}</p>
-          </div>
-        <% end %>
+        <div :if={@sub_errors != []} class="mt-1">
+          <p :for={err <- @sub_errors} class="text-sm text-red-600">{err}</p>
+        </div>
       </div>
       """
     end
@@ -1377,9 +1411,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <div class={nested_span_class(@sf.span)}>
         <label class="block text-xs font-medium text-gray-500 mb-1">
           {@sf.label}
-          <%= if @sf.required do %>
-            <span class="text-red-500">*</span>
-          <% end %>
+          <span :if={@sf.required} class="text-red-500">*</span>
         </label>
         <%= case @sf.type do %>
           <% :textarea -> %>
@@ -1729,28 +1761,26 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
       <%= case @style do %>
         <% :dropzone -> %>
-          <%= if @upload do %>
-            <.dynamic_component
-              module={@ui}
-              function={:upload_dropzone}
-              upload_ref={@upload.ref}
-              accept={@upload_config[:accept]}
-              max_entries={@upload_config[:max_entries] || 1}
-            >
-              {render_live_file_input(assigns, "sr-only")}
-            </.dynamic_component>
-          <% end %>
+          <.dynamic_component
+            :if={@upload}
+            module={@ui}
+            function={:upload_dropzone}
+            upload_ref={@upload.ref}
+            accept={@upload_config[:accept]}
+            max_entries={@upload_config[:max_entries] || 1}
+          >
+            {render_live_file_input(assigns, "sr-only")}
+          </.dynamic_component>
         <% :file_input -> %>
-          <%= if @upload do %>
-            <.dynamic_component
-              module={@ui}
-              function={:upload_file_input}
-              accept={@upload_config[:accept]}
-              max_entries={@upload_config[:max_entries] || 1}
-            >
-              {render_live_file_input(assigns, nil)}
-            </.dynamic_component>
-          <% end %>
+          <.dynamic_component
+            :if={@upload}
+            module={@ui}
+            function={:upload_file_input}
+            accept={@upload_config[:accept]}
+            max_entries={@upload_config[:max_entries] || 1}
+          >
+            {render_live_file_input(assigns, nil)}
+          </.dynamic_component>
         <% :custom -> %>
           <%= if @upload do %>
             {render_live_file_input(assigns, nil)}
@@ -1844,17 +1874,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp render_existing_files(assigns) do
     ~H"""
     <div class="space-y-2">
-      <%= for file <- @existing_files do %>
-        <.dynamic_component
-          module={@ui}
-          function={:upload_existing_file}
-          file={file}
-          filename={file[:filename] || file[:name] || "File"}
-          file_id={file[:id] || file[:filename] || file[:name]}
-          upload_name={@upload_config.name}
-          phx_target={@myself}
-        />
-      <% end %>
+      <.dynamic_component
+        :for={file <- @existing_files}
+        module={@ui}
+        function={:upload_existing_file}
+        file={file}
+        filename={file[:filename] || file[:name] || "File"}
+        file_id={file[:id] || file[:filename] || file[:name]}
+        upload_name={@upload_config.name}
+        phx_target={@myself}
+      />
     </div>
     """
   end
