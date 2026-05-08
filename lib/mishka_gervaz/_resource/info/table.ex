@@ -315,7 +315,8 @@ defmodule MishkaGervaz.Resource.Info.Table do
     if master_user?, do: master_action, else: tenant_action
   end
 
-  defp resolve_action_value(action, _master_user?, _fallback) when is_atom(action) and not is_nil(action) do
+  defp resolve_action_value(action, _master_user?, _fallback)
+       when is_atom(action) and not is_nil(action) do
     action
   end
 
