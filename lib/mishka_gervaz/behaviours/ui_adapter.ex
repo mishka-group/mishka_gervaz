@@ -3,41 +3,38 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   Behaviour for UI component adapters.
 
   Implement this behaviour to integrate any UI library:
-  - Plain Tailwind CSS (default)
-  - Custom component libraries
+
+  - Plain Tailwind CSS (default, `MishkaGervaz.UIAdapters.Tailwind`)
+  - A custom component library
   - Database-driven dynamic components
-  - Any other component library
+  - Anything else with the same per-component shape
 
-  ## Using the Macro
+  ## Using the macro
 
-  Use `use MishkaGervaz.Behaviours.UIAdapter` to get default implementations
-  that delegate to Tailwind. Override only the components you need:
+  `use MishkaGervaz.Behaviours.UIAdapter` provides default implementations
+  that delegate to a fallback module (Tailwind by default). Override only
+  the components you need:
 
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter
 
-        # Override specific components - compile time check!
-        if Code.ensure_loaded?(MyAppWeb.Components.Button) do
-          def button(assigns), do: MyAppWeb.Components.Button.button(assigns)
-        end
-
-        # Everything else uses Tailwind defaults
+        # Override specific components — everything else uses Tailwind defaults.
+        def button(assigns), do: MyAppWeb.Components.Button.button(assigns)
       end
 
-  ## With Components Module
+  ## With a components module
 
-  Pass your components module to auto-generate overrides:
+  Pass your components module to auto-generate overrides for any function
+  it exports:
 
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter,
           components: MyAppWeb.Components
-
-        # Auto-generates overrides for any function that exists in MyAppWeb.Components
       end
 
-  ## With Custom Fallback
+  ## With a custom fallback
 
-  Specify a different fallback module instead of Tailwind:
+  Use a different fallback module instead of Tailwind:
 
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter,
@@ -45,361 +42,194 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
           components: MyAppWeb.Components.Custom
       end
 
-  Then use in DSL:
+  ## DSL usage
 
       presentation do
         ui_adapter MyAppWeb.UIAdapter
       end
   """
 
-  @doc "Render a text input"
-  @callback text_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+  @typedoc "Phoenix LiveView assigns map passed to every component function."
+  @type assigns :: map()
 
-  @doc "Render a select dropdown"
-  @callback select(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+  @typedoc "A `{function_name, docstring}` pair."
+  @type component :: {atom(), String.t()}
 
-  @doc "Render a multi-select with search support"
-  @callback multi_select(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+  # Single source of truth for all component callbacks. Every entry produces
+  # a `@callback`, an entry in `@component_functions` (drives the
+  # `defdelegate` defaults in `__using__`), and an entry in
+  # `@optional_callbacks`. To add a new component, add ONE line here.
+  @components [
+    # ----- Inputs -----------------------------------------------------------
+    {:text_input, "Render a text input"},
+    {:select, "Render a select dropdown"},
+    {:multi_select, "Render a multi-select with search support"},
+    {:search_select, "Render a single-select with search support"},
+    {:load_more_select, "Render a single-select with paginated load-more (no search input)"},
+    {:checkbox, "Render a checkbox"},
+    {:date_input, "Render a date input"},
+    {:datetime_input, "Render a datetime input"},
+    {:number_input, "Render a number input"},
+    {:textarea, "Render a multi-line text input"},
+    {:json_editor, "Render a JSON editor (textarea with formatting)"},
+    {:toggle_input, "Render a boolean toggle switch"},
+    {:range_input, "Render a range slider input"},
+    {:string_list_input, "Render a dynamic string list input with add/remove buttons"},
+    {:password_input, "Render a password input (masked text entry)"},
+    {:combobox, "Render a combobox (text input with dropdown suggestions)"},
 
-  @doc "Render a single-select with search support"
-  @callback search_select(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+    # ----- Actions and display ---------------------------------------------
+    {:button, "Render a button"},
+    {:icon, "Render an icon"},
+    {:badge, "Render a badge/tag"},
+    {:spinner, "Render a loading spinner"},
+    {:nav_link, "Render a navigation link"},
+    {:dropdown, "Render a dropdown menu"},
 
-  @doc "Render a single-select with paginated load-more (no search input)"
-  @callback load_more_select(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+    # ----- State and status ------------------------------------------------
+    {:empty_state, "Render empty state"},
+    {:error_state, "Render error state"},
+    {:loading_state, "Render loading state"},
+    {:alert, "Render a static alert/notice (info/warning/error/success/neutral)"},
 
-  @doc "Render a checkbox"
-  @callback checkbox(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
+    # ----- Table -----------------------------------------------------------
+    {:table, "Render table wrapper"},
+    {:table_header, "Render table header row"},
+    {:th, "Render a table header cell"},
+    {:tr, "Render a table row"},
+    {:td, "Render a table cell"},
+    {:date_range_container, "Render a date range container"},
+    {:cell_empty, "Render empty cell value (nil/missing data)"},
+    {:cell_text, "Render text cell value"},
+    {:cell_number, "Render number cell value"},
+    {:cell_date, "Render date cell value"},
+    {:cell_datetime, "Render datetime cell value"},
+    {:cell_code, "Render code/monospace cell value"},
+    {:cell_array, "Render array/list container"},
+    {:filter_reset_button, "Render filter reset/clear button"},
+    {:archive_toggle, "Render archive status toggle"},
+    {:bulk_action_bar, "Render bulk actions bar container"},
+    {:bulk_action_button, "Render individual bulk action button"},
+    {:pagination_container, "Render pagination container with page info"},
+    {:pagination_nav_button, "Render pagination nav button (prev/next/first/last)"},
+    {:pagination_page_button, "Render pagination page number button"},
+    {:template_switcher, "Render template switcher container with buttons"},
+    {:template_switcher_button, "Render template switcher button"},
 
-  @doc "Render a date input"
-  @callback date_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a datetime input"
-  @callback datetime_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a number input"
-  @callback number_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a button"
-  @callback button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render an icon"
-  @callback icon(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a badge/tag"
-  @callback badge(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a loading spinner"
-  @callback spinner(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render empty state"
-  @callback empty_state(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render error state"
-  @callback error_state(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a date range container"
-  @callback date_range_container(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a navigation link"
-  @callback nav_link(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render table wrapper"
-  @callback table(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render table header row"
-  @callback table_header(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a table header cell"
-  @callback th(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a table row"
-  @callback tr(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a table cell"
-  @callback td(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a dropdown menu"
-  @callback dropdown(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render empty cell value (nil/missing data)"
-  @callback cell_empty(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render text cell value"
-  @callback cell_text(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render number cell value"
-  @callback cell_number(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render date cell value"
-  @callback cell_date(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render datetime cell value"
-  @callback cell_datetime(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render code/monospace cell value"
-  @callback cell_code(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render array/list container"
-  @callback cell_array(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render filter reset/clear button"
-  @callback filter_reset_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render archive status toggle"
-  @callback archive_toggle(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render bulk actions bar container"
-  @callback bulk_action_bar(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render individual bulk action button"
-  @callback bulk_action_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render pagination container with page info"
-  @callback pagination_container(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render pagination nav button (prev/next/first/last)"
-  @callback pagination_nav_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render pagination page number button"
-  @callback pagination_page_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render loading state"
-  @callback loading_state(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render template switcher container with buttons"
-  @callback template_switcher(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render template switcher button"
-  @callback template_switcher_button(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render the main form wrapper (phx-change, phx-submit)"
-  @callback form_container(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a field wrapper with label, input, and error display"
-  @callback field_wrapper(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a collapsible group of fields"
-  @callback field_group(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render wizard/tabs step progress indicator"
-  @callback step_indicator(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render wizard prev/next/submit navigation controls"
-  @callback step_navigation(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a drag-drop file upload zone"
-  @callback upload_dropzone(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a file preview thumbnail"
-  @callback upload_preview(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render an upload progress bar"
-  @callback upload_progress(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a boolean toggle switch"
-  @callback toggle_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a range slider input"
-  @callback range_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a multi-line text input"
-  @callback textarea(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a JSON editor (textarea with formatting)"
-  @callback json_editor(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a container for nested form fields"
-  @callback nested_fields(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a container for array-of-maps fields"
-  @callback array_fields(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a dynamic string list input with add/remove buttons"
-  @callback string_list_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a password input (masked text entry)"
-  @callback password_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a combobox (text input with dropdown suggestions)"
-  @callback combobox(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a field error message display"
-  @callback field_error(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a styled file input (non-dropzone) upload control"
-  @callback upload_file_input(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render an existing file card with remove button (for edit mode)"
-  @callback upload_existing_file(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a static alert/notice (info/warning/error/success/neutral)"
-  @callback alert(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a form header (title + description)"
-  @callback form_header(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @doc "Render a form footer (static content below the submit row)"
-  @callback form_footer(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
-
-  @optional_callbacks [
-    # Table-only optional (23)
-    template_switcher: 1,
-    multi_select: 1,
-    search_select: 1,
-    dropdown: 1,
-    empty_state: 1,
-    error_state: 1,
-    cell_empty: 1,
-    cell_text: 1,
-    cell_number: 1,
-    cell_date: 1,
-    cell_datetime: 1,
-    cell_code: 1,
-    cell_array: 1,
-    filter_reset_button: 1,
-    archive_toggle: 1,
-    bulk_action_bar: 1,
-    bulk_action_button: 1,
-    pagination_container: 1,
-    pagination_nav_button: 1,
-    pagination_page_button: 1,
-    loading_state: 1,
-    template_switcher_button: 1,
-    date_range_container: 1,
-    nav_link: 1,
-    table: 1,
-    table_header: 1,
-    th: 1,
-    tr: 1,
-    td: 1,
-    # Form-only optional (15)
-    form_container: 1,
-    field_wrapper: 1,
-    field_group: 1,
-    step_indicator: 1,
-    step_navigation: 1,
-    upload_dropzone: 1,
-    upload_preview: 1,
-    upload_progress: 1,
-    toggle_input: 1,
-    range_input: 1,
-    textarea: 1,
-    json_editor: 1,
-    nested_fields: 1,
-    array_fields: 1,
-    field_error: 1,
-    upload_file_input: 1,
-    upload_existing_file: 1,
-    string_list_input: 1,
-    combobox: 1,
-    password_input: 1,
-    alert: 1,
-    form_header: 1,
-    form_footer: 1
+    # ----- Form ------------------------------------------------------------
+    {:form_container, "Render the main form wrapper (phx-change, phx-submit)"},
+    {:form_header, "Render a form header (title + description)"},
+    {:form_footer, "Render a form footer (static content below the submit row)"},
+    {:field_wrapper, "Render a field wrapper with label, input, and error display"},
+    {:field_group, "Render a collapsible group of fields"},
+    {:field_error, "Render a field error message display"},
+    {:step_indicator, "Render wizard/tabs step progress indicator"},
+    {:step_navigation, "Render wizard prev/next/submit navigation controls"},
+    {:upload_dropzone, "Render a drag-drop file upload zone"},
+    {:upload_preview, "Render a file preview thumbnail"},
+    {:upload_progress, "Render an upload progress bar"},
+    {:upload_file_input, "Render a styled file input (non-dropzone) upload control"},
+    {:upload_existing_file, "Render an existing file card with remove button (for edit mode)"},
+    {:nested_fields, "Render a container for nested form fields"},
+    {:array_fields, "Render a container for array-of-maps fields"}
   ]
 
-  @component_functions [
-    # Shared
-    :text_input,
-    :select,
-    :multi_select,
-    :search_select,
-    :load_more_select,
-    :checkbox,
-    :date_input,
-    :datetime_input,
-    :number_input,
-    :button,
-    :icon,
-    :badge,
-    :spinner,
-    :empty_state,
-    :error_state,
-    # Table-only
-    :date_range_container,
-    :nav_link,
-    :table,
-    :table_header,
-    :th,
-    :tr,
-    :td,
-    :dropdown,
-    :cell_empty,
-    :cell_text,
-    :cell_number,
-    :cell_date,
-    :cell_datetime,
-    :cell_code,
-    :cell_array,
-    :filter_reset_button,
-    :archive_toggle,
-    :bulk_action_bar,
-    :bulk_action_button,
-    :pagination_container,
-    :pagination_nav_button,
-    :pagination_page_button,
-    :loading_state,
-    :template_switcher,
-    :template_switcher_button,
-    # Form-only
-    :form_container,
-    :field_wrapper,
-    :field_group,
-    :step_indicator,
-    :step_navigation,
-    :upload_dropzone,
-    :upload_preview,
-    :upload_progress,
-    :toggle_input,
-    :range_input,
-    :textarea,
-    :json_editor,
-    :nested_fields,
-    :array_fields,
-    :field_error,
-    :upload_file_input,
-    :upload_existing_file,
-    :string_list_input,
-    :combobox,
-    :password_input,
-    :alert,
-    :form_header,
-    :form_footer
-  ]
+  @component_functions Enum.map(@components, &elem(&1, 0))
+
+  for {name, doc} <- @components do
+    @doc doc
+    @callback unquote(name)(assigns()) :: Phoenix.LiveView.Rendered.t()
+  end
+
+  # Every callback ships with a default implementation via `use`, so all of
+  # them are effectively optional — hand-rolled implementers can pick the
+  # subset they want without compile warnings.
+  @optional_callbacks Enum.map(@component_functions, &{&1, 1})
 
   @doc """
-  Use this module to get default implementations for all callbacks.
+  The list of every component function name on the behaviour. Useful for
+  introspection and for tests that want to assert all functions are wired.
+  """
+  @spec component_functions() :: [atom()]
+  def component_functions, do: @component_functions
+
+  @doc """
+  Resolves the `{module, function}` target a generated override should call,
+  given the consuming module's `:components`, `:nested_components`,
+  `:module_prefix`, and `:component_prefix` options.
+
+  Public so the macro can call it; also useful for testing the routing
+  logic directly without having to build a full adapter.
+  """
+  @spec resolve_target(atom(), module(), boolean(), String.t() | nil, String.t() | nil) ::
+          {module(), atom()}
+  def resolve_target(func, components, nested?, module_prefix, component_prefix) do
+    {target_module(func, components, nested?, module_prefix),
+     target_function(func, component_prefix)}
+  end
+
+  defp target_function(func, nil), do: func
+  defp target_function(func, prefix), do: String.to_atom("#{prefix}#{func}")
+
+  defp target_module(_func, components, false, _module_prefix), do: components
+
+  defp target_module(func, components, true, module_prefix) do
+    submodule =
+      func
+      |> Atom.to_string()
+      |> Macro.camelize()
+      |> then(&"#{module_prefix || ""}#{&1}")
+      |> String.to_atom()
+
+    Module.concat(components, submodule)
+  end
+
+  @doc """
+  Sets up an adapter that delegates every component to a fallback module,
+  and optionally overrides specific components from a `:components` module.
 
   ## Options
 
-    * `:fallback` - Fallback module for defaults. Defaults to `MishkaGervaz.UIAdapters.Tailwind`
-    * `:components` - Components module to auto-generate overrides from. Optional.
-    * `:nested_components` - If true, uses nested module style (e.g., `Components.Button.button/1`).
-      If false, uses flat style (e.g., `Components.button/1`). Defaults to false.
-    * `:module_prefix` - Prefix added to module names (e.g., `"Mishka"` -> `Components.MishkaButton`).
-    * `:component_prefix` - Prefix added to function names (e.g., `"mc_"` -> `mc_button/1`).
+    * `:fallback` — module providing the default implementations.
+      Defaults to `MishkaGervaz.UIAdapters.Tailwind`.
+
+    * `:components` — module to source overrides from. Each component
+      function is wired only when the target module is loaded **and**
+      exports the corresponding 1-arity function.
+
+    * `:nested_components` — when `true`, look for each component under a
+      submodule (e.g. `Components.Button.button/1`). When `false` (default),
+      the components module is flat (e.g. `Components.button/1`).
+
+    * `:module_prefix` — a string prepended to each submodule name when
+      `nested_components: true`. Example: `"Mishka"` makes the macro look
+      under `Components.MishkaButton.button/1`.
+
+    * `:component_prefix` — a string prepended to each function name.
+      Example: `"mc_"` makes the macro look up `mc_button/1` on the target
+      module.
 
   ## Examples
 
-      # Simple usage - all defaults from Tailwind
+      # All defaults from Tailwind
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter
       end
 
-      # With flat components module (Components.button/1)
+      # Flat components module — Components.button/1
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter,
           components: MyAppWeb.Components
       end
 
-      # With nested components style (Components.Button.button/1)
+      # Nested style — Components.Button.button/1
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter,
           components: MyAppWeb.Components,
           nested_components: true
       end
 
-      # With module prefix (Components.MishkaButton.button/1)
+      # Module prefix — Components.MishkaButton.button/1
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter,
           components: MyAppWeb.Components,
@@ -407,26 +237,25 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
           module_prefix: "Mishka"
       end
 
-      # With component prefix (Components.Button.mc_button/1)
+      # Function prefix — Components.mc_button/1
       defmodule MyAppWeb.UIAdapter do
         use MishkaGervaz.Behaviours.UIAdapter,
           components: MyAppWeb.Components,
-          nested_components: true,
-          component_prefix: "mc_"
-      end
-
-      # With both prefixes (Components.MishkaButton.mc_button/1)
-      defmodule MyAppWeb.UIAdapter do
-        use MishkaGervaz.Behaviours.UIAdapter,
-          components: MyAppWeb.Components,
-          nested_components: true,
-          module_prefix: "Mishka",
           component_prefix: "mc_"
       end
   """
   defmacro __using__(opts \\ []) do
-    fallback = Keyword.get(opts, :fallback, MishkaGervaz.UIAdapters.Tailwind)
-    components = Keyword.get(opts, :components)
+    fallback =
+      opts
+      |> Keyword.get(:fallback, MishkaGervaz.UIAdapters.Tailwind)
+      |> Macro.expand(__CALLER__)
+
+    components =
+      case Keyword.get(opts, :components) do
+        nil -> nil
+        mod -> Macro.expand(mod, __CALLER__)
+      end
+
     nested_components = Keyword.get(opts, :nested_components, false)
     module_prefix = Keyword.get(opts, :module_prefix)
     component_prefix = Keyword.get(opts, :component_prefix)
@@ -440,51 +269,20 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
 
     component_overrides =
       if components do
-        if nested_components do
-          for func <- @component_functions do
-            mod_name =
-              func
-              |> Atom.to_string()
-              |> Macro.camelize()
-              |> String.to_atom()
+        for func <- @component_functions do
+          {target_mod, target_func} =
+            __MODULE__.resolve_target(
+              func,
+              components,
+              nested_components,
+              module_prefix,
+              component_prefix
+            )
 
-            prefixed_mod_name =
-              if module_prefix do
-                String.to_atom("#{module_prefix}#{mod_name}")
-              else
-                mod_name
-              end
-
-            full_module = Module.concat(components, prefixed_mod_name)
-
-            target_func =
-              if component_prefix do
-                String.to_atom("#{component_prefix}#{func}")
-              else
-                func
-              end
-
-            quote do
-              if Code.ensure_loaded?(unquote(full_module)) and
-                   function_exported?(unquote(full_module), unquote(target_func), 1) do
-                def unquote(func)(assigns), do: unquote(full_module).unquote(target_func)(assigns)
-              end
-            end
-          end
-        else
-          for func <- @component_functions do
-            target_func =
-              if component_prefix do
-                String.to_atom("#{component_prefix}#{func}")
-              else
-                func
-              end
-
-            quote do
-              if Code.ensure_loaded?(unquote(components)) and
-                   function_exported?(unquote(components), unquote(target_func), 1) do
-                def unquote(func)(assigns), do: unquote(components).unquote(target_func)(assigns)
-              end
+          quote do
+            if Code.ensure_loaded?(unquote(target_mod)) and
+                 function_exported?(unquote(target_mod), unquote(target_func), 1) do
+              def unquote(func)(assigns), do: unquote(target_mod).unquote(target_func)(assigns)
             end
           end
         end
