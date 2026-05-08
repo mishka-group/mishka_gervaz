@@ -119,6 +119,7 @@ defmodule MishkaGervaz.Form.Web.State do
       :features,
       :debounce,
       :preloads,
+      :access,
       :layout_mode,
       :layout_columns,
       :layout_navigation,
@@ -146,6 +147,7 @@ defmodule MishkaGervaz.Form.Web.State do
             features: list(atom()),
             debounce: integer() | nil,
             preloads: list(atom()),
+            access: module(),
             layout_mode: :standard | :wizard | :tabs,
             layout_columns: 1 | 2 | 3 | 4,
             layout_navigation: :sequential | :free,
@@ -257,10 +259,32 @@ defmodule MishkaGervaz.Form.Web.State do
       (`mode_allowed?/3`, `resolve_access/1`) — the bits of logic the
       macro and external callers (e.g. `Form.Web.Live`) both need.
 
+    ## `mode_allowed?/3` — `:restricted` semantics
+
+    The `:restricted` field on a `source` map (or a per-mode entry in
+    `:access_rules`) accepts two shapes with **deliberately different
+    contracts**:
+
+    - `restricted: true` — applies the master gate. Mode is allowed iff
+      `state.master_user?`. Use this for the standard "admin-only"
+      pattern.
+    - `restricted: fn state -> boolean end` — function is the **final
+      word**. The master gate is **not** layered on top. Returning
+      `true` means "this user is restricted"; the mode is denied.
+      Returning `false` allows the mode unconditionally.
+
+    The asymmetry is intentional: the boolean form is the common case
+    where you just want master-only; the function form is the escape
+    hatch for callers that need the full state (role, dirty?, current
+    step, etc.) to decide and don't want master-gate sugar layered on.
+    Reach for the boolean unless you specifically need to bypass it.
+
     See `MishkaGervaz.Form.Web.State`,
     `MishkaGervaz.Form.Web.State.Access.Default`, and
     `MishkaGervaz.Form.Web.Live`.
     """
+
+    require Logger
 
     import MishkaGervaz.Helpers, only: [module_to_snake: 2]
 
@@ -359,12 +383,96 @@ defmodule MishkaGervaz.Form.Web.State do
           true
       end
     end
+
+    @doc false
+    @spec load_static_relation_options(list(map()), map() | nil) :: map()
+    def load_static_relation_options(fields, current_user) do
+      fields
+      |> Enum.filter(&static_relation?/1)
+      |> Task.async_stream(
+        fn field -> {field.name, load_relation(field, current_user)} end,
+        timeout: :infinity,
+        ordered: false,
+        on_timeout: :kill_task
+      )
+      |> Enum.reduce(%{}, fn
+        {:ok, {name, {:ok, payload}}}, acc -> Map.put(acc, name, payload)
+        {:ok, {_name, :error}}, acc -> acc
+        {:exit, _reason}, acc -> acc
+      end)
+    end
+
+    defp load_relation(field, current_user) do
+      case Ash.read(field.resource, actor: current_user, authorize?: false, page: false) do
+        {:ok, records} ->
+          {:ok, build_relation_payload(field, records)}
+
+        {:error, reason} ->
+          Logger.warning(
+            "[mishka_gervaz] static relation options for field " <>
+              "#{inspect(field.name)} (resource #{inspect(field.resource)}) " <>
+              "failed to load: #{inspect(reason)}"
+          )
+
+          :error
+      end
+    end
+
+    @doc false
+    @spec load_combobox_options(list(map())) :: %{atom() => list()}
+    def load_combobox_options(fields) do
+      fields
+      |> Enum.filter(fn f -> f.type == :combobox and f.options != nil end)
+      |> Enum.reduce(%{}, fn field, acc ->
+        Map.put(acc, field.name, MishkaGervaz.Helpers.resolve_options(field.options))
+      end)
+    end
+
+    @doc false
+    @spec prepend_nil_option(list(), term()) :: list()
+    def prepend_nil_option(options, nil), do: options
+    def prepend_nil_option(options, false), do: options
+    def prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
+
+    def prepend_nil_option(options, label) when is_binary(label) do
+      [{label, "__nil__"} | options]
+    end
+
+    def prepend_nil_option(options, label) when is_function(label, 0) do
+      [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
+    end
+
+    defp static_relation?(%{type: :relation, resource: resource} = field)
+         when not is_nil(resource) do
+      (Map.get(field, :mode) || :static) == :static
+    end
+
+    defp static_relation?(_field), do: false
+
+    defp build_relation_payload(field, records) do
+      display_field = field.display_field || :name
+
+      options =
+        records
+        |> Enum.map(fn record ->
+          label = to_string(Map.get(record, display_field, Map.get(record, :id)))
+          value = to_string(record.id)
+          {label, value}
+        end)
+        |> prepend_nil_option(field.include_nil)
+
+      %{
+        options: options,
+        has_more?: false,
+        page: 1,
+        selected_options: [],
+        dropdown_open?: false
+      }
+    end
   end
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
-      require Logger
-
       alias MishkaGervaz.Form.Web.State
       alias MishkaGervaz.Form.Web.State.Static
       alias MishkaGervaz.Form.Web.State.Helpers, as: StateHelpers
@@ -433,62 +541,19 @@ defmodule MishkaGervaz.Form.Web.State do
       @spec do_init(String.t(), module(), map() | nil, map()) :: State.t()
       defp do_init(id, resource, current_user, dsl_state) do
         config = Info.config(resource)
+        modules = resolve_dsl_modules(dsl_state)
+        master_user? = modules.access.master_user?(current_user)
 
-        field_mod = Map.get(dsl_state, :field, field_builder())
-        group_mod = Map.get(dsl_state, :group, group_builder())
-        step_mod = Map.get(dsl_state, :step, step_builder())
-        presentation_mod = Map.get(dsl_state, :presentation, presentation())
-        access_mod = Map.get(dsl_state, :access, access())
+        fields = modules.field.build(config, resource)
 
-        master_user? = access_mod.master_user?(current_user)
-        preloads = access_mod.get_preloads(resource, master_user?)
-        preload_aliases = Info.preload_aliases(resource, master_user?)
+        groups =
+          config
+          |> modules.group.build(resource)
+          |> modules.group.assign_fields_to_groups(fields)
 
-        fields = field_mod.build(config, resource)
-        groups = group_mod.build(config, resource)
-        groups = group_mod.assign_fields_to_groups(groups, fields)
-
-        steps = step_mod.build(config, resource)
-        layout_mode = StateHelpers.get_layout_mode(config)
-
-        template = presentation_mod.resolve_template(config)
-        stream_name = Info.stream_name(resource) || StateHelpers.generate_stream_name(resource)
-
-        static = %Static{
-          id: id,
-          resource: resource,
-          stream_name: stream_name,
-          config: config,
-          source: config[:source],
-          fields: fields,
-          groups: groups,
-          steps: steps,
-          uploads: StateHelpers.get_uploads(config),
-          submit: StateHelpers.get_submit(config),
-          hooks: StateHelpers.get_hooks(config),
-          ui_adapter: presentation_mod.resolve_ui_adapter(config),
-          ui_adapter_opts: presentation_mod.get_ui_adapter_opts(config),
-          template: template,
-          theme: presentation_mod.get_theme(config),
-          features: presentation_mod.get_features(config),
-          debounce: presentation_mod.get_debounce(config),
-          preloads: preloads,
-          layout_mode: layout_mode,
-          layout_columns: StateHelpers.get_layout_columns(config),
-          layout_navigation: StateHelpers.get_layout_navigation(config),
-          header: StateHelpers.get_header(config),
-          footer: StateHelpers.get_footer(config),
-          notices: StateHelpers.get_notices(config)
-        }
-
-        current_step =
-          if layout_mode in [:wizard, :tabs], do: step_mod.initial_step(steps), else: nil
-
-        step_states =
-          if layout_mode in [:wizard, :tabs], do: step_mod.initial_step_states(steps), else: %{}
-
-        relation_options = load_static_relation_options(fields, current_user)
-        combobox_options = load_combobox_options(fields)
+        steps = modules.step.build(config, resource)
+        static = build_static(id, resource, config, modules, fields, groups, steps, master_user?)
+        {current_step, step_states} = initial_step_state(static.layout_mode, steps, modules.step)
 
         %State{
           static: static,
@@ -503,96 +568,103 @@ defmodule MishkaGervaz.Form.Web.State do
           errors: %{},
           form_errors: [],
           field_values: %{},
-          relation_options: relation_options,
-          combobox_options: combobox_options,
+          relation_options: StateHelpers.load_static_relation_options(fields, current_user),
+          combobox_options: StateHelpers.load_combobox_options(fields),
           upload_state: %{},
           existing_files: %{},
           dirty?: false,
           defaults: nil,
-          preload_aliases: preload_aliases,
+          preload_aliases: Info.preload_aliases(resource, master_user?),
           dismissed_notices: MapSet.new()
         }
       end
 
-      @spec load_static_relation_options(list(map()), map() | nil) :: map()
-      defp load_static_relation_options(fields, current_user) do
-        fields
-        |> Enum.filter(fn f ->
-          f.type == :relation and f.resource != nil and (f.mode || :static) == :static
-        end)
-        |> Enum.reduce(%{}, fn field, acc ->
-          case Ash.read(field.resource,
-                 actor: current_user,
-                 authorize?: false,
-                 page: false
-               ) do
-            {:ok, records} ->
-              display_field = field.display_field || :name
-
-              options =
-                Enum.map(records, fn record ->
-                  label = to_string(Map.get(record, display_field, Map.get(record, :id)))
-                  value = to_string(record.id)
-                  {label, value}
-                end)
-
-              options = prepend_nil_option(options, field.include_nil)
-
-              Map.put(acc, field.name, %{
-                options: options,
-                has_more?: false,
-                page: 1,
-                selected_options: [],
-                dropdown_open?: false
-              })
-
-            {:error, reason} ->
-              Logger.warning(
-                "[mishka_gervaz] static relation options for field " <>
-                  "#{inspect(field.name)} (resource #{inspect(field.resource)}) " <>
-                  "failed to load: #{inspect(reason)}"
-              )
-
-              acc
-          end
-        end)
+      @spec resolve_dsl_modules(map()) :: %{
+              field: module(),
+              group: module(),
+              step: module(),
+              presentation: module(),
+              access: module()
+            }
+      defp resolve_dsl_modules(dsl_state) do
+        %{
+          field: Map.get(dsl_state, :field, field_builder()),
+          group: Map.get(dsl_state, :group, group_builder()),
+          step: Map.get(dsl_state, :step, step_builder()),
+          presentation: Map.get(dsl_state, :presentation, presentation()),
+          access: Map.get(dsl_state, :access, access())
+        }
       end
 
-      @spec load_combobox_options(list(map())) :: %{atom() => list()}
-      defp load_combobox_options(fields) do
-        fields
-        |> Enum.filter(fn f -> f.type == :combobox and f.options != nil end)
-        |> Enum.reduce(%{}, fn field, acc ->
-          Map.put(acc, field.name, MishkaGervaz.Helpers.resolve_options(field.options))
-        end)
+      @spec build_static(
+              String.t(),
+              module(),
+              map(),
+              map(),
+              list(map()),
+              list(map()),
+              list(map()),
+              boolean()
+            ) :: Static.t()
+      defp build_static(id, resource, config, modules, fields, groups, steps, master_user?) do
+        presentation_mod = modules.presentation
+
+        %Static{
+          id: id,
+          resource: resource,
+          stream_name: Info.stream_name(resource) || StateHelpers.generate_stream_name(resource),
+          config: config,
+          source: config[:source],
+          fields: fields,
+          groups: groups,
+          steps: steps,
+          uploads: StateHelpers.get_uploads(config),
+          submit: StateHelpers.get_submit(config),
+          hooks: StateHelpers.get_hooks(config),
+          ui_adapter: presentation_mod.resolve_ui_adapter(config),
+          ui_adapter_opts: presentation_mod.get_ui_adapter_opts(config),
+          template: presentation_mod.resolve_template(config),
+          theme: presentation_mod.get_theme(config),
+          features: presentation_mod.get_features(config),
+          debounce: presentation_mod.get_debounce(config),
+          preloads: modules.access.get_preloads(resource, master_user?),
+          access: modules.access,
+          layout_mode: StateHelpers.get_layout_mode(config),
+          layout_columns: StateHelpers.get_layout_columns(config),
+          layout_navigation: StateHelpers.get_layout_navigation(config),
+          header: StateHelpers.get_header(config),
+          footer: StateHelpers.get_footer(config),
+          notices: StateHelpers.get_notices(config)
+        }
       end
 
-      defp prepend_nil_option(options, nil), do: options
-      defp prepend_nil_option(options, false), do: options
-      defp prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
-
-      defp prepend_nil_option(options, label) when is_binary(label) do
-        [{label, "__nil__"} | options]
+      @spec initial_step_state(atom(), list(map()), module()) :: {atom() | nil, map()}
+      defp initial_step_state(mode, steps, step_mod) when mode in [:wizard, :tabs] do
+        {step_mod.initial_step(steps), step_mod.initial_step_states(steps)}
       end
 
-      defp prepend_nil_option(options, label) when is_function(label, 0) do
-        [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
-      end
+      defp initial_step_state(_mode, _steps, _step_mod), do: {nil, %{}}
 
       @spec update(State.t(), keyword() | map()) :: State.t()
       def update(%State{} = state, updates), do: struct(state, updates)
 
       @spec get_action(State.t(), atom()) :: atom()
       def get_action(
-            %State{static: %{resource: resource}, master_user?: master_user?},
+            %State{
+              static: %{resource: resource, access: access_mod},
+              master_user?: master_user?
+            },
             action_type
           ) do
-        access().get_action(resource, action_type, master_user?)
+        access_mod.get_action(resource, action_type, master_user?)
       end
 
       @spec get_preloads(State.t()) :: list(atom())
-      def get_preloads(%State{static: %{resource: resource}, master_user?: master_user?}) do
-        access().get_preloads(resource, master_user?)
+      def get_preloads(%State{
+            static: %{resource: resource, access: access_mod},
+            master_user?: master_user?
+          }) do
+        access_mod.get_preloads(resource, master_user?)
       end
 
       @spec wizard_mode?(State.t()) :: boolean()

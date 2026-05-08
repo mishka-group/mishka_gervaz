@@ -55,6 +55,7 @@ defmodule MishkaGervaz.Test.FormWebHelpers do
       theme: Keyword.get(opts, :theme, nil),
       features: Keyword.get(opts, :features, []),
       preloads: Keyword.get(opts, :preloads, []),
+      access: Keyword.get(opts, :access, MishkaGervaz.Form.Web.State.Access.Default),
       layout_mode: Keyword.get(opts, :layout_mode, :standard),
       layout_columns: Keyword.get(opts, :layout_columns, 1),
       layout_navigation: Keyword.get(opts, :layout_navigation, :sequential)
