@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Select do
   @moduledoc """
-  Single select dropdown field type.
+  Single-select dropdown field type. Trims string values on sanitize.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

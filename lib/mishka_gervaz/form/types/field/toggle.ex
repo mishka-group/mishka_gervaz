@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Toggle do
   @moduledoc """
-  Toggle switch field type.
+  Toggle switch field type. Boolean variant rendered as a switch instead of a checkbox.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

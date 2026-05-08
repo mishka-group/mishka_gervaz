@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Text do
   @moduledoc """
-  Default text input field type.
+  Default text input field type. Strips HTML tags and trims whitespace on sanitize.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

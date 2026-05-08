@@ -18,6 +18,8 @@ defmodule MishkaGervaz.Form.Types.Field.Combobox do
           end
         end
       end
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

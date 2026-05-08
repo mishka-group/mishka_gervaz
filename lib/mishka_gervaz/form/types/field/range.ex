@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Range do
   @moduledoc """
-  Range slider field type.
+  Range slider field type. Validates numeric input.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

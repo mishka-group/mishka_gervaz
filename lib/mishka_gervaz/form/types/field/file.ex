@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.File do
   @moduledoc """
   File upload field type.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

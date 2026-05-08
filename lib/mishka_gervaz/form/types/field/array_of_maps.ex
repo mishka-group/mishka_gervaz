@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.ArrayOfMaps do
   @moduledoc """
-  Array of maps repeatable field type.
+  Array-of-maps repeatable field type.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

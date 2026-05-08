@@ -4,8 +4,36 @@ defmodule MishkaGervaz.Form.Types.Field do
   @moduledoc """
   Built-in form field type registry.
 
-  Provides lookup for built-in field types by atom name.
-  Custom field types can be used directly by passing the module.
+  Resolves field type atoms (`:text`, `:select`, `:relation`, …) to the
+  implementation modules under `MishkaGervaz.Form.Types.Field.*`. Built on
+  the shared `MishkaGervaz.Table.Behaviours.TypeRegistry` macro, which
+  generates `get/1`, `builtin_types/0`, `builtin?/1`, `default/0`,
+  `get_or_passthrough/1`, and `infer_from_ash_type/1`.
+
+  ## Registration shape
+
+  Each entry is `{Module, [AshTypes]}`. The Ash-type list seeds
+  `infer_from_ash_type/1`, which is consulted by
+  `MishkaGervaz.Form.Transformers.ResolveFields` whenever a field omits
+  an explicit type — e.g. `field :title` on a `:string` attribute resolves
+  to `Field.Text` because `Ash.Type.String` is mapped there. An empty list
+  (`{Field.Hidden, []}`) means "this type is selectable by atom but never
+  inferred from an Ash attribute".
+
+  ## Custom field types
+
+  Any module implementing `MishkaGervaz.Form.Behaviours.FieldType` can be
+  referenced directly in the DSL — no registration needed:
+
+      field :background_color, MyApp.FieldTypes.Color
+
+  `get_or_passthrough/1` returns built-in modules by atom and any other
+  atom value as-is, so custom modules pass straight through to the
+  renderer.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType`,
+  `MishkaGervaz.Table.Behaviours.TypeRegistry`, and
+  `MishkaGervaz.Form.Transformers.ResolveFields`.
   """
 
   alias MishkaGervaz.Form.Types.Field

@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Checkbox do
   @moduledoc """
   Checkbox input field type.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

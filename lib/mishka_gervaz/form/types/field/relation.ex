@@ -22,6 +22,10 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
         search_field :name
         min_chars 1
       end
+
+  See `MishkaGervaz.Form.Behaviours.FieldType`,
+  `MishkaGervaz.Form.Types.Field`, and the table-side counterpart
+  `MishkaGervaz.Table.Types.Filter.Relation`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

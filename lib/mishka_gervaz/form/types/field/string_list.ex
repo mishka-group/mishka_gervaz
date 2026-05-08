@@ -2,8 +2,12 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
   @moduledoc """
   String list field type.
 
-  Renders as a dynamic list of text inputs with add/remove buttons.
-  Used for `{:array, :string}` attributes like allowed origins, tags, etc.
+  Renders as a dynamic list of text inputs with add / remove buttons.
+  Used for `{:array, :string}` attributes such as allowed origins, tags,
+  and so on. Sanitize strips HTML and trims each item; empty strings are
+  filtered out on `parse_params/2`.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

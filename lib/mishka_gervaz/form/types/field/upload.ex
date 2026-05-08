@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Upload do
   @moduledoc """
   Upload field type for inline positioning of uploads within form fields.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Nested do
   @moduledoc """
-  Nested/embedded form field type.
+  Nested / embedded form field type. Used for `inputs_for` and constrained-map fields.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

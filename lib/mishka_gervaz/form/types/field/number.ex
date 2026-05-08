@@ -1,6 +1,12 @@
 defmodule MishkaGervaz.Form.Types.Field.Number do
   @moduledoc """
   Numeric input field type.
+
+  Validates against the field's `ash_type`: `:integer` / `Ash.Type.Integer`
+  reject decimals; other numeric Ash types accept either integers or floats.
+  Sanitizes string input by stripping HTML and trimming whitespace.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
@@ -36,10 +42,6 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
   def validate(value, _config), do: {:ok, value}
 
-  defp integer_type?(:integer), do: true
-  defp integer_type?(Ash.Type.Integer), do: true
-  defp integer_type?(_), do: false
-
   @impl true
   def parse_params(value, _config), do: value
 
@@ -52,4 +54,8 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
   @impl true
   def default_ui, do: %{type: :number}
+
+  defp integer_type?(:integer), do: true
+  defp integer_type?(Ash.Type.Integer), do: true
+  defp integer_type?(_), do: false
 end

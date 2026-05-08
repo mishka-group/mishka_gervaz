@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Date do
   @moduledoc """
-  Date picker field type.
+  Date picker field type. Validates ISO-8601 date strings.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.Textarea do
   @moduledoc """
-  Multi-line text input field type.
+  Multi-line text input field type. Pass-through sanitization (preserves newlines and markup).
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

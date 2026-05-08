@@ -1,6 +1,14 @@
 defmodule MishkaGervaz.Form.Types.Field.Json do
   @moduledoc """
   JSON editor field type.
+
+  Validates string and structured input against the field's `ash_type`
+  (`:map` / `Ash.Type.Map` accepts only objects; `{:array, _}` accepts only
+  arrays). On `parse_params/2`, JSON strings are decoded to native terms;
+  invalid JSON falls through unchanged so the validator can surface the
+  error message.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
@@ -37,13 +45,6 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
 
   def validate(value, _config), do: {:ok, value}
 
-  defp map_type?(:map), do: true
-  defp map_type?(Ash.Type.Map), do: true
-  defp map_type?(_), do: false
-
-  defp array_type?({:array, _}), do: true
-  defp array_type?(_), do: false
-
   @impl true
   def parse_params(value, _config) when is_binary(value) and value != "" do
     case Jason.decode(value) do
@@ -59,4 +60,11 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
 
   @impl true
   def default_ui, do: %{type: :json}
+
+  defp map_type?(:map), do: true
+  defp map_type?(Ash.Type.Map), do: true
+  defp map_type?(_), do: false
+
+  defp array_type?({:array, _}), do: true
+  defp array_type?(_), do: false
 end

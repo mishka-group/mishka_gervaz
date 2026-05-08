@@ -2,7 +2,12 @@ defmodule MishkaGervaz.Form.Types.Field.Password do
   @moduledoc """
   Password input field type.
 
-  Renders as a text input with `type="password"` for masked entry.
+  Renders as a text input with `type="password"` for masked entry. Sanitize
+  trims surrounding whitespace; values are otherwise passed through
+  unchanged so trailing/leading characters that matter for hashing aren't
+  silently stripped.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType

@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Form.Types.Field.DateTime do
   @moduledoc """
-  DateTime picker field type.
+  DateTime picker field type. Accepts both ISO-8601 naive and zoned strings.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
