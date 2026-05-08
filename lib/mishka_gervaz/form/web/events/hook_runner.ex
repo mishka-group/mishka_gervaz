@@ -17,12 +17,15 @@ defmodule MishkaGervaz.Form.Web.Events.HookRunner do
           super(hooks, hook_name, args)
         end
       end
+
+  See `MishkaGervaz.Form.Web.Events`,
+  `MishkaGervaz.Form.Web.Events.Helpers`, and the sibling sub-handlers
+  `SanitizationHandler`, `ValidationHandler`, `SubmitHandler`,
+  `StepHandler`, `UploadHandler`, `RelationHandler`.
   """
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.Events.Builder
-
       @doc """
       Run a hook by name with the given arguments.
       Returns the hook result or nil if hook doesn't exist.

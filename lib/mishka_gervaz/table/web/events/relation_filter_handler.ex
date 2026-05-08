@@ -149,8 +149,6 @@ defmodule MishkaGervaz.Table.Web.Events.RelationFilterHandler do
 
   def valid_relation_value?(_, _), do: false
 
-  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
-
   @doc false
   def do_handle("search", params, state, socket) do
     with {:ok, filter_atom, filter} <- get_filter(params, state),

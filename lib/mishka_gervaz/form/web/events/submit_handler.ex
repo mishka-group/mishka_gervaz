@@ -17,6 +17,18 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           params |> super(state) |> Map.put("custom_field", "value")
         end
       end
+
+  Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
+  `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`,
+  `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`)
+  are public so user overrides can reuse them — they live outside the
+  `__using__` macro to avoid per-consumer compile cost.
+
+  See `MishkaGervaz.Form.Web.Events`,
+  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/2` and
+  `merge_uploaded_files/4`),
+  `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Web.UploadHelpers`, and the sibling sub-handlers.
   """
 
   alias MishkaGervaz.Form.Web.State
@@ -134,10 +146,9 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.Events.Builder
-
       alias MishkaGervaz.Form.Web.{State, DataLoader}
       alias MishkaGervaz.Form.Web.UploadHelpers
+      alias MishkaGervaz.Form.Web.Events.Helpers, as: EventsHelpers
 
       import MishkaGervaz.Helpers, only: [merge_relation_field_values: 2]
 
@@ -226,7 +237,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       """
       @spec transform_params(State.t(), map()) :: map()
       def transform_params(state, params) do
-        MishkaGervaz.Form.Web.Events.Builder.parse_typed_params(state.static.fields, params)
+        EventsHelpers.parse_typed_params(state.static.fields, params)
       end
 
       @doc """
@@ -296,18 +307,11 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
                  }}
               end)
 
-            merge_uploaded_files(socket, params, upload_config, uploaded_files)
+            EventsHelpers.merge_uploaded_files(socket, params, upload_config, uploaded_files)
 
           :error ->
             {socket, params}
         end
-      end
-
-      defp merge_uploaded_files(socket, params, _upload_config, []), do: {socket, params}
-
-      defp merge_uploaded_files(socket, params, upload_config, uploaded_files) do
-        param_key = to_string(upload_config[:field] || upload_config.name)
-        {socket, Map.put(params, param_key, uploaded_files)}
       end
 
       defoverridable submit: 3, transform_params: 2, after_save: 3, consume_and_merge_uploads: 3

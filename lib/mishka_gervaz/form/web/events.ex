@@ -47,6 +47,13 @@ defmodule MishkaGervaz.Form.Web.Events do
           events MyApp.CustomFormEvents
         end
       end
+
+  See `MishkaGervaz.Form.Web.Events.Helpers` (shared helpers exposed to
+  sub-handlers and user overrides), `MishkaGervaz.Form.Web.State`,
+  `MishkaGervaz.Form.Web.DataLoader`,
+  `MishkaGervaz.Form.Web.Live`, and the sub-handlers
+  `SanitizationHandler`, `ValidationHandler`, `SubmitHandler`,
+  `StepHandler`, `UploadHandler`, `RelationHandler`, `HookRunner`.
   """
 
   alias MishkaGervaz.Form.Web.{State, DataLoader}
@@ -69,8 +76,6 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   @callback handle(event :: String.t(), params :: map(), socket :: socket()) ::
               {:noreply, socket()}
-
-  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
 
   @doc false
   @spec sanitization_handler(State.t()) :: module()
@@ -129,7 +134,7 @@ defmodule MishkaGervaz.Form.Web.Events do
     case params do
       %{"form" => form_params} = p when is_map(form_params) ->
         sanitized =
-          MishkaGervaz.Form.Web.Events.Builder.sanitize_typed_params(fields, form_params)
+          MishkaGervaz.Form.Web.Events.Helpers.sanitize_typed_params(fields, form_params)
 
         Map.put(p, "form", sanitized)
 

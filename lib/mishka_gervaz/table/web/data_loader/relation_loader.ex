@@ -50,8 +50,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
   @callback load_with_selected(filter(), state(), list(), keyword()) ::
               {:ok, load_result()} | {:error, term()}
 
-  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
-
   @doc false
   @spec get_nil_option(map()) :: list({String.t(), String.t()})
   def get_nil_option(%{include_nil: label}) when is_binary(label), do: [{label, "__nil__"}]

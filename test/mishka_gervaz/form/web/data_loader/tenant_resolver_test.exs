@@ -9,7 +9,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader.TenantResolverTest do
 
   defp build_state(attrs) do
     attrs = Map.new(attrs)
-    static = Map.merge(%{access: MishkaGervaz.Form.Web.State.Access.Default}, attrs[:static] || %{})
+
+    static =
+      Map.merge(%{access: MishkaGervaz.Form.Web.State.Access.Default}, attrs[:static] || %{})
 
     %State{
       static: struct!(MishkaGervaz.Form.Web.State.Static, Map.put_new(static, :resource, nil)),

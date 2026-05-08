@@ -76,8 +76,6 @@ defmodule MishkaGervaz.Table.Web.Events do
   @callback handle(event :: String.t(), params :: map(), socket :: socket()) ::
               {:noreply, socket()}
 
-  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
-
   @doc false
   @spec sanitization_handler(State.t()) :: module()
   def sanitization_handler(state) do

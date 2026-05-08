@@ -17,6 +17,9 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
           super(state, upload_key, socket)
         end
       end
+
+  See `MishkaGervaz.Form.Web.Events`,
+  `MishkaGervaz.Form.Web.UploadHelpers`, and the sibling sub-handlers.
   """
 
   alias MishkaGervaz.Form.Web.State
@@ -31,8 +34,6 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.Events.Builder
-
       alias MishkaGervaz.Form.Web.State
 
       import MishkaGervaz.Form.Web.Events.UploadHandler, only: [resolve_upload_name: 2]

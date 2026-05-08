@@ -19,6 +19,13 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
           super(state, current_step)
         end
       end
+
+  Top-level helpers `find_next_step/2`, `find_prev_step/2`,
+  `step_exists?/2` are public so user overrides can reuse them.
+
+  See `MishkaGervaz.Form.Web.Events`,
+  `MishkaGervaz.Form.Web.State` (for `:current_step`, `:step_states`,
+  `:wizard_history`), and the sibling sub-handlers.
   """
 
   alias MishkaGervaz.Form.Web.State
@@ -56,8 +63,6 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.Events.Builder
-
       alias MishkaGervaz.Form.Web.State
 
       import MishkaGervaz.Form.Web.Events.StepHandler,

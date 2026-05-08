@@ -23,6 +23,16 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
           super("toggle", params, state, socket)
         end
       end
+
+  Top-level helpers (`get_field/2`, `get_search_term/2`,
+  `validate_min_chars/2`, `resolve_selected_options/3`, `revalidate_form/3`,
+  `update_relation_state/5`, `reload_dependent_fields/3`, etc.) are public
+  so user overrides can reuse them — they live outside the `__using__`
+  macro to avoid per-consumer compile cost.
+
+  See `MishkaGervaz.Form.Web.Events`,
+  `MishkaGervaz.Form.Web.DataLoader.RelationLoader`, and the sibling
+  sub-handlers.
   """
 
   alias MishkaGervaz.Form.Web.{State, DataLoader}
@@ -33,8 +43,6 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
   @callback handle(action :: String.t(), params :: params(), state :: state(), socket :: socket()) ::
               {:noreply, socket()}
-
-  # ========== Outer-level helpers (single-use, kept here to avoid per-consumer compile cost) ==========
 
   @doc false
   def do_handle("search", params, state, socket) do

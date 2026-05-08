@@ -16,25 +16,24 @@ defmodule MishkaGervaz.Form.Web.Events.SanitizationHandler do
           value |> super() |> String.trim()
         end
       end
+
+  See `MishkaGervaz.Form.Web.Events`,
+  `MishkaGervaz.Form.Web.Events.Helpers` (where `sanitize_string/1` and
+  `sanitize_list_item/2` live), and the sibling sub-handlers.
   """
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Form.Web.Events.Builder
+      alias MishkaGervaz.Form.Web.Events.Helpers, as: EventsHelpers
 
       @doc """
       Sanitize a single string value.
 
-      Strips HTML tags and trims whitespace.
+      Strips HTML tags and trims whitespace. Delegates to
+      `MishkaGervaz.Form.Web.Events.Helpers.sanitize_string/1`.
       """
       @spec sanitize(any()) :: any()
-      def sanitize(value) when is_binary(value) do
-        value
-        |> String.replace(~r/<[^>]*>/, "")
-        |> String.trim()
-      end
-
-      def sanitize(value), do: value
+      def sanitize(value), do: EventsHelpers.sanitize_string(value)
 
       @doc """
       Sanitize a map of form params.
@@ -44,17 +43,20 @@ defmodule MishkaGervaz.Form.Web.Events.SanitizationHandler do
       @spec sanitize_params(map()) :: map()
       def sanitize_params(params) when is_map(params) do
         Map.new(params, fn
-          {key, value} when is_binary(value) -> {key, sanitize(value)}
-          {key, value} when is_map(value) -> {key, sanitize_params(value)}
-          {key, value} when is_list(value) -> {key, Enum.map(value, &sanitize_list_item/1)}
-          {key, value} -> {key, value}
+          {key, value} when is_binary(value) ->
+            {key, sanitize(value)}
+
+          {key, value} when is_map(value) ->
+            {key, sanitize_params(value)}
+
+          {key, value} when is_list(value) ->
+            sanitize_params_fn = &sanitize_params/1
+            {key, Enum.map(value, &EventsHelpers.sanitize_list_item(&1, sanitize_params_fn))}
+
+          {key, value} ->
+            {key, value}
         end)
       end
-
-      @spec sanitize_list_item(any()) :: any()
-      defp sanitize_list_item(item) when is_binary(item), do: sanitize(item)
-      defp sanitize_list_item(item) when is_map(item), do: sanitize_params(item)
-      defp sanitize_list_item(item), do: item
 
       defoverridable sanitize: 1, sanitize_params: 1
     end
