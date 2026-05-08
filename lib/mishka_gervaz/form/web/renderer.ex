@@ -16,6 +16,11 @@ defmodule MishkaGervaz.Form.Web.Renderer do
   Renderer passes two key assigns to templates:
   - `@static` - Same reference always, LiveView skips re-render (O(1) comparison)
   - `@state` - Changes trigger re-render only for parts using dynamic fields
+
+  See `MishkaGervaz.Form.Web.Live` (the LiveComponent that delegates to
+  `render/1`), `MishkaGervaz.Form.Web.State` (struct shape — `:static` /
+  `:template` / etc.), `MishkaGervaz.Form.Behaviours.Template`, and the
+  default template `MishkaGervaz.Form.Templates.Standard`.
   """
 
   use Phoenix.Component
