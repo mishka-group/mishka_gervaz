@@ -137,7 +137,9 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFieldsTest do
     test "explicit field with no `source` defaults source for all FormPost fields" do
       for name <- [:title, :content, :status, :priority, :featured, :metadata, :language] do
         field = FormInfo.field(FormPost, name)
-        assert field.source == name, "expected #{name}.source == #{name}, got #{inspect(field.source)}"
+
+        assert field.source == name,
+               "expected #{name}.source == #{name}, got #{inspect(field.source)}"
       end
     end
 

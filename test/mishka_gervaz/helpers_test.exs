@@ -294,4 +294,32 @@ defmodule MishkaGervaz.HelpersTest do
       assert result == %{ui: ui, create: create, update: nil, cancel: nil}
     end
   end
+
+  describe "compact_to_nil/1" do
+    test "drops nil values and returns the cleaned map" do
+      assert Helpers.compact_to_nil(%{a: 1, b: nil, c: 2}) == %{a: 1, c: 2}
+    end
+
+    test "returns nil when the input map is empty" do
+      assert Helpers.compact_to_nil(%{}) == nil
+    end
+
+    test "returns nil when every value is nil" do
+      assert Helpers.compact_to_nil(%{a: nil, b: nil}) == nil
+    end
+
+    test "is idempotent on nil input" do
+      assert Helpers.compact_to_nil(nil) == nil
+    end
+
+    test "preserves non-nil falsy values (false, 0, [], \"\")" do
+      assert Helpers.compact_to_nil(%{a: false, b: 0, c: [], d: ""}) ==
+               %{a: false, b: 0, c: [], d: ""}
+    end
+
+    test "leaves nested maps alone — only top-level nil values are pruned" do
+      result = Helpers.compact_to_nil(%{a: %{b: nil}, c: nil})
+      assert result == %{a: %{b: nil}}
+    end
+  end
 end

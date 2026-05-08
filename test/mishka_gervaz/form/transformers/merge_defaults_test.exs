@@ -127,6 +127,7 @@ defmodule MishkaGervaz.Form.Transformers.MergeDefaultsTest do
 
     test "MinimalForm stream_name is derived as <name>_stream" do
       config = FormInfo.config(MinimalForm)
+
       assert config.identity.stream_name ==
                String.to_atom("#{config.identity.name}_stream")
     end

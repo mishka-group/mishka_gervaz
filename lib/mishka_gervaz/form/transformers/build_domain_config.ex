@@ -1,13 +1,24 @@
 defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
   @moduledoc """
-  Builds the domain-level form configuration from the DSL state.
+  Compiles the domain-level form configuration into a single map and
+  persists it under the `:form` key of `:mishka_gervaz_domain_config`.
 
-  Persists form defaults under the `:form` key within `:mishka_gervaz_domain_config`.
+  Runs after `MishkaGervaz.Table.Transformers.BuildDomainConfig` so the
+  table-side persistence is in place when this transformer reads /
+  writes the same key. Resources later read these defaults via
+  `MishkaGervaz.Domain.Info.Form.defaults/1` and inherit them in
+  `MishkaGervaz.Form.Transformers.MergeDefaults`.
+
+  See `MishkaGervaz.Form.Dsl.DomainDefaults` for the DSL section that
+  declares the values this transformer reads.
   """
 
   use Spark.Dsl.Transformer
+
   alias Spark.Dsl.Transformer
   alias MishkaGervaz.Form.Entities.Submit
+
+  import MishkaGervaz.Helpers, only: [compact_to_nil: 1]
   import MishkaGervaz.Table.Transformers.Helpers
 
   @form_path [:mishka_gervaz, :form]
@@ -28,16 +39,17 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
   }
 
   @impl true
+  @spec after?(module()) :: boolean()
   def after?(MishkaGervaz.Table.Transformers.BuildDomainConfig), do: true
   def after?(_), do: false
 
   @impl true
   @spec transform(Spark.Dsl.t()) :: {:ok, Spark.Dsl.t()}
   def transform(dsl_state) do
-    form_config = build_form(dsl_state)
-
-    existing = Transformer.get_persisted(dsl_state, :mishka_gervaz_domain_config, %{})
-    config = Map.put(existing, :form, form_config)
+    config =
+      dsl_state
+      |> Transformer.get_persisted(:mishka_gervaz_domain_config, %{})
+      |> Map.put(:form, build_form(dsl_state))
 
     {:ok, Transformer.persist(dsl_state, :mishka_gervaz_domain_config, config)}
   end
@@ -58,49 +70,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
     }
   end
 
-  @spec build_submit(Spark.Dsl.t()) :: map() | nil
-  defp build_submit(dsl_state) do
-    case find_entity(dsl_state, @form_path, Submit) do
-      nil ->
-        nil
-
-      %Submit{} = entity ->
-        %{
-          create: button_to_map(entity.create),
-          update: button_to_map(entity.update),
-          cancel: button_to_map(entity.cancel),
-          position: entity.position,
-          ui: ui_to_map(entity.ui)
-        }
-    end
-  end
-
-  defp button_to_map(nil), do: nil
-
-  defp button_to_map(%Submit.Button{} = btn) do
-    %{
-      label: btn.label,
-      disabled: btn.disabled,
-      restricted: btn.restricted,
-      visible: btn.visible
-    }
-  end
-
-  defp ui_to_map(nil), do: nil
-
-  defp ui_to_map(%Submit.Ui{} = ui) do
-    if any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{} do
-      %{
-        submit_class: ui.submit_class,
-        cancel_class: ui.cancel_class,
-        wrapper_class: ui.wrapper_class,
-        extra: ui.extra
-      }
-    else
-      nil
-    end
-  end
-
   @spec build_actions(Spark.Dsl.t()) :: map()
   defp build_actions(dsl_state) do
     path = @form_path ++ [:actions]
@@ -115,18 +84,61 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
   @spec build_section(Spark.Dsl.t(), atom(), map()) :: map() | nil
   defp build_section(dsl_state, section, defaults) do
     path = @form_path ++ [section]
-    keys = Map.keys(defaults)
-    values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})
 
-    if Enum.any?(values, fn {_, v} -> v != nil end) do
-      Map.merge(defaults, reject_nil_values(values))
-    else
-      nil
+    values =
+      defaults
+      |> Map.keys()
+      |> Map.new(&{&1, get_opt(dsl_state, path, &1)})
+
+    case compact_to_nil(values) do
+      nil -> nil
+      cleaned -> Map.merge(defaults, cleaned)
     end
   end
 
-  @spec reject_nil_values(map()) :: map()
-  defp reject_nil_values(map) do
-    Map.reject(map, fn {_, v} -> is_nil(v) end)
+  @spec build_submit(Spark.Dsl.t()) :: map() | nil
+  defp build_submit(dsl_state) do
+    dsl_state |> find_entity(@form_path, Submit) |> submit_to_map()
+  end
+
+  @spec submit_to_map(Submit.t() | nil) :: map() | nil
+  defp submit_to_map(nil), do: nil
+
+  defp submit_to_map(%Submit{} = entity) do
+    %{
+      create: button_to_map(entity.create),
+      update: button_to_map(entity.update),
+      cancel: button_to_map(entity.cancel),
+      position: entity.position,
+      ui: ui_to_map(entity.ui)
+    }
+  end
+
+  @spec button_to_map(Submit.Button.t() | nil) :: map() | nil
+  defp button_to_map(nil), do: nil
+
+  defp button_to_map(%Submit.Button{} = btn) do
+    %{
+      label: btn.label,
+      disabled: btn.disabled,
+      restricted: btn.restricted,
+      visible: btn.visible
+    }
+  end
+
+  @spec ui_to_map(Submit.Ui.t() | nil) :: map() | nil
+  defp ui_to_map(nil), do: nil
+
+  defp ui_to_map(%Submit.Ui{} = ui) do
+    if any_set?([ui.submit_class, ui.cancel_class, ui.wrapper_class]) or ui.extra != %{} do
+      %{
+        submit_class: ui.submit_class,
+        cancel_class: ui.cancel_class,
+        wrapper_class: ui.wrapper_class,
+        extra: ui.extra
+      }
+    else
+      nil
+    end
   end
 end

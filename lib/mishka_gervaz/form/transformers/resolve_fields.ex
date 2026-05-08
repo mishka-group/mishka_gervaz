@@ -1,14 +1,30 @@
 defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   @moduledoc """
-  Resolves field configurations from the DSL.
+  Resolves field configurations from the form DSL.
 
-  This transformer:
+  Stages, in order (see `transform/1`):
 
-  - Processes `auto_fields` to discover fields from Ash resource attributes
-  - Auto-detects field types from Ash types
-  - Resolves field positions
-  - Applies field order
-  - Detects required preloads from relationship sources
+    * `resolve_auto_fields/1` — expands `auto_fields do … end` into
+      explicit `Field` entities, detecting types from the resource's
+      Ash attributes.
+    * `resolve_explicit_field_types/1` — fills in the `type`,
+      `type_module`, `options`, and `nested_fields` for fields that
+      omit `type:` or use `:nested`.
+    * `resolve_field_sources/1` — defaults `field.source` to the
+      field's `name` when not set.
+    * `resolve_relation_resources/1` — links `:relation` fields to
+      their target resource via the Ash relationship table.
+    * `resolve_field_positions/1` — applies `field_order` and the
+      `:first` / `:last` / integer / `{:before, …}` / `{:after, …}`
+      position tokens, persisting the resolved order under
+      `:mishka_gervaz_form_field_order`.
+    * `detect_preloads/1` — collects required preloads from
+      `:relation` and `:select` fields, persisting them under
+      `:mishka_gervaz_form_detected_preloads`.
+
+  Runs after `MishkaGervaz.Form.Transformers.MergeDefaults` and the
+  Ash `SetTypes` transformer; output is consumed by
+  `MishkaGervaz.Form.Transformers.BuildRuntimeConfig`.
   """
 
   use Spark.Dsl.Transformer
@@ -30,14 +46,12 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   @impl true
   @spec transform(Spark.Dsl.t()) :: {:ok, Spark.Dsl.t()}
   def transform(dsl_state) do
-    module = Transformer.get_persisted(dsl_state, :module)
-
     dsl_state =
       dsl_state
-      |> resolve_auto_fields(module)
+      |> resolve_auto_fields()
       |> resolve_explicit_field_types()
       |> resolve_field_sources()
-      |> resolve_relation_resources(module)
+      |> resolve_relation_resources()
       |> resolve_field_positions()
       |> detect_preloads()
 
@@ -48,8 +62,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   defp filter_fields(entities),
     do: Enum.filter(entities, &match?(%Field{}, &1))
 
-  @spec resolve_auto_fields(Spark.Dsl.t(), module()) :: Spark.Dsl.t()
-  defp resolve_auto_fields(dsl_state, _module) do
+  @spec resolve_auto_fields(Spark.Dsl.t()) :: Spark.Dsl.t()
+  defp resolve_auto_fields(dsl_state) do
     entities = get_entities(dsl_state, @fields_path)
 
     case Enum.find(entities, &match?(%AutoFields{}, &1)) do
@@ -632,8 +646,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     end)
   end
 
-  @spec resolve_relation_resources(Spark.Dsl.t(), module()) :: Spark.Dsl.t()
-  defp resolve_relation_resources(dsl_state, _module) do
+  @spec resolve_relation_resources(Spark.Dsl.t()) :: Spark.Dsl.t()
+  defp resolve_relation_resources(dsl_state) do
     entities = get_entities(dsl_state, @fields_path)
     fields = filter_fields(entities)
     relationships = get_relationships(dsl_state)

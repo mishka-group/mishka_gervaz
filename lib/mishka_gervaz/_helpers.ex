@@ -882,4 +882,20 @@ defmodule MishkaGervaz.Helpers do
   defp do_extract_singleton([], map, key), do: Map.put(map, key, nil)
   defp do_extract_singleton(value, map, _key) when is_struct(value), do: map
   defp do_extract_singleton(_value, map, _key), do: map
+
+  @doc """
+  Drops nil values from a map and returns `nil` if the result is empty,
+  otherwise returns the cleaned map.
+
+  Used by transformers that build optional sub-config blocks where
+  "no overrides set" should compile down to `nil` rather than an empty
+  map. Idempotent on `nil` input.
+  """
+  @spec compact_to_nil(map() | nil) :: map() | nil
+  def compact_to_nil(nil), do: nil
+
+  def compact_to_nil(map) when is_map(map) do
+    cleaned = Map.reject(map, fn {_, v} -> is_nil(v) end)
+    if cleaned == %{}, do: nil, else: cleaned
+  end
 end
