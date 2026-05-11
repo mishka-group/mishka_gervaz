@@ -3,6 +3,8 @@ defmodule MishkaGervaz.Table.Entities.MenuGroup do
   Entity struct for navigation menu group configuration.
 
   Used by `MishkaGervaz.Domain` extension.
+
+  See `MishkaGervaz.Table.Dsl.Navigation` and `MishkaGervaz.Domain`.
   """
 
   @type t :: %__MODULE__{

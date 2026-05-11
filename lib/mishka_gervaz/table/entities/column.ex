@@ -4,6 +4,13 @@ defmodule MishkaGervaz.Table.Entities.Column do
 
   This module defines the struct and schema for columns, following Ash's
   entity pattern with `opt_schema` and `transform/1`.
+
+  See `MishkaGervaz.Table.Dsl.Columns`,
+  `MishkaGervaz.Table.Entities.Column.Ui`,
+  `MishkaGervaz.Table.Entities.AutoColumns`,
+  `MishkaGervaz.Table.Types.Column` (type registry),
+  `MishkaGervaz.Table.Transformers.ResolveColumns`, and
+  `MishkaGervaz.Table.Web.State.ColumnBuilder`.
   """
 
   @type position :: integer() | :first | :last | {:before, atom()} | {:after, atom()}

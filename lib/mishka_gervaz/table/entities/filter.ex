@@ -1,6 +1,13 @@
 defmodule MishkaGervaz.Table.Entities.Filter do
   @moduledoc """
   Entity struct for table filter configuration.
+
+  See `MishkaGervaz.Table.Dsl.Filters`,
+  `MishkaGervaz.Table.Entities.Filter.Ui`,
+  `MishkaGervaz.Table.Entities.Filter.Preload`,
+  `MishkaGervaz.Table.Entities.FilterGroup`,
+  `MishkaGervaz.Table.Types.Filter` (type registry), and
+  `MishkaGervaz.Table.Web.State.FilterBuilder`.
   """
 
   @type filter_type ::

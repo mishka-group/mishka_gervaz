@@ -1,6 +1,10 @@
 defmodule MishkaGervaz.Table.Entities.Pagination do
   @moduledoc """
   Entity struct for pagination configuration.
+
+  See `MishkaGervaz.Table.Dsl.Pagination`,
+  `MishkaGervaz.Table.Entities.Pagination.Ui`, and
+  `MishkaGervaz.Table.Web.DataLoader.PaginationHandler`.
   """
 
   alias __MODULE__.Ui

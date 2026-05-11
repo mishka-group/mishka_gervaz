@@ -31,6 +31,9 @@ defmodule MishkaGervaz.Table.Entities.Events do
   - `bulk_action` - `MishkaGervaz.Table.Web.Events.BulkActionHandler.Default`
   - `hooks` - `MishkaGervaz.Table.Web.Events.HookRunner.Default`
   - `relation_filter` - `MishkaGervaz.Table.Web.Events.RelationFilterHandler.Default`
+
+  See `MishkaGervaz.Table.Dsl.Events` and
+  `MishkaGervaz.Table.Web.Events`.
   """
 
   @type t :: %__MODULE__{

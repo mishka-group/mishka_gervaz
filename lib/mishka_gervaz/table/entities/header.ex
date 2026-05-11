@@ -17,6 +17,11 @@ defmodule MishkaGervaz.Table.Entities.Header do
           restricted false
         end
       end
+
+  See `MishkaGervaz.Table.Dsl.States`,
+  `MishkaGervaz.Table.Entities.Footer`,
+  `MishkaGervaz.Table.Entities.Notice`, and the form-side counterpart
+  `MishkaGervaz.Form.Entities.Header`.
   """
 
   @type t :: %__MODULE__{

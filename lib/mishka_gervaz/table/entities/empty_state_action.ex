@@ -1,6 +1,9 @@
 defmodule MishkaGervaz.Table.Entities.EmptyStateAction do
   @moduledoc """
   Entity struct for empty state call-to-action.
+
+  See `MishkaGervaz.Table.Entities.EmptyState` (parent) and
+  `MishkaGervaz.Table.Dsl.States`.
   """
 
   @type t :: %__MODULE__{

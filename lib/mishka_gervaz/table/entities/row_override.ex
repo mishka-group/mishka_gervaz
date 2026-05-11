@@ -3,6 +3,8 @@ defmodule MishkaGervaz.Table.Entities.RowOverride do
   Entity struct for row override configuration.
 
   Allows custom rendering of entire rows with different HTML/components.
+
+  See `MishkaGervaz.Table.Dsl.Row` and `MishkaGervaz.Table.Templates.Table`.
   """
 
   @type t :: %__MODULE__{

@@ -1,6 +1,9 @@
 defmodule MishkaGervaz.Table.Entities.Pagination.Ui do
   @moduledoc """
   UI/presentation configuration for pagination.
+
+  See `MishkaGervaz.Table.Entities.Pagination` (parent) and
+  `MishkaGervaz.Table.Dsl.Pagination`.
   """
 
   @type t :: %__MODULE__{

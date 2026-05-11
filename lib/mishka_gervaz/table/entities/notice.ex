@@ -49,6 +49,12 @@ defmodule MishkaGervaz.Table.Entities.Notice do
           bind_to :no_results
         end
       end
+
+  See `MishkaGervaz.Table.Dsl.States`,
+  `MishkaGervaz.Table.Entities.Notice.Ui`,
+  `MishkaGervaz.Table.Entities.Header` /
+  `MishkaGervaz.Table.Entities.Footer` (sibling chrome), and the form-side
+  counterpart `MishkaGervaz.Form.Entities.Notice`.
   """
 
   @valid_types ~w(info warning error success neutral)a

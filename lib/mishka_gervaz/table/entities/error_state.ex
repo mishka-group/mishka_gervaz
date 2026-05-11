@@ -1,6 +1,9 @@
 defmodule MishkaGervaz.Table.Entities.ErrorState do
   @moduledoc """
   Entity struct for error state configuration.
+
+  See `MishkaGervaz.Table.Dsl.States` and
+  `MishkaGervaz.Table.Entities.EmptyState` (sibling).
   """
 
   @type t :: %__MODULE__{

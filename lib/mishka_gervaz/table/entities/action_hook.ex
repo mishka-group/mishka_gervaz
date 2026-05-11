@@ -6,6 +6,11 @@ defmodule MishkaGervaz.Table.Entities.ActionHook do
 
   Used by entries like `before_row_action`, `after_row_action`,
   `on_row_action_success`, `on_row_action_error`, and the bulk variants.
+
+  See `MishkaGervaz.Table.Dsl.Hooks`,
+  `MishkaGervaz.Table.Entities.RowAction`,
+  `MishkaGervaz.Table.Entities.BulkAction`, and
+  `MishkaGervaz.Table.Web.Events.HookRunner`.
   """
 
   @type t :: %__MODULE__{

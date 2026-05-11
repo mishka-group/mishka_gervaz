@@ -1,6 +1,10 @@
 defmodule MishkaGervaz.Table.Entities.EmptyState do
   @moduledoc """
   Entity struct for empty state configuration.
+
+  See `MishkaGervaz.Table.Dsl.States`,
+  `MishkaGervaz.Table.Entities.EmptyStateAction`, and
+  `MishkaGervaz.Table.Entities.ErrorState`.
   """
 
   @type t :: %__MODULE__{

@@ -1,6 +1,12 @@
 defmodule MishkaGervaz.Table.Entities.BulkAction do
   @moduledoc """
   Entity struct for bulk action configuration.
+
+  See `MishkaGervaz.Table.Dsl.BulkActions`,
+  `MishkaGervaz.Table.Entities.BulkAction.Ui`,
+  `MishkaGervaz.Table.Entities.RowAction` (per-row counterpart),
+  `MishkaGervaz.Table.Types.Action` (type registry), and
+  `MishkaGervaz.Table.Web.Events.BulkActionHandler`.
   """
 
   @type action_type :: :event | :destroy | :update | :unarchive | :permanent_destroy

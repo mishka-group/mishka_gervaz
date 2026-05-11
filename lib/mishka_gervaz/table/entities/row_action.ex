@@ -1,6 +1,13 @@
 defmodule MishkaGervaz.Table.Entities.RowAction do
   @moduledoc """
   Entity struct for row action configuration.
+
+  See `MishkaGervaz.Table.Dsl.RowActions`,
+  `MishkaGervaz.Table.Entities.RowAction.Ui`,
+  `MishkaGervaz.Table.Entities.RowActionDropdown`,
+  `MishkaGervaz.Table.Entities.DropdownSeparator`,
+  `MishkaGervaz.Table.Types.Action` (type registry), and
+  `MishkaGervaz.Table.Web.State.ActionBuilder`.
   """
 
   @type action_type ::

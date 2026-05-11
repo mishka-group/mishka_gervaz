@@ -31,6 +31,9 @@ defmodule MishkaGervaz.Table.Entities.DataLoader do
   - `tenant` - `MishkaGervaz.Table.Web.DataLoader.TenantResolver.Default`
   - `hooks` - `MishkaGervaz.Table.Web.DataLoader.HookRunner.Default`
   - `relation` - `MishkaGervaz.Table.Web.DataLoader.RelationLoader.Default`
+
+  See `MishkaGervaz.Table.Dsl.DataLoader` and
+  `MishkaGervaz.Table.Web.DataLoader`.
   """
 
   @type t :: %__MODULE__{

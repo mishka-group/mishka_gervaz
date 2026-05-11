@@ -25,6 +25,11 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Dsl.FilterGroups`,
+  `MishkaGervaz.Table.Entities.FilterGroup.Ui`,
+  `MishkaGervaz.Table.Entities.Filter`, and
+  `MishkaGervaz.Form.Entities.Group` (the form-side counterpart).
   """
 
   @type t :: %__MODULE__{

@@ -1,6 +1,8 @@
 defmodule MishkaGervaz.Table.Entities.Realtime do
   @moduledoc """
   Entity struct for realtime configuration.
+
+  See `MishkaGervaz.Table.Dsl.Realtime`.
   """
 
   @type t :: %__MODULE__{
