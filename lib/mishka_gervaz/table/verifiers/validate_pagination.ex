@@ -7,11 +7,16 @@ defmodule MishkaGervaz.Table.Verifiers.ValidatePagination do
   - page_size_options are all positive integers (when explicitly set)
   - page_size is included in page_size_options (when both are set)
   - pagination type is valid
+
+  See `MishkaGervaz.Table.Dsl.Pagination`,
+  `MishkaGervaz.Table.Entities.Pagination`,
+  `MishkaGervaz.Table.Verifiers.Helpers`, and sibling verifiers.
   """
 
   use Spark.Dsl.Verifier
   alias Spark.Dsl.Verifier
   alias MishkaGervaz.Table.Entities.Pagination
+  import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3, entities_of: 3]
 
   @table_path [:mishka_gervaz, :table]
 
@@ -28,13 +33,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidatePagination do
 
   defp do_verify(dsl_state) do
     module = Verifier.get_persisted(dsl_state, :module)
-
-    pagination =
-      dsl_state
-      |> Verifier.get_entities(@table_path)
-      |> List.wrap()
-      |> Enum.find(&match?(%Pagination{}, &1))
-
+    pagination = dsl_state |> entities_of(@table_path, Pagination) |> List.first()
     validate_pagination(pagination, module)
   end
 
@@ -192,8 +191,4 @@ defmodule MishkaGervaz.Table.Verifiers.ValidatePagination do
   end
 
   defp validate_max_page_size(_, _, _), do: :ok
-
-  defp dsl_error(module, path, message) do
-    {:error, Spark.Error.DslError.exception(module: module, path: path, message: message)}
-  end
 end

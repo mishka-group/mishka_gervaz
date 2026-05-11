@@ -1,11 +1,15 @@
 defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   @moduledoc """
   Validates the source section of MishkaGervaz DSL.
+
+  See `MishkaGervaz.Table.Dsl.Source`,
+  `MishkaGervaz.Table.Verifiers.Helpers`, and sibling verifiers.
   """
 
   use Spark.Dsl.Verifier
   alias Spark.Dsl.Verifier
   alias MishkaGervaz.Table.Entities.Realtime
+  import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3, entities_of: 3]
 
   @actions_path [:mishka_gervaz, :table, :source, :actions]
   @archive_path [:mishka_gervaz, :table, :source, :archive]
@@ -206,9 +210,8 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
           :ok | {:error, Spark.Error.DslError.t()}
   defp validate_realtime_prefix(dsl_state, module) do
     dsl_state
-    |> Verifier.get_entities([:mishka_gervaz, :table])
-    |> List.wrap()
-    |> Enum.find(&match?(%Realtime{}, &1))
+    |> entities_of([:mishka_gervaz, :table], Realtime)
+    |> List.first()
     |> check_realtime_prefix(module)
   end
 
@@ -237,10 +240,5 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
     AshArchival.Resource in Spark.extensions(module)
   rescue
     _ -> false
-  end
-
-  @spec dsl_error(module(), list(), String.t()) :: {:error, Spark.Error.DslError.t()}
-  defp dsl_error(module, path, message) do
-    {:error, Spark.Error.DslError.exception(module: module, path: path, message: message)}
   end
 end

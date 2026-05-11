@@ -1,11 +1,18 @@
 defmodule MishkaGervaz.Table.Verifiers.ValidateRowActions do
   @moduledoc """
   Validates the row_actions section of MishkaGervaz DSL.
+
+  See `MishkaGervaz.Table.Dsl.RowActions`,
+  `MishkaGervaz.Table.Entities.RowAction`,
+  `MishkaGervaz.Table.Entities.RowActionDropdown`,
+  `MishkaGervaz.Table.Verifiers.Helpers`, and sibling verifiers.
   """
 
   use Spark.Dsl.Verifier
   alias Spark.Dsl.Verifier
   alias MishkaGervaz.Table.Entities.{RowAction, RowActionDropdown}
+  import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3, entities_of: 3]
+
   @path [:mishka_gervaz, :table, :row_actions]
 
   @impl true
@@ -18,36 +25,24 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateRowActions do
   end
 
   defp do_verify(dsl_state) do
-    entities = dsl_state |> Verifier.get_entities(@path) |> List.wrap()
-    actions = Enum.filter(entities, &match?(%RowAction{}, &1))
-    dropdowns = Enum.filter(entities, &match?(%RowActionDropdown{}, &1))
+    actions = entities_of(dsl_state, @path, RowAction)
+    dropdowns = entities_of(dsl_state, @path, RowActionDropdown)
+    module = Verifier.get_persisted(dsl_state, :module)
 
-    with :ok <- validate_configs(actions, &validate_action/1, dsl_state),
-         :ok <- validate_configs(dropdowns, &validate_dropdown/1, dsl_state),
+    with :ok <- validate_configs(actions, &validate_action/1, module),
+         :ok <- validate_configs(dropdowns, &validate_dropdown/1, module),
          do: :ok
   end
 
-  @spec validate_configs(list(), (map() -> list(String.t())), Spark.Dsl.t()) ::
+  @spec validate_configs(list(), (map() -> list(String.t())), module()) ::
           :ok | {:error, Spark.Error.DslError.t()}
-  defp validate_configs(entities, validator, dsl_state) do
+  defp validate_configs(entities, validator, module) do
     entities
     |> Enum.flat_map(validator)
-    |> maybe_config_error(dsl_state)
-  end
-
-  @spec maybe_config_error(list(String.t()), Spark.Dsl.t()) ::
-          :ok | {:error, Spark.Error.DslError.t()}
-  defp maybe_config_error([], _dsl_state), do: :ok
-  defp maybe_config_error(errors, dsl_state), do: dsl_error(dsl_state, Enum.join(errors, "; "))
-
-  @spec dsl_error(Spark.Dsl.t(), String.t()) :: {:error, Spark.Error.DslError.t()}
-  defp dsl_error(dsl_state, message) do
-    {:error,
-     Spark.Error.DslError.exception(
-       module: Verifier.get_persisted(dsl_state, :module),
-       path: @path,
-       message: message
-     )}
+    |> case do
+      [] -> :ok
+      errors -> dsl_error(module, @path, Enum.join(errors, "; "))
+    end
   end
 
   @spec validate_action(map()) :: list(String.t())

@@ -6,10 +6,15 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateIdentity do
   - `identity` section is present
   - `identity.name` is present
   - `identity.route` is present
+
+  See `MishkaGervaz.Table.Dsl.Identity`,
+  `MishkaGervaz.Table.Verifiers.Helpers`, and sibling verifiers.
   """
 
   use Spark.Dsl.Verifier
   alias Spark.Dsl.Verifier
+  import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3]
+
   @path [:mishka_gervaz, :table, :identity]
 
   @table_entity_paths [
@@ -41,32 +46,18 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateIdentity do
   @spec validate_identity(atom() | nil, String.t() | nil, module()) ::
           :ok | {:error, Spark.Error.DslError.t()}
   defp validate_identity(nil, nil, module) do
-    {:error,
-     Spark.Error.DslError.exception(
-       module: module,
-       path: @path,
-       message:
-         "identity section is required. Add: identity do name :my_table, route \"/admin/path\" end"
-     )}
+    dsl_error(
+      module,
+      @path,
+      "identity section is required. Add: identity do name :my_table, route \"/admin/path\" end"
+    )
   end
 
-  defp validate_identity(nil, _route, module) do
-    {:error,
-     Spark.Error.DslError.exception(
-       module: module,
-       path: @path ++ [:name],
-       message: "identity.name is required"
-     )}
-  end
+  defp validate_identity(nil, _route, module),
+    do: dsl_error(module, @path ++ [:name], "identity.name is required")
 
-  defp validate_identity(_name, nil, module) do
-    {:error,
-     Spark.Error.DslError.exception(
-       module: module,
-       path: @path ++ [:route],
-       message: "identity.route is required"
-     )}
-  end
+  defp validate_identity(_name, nil, module),
+    do: dsl_error(module, @path ++ [:route], "identity.route is required")
 
   defp validate_identity(_name, _route, _module), do: :ok
 end

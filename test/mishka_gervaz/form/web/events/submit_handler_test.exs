@@ -75,12 +75,14 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandlerTest do
 
     test "doesn't overwrite existing keys" do
       state = %{mode: :create, defaults: %{site_id: "default"}}
+
       assert SubmitHandler.merge_defaults(state, %{"site_id" => "user-set"}) ==
                %{"site_id" => "user-set"}
     end
 
     test "treats nil/empty-string as missing and overwrites" do
       state = %{mode: :create, defaults: %{site_id: "default"}}
+
       assert SubmitHandler.merge_defaults(state, %{"site_id" => ""}) ==
                %{"site_id" => "default"}
 

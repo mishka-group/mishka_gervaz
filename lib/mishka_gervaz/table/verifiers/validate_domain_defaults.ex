@@ -6,10 +6,15 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
   - UI adapter module exists (if specified)
   - PubSub module exists (if specified)
   - Pagination settings are valid (page_size, page_size_options, type)
+
+  See `MishkaGervaz.Table.Dsl.Defaults`,
+  `MishkaGervaz.Domain`,
+  `MishkaGervaz.Table.Verifiers.Helpers`, and sibling verifiers.
   """
 
   use Spark.Dsl.Verifier
   alias Spark.Dsl.Verifier
+  import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3]
 
   @pagination_path [:mishka_gervaz, :table, :pagination]
 
@@ -32,12 +37,11 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
         if Code.ensure_loaded?(adapter) do
           :ok
         else
-          {:error,
-           Spark.Error.DslError.exception(
-             module: Verifier.get_persisted(dsl_state, :module),
-             path: [:mishka_gervaz, :table, :ui_adapter],
-             message: "UI adapter module #{inspect(adapter)} is not loaded"
-           )}
+          dsl_error(
+            Verifier.get_persisted(dsl_state, :module),
+            [:mishka_gervaz, :table, :ui_adapter],
+            "UI adapter module #{inspect(adapter)} is not loaded"
+          )
         end
 
       _ ->
@@ -55,12 +59,11 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
         if Code.ensure_loaded?(pubsub) do
           :ok
         else
-          {:error,
-           Spark.Error.DslError.exception(
-             module: Verifier.get_persisted(dsl_state, :module),
-             path: [:mishka_gervaz, :table, :realtime, :pubsub],
-             message: "PubSub module #{inspect(pubsub)} is not loaded"
-           )}
+          dsl_error(
+            Verifier.get_persisted(dsl_state, :module),
+            [:mishka_gervaz, :table, :realtime, :pubsub],
+            "PubSub module #{inspect(pubsub)} is not loaded"
+          )
         end
 
       _ ->
@@ -230,8 +233,4 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
   end
 
   defp validate_max_page_size(_, _, _), do: :ok
-
-  defp dsl_error(module, path, message) do
-    {:error, Spark.Error.DslError.exception(module: module, path: path, message: message)}
-  end
 end

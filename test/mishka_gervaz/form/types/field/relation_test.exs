@@ -64,7 +64,12 @@ defmodule MishkaGervaz.Form.Types.Field.RelationTest do
       assert_received {:dispatched, :select, _}
     end
 
-    test "no mode (default :static) → ui.select", %{ui: ui, field: field, rel_data: rel, state_assigns: st} do
+    test "no mode (default :static) → ui.select", %{
+      ui: ui,
+      field: field,
+      rel_data: rel,
+      state_assigns: st
+    } do
       Relation.render_input(field, rel, st, ui)
       assert_received {:dispatched, :select, _}
     end
@@ -74,17 +79,32 @@ defmodule MishkaGervaz.Form.Types.Field.RelationTest do
       assert_received {:dispatched, :search_select, _}
     end
 
-    test ":load_more → ui.load_more_select", %{ui: ui, field: field, rel_data: rel, state_assigns: st} do
+    test ":load_more → ui.load_more_select", %{
+      ui: ui,
+      field: field,
+      rel_data: rel,
+      state_assigns: st
+    } do
       Relation.render_input(Map.put(field, :mode, :load_more), rel, st, ui)
       assert_received {:dispatched, :load_more_select, _}
     end
 
-    test ":search_multi → ui.multi_select", %{ui: ui, field: field, rel_data: rel, state_assigns: st} do
+    test ":search_multi → ui.multi_select", %{
+      ui: ui,
+      field: field,
+      rel_data: rel,
+      state_assigns: st
+    } do
       Relation.render_input(Map.put(field, :mode, :search_multi), rel, st, ui)
       assert_received {:dispatched, :multi_select, _}
     end
 
-    test "unknown mode falls back to ui.select", %{ui: ui, field: field, rel_data: rel, state_assigns: st} do
+    test "unknown mode falls back to ui.select", %{
+      ui: ui,
+      field: field,
+      rel_data: rel,
+      state_assigns: st
+    } do
       Relation.render_input(Map.put(field, :mode, :weird), rel, st, ui)
       assert_received {:dispatched, :select, _}
     end

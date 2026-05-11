@@ -42,8 +42,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandlerTest do
     test "supports multiple interpolations in one message" do
       form = %Phoenix.HTML.Form{
         errors: [
-          {:length,
-           {"must be between %{min} and %{max} chars", [min: 3, max: 10]}}
+          {:length, {"must be between %{min} and %{max} chars", [min: 3, max: 10]}}
         ]
       }
 

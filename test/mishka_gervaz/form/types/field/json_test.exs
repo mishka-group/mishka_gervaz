@@ -45,6 +45,7 @@ defmodule MishkaGervaz.Form.Types.Field.JsonTest do
 
     test "decoded string respects ash_type constraint" do
       assert Json.validate(~s([1, 2]), %{ash_type: :map}) == {:error, "must be a JSON object"}
+
       assert Json.validate(~s({"a": 1}), %{ash_type: {:array, :string}}) ==
                {:error, "must be a JSON array"}
     end
