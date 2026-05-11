@@ -40,6 +40,11 @@ defmodule MishkaGervaz.Table.Behaviours.FilterType do
   Then use in DSL:
 
       filter :created_at, type: MyApp.FilterTypes.DateRange
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Entities.Filter`,
+  `MishkaGervaz.Table.Behaviours.TypeRegistry`, and the form-side
+  counterpart `MishkaGervaz.Form.Behaviours.FieldType`.
   """
 
   @doc """

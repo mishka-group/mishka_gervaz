@@ -31,6 +31,11 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   ## Performance
   Uses `@static.*` for columns, ui_adapter, etc. (no re-render on user interaction)
   Uses `@state.*` for page, filter_values, etc. (re-renders when changed)
+
+  See `MishkaGervaz.Table.Behaviours.Template`,
+  `MishkaGervaz.Table.Templates.Shared`,
+  `MishkaGervaz.Table.Templates.Table` (sibling), and
+  `MishkaGervaz.UIAdapters.MediaGallery` (paired UI adapter).
   """
 
   use MishkaGervaz.Table.Behaviours.Template

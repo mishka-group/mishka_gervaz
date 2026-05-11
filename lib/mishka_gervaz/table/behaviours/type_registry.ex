@@ -48,6 +48,20 @@ defmodule MishkaGervaz.Table.Behaviours.TypeRegistry do
 
   - `resolve_type/1` - Resolve type from config map (single context)
   - `resolve_type/2` - Resolve type from config map with extra context
+
+  ## Consumers
+
+  This behaviour is `use`-d by:
+
+  - `MishkaGervaz.Table.Types.Column` (column registry)
+  - `MishkaGervaz.Table.Types.Filter` (filter registry)
+  - `MishkaGervaz.Table.Types.Action` (action registry)
+  - `MishkaGervaz.Form.Types.Field` (form field registry)
+
+  See `MishkaGervaz.Table.Behaviours.ColumnType`,
+  `MishkaGervaz.Table.Behaviours.FilterType`,
+  `MishkaGervaz.Table.Behaviours.ActionType`, and
+  `MishkaGervaz.Form.Behaviours.FieldType`.
   """
 
   @doc """

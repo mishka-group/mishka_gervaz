@@ -24,6 +24,10 @@ defmodule MishkaGervaz.Table.Behaviours.ColumnType do
   Then use in DSL:
 
       column :background_color, type: MyApp.ColumnTypes.Color
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Entities.Column`, and
+  `MishkaGervaz.Table.Behaviours.TypeRegistry`.
   """
 
   @doc """

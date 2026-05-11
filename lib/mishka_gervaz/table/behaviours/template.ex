@@ -55,6 +55,12 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Templates.Table` (default),
+  `MishkaGervaz.Table.Templates.MediaGallery`,
+  `MishkaGervaz.Table.Templates.Shared` (rendering helpers),
+  `MishkaGervaz.Behaviours.UIAdapter`, and the form-side counterpart
+  `MishkaGervaz.Form.Behaviours.Template`.
   """
 
   @type assigns :: map()

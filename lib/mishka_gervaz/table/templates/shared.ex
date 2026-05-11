@@ -12,6 +12,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   - `@state` - Changes trigger re-render (page, filter_values, etc.)
 
   This separation allows LiveView to skip re-rendering static parts.
+
+  See `MishkaGervaz.Table.Behaviours.Template`,
+  `MishkaGervaz.Table.Templates.Table`,
+  `MishkaGervaz.Table.Templates.MediaGallery`, and
+  `MishkaGervaz.Table.Web.Renderer`.
   """
 
   use Phoenix.Component

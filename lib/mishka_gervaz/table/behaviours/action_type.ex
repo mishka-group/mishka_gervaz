@@ -50,6 +50,11 @@ defmodule MishkaGervaz.Table.Behaviours.ActionType do
   - `assigns[:state]` - The table state struct
   - `assigns[:state].config[:identity][:route]` - Base route for the resource
   - `assigns[:state].master_user?` - Whether current user is master
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Entities.RowAction`,
+  `MishkaGervaz.Table.Entities.BulkAction`, and
+  `MishkaGervaz.Table.Behaviours.TypeRegistry`.
   """
 
   @doc """
