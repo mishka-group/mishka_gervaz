@@ -18,6 +18,10 @@ defmodule MishkaGervaz.Table.Types.Filter.Text do
       end
 
   This creates an OR query across all specified fields.
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

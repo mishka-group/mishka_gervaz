@@ -11,6 +11,10 @@ defmodule MishkaGervaz.Table.Types.Column.Number do
   - `:suffix` - Suffix string (e.g., "%", " kg")
   - `:thousands_separator` - Separator for thousands (default: ",")
   - `:decimal_separator` - Decimal separator (default: ".")
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

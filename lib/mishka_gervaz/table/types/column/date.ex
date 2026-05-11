@@ -12,6 +12,10 @@ defmodule MishkaGervaz.Table.Types.Column.Date do
     - "%d/%m/%Y" → 15/01/2024
     - "%B %d, %Y" → January 15, 2024
     - "%b %d" → Jan 15
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

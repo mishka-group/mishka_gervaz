@@ -3,6 +3,10 @@ defmodule MishkaGervaz.Table.Types.Filter.Number do
   Number input filter type.
 
   Renders a number input for numeric filtering.
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

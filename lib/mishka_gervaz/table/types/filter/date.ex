@@ -3,6 +3,10 @@ defmodule MishkaGervaz.Table.Types.Filter.Date do
   Date picker filter type.
 
   Renders a date input for date filtering.
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

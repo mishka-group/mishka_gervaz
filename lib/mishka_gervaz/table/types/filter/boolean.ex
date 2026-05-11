@@ -3,6 +3,10 @@ defmodule MishkaGervaz.Table.Types.Filter.Boolean do
   Boolean checkbox filter type.
 
   Renders a checkbox for true/false filtering.
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

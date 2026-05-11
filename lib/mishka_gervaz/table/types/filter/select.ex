@@ -6,6 +6,10 @@ defmodule MishkaGervaz.Table.Types.Filter.Select do
   - Static list from DSL
   - Auto-loaded from relationship
   - Loaded via custom function
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

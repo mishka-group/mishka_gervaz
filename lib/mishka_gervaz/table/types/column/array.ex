@@ -10,6 +10,10 @@ defmodule MishkaGervaz.Table.Types.Column.Array do
   - `:max_items` - Maximum items to show (default: nil, show all)
   - `:as_badges` - Render each item as a badge (default: false)
   - `:badge_class` - CSS class for badges (default: "bg-gray-100 text-gray-800")
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

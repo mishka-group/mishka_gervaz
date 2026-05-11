@@ -10,6 +10,11 @@ defmodule MishkaGervaz.Table.Types.Action.Destroy do
         action :delete, type: :destroy
         action :remove, type: :destroy, confirm: "Delete this item permanently?"
       end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

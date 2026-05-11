@@ -20,6 +20,11 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
       action :edit, type: :edit, js: fn _record ->
         JS.exec("data-show-modal", to: "#form-modal")
       end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

@@ -8,6 +8,11 @@ defmodule MishkaGervaz.Table.Types.Action.Update do
         action :activate, type: :update, action: :activate
         action :set_master, type: :update, action: {:master_set_master, :set_master}
       end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

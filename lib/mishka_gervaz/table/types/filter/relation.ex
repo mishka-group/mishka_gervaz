@@ -16,6 +16,10 @@ defmodule MishkaGervaz.Table.Types.Filter.Relation do
         mode :search_multi
         search_field :name
       end
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

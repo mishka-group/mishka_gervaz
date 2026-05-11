@@ -31,6 +31,10 @@ defmodule MishkaGervaz.Table.Types.Action do
       row_actions do
         action :archive, type: MyApp.ActionTypes.Archive
       end
+
+  See `MishkaGervaz.Table.Behaviours.TypeRegistry` (base),
+  `MishkaGervaz.Table.Behaviours.ActionType`, and
+  `MishkaGervaz.Table.Entities.RowAction`.
   """
 
   alias MishkaGervaz.Table.Types.Action

@@ -18,6 +18,11 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
       action :process, type: :event, payload: fn record ->
         %{id: record.id, status: record.status}
       end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

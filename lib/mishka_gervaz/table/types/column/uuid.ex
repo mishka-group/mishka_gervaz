@@ -10,6 +10,10 @@ defmodule MishkaGervaz.Table.Types.Column.UUID do
   - `:prefix_length` - Characters to show at start (default: 8)
   - `:suffix_length` - Characters to show at end (default: 0)
   - `:copy_button` - Show copy button (default: false)
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

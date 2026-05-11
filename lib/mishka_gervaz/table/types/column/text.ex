@@ -8,6 +8,10 @@ defmodule MishkaGervaz.Table.Types.Column.Text do
 
   - `:max_length` - Truncate text after this many characters (default: nil)
   - `:truncate_suffix` - Suffix for truncated text (default: "...")
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

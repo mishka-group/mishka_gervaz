@@ -26,6 +26,10 @@ defmodule MishkaGervaz.Table.Types.Column do
         column :status, type: :badge          # Built-in type
         column :color, type: MyApp.ColorType  # Custom type
       end
+
+  See `MishkaGervaz.Table.Behaviours.TypeRegistry` (base),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   alias MishkaGervaz.Table.Types.Column

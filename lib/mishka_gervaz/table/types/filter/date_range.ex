@@ -3,6 +3,10 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   Date range filter type.
 
   Renders two date inputs for filtering records within a date range.
+
+  See `MishkaGervaz.Table.Types.Filter` (registry),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType

@@ -19,6 +19,11 @@ defmodule MishkaGervaz.Table.Types.Action.Accordion do
         id: "my-table",
         expanded_html: html
       )
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

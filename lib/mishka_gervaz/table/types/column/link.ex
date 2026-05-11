@@ -11,6 +11,10 @@ defmodule MishkaGervaz.Table.Types.Column.Link do
   - `:external` - Open in new tab (default: false)
   - `:class` - CSS class for link (default: "text-blue-600 hover:text-blue-800")
   - `:label_fn` - Function to generate label (default: uses column value)
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

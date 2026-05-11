@@ -13,6 +13,11 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
   Or use a custom path function:
 
       action :view, type: :link, path: fn record -> "/custom/\#{record.id}" end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

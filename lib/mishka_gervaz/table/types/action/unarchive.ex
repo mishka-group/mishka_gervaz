@@ -8,6 +8,11 @@ defmodule MishkaGervaz.Table.Types.Action.Unarchive do
         action :unarchive, type: :unarchive
         action :restore, type: :unarchive, confirm: "Restore this item?"
       end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

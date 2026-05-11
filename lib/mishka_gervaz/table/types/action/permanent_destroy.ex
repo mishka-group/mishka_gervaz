@@ -8,6 +8,11 @@ defmodule MishkaGervaz.Table.Types.Action.PermanentDestroy do
         action :permanent_destroy, type: :permanent_destroy
         action :delete_forever, type: :permanent_destroy, confirm: "This cannot be undone!"
       end
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

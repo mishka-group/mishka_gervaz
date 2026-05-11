@@ -19,6 +19,11 @@ defmodule MishkaGervaz.Table.Types.Action.RowClick do
 
   The action is not rendered as a button - instead, it's used by the
   template to make rows clickable.
+
+  See `MishkaGervaz.Table.Types.Action` (registry),
+  `MishkaGervaz.Table.Behaviours.ActionType`,
+  `MishkaGervaz.Table.Entities.RowAction`, and
+  `MishkaGervaz.Table.Entities.BulkAction`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType

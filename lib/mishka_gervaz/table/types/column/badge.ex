@@ -10,6 +10,10 @@ defmodule MishkaGervaz.Table.Types.Column.Badge do
     Example: %{draft: "bg-gray-100 text-gray-800", published: "bg-green-100 text-green-800"}
   - `:default_color` - Default color if value not in map (default: "bg-gray-100 text-gray-800")
   - `:labels` - Map of value to display label (default: humanizes the value)
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

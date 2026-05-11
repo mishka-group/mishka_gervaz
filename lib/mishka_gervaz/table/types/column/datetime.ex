@@ -9,6 +9,10 @@ defmodule MishkaGervaz.Table.Types.Column.DateTime do
   - `:format` - DateTime format string (default: "%Y-%m-%d %H:%M")
   - `:relative` - Show relative time like "2 hours ago" (default: false)
   - `:timezone` - Convert to timezone (default: nil, shows as-is)
+
+  See `MishkaGervaz.Table.Types.Column` (registry),
+  `MishkaGervaz.Table.Behaviours.ColumnType`, and
+  `MishkaGervaz.Table.Entities.Column`.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType

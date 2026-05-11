@@ -23,6 +23,10 @@ defmodule MishkaGervaz.Table.Types.Filter do
         filter :created_at, type: :date_range  # Built-in type
         filter :category, type: MyApp.TreeFilter # Custom type
       end
+
+  See `MishkaGervaz.Table.Behaviours.TypeRegistry` (base),
+  `MishkaGervaz.Table.Behaviours.FilterType`, and
+  `MishkaGervaz.Table.Entities.Filter`.
   """
 
   alias MishkaGervaz.Table.Types.Filter
