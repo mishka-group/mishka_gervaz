@@ -22,6 +22,13 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
   For non-multi-tenant resources, action tuples use only the second (tenant) action,
   since there's no master/tenant distinction.
+
+  See `MishkaGervaz.Resource.Info.Table` (reads what this persists),
+  `MishkaGervaz.Table.Transformers.{BuildDomainConfig, MergeDefaults,
+  ResolveColumns}` (upstream),
+  `MishkaGervaz.Table.Transformers.Helpers`,
+  `MishkaGervaz.Table.ArchiveMerger`, and the form-side counterpart
+  `MishkaGervaz.Form.Transformers.BuildRuntimeConfig`.
   """
 
   use Spark.Dsl.Transformer

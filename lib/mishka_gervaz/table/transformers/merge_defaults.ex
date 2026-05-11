@@ -10,6 +10,12 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
   - Generating `identity.stream_name` if not specified
   - Setting default tenant check function
   - Setting default visibility function for realtime
+
+  See `MishkaGervaz.Table.Transformers.BuildDomainConfig` (upstream),
+  `MishkaGervaz.Table.Transformers.ResolveColumns` (downstream),
+  `MishkaGervaz.Table.Transformers.BuildRuntimeConfig` (final),
+  `MishkaGervaz.Table.Transformers.Helpers`, and the form-side
+  counterpart `MishkaGervaz.Form.Transformers.MergeDefaults`.
   """
 
   use Spark.Dsl.Transformer

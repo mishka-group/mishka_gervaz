@@ -1,6 +1,14 @@
 defmodule MishkaGervaz.Table.Transformers.BuildDomainConfig do
   @moduledoc """
   Builds the domain-level configuration from the DSL state.
+
+  Persists the resolved domain map under `:mishka_gervaz_domain_config`
+  so resources can inherit it via `MishkaGervaz.Table.Transformers.MergeDefaults`.
+
+  See `MishkaGervaz.Domain`, `MishkaGervaz.Table.Dsl.Defaults`,
+  `MishkaGervaz.Table.Transformers.MergeDefaults`,
+  `MishkaGervaz.Table.Transformers.Helpers`, and the form-side
+  counterpart `MishkaGervaz.Form.Transformers.BuildDomainConfig`.
   """
 
   use Spark.Dsl.Transformer

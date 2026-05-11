@@ -2,8 +2,17 @@ defmodule MishkaGervaz.Table.Transformers.Helpers do
   @moduledoc """
   Shared helper functions for MishkaGervaz transformers.
 
-  These functions are used across multiple transformers to reduce duplication
-  and provide consistent DSL state manipulation.
+  These functions are used across both table and form transformers to
+  reduce duplication and provide consistent DSL state manipulation.
+
+  Imported by `MishkaGervaz.Table.Transformers.{MergeDefaults,
+  ResolveColumns, BuildDomainConfig, BuildRuntimeConfig}` and
+  `MishkaGervaz.Form.Transformers.{MergeDefaults, ResolveFields,
+  BuildDomainConfig, BuildRuntimeConfig}`.
+
+  See `MishkaGervaz.Form.Web.State.Helpers` and
+  `MishkaGervaz.Form.Web.DataLoader.Helpers` for the runtime-side
+  equivalent helpers.
   """
 
   alias Spark.Dsl.Transformer

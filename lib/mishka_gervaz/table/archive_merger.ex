@@ -25,6 +25,10 @@ defmodule MishkaGervaz.Table.ArchiveMerger do
     * Tuple value `{master, tenant}` — `master` for users without `site_id`,
       `tenant` for users scoped to a `site_id`. Enforcement lives inside the
       Ash actions themselves; this module only routes which atom to call.
+
+  See `MishkaGervaz.Table.Transformers.BuildRuntimeConfig` (the caller),
+  `MishkaGervaz.Table.Dsl.Defaults` (where domain-level archive is set),
+  and `MishkaGervaz.Resource.Info.Table` (downstream reader).
   """
 
   @action_keys [:read, :get, :restore, :destroy]

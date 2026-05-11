@@ -9,6 +9,13 @@ defmodule MishkaGervaz.Table.Transformers.ResolveColumns do
   - Applies column order from `column_order` option
   - Infers column sources if not explicitly specified
   - Detects required preloads from relationship sources
+
+  See `MishkaGervaz.Table.Entities.Column`,
+  `MishkaGervaz.Table.Entities.AutoColumns`,
+  `MishkaGervaz.Table.Transformers.MergeDefaults` (upstream),
+  `MishkaGervaz.Table.Transformers.BuildRuntimeConfig` (downstream),
+  `MishkaGervaz.Table.Transformers.Helpers`, and the form-side
+  counterpart `MishkaGervaz.Form.Transformers.ResolveFields`.
   """
 
   use Spark.Dsl.Transformer
