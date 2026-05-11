@@ -19,6 +19,12 @@ defmodule MishkaGervaz.Table.Web.State.FilterBuilder do
           |> Enum.reject(&(&1.name == :internal_field))
         end
       end
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.State.Helpers`,
+  `MishkaGervaz.Table.Entities.Filter`,
+  `MishkaGervaz.Table.Types.Filter`, and the sibling builders
+  `ColumnBuilder`, `ActionBuilder`, `Presentation`, `UrlSync`, `Access`.
   """
 
   alias MishkaGervaz.Table.Types.Filter, as: FilterType
@@ -57,8 +63,6 @@ defmodule MishkaGervaz.Table.Web.State.FilterBuilder do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.State.Builder
-
       alias MishkaGervaz.Table.Types.Filter, as: FilterType
 
       import MishkaGervaz.Helpers, only: [get_resource_attributes: 1]

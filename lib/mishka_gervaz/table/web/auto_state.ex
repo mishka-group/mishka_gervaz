@@ -24,6 +24,11 @@ defmodule MishkaGervaz.Table.Web.AutoState do
   Bulk actions already reload; `after_bulk_action/3` just arms the flag.
   `after_load/2` (called from `DataLoader.handle_async`) reads the armed flag,
   applies the relevant rule, and clears the flag.
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.Refresh`,
+  `MishkaGervaz.Table.Entities.AutoState`.
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}

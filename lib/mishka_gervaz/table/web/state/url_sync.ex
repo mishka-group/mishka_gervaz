@@ -18,6 +18,12 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
           |> apply_custom_url_params(url_state)
         end
       end
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.State.Helpers`,
+  `MishkaGervaz.Table.Web.UrlSync` (the outer-LiveView URL bridge),
+  and the sibling builders `ColumnBuilder`, `FilterBuilder`,
+  `ActionBuilder`, `Presentation`, `Access`.
   """
 
   import MishkaGervaz.Helpers, only: [accessible?: 2, find_by_name: 2]
@@ -121,8 +127,6 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.State.Builder
-
       import MishkaGervaz.Table.Web.State.UrlSync,
         only: [
           apply_url_filters: 2,

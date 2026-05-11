@@ -19,13 +19,17 @@ defmodule MishkaGervaz.Table.Web.State.ActionBuilder do
           super(config) ++ [custom_export_action()]
         end
       end
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.State.Helpers`,
+  `MishkaGervaz.Table.Entities.RowAction`,
+  `MishkaGervaz.Table.Entities.BulkAction`, and the sibling builders
+  `ColumnBuilder`, `FilterBuilder`, `Presentation`, `UrlSync`, `Access`.
   """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.State.Builder
-
       @doc """
       Builds row actions from config.
 

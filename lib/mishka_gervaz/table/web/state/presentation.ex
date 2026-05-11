@@ -22,13 +22,17 @@ defmodule MishkaGervaz.Table.Web.State.Presentation do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.State.Helpers`,
+  `MishkaGervaz.Table.Behaviours.Template`,
+  `MishkaGervaz.Behaviours.UIAdapter`, and the sibling builders
+  `ColumnBuilder`, `FilterBuilder`, `ActionBuilder`, `UrlSync`, `Access`.
   """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.State.Builder
-
       @doc """
       Resolves UI adapter module from config.
 

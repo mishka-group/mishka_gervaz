@@ -47,6 +47,10 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   - Page: `?table_page=2`
   - Search: `?table_search=hello`
   - Template: `?table_template=grid`
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.State.UrlSync` (the in-state sub-builder),
+  `MishkaGervaz.Table.Entities.UrlSync`.
   """
 
   @default_config %{

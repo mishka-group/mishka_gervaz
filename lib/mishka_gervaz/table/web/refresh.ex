@@ -69,6 +69,11 @@ defmodule MishkaGervaz.Table.Web.Refresh do
           el.dispatchEvent(new CustomEvent("gervaz:resume_refresh"))
         })
       })
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.AutoState`,
+  `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Entities.Refresh`.
   """
 
   import Phoenix.Component, only: [assign: 3]

@@ -18,6 +18,12 @@ defmodule MishkaGervaz.Table.Web.State.Access do
         def master_user?(%{role: :admin}), do: true
         def master_user?(user), do: super(user)
       end
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.State.Helpers`,
+  `MishkaGervaz.Helpers` (for `master_user?/1` and `user_tenant/1`),
+  and the sibling builders `ColumnBuilder`, `FilterBuilder`,
+  `ActionBuilder`, `Presentation`, `UrlSync`.
   """
 
   alias MishkaGervaz.Resource.Info.Table, as: Info
@@ -46,8 +52,6 @@ defmodule MishkaGervaz.Table.Web.State.Access do
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.State.Builder
-
       alias MishkaGervaz.Resource.Info.Table, as: Info
 
       import MishkaGervaz.Table.Web.State.Access,
