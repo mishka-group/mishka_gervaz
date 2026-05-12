@@ -30,8 +30,7 @@ defmodule MishkaGervaz.Table.Behaviours.TypeRegistryTest do
       builtin: %{
         text: {TypeRegistryTest.TextMod, [Ash.Type.String]},
         boolean: {TypeRegistryTest.BoolMod, [Ash.Type.Boolean]},
-        number:
-          {TypeRegistryTest.NumberMod, [Ash.Type.Integer, Ash.Type.Float, Ash.Type.Decimal]}
+        number: {TypeRegistryTest.NumberMod, [Ash.Type.Integer, Ash.Type.Float, Ash.Type.Decimal]}
       },
       default: TypeRegistryTest.TextMod
   end

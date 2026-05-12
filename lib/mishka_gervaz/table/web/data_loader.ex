@@ -362,7 +362,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
               :archived -> {:saved_archived_state, :saved_active_state}
             end
 
-          saved_state = Map.get(state, restore_state_key) || DataLoaderHelpers.default_mode_state()
+          saved_state =
+            Map.get(state, restore_state_key) || DataLoaderHelpers.default_mode_state()
 
           state =
             state
