@@ -20,12 +20,15 @@ defmodule MishkaGervaz.Table.Web.DataLoader.FilterParser do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.DataLoader.Helpers`,
+  and the sibling sub-builders `QueryBuilder`, `PaginationHandler`,
+  `TenantResolver`, `HookRunner`, `RelationLoader`.
   """
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.DataLoader.Builder
-
       @doc """
       Parse raw filter values from form submission.
       Converts string keys to atoms and removes empty values.

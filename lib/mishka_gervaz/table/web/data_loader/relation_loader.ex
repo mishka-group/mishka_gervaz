@@ -26,6 +26,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
           super(filter, state, opts)
         end
       end
+
+  See `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Table.Types.Filter.Relation`,
+  and the sibling sub-builders `QueryBuilder`, `FilterParser`,
+  `PaginationHandler`, `TenantResolver`, `HookRunner`.
   """
 
   require Ash.Query

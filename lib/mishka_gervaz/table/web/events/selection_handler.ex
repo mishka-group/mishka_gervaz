@@ -32,6 +32,11 @@ defmodule MishkaGervaz.Table.Web.Events.SelectionHandler do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events`,
+  `MishkaGervaz.Table.Web.State`,
+  and the sibling handlers `SanitizationHandler`, `RecordHandler`,
+  `BulkActionHandler`, `HookRunner`, `RelationFilterHandler`.
   """
 
   alias MishkaGervaz.Table.Web.State

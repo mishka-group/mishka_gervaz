@@ -29,6 +29,11 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events`,
+  `MishkaGervaz.Table.Web.DataLoader`,
+  and the sibling handlers `SanitizationHandler`, `SelectionHandler`,
+  `BulkActionHandler`, `HookRunner`, `RelationFilterHandler`.
   """
 
   alias MishkaGervaz.Table.Web.State

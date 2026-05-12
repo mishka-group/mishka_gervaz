@@ -27,6 +27,10 @@ defmodule MishkaGervaz.Table.Web.Events.SanitizationHandler do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events`,
+  and the sibling handlers `RecordHandler`, `SelectionHandler`,
+  `BulkActionHandler`, `HookRunner`, `RelationFilterHandler`.
   """
 
   @doc """

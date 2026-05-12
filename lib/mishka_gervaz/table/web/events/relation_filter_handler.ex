@@ -48,6 +48,12 @@ defmodule MishkaGervaz.Table.Web.Events.RelationFilterHandler do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events`,
+  `MishkaGervaz.Table.Web.DataLoader.RelationLoader`,
+  `MishkaGervaz.Table.Types.Filter.Relation`,
+  and the sibling handlers `SanitizationHandler`, `RecordHandler`,
+  `SelectionHandler`, `BulkActionHandler`, `HookRunner`.
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}

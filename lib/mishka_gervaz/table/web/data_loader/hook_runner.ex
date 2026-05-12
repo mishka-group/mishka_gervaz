@@ -20,12 +20,16 @@ defmodule MishkaGervaz.Table.Web.DataLoader.HookRunner do
           result
         end
       end
+
+  See `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Table.Entities.HookCollection`,
+  and the sibling sub-builders `QueryBuilder`, `FilterParser`,
+  `PaginationHandler`, `TenantResolver`, `RelationLoader`.
   """
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.DataLoader.Builder
-
       @doc """
       Run a hook by name with the given arguments.
       Returns the hook result or nil if hook doesn't exist.

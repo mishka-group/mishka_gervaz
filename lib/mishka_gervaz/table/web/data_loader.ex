@@ -58,6 +58,17 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           data_loader MyApp.Table.CustomDataLoader
         end
       end
+
+  See `MishkaGervaz.Table.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Table.Web.DataLoader.QueryBuilder`,
+  `MishkaGervaz.Table.Web.DataLoader.FilterParser`,
+  `MishkaGervaz.Table.Web.DataLoader.PaginationHandler`,
+  `MishkaGervaz.Table.Web.DataLoader.TenantResolver`,
+  `MishkaGervaz.Table.Web.DataLoader.HookRunner`,
+  `MishkaGervaz.Table.Web.DataLoader.RelationLoader`,
+  `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.UrlSync`,
+  `MishkaGervaz.Table.Web.AutoState`.
   """
 
   alias MishkaGervaz.Table.Web.{State, UrlSync}
@@ -98,6 +109,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       alias MishkaGervaz.Table.Web.{State, UrlSync}
+      alias MishkaGervaz.Table.Web.DataLoader.Helpers, as: DataLoaderHelpers
       alias MishkaGervaz.Resource.Info.Table, as: Info
       alias MishkaGervaz.Errors
       alias Phoenix.LiveView.AsyncResult
@@ -310,29 +322,19 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
               {_, current_order} = Enum.at(current_sorts, 0)
 
               case current_order do
-                :asc -> toggle_sort_group(current_sorts, db_fields, :desc)
-                :desc -> remove_sort_group(current_sorts, db_fields)
+                :asc -> DataLoaderHelpers.toggle_sort_group(current_sorts, db_fields, :desc)
+                :desc -> DataLoaderHelpers.remove_sort_group(current_sorts, db_fields)
               end
 
             _index ->
               {_, current_order} = Enum.find(current_sorts, fn {f, _} -> f == primary end)
               new_order = if current_order == :asc, do: :desc, else: :asc
-              rest = remove_sort_group(current_sorts, db_fields)
+              rest = DataLoaderHelpers.remove_sort_group(current_sorts, db_fields)
               Enum.map(db_fields, &{&1, new_order}) ++ rest
           end
 
         state = State.update(state, sort_fields: new_sorts)
         load_async(socket, state, page: 1, reset: true)
-      end
-
-      defp toggle_sort_group(sorts, db_fields, new_order) do
-        Enum.map(sorts, fn {f, ord} ->
-          if f in db_fields, do: {f, new_order}, else: {f, ord}
-        end)
-      end
-
-      defp remove_sort_group(sorts, db_fields) do
-        Enum.reject(sorts, fn {f, _} -> f in db_fields end)
       end
 
       @doc """
@@ -360,7 +362,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
               :archived -> {:saved_archived_state, :saved_active_state}
             end
 
-          saved_state = Map.get(state, restore_state_key) || default_mode_state()
+          saved_state = Map.get(state, restore_state_key) || DataLoaderHelpers.default_mode_state()
 
           state =
             state
@@ -376,17 +378,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
           load_async(socket, state, page: 1, reset: true)
         end
-      end
-
-      @spec default_mode_state() :: map()
-      defp default_mode_state do
-        %{
-          filter_values: %{},
-          sort_fields: [],
-          selected_ids: MapSet.new(),
-          excluded_ids: MapSet.new(),
-          select_all?: false
-        }
       end
 
       @spec maybe_sync_url(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()

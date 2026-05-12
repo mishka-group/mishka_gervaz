@@ -19,6 +19,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader.QueryBuilder do
           Ash.Query.filter(query, ^ref(field) == ^value)
         end
       end
+
+  See `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Table.Types.Filter`,
+  and the sibling sub-builders `FilterParser`, `PaginationHandler`,
+  `TenantResolver`, `HookRunner`, `RelationLoader`.
   """
 
   alias MishkaGervaz.Table.Web.State
@@ -29,8 +35,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.QueryBuilder do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.DataLoader.Builder
-
       alias MishkaGervaz.Table.Web.State
 
       require Ash.Query

@@ -32,6 +32,12 @@ defmodule MishkaGervaz.Table.Web.Events.HookRunner do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events`,
+  `MishkaGervaz.Table.Entities.HookCollection`,
+  `MishkaGervaz.Table.Web.DataLoader.HookRunner`,
+  and the sibling handlers `SanitizationHandler`, `RecordHandler`,
+  `SelectionHandler`, `BulkActionHandler`, `RelationFilterHandler`.
   """
 
   @type hooks :: map() | nil

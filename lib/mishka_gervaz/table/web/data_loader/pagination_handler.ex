@@ -27,6 +27,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.DataLoader.Helpers`,
+  `MishkaGervaz.Table.Entities.Pagination`,
+  and the sibling sub-builders `QueryBuilder`, `FilterParser`,
+  `TenantResolver`, `HookRunner`, `RelationLoader`.
   """
 
   alias MishkaGervaz.Table.Web.State
@@ -39,8 +45,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
 
   defmacro __using__(_opts) do
     quote do
-      use MishkaGervaz.Table.Web.DataLoader.Builder
-
       alias MishkaGervaz.Table.Web.State
 
       import MishkaGervaz.Table.Web.DataLoader.PaginationHandler, only: [extract_results: 1]

@@ -28,6 +28,12 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           end
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events`,
+  `MishkaGervaz.Table.Entities.BulkAction`,
+  `MishkaGervaz.Table.Web.DataLoader`,
+  and the sibling handlers `SanitizationHandler`, `RecordHandler`,
+  `SelectionHandler`, `HookRunner`, `RelationFilterHandler`.
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}

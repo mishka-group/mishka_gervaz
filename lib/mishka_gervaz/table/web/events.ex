@@ -46,6 +46,16 @@ defmodule MishkaGervaz.Table.Web.Events do
           events MyApp.CustomEvents
         end
       end
+
+  See `MishkaGervaz.Table.Web.Events.SanitizationHandler`,
+  `MishkaGervaz.Table.Web.Events.RecordHandler`,
+  `MishkaGervaz.Table.Web.Events.SelectionHandler`,
+  `MishkaGervaz.Table.Web.Events.BulkActionHandler`,
+  `MishkaGervaz.Table.Web.Events.HookRunner`,
+  `MishkaGervaz.Table.Web.Events.RelationFilterHandler`,
+  `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.Live`.
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}
