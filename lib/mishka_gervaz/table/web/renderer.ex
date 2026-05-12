@@ -20,6 +20,11 @@ defmodule MishkaGervaz.Table.Web.Renderer do
   Templates should use:
   - `@static.*` for columns, filters, ui_adapter, etc. (no re-render on user interaction)
   - `@state.*` for page, filter_values, selected_ids, etc. (re-renders when changed)
+
+  See `MishkaGervaz.Table.Web.Live`,
+  `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Templates.Table`,
+  `MishkaGervaz.Table.Behaviours.Template`.
   """
 
   use Phoenix.Component

@@ -95,6 +95,14 @@ defmodule MishkaGervaz.Table.Web.Live do
         enabled true
         interval 30_000  # 30 seconds
       end
+
+  See `MishkaGervaz.Table.Web.State`,
+  `MishkaGervaz.Table.Web.DataLoader`,
+  `MishkaGervaz.Table.Web.Events`,
+  `MishkaGervaz.Table.Web.Renderer`,
+  `MishkaGervaz.Table.Web.Refresh`,
+  `MishkaGervaz.Table.Web.UrlSync`,
+  `MishkaGervaz.Resource.Info.Table`.
   """
 
   use Phoenix.LiveComponent
