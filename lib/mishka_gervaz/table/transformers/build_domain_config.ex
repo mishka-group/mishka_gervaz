@@ -13,7 +13,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildDomainConfig do
 
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
-  alias MishkaGervaz.Table.Entities.{MenuGroup, Pagination}
+  alias MishkaGervaz.Entities.MenuGroup
+  alias MishkaGervaz.Table.Entities.Pagination
   import MishkaGervaz.Table.Transformers.Helpers
 
   @table_path [:mishka_gervaz, :table]

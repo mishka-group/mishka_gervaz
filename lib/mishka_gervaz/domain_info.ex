@@ -37,9 +37,9 @@ defmodule MishkaGervaz.DomainInfo do
       DomainInfo.table_url_sync(MyDomain)
       DomainInfo.table_actions(MyDomain)
 
-      # Domain-level navigation (lives on Domain.Info.Table)
-      DomainInfo.table_navigation(MyDomain)
-      DomainInfo.table_menu_groups(MyDomain)
+      # Domain-level navigation (top-level — not table-specific)
+      DomainInfo.navigation(MyDomain)
+      DomainInfo.menu_groups(MyDomain)
 
       # Inherited form defaults
       DomainInfo.form_defaults(MyDomain)
@@ -55,11 +55,8 @@ defmodule MishkaGervaz.DomainInfo do
 
   defdelegate table_config(domain), to: MishkaGervaz.Domain.Info.Table, as: :config
   defdelegate table_defaults(domain), to: MishkaGervaz.Domain.Info.Table, as: :defaults
-  defdelegate table_navigation(domain), to: MishkaGervaz.Domain.Info.Table, as: :navigation
-
-  defdelegate table_menu_groups(domain),
-    to: MishkaGervaz.Domain.Info.Table,
-    as: :menu_groups
+  defdelegate navigation(domain), to: MishkaGervaz.Domain.Info, as: :navigation
+  defdelegate menu_groups(domain), to: MishkaGervaz.Domain.Info, as: :menu_groups
 
   defdelegate table_ui_adapter(domain),
     to: MishkaGervaz.Domain.Info.Table,

@@ -153,7 +153,7 @@ defmodule MishkaGervaz.Verifiers.ValidateDomainDefaultsTest do
     end
 
     test "navigation menu_groups are configured correctly" do
-      menu_groups = DomainInfo.table_menu_groups(MishkaGervaz.Test.Domain)
+      menu_groups = DomainInfo.menu_groups(MishkaGervaz.Test.Domain)
 
       assert length(menu_groups) == 2
 

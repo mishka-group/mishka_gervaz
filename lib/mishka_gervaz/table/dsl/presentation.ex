@@ -7,7 +7,8 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
   ## Templates vs UI Adapters
 
   - **Template**: Defines the layout structure (Table, MediaGallery)
-  - **UIAdapter**: Defines the styling (Tailwind, Mishka Chelekom, Bootstrap, Custom)
+  - **UIAdapter**: Defines the styling (Tailwind, custom adapters wrapping
+    a component library)
 
   Templates control WHERE things go (rows/columns vs cards vs thumbnails).
   UI Adapters control HOW things look (colors, spacing, component styles).
@@ -182,13 +183,13 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
       ## Available Options
 
         * `:component_module` - Your components module (e.g., `MyAppWeb.Components`).
-          When specified, generates a dynamic adapter at compile time that uses
-          your components with Tailwind as fallback.
+          When specified together with `MishkaGervaz.UIAdapters.Dynamic`, generates
+          a dynamic adapter at compile time that uses your components with Tailwind
+          as fallback.
 
         * `:fallback` - Fallback adapter module. Defaults to `MishkaGervaz.UIAdapters.Tailwind`.
 
         * `:nested_components` - If true, uses nested module pattern (e.g., `Components.Button.button/1`).
-          Automatically set to true when Chelekom adapter is selected.
 
         * `:module_prefix` - Prefix for module names (e.g., `"Mishka"` → `Components.MishkaButton`).
 
@@ -196,30 +197,30 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
 
       ## Examples
 
-          # Basic Chelekom usage
+          # Basic dynamic adapter usage
           presentation do
-            ui_adapter MishkaGervaz.Table.UIAdapters.Chelekom
+            ui_adapter MishkaGervaz.UIAdapters.Dynamic
             ui_adapter_opts component_module: MyAppWeb.Components
           end
           # Calls: MyAppWeb.Components.Button.button/1
 
           # With module prefix
           presentation do
-            ui_adapter MishkaGervaz.Table.UIAdapters.Chelekom
+            ui_adapter MishkaGervaz.UIAdapters.Dynamic
             ui_adapter_opts component_module: MyAppWeb.Components, module_prefix: "Mishka"
           end
           # Calls: MyAppWeb.Components.MishkaButton.button/1
 
           # With component prefix
           presentation do
-            ui_adapter MishkaGervaz.Table.UIAdapters.Chelekom
+            ui_adapter MishkaGervaz.UIAdapters.Dynamic
             ui_adapter_opts component_module: MyAppWeb.Components, component_prefix: "mc_"
           end
           # Calls: MyAppWeb.Components.Button.mc_button/1
 
           # With both prefixes
           presentation do
-            ui_adapter MishkaGervaz.Table.UIAdapters.Chelekom
+            ui_adapter MishkaGervaz.UIAdapters.Dynamic
             ui_adapter_opts component_module: MyAppWeb.Components,
                             module_prefix: "Mishka",
                             component_prefix: "mc_"
@@ -227,7 +228,7 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
           # Calls: MyAppWeb.Components.MishkaButton.mc_button/1
 
       This auto-generates an adapter module `YourResource.GervazUIAdapter` that:
-      - Delegates to your Chelekom components if they exist
+      - Delegates to your declared components if they exist
       - Falls back to Tailwind for any missing components
       - All resolved at compile time with zero runtime overhead
       """

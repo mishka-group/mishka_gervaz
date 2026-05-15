@@ -77,12 +77,12 @@ defmodule MishkaGervaz.Info.DomainTableInfoTest do
       assert TableInfo.defaults(BareDomain) == %{}
     end
 
-    test "navigation returns nil" do
-      assert TableInfo.navigation(BareDomain) == nil
+    test "navigation returns nil (now lives on Domain.Info, not Domain.Info.Table)" do
+      assert MishkaGervaz.Domain.Info.navigation(BareDomain) == nil
     end
 
-    test "menu_groups returns []" do
-      assert TableInfo.menu_groups(BareDomain) == []
+    test "menu_groups returns [] (now lives on Domain.Info, not Domain.Info.Table)" do
+      assert MishkaGervaz.Domain.Info.menu_groups(BareDomain) == []
     end
 
     test "ui_adapter falls back to Tailwind" do

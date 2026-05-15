@@ -11,22 +11,28 @@ defmodule MishkaGervaz.Table.Dsl do
   - `MishkaGervaz.Table.Dsl.Source` - Data fetching, action mapping, preloading
   - `MishkaGervaz.Table.Dsl.Columns` - Define table columns
   - `MishkaGervaz.Table.Dsl.Filters` - Filter input configuration
+  - `MishkaGervaz.Table.Dsl.FilterGroups` - Group filters into collapsible UI panels
   - `MishkaGervaz.Table.Dsl.RowActions` - Per-row action buttons
   - `MishkaGervaz.Table.Dsl.Row` - Row styling and behavior
   - `MishkaGervaz.Table.Dsl.BulkActions` - Actions on multiple selected rows
+  - `MishkaGervaz.Table.Dsl.Layout` - Header / footer / notices layout
   - `MishkaGervaz.Table.Dsl.Presentation` - UI adapter and theming
+  - `MishkaGervaz.Table.Dsl.Hooks` - Lifecycle callbacks
   - `MishkaGervaz.Table.Dsl.Refresh` - Auto-refresh configuration
   - `MishkaGervaz.Table.Dsl.UrlSync` - URL state synchronization
-  - `MishkaGervaz.Table.Dsl.Hooks` - Lifecycle callbacks
   - `MishkaGervaz.Table.Dsl.State` - State management module overrides
-  - `MishkaGervaz.Table.Dsl.DataLoader` - Data loading module overrides
 
-  ## Entities
+  ## Top-level entities
 
-  - `MishkaGervaz.Table.Entities.Realtime` - PubSub configuration (inline or block)
-  - `MishkaGervaz.Table.Entities.Pagination` - Pagination configuration (inline or block)
-  - `MishkaGervaz.Table.Entities.EmptyState` - Empty state configuration
-  - `MishkaGervaz.Table.Entities.ErrorState` - Error state configuration
+  - `MishkaGervaz.Table.Dsl.Realtime` - PubSub configuration (inline or block)
+  - `MishkaGervaz.Table.Dsl.Pagination` - Pagination configuration (inline or block)
+  - `MishkaGervaz.Table.Dsl.States` - `empty_state` / `error_state` entities
+  - `MishkaGervaz.Table.Dsl.DataLoader` - Data loader module overrides
+  - `MishkaGervaz.Table.Dsl.Events` - Event handler module overrides
+
+  Admin-sidebar grouping (`MishkaGervaz.Dsl.Navigation`) is declared at
+  the **domain** level, not inside a resource's `table do` — see
+  `MishkaGervaz.Domain`.
 
   ## Structure
 
@@ -38,21 +44,33 @@ defmodule MishkaGervaz.Table.Dsl do
       realtime enabled: true, pubsub: MyApp.PubSub
       columns do ... end
       filters do ... end
+      filter_groups do ... end
       row_actions do ... end
       row do ... end
       bulk_actions do ... end
+      layout do ... end
       pagination page_size: 20, type: :infinite
       empty_state message: "No records found"
       error_state message: "Error loading data"
       presentation do ... end
+      hooks do ... end
       refresh do ... end
       url_sync do ... end
-      hooks do ... end
       state do ... end
       data_loader do ... end
+      events do ... end
     end
   end
   ```
+
+  See `MishkaGervaz.Resource`, `MishkaGervaz.Domain`,
+  `MishkaGervaz.Table.Entities.Column`,
+  `MishkaGervaz.Table.Entities.Filter`,
+  `MishkaGervaz.Table.Entities.RowAction`,
+  `MishkaGervaz.Table.Entities.BulkAction`,
+  `MishkaGervaz.Table.Entities.Pagination`,
+  `MishkaGervaz.Table.Entities.Realtime`,
+  and `MishkaGervaz.Table.Web.Live`.
   """
 
   alias MishkaGervaz.Table.Dsl.{

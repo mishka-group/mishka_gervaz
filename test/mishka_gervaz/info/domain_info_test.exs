@@ -101,13 +101,13 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "navigation/1" do
     test "returns navigation with exact menu_groups count" do
-      nav = DomainInfo.table_navigation(Domain)
+      nav = DomainInfo.navigation(Domain)
 
       assert length(nav.menu_groups) == 2
     end
 
     test "navigation contains content menu group with correct properties" do
-      nav = DomainInfo.table_navigation(Domain)
+      nav = DomainInfo.navigation(Domain)
       content_group = Enum.find(nav.menu_groups, &(&1.name == :content))
 
       assert content_group != nil
@@ -117,7 +117,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "navigation contains users menu group with correct properties" do
-      nav = DomainInfo.table_navigation(Domain)
+      nav = DomainInfo.navigation(Domain)
       users_group = Enum.find(nav.menu_groups, &(&1.name == :users))
 
       assert users_group != nil
@@ -129,13 +129,13 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
 
   describe "menu_groups/1" do
     test "returns exactly 2 menu groups" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
 
       assert length(groups) == 2
     end
 
     test "content menu group has all expected keys" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
       content_group = Enum.find(groups, &(&1.name == :content))
 
       assert content_group.name == :content
@@ -147,7 +147,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "users menu group has all expected keys" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
       users_group = Enum.find(groups, &(&1.name == :users))
 
       assert users_group.name == :users
@@ -156,7 +156,7 @@ defmodule MishkaGervaz.Info.DomainInfoTest do
     end
 
     test "menu groups are returned in order" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
       group_names = Enum.map(groups, & &1.name)
 
       assert group_names == [:content, :users]

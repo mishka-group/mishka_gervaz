@@ -1,13 +1,15 @@
-defmodule MishkaGervaz.Table.Dsl.Navigation do
+defmodule MishkaGervaz.Dsl.Navigation do
   @moduledoc """
   DSL section for domain-level navigation configuration.
 
   Defines menu groups and navigation structure for admin UI.
 
   Used by `MishkaGervaz.Domain` extension.
+
+  See `MishkaGervaz.Domain`, `MishkaGervaz.Entities.MenuGroup`.
   """
 
-  alias MishkaGervaz.Table.Entities.MenuGroup
+  alias MishkaGervaz.Entities.MenuGroup
 
   defp menu_group_entity do
     %Spark.Dsl.Entity{

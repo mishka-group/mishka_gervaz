@@ -78,18 +78,18 @@ defmodule MishkaGervaz.DSL.DomainTest do
 
   describe "navigation" do
     test "navigation config is present" do
-      navigation = DomainInfo.table_navigation(Domain)
+      navigation = DomainInfo.navigation(Domain)
       assert is_map(navigation)
     end
 
     test "menu_groups are configured" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
       assert is_list(groups)
       assert length(groups) >= 1
     end
 
     test "content menu group exists" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
       content_group = Enum.find(groups, &(&1.name == :content))
       assert content_group != nil
       assert content_group.label == "Content"
@@ -97,7 +97,7 @@ defmodule MishkaGervaz.DSL.DomainTest do
     end
 
     test "users menu group exists" do
-      groups = DomainInfo.table_menu_groups(Domain)
+      groups = DomainInfo.menu_groups(Domain)
       users_group = Enum.find(groups, &(&1.name == :users))
       assert users_group != nil
       assert users_group.label == "Users"

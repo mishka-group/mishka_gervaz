@@ -31,12 +31,12 @@ defmodule MishkaGervaz.Info.DomainInfoAggregatorTest do
       assert DomainInfo.table_defaults(Domain) == TableInfo.defaults(Domain)
     end
 
-    test "table_navigation" do
-      assert DomainInfo.table_navigation(Domain) == TableInfo.navigation(Domain)
+    test "navigation" do
+      assert DomainInfo.navigation(Domain) == MishkaGervaz.Domain.Info.navigation(Domain)
     end
 
-    test "table_menu_groups" do
-      assert DomainInfo.table_menu_groups(Domain) == TableInfo.menu_groups(Domain)
+    test "menu_groups" do
+      assert DomainInfo.menu_groups(Domain) == MishkaGervaz.Domain.Info.menu_groups(Domain)
     end
 
     test "table_ui_adapter" do

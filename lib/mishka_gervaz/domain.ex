@@ -87,9 +87,9 @@ defmodule MishkaGervaz.Domain do
     - `theme` - Default form theme
     - `layout` - Default form layout (navigation, persistence, columns, responsive)
     - `submit` - Default submit/update/cancel button labels
-  - `navigation` - Admin navigation structure.
-    See `MishkaGervaz.Table.Dsl.Navigation`.
-    - `menu_group` - Group resources. See `MishkaGervaz.Table.Entities.MenuGroup`.
+  - `navigation` - Admin navigation structure (domain-wide, not table-specific).
+    See `MishkaGervaz.Dsl.Navigation`.
+    - `menu_group` - Group resources. See `MishkaGervaz.Entities.MenuGroup`.
 
   ## Introspection
 
@@ -106,7 +106,7 @@ defmodule MishkaGervaz.Domain do
     sections: [
       MishkaGervaz.Table.Dsl.Defaults.section(),
       MishkaGervaz.Form.Dsl.DomainDefaults.section(),
-      MishkaGervaz.Table.Dsl.Navigation.section()
+      MishkaGervaz.Dsl.Navigation.section()
     ]
   }
 

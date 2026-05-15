@@ -81,7 +81,9 @@ defmodule MishkaGervaz.MixProject do
         MishkaGervaz.Resource,
         MishkaGervaz.Domain,
         MishkaGervaz.Dsl,
-        MishkaGervaz.DomainInfo
+        MishkaGervaz.DomainInfo,
+        MishkaGervaz.Dsl.Navigation,
+        MishkaGervaz.Entities.MenuGroup
       ],
       Introspection: [
         ~r/^MishkaGervaz\.Resource\.Info(\..+)?$/,

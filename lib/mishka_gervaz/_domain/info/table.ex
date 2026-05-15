@@ -10,8 +10,7 @@ defmodule MishkaGervaz.Domain.Info.Table do
       # Get default pagination
       pagination = MishkaGervaz.Domain.Info.Table.pagination(MyDomain)
 
-      # Get menu groups
-      groups = MishkaGervaz.Domain.Info.Table.menu_groups(MyDomain)
+      # Get navigation (domain-wide, not table-specific) — see Domain.Info.menu_groups/1
   """
 
   use Spark.InfoGenerator,
@@ -35,19 +34,6 @@ defmodule MishkaGervaz.Domain.Info.Table do
   """
   @spec defaults(module()) :: map()
   def defaults(domain), do: map_get(config(domain), :table, %{})
-
-  @doc """
-  Get the navigation configuration for a domain.
-  Returns nil if navigation is not defined.
-  """
-  @spec navigation(module()) :: map() | nil
-  def navigation(domain), do: map_get(config(domain), :navigation, nil)
-
-  @doc """
-  Get the menu groups for a domain.
-  """
-  @spec menu_groups(module()) :: [map()]
-  def menu_groups(domain), do: map_get(navigation(domain), :menu_groups, [])
 
   @doc """
   Get the UI adapter.

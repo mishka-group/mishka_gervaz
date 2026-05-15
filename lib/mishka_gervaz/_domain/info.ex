@@ -35,9 +35,9 @@ defmodule MishkaGervaz.Domain.Info do
       Domain.Info.table_pagination(MyDomain)
       Domain.Info.table_realtime(MyDomain)
 
-      # Domain-level navigation (lives on Domain.Info.Table)
-      Domain.Info.table_navigation(MyDomain)
-      Domain.Info.table_menu_groups(MyDomain)
+      # Domain-level navigation (not table-specific — top-level on Domain.Info)
+      Domain.Info.navigation(MyDomain)
+      Domain.Info.menu_groups(MyDomain)
 
       # Inherited form defaults
       Domain.Info.form_defaults(MyDomain)
@@ -47,11 +47,31 @@ defmodule MishkaGervaz.Domain.Info do
 
   defdelegate table_config(domain), to: MishkaGervaz.Domain.Info.Table, as: :config
   defdelegate table_defaults(domain), to: MishkaGervaz.Domain.Info.Table, as: :defaults
-  defdelegate table_navigation(domain), to: MishkaGervaz.Domain.Info.Table, as: :navigation
 
-  defdelegate table_menu_groups(domain),
-    to: MishkaGervaz.Domain.Info.Table,
-    as: :menu_groups
+  @doc """
+  Get the navigation configuration for a domain.
+  Returns nil if no `navigation do … end` block is declared.
+  """
+  @spec navigation(module()) :: map() | nil
+  def navigation(domain) do
+    domain
+    |> MishkaGervaz.Domain.Info.Table.config()
+    |> case do
+      %{navigation: nav} -> nav
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get the menu groups for a domain.
+  """
+  @spec menu_groups(module()) :: [map()]
+  def menu_groups(domain) do
+    case navigation(domain) do
+      %{menu_groups: groups} when is_list(groups) -> groups
+      _ -> []
+    end
+  end
 
   defdelegate table_ui_adapter(domain),
     to: MishkaGervaz.Domain.Info.Table,
