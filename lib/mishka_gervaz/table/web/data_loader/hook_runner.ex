@@ -23,7 +23,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.HookRunner do
 
   See `MishkaGervaz.Table.Web.DataLoader`,
   `MishkaGervaz.Table.Web.DataLoader.Helpers`,
-  `MishkaGervaz.Table.Entities.HookCollection`,
+  `MishkaGervaz.Table.Dsl.Hooks` (where hooks are declared),
+  `MishkaGervaz.Table.Entities.ActionHook` (the per-action hook entity),
   and the sibling sub-builders `QueryBuilder`, `FilterParser`,
   `PaginationHandler`, `TenantResolver`, `RelationLoader`.
   """

@@ -34,8 +34,9 @@ defmodule MishkaGervaz.Table.Web.Events.HookRunner do
       end
 
   See `MishkaGervaz.Table.Web.Events`,
-  `MishkaGervaz.Table.Entities.HookCollection`,
-  `MishkaGervaz.Table.Web.DataLoader.HookRunner`,
+  `MishkaGervaz.Table.Dsl.Hooks` (where hooks are declared),
+  `MishkaGervaz.Table.Entities.ActionHook` (the per-action hook entity),
+  `MishkaGervaz.Table.Web.DataLoader.HookRunner` (data-loading counterpart),
   and the sibling handlers `SanitizationHandler`, `RecordHandler`,
   `SelectionHandler`, `BulkActionHandler`, `RelationFilterHandler`.
   """

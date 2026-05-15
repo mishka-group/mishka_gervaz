@@ -30,9 +30,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.TenantResolver do
   `PaginationHandler`, `HookRunner`, `RelationLoader`.
   """
 
-  alias MishkaGervaz.Table.Web.State
-  alias MishkaGervaz.Resource.Info.Table, as: Info
-
   defmacro __using__(_opts) do
     quote do
       alias MishkaGervaz.Table.Web.State

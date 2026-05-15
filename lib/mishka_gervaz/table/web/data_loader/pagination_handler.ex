@@ -35,8 +35,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
   `TenantResolver`, `HookRunner`, `RelationLoader`.
   """
 
-  alias MishkaGervaz.Table.Web.State
-
   @doc false
   @spec extract_results(any()) :: list()
   def extract_results(%{results: results}) when is_list(results), do: results

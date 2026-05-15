@@ -27,12 +27,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.QueryBuilder do
   `TenantResolver`, `HookRunner`, `RelationLoader`.
   """
 
-  alias MishkaGervaz.Table.Web.State
-
-  require Ash.Query
-
-  import Ash.Expr
-
   defmacro __using__(_opts) do
     quote do
       alias MishkaGervaz.Table.Web.State

@@ -37,7 +37,6 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
   """
 
   alias MishkaGervaz.Table.Web.State
-  alias MishkaGervaz.Resource.Info.Table, as: Info
 
   @type state :: State.t()
   @type record :: struct()
