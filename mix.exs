@@ -47,6 +47,7 @@ defmodule MishkaGervaz.MixProject do
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:sourceror, "~> 1.10", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:igniter, "~> 0.8", only: [:dev, :test], runtime: false},
       # Test-only dependency for archive testing
       {:ash_archival, "~> 2.0", only: :test}
     ]
@@ -119,8 +120,7 @@ defmodule MishkaGervaz.MixProject do
         ~r/^MishkaGervaz\.Form\.Web(\..+)?$/
       ],
       "Table — DSL Sections": [
-        ~r/^MishkaGervaz\.Table\.Dsl(\..+)?$/,
-        MishkaGervaz.Table.DomainDsl
+        ~r/^MishkaGervaz\.Table\.Dsl(\..+)?$/
       ],
       "Table — Entities": [
         ~r/^MishkaGervaz\.Table\.Entities(\..+)?$/

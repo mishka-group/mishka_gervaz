@@ -18,7 +18,7 @@ defmodule MishkaGervaz.Table.Entities.Header do
         end
       end
 
-  See `MishkaGervaz.Table.Dsl.States`,
+  See `MishkaGervaz.Table.Dsl.Layout`,
   `MishkaGervaz.Table.Entities.Footer`,
   `MishkaGervaz.Table.Entities.Notice`, and the form-side counterpart
   `MishkaGervaz.Form.Entities.Header`.

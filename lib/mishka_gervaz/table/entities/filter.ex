@@ -13,13 +13,11 @@ defmodule MishkaGervaz.Table.Entities.Filter do
   @type filter_type ::
           :text
           | :select
-          | :combobox
-          | :multi_select
           | :boolean
           | :number
           | :date
-          | :datetime
-          | :range
+          | :date_range
+          | :relation
 
   @type relation_mode :: :static | :search | :search_multi
 
@@ -88,14 +86,10 @@ defmodule MishkaGervaz.Table.Entities.Filter do
   @builtin_filter_types [
     :text,
     :select,
-    :combobox,
-    :multi_select,
     :boolean,
     :number,
     :date,
-    :datetime,
     :date_range,
-    :range,
     :relation
   ]
 

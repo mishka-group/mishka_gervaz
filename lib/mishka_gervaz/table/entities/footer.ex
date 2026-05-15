@@ -16,7 +16,7 @@ defmodule MishkaGervaz.Table.Entities.Footer do
         end
       end
 
-  See `MishkaGervaz.Table.Dsl.States`,
+  See `MishkaGervaz.Table.Dsl.Layout`,
   `MishkaGervaz.Table.Entities.Header`,
   `MishkaGervaz.Table.Entities.Notice`, and the form-side counterpart
   `MishkaGervaz.Form.Entities.Footer`.

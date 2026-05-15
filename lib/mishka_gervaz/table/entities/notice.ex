@@ -50,7 +50,7 @@ defmodule MishkaGervaz.Table.Entities.Notice do
         end
       end
 
-  See `MishkaGervaz.Table.Dsl.States`,
+  See `MishkaGervaz.Table.Dsl.Layout`,
   `MishkaGervaz.Table.Entities.Notice.Ui`,
   `MishkaGervaz.Table.Entities.Header` /
   `MishkaGervaz.Table.Entities.Footer` (sibling chrome), and the form-side

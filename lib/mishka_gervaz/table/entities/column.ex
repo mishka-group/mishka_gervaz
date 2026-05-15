@@ -233,6 +233,8 @@ defmodule MishkaGervaz.Table.Entities.Column.Ui do
           | :tags
           | :progress
           | :json
+          | :uuid
+          | :array
           | :custom
 
   @type align :: :left | :center | :right
