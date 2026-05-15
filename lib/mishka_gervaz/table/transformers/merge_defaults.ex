@@ -133,5 +133,4 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
         dsl_state
     end
   end
-
 end
