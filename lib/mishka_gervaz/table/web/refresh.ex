@@ -73,7 +73,8 @@ defmodule MishkaGervaz.Table.Web.Refresh do
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.AutoState`,
   `MishkaGervaz.Table.Web.DataLoader`,
-  `MishkaGervaz.Table.Entities.Refresh`.
+  `MishkaGervaz.Table.Dsl.Refresh` (resource-level DSL section),
+  `MishkaGervaz.Table.Dsl.Defaults` (domain-level defaults).
   """
 
   import Phoenix.Component, only: [assign: 3]

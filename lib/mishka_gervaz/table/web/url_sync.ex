@@ -50,7 +50,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.State.UrlSync` (the in-state sub-builder),
-  `MishkaGervaz.Table.Entities.UrlSync`.
+  `MishkaGervaz.Table.Dsl.UrlSync` (resource-level DSL section),
+  `MishkaGervaz.Table.Dsl.Defaults` (domain-level defaults).
   """
 
   @default_config %{

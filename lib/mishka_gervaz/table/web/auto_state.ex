@@ -28,7 +28,7 @@ defmodule MishkaGervaz.Table.Web.AutoState do
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.DataLoader`,
   `MishkaGervaz.Table.Web.Refresh`,
-  `MishkaGervaz.Table.Entities.AutoState`.
+  `MishkaGervaz.Table.Dsl.Hooks` (rules live under the `hooks` DSL section).
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}

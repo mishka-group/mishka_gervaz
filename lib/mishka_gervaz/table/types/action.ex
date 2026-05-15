@@ -7,10 +7,15 @@ defmodule MishkaGervaz.Table.Types.Action do
 
   ## Built-in Types
 
-  - `:link` - Navigation link (show, edit)
-  - `:event` - Custom event button
+  - `:link` - Navigation link
+  - `:event` - Custom event button (default)
+  - `:edit` - Edit action (opens form)
   - `:destroy` - Delete button with confirmation
-  - `:row_click` - Row click handler
+  - `:update` - Ash update action trigger
+  - `:unarchive` - Restore archived record
+  - `:permanent_destroy` - Permanently delete archived record
+  - `:row_click` - Full-row click handler
+  - `:accordion` - Expandable row toggle (requires `:expand` feature)
 
   ## Custom Action Types
 
@@ -21,7 +26,7 @@ defmodule MishkaGervaz.Table.Types.Action do
         use Phoenix.Component
 
         @impl true
-        def render(action, record, ui, target) do
+        def render(assigns, action, record, ui, target) do
           # Return rendered HEEx
         end
       end
@@ -75,17 +80,9 @@ defmodule MishkaGervaz.Table.Types.Action do
     action_type = Map.get(action, :type, :event)
 
     cond do
-      is_atom(action_type) and function_exported?(action_type, :render, 4) -> action_type
+      is_atom(action_type) and function_exported?(action_type, :render, 5) -> action_type
       is_atom(action_type) -> get_or_passthrough(action_type)
       true -> default()
     end
   end
-
-  @doc """
-  List all built-in action types.
-
-  Alias for `builtin_types/0`.
-  """
-  @spec list() :: [atom()]
-  def list, do: builtin_types()
 end

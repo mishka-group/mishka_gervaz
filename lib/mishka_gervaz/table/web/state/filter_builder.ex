@@ -27,8 +27,6 @@ defmodule MishkaGervaz.Table.Web.State.FilterBuilder do
   `ColumnBuilder`, `ActionBuilder`, `Presentation`, `UrlSync`, `Access`.
   """
 
-  alias MishkaGervaz.Table.Types.Filter, as: FilterType
-
   @doc false
   @spec get_resource_calculations(module()) :: map()
   def get_resource_calculations(resource) do

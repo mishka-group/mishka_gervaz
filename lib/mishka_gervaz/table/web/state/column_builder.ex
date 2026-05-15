@@ -25,9 +25,6 @@ defmodule MishkaGervaz.Table.Web.State.ColumnBuilder do
   `FilterBuilder`, `ActionBuilder`, `Presentation`, `UrlSync`, `Access`.
   """
 
-  alias MishkaGervaz.Resource.Info.Table, as: Info
-  alias MishkaGervaz.Table.Types.Column, as: ColumnType
-
   @doc false
   defmacro __using__(_opts) do
     quote do
