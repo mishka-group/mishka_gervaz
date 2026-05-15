@@ -8,8 +8,12 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
   - Inheriting defaults from the domain (if using `MishkaGervaz.Domain`)
   - Deriving `identity.name` from the resource module name
   - Generating `identity.stream_name` if not specified
-  - Setting default tenant check function
-  - Setting default visibility function for realtime
+
+  If a domain declares `master_check`, it flows to the resource's
+  `source.master_check`. If neither domain nor resource declares one,
+  `Info.Table` leaves it `nil`; callers should check for `nil` (no
+  fallback is injected, unlike the form side which falls back to
+  `MishkaGervaz.Helpers.master_user?/1` via `Info.Form`).
 
   See `MishkaGervaz.Table.Transformers.BuildDomainConfig` (upstream),
   `MishkaGervaz.Table.Transformers.ResolveColumns` (downstream),
@@ -30,8 +34,7 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
     {[:presentation], :ui_adapter},
     {[:presentation], :ui_adapter_opts},
     {[:source], :actor_key},
-    {[:source, :tenant], :field, [:tenant, :field]},
-    {[:source, :tenant], :master_check, [:tenant, :master_check]},
+    {[:source], :master_check},
     {[:source, :actions], :read, [:actions, :read]},
     {[:source, :actions], :get, [:actions, :get]},
     {[:source, :actions], :destroy, [:actions, :destroy]},
@@ -54,7 +57,6 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
       dsl_state
       |> merge_domain_defaults(domain_defaults)
       |> merge_identity_defaults(module)
-      |> merge_tenant_defaults(domain_defaults)
 
     {:ok, dsl_state}
   end
@@ -132,20 +134,4 @@ defmodule MishkaGervaz.Table.Transformers.MergeDefaults do
     end
   end
 
-  @spec merge_tenant_defaults(Spark.Dsl.t(), map() | nil) :: Spark.Dsl.t()
-  defp merge_tenant_defaults(dsl_state, _domain_defaults) do
-    tenant_path = @table_path ++ [:source, :tenant]
-
-    case get_opt(dsl_state, tenant_path, :master_check) do
-      nil ->
-        Transformer.persist(
-          dsl_state,
-          :mishka_gervaz_default_master_check,
-          {MishkaGervaz.Helpers, :master_user?, []}
-        )
-
-      _ ->
-        dsl_state
-    end
-  end
 end

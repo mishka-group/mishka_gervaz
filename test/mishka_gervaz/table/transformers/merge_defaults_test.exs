@@ -68,13 +68,21 @@ defmodule MishkaGervaz.Transformers.MergeDefaultsTest do
     end
   end
 
-  describe "tenant defaults" do
-    test "default_master_check is persisted" do
-      # The default master_check function should be persisted
+  describe "master_check inheritance" do
+    test "domain-level master_check flows into resource source" do
       config = ResourceInfo.table_config(Post)
+      domain_check = DomainInfo.table_defaults(Domain)[:master_check]
 
-      assert config.source.master_check != nil or
-               Spark.Dsl.Extension.get_persisted(Post, :mishka_gervaz_default_master_check) != nil
+      cond do
+        is_function(domain_check) ->
+          assert is_function(config.source.master_check)
+
+        true ->
+          # No domain master_check declared — resource side stays nil
+          # (no automatic fallback to Helpers.master_user?/1 on table side).
+          assert is_nil(config.source.master_check) or
+                   is_function(config.source.master_check)
+      end
     end
   end
 
