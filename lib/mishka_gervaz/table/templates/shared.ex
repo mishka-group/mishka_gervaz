@@ -46,7 +46,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     |> JS.remove_attribute("checked", to: prefix <> ".gervaz-row-checkbox")
     |> JS.remove_attribute("checked", to: prefix <> ".gervaz-media-checkbox")
     |> JS.remove_attribute("checked", to: prefix <> ".gervaz-select-all-checkbox")
-    |> JS.remove_class("bg-blue-50", to: prefix <> ".gervaz-row")
+    |> JS.remove_class("bg-accent", to: prefix <> ".gervaz-row")
   end
 
   @doc """
@@ -58,7 +58,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
     js
     |> JS.set_attribute({"checked", "checked"}, to: prefix <> ".gervaz-row-checkbox")
-    |> JS.add_class("bg-blue-50", to: prefix <> ".gervaz-row")
+    |> JS.add_class("bg-accent", to: prefix <> ".gervaz-row")
   end
 
   @doc """
@@ -1278,7 +1278,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> Phoenix.Component.assign(:dropdowns, dropdowns || [])
 
     ~H"""
-    <div class="flex gap-2">
+    <div class="flex items-center gap-1">
       <%= if @has_layout? do %>
         <.render_inline_actions
           :if={@layout[:inline] != []}

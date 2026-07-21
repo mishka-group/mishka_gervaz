@@ -693,9 +693,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> button_class(assigns[:variant]) end)
       |> assign_new(:icon, fn -> button_icon(assigns[:variant]) end)
 
+    icon_class = if assigns[:label] in [nil, ""], do: "w-3.5 h-3.5", else: "w-4 h-4 inline-block mr-1"
+    assigns = assign(assigns, :icon_class, icon_class)
+
     ~H"""
     <button type={@type} class={@class} {@rest}>
-      <.render_icon :if={@icon} name={@icon} class="w-4 h-4 inline-block mr-1" />
+      <.render_icon :if={@icon} name={@icon} class={@icon_class} />
       {@label}
     </button>
     """
@@ -1131,7 +1134,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:badge_class` - Chip CSS class
     * `:empty` - Text shown when there are no chips (default `"—"`)
   """
-  @tags_default_badge "inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
+  @tags_default_badge "inline-flex items-center justify-center rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground w-fit whitespace-nowrap"
 
   @impl true
   def cell_tags(assigns) do
@@ -1163,14 +1166,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <button
         :if={@more > 0}
         type="button"
-        class={[@badge_class, "cursor-pointer text-gray-500 hover:bg-gray-200 focus:outline-none"]}
+        class={[@badge_class, "cursor-pointer text-muted-foreground hover:bg-accent focus:outline-none"]}
         phx-click={tags_toggle(@id)}
       >
         <span id={@id <> "-more"}>+{@more}</span>
         <span id={@id <> "-less"} class="hidden">−</span>
       </button>
     </div>
-    <span :if={not @any?} class="text-xs text-gray-400">{@empty}</span>
+    <span :if={not @any?} class="text-xs text-muted-foreground">{@empty}</span>
     """
   end
 
