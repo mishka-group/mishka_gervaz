@@ -31,28 +31,27 @@ defmodule MishkaGervaz.Table.Types.Action.Update do
   def render(_assigns, action, record, ui, target) do
     event = action[:event] || to_string(action[:name])
 
+    # ONLY WHAT THE COMPONENT DECLARES, PLUS REAL ATTRIBUTES. The map below is splatted straight at the
+    # UI adapter, whose `button/1` declares `attr :rest, :global` — so every key it does not recognise
+    # was written into the DOM as an attribute of its own (`record_id`, `target`, `confirm`), on every
+    # row of every table. The bindings now travel under their own names; `MishkaGervaz.Helpers`
+    # dashes the `phx_`/`data_` keys on the way through `dynamic_component/1`.
     assigns =
       %{__changed__: %{}}
       |> assign(:module, ui)
       |> assign(:function, :button)
       |> assign(:variant, :default)
       |> assign(:label, resolve_label(action[:ui][:label]) || humanize(action[:name]))
-      |> assign(:record_id, record.id)
-      |> assign(:event, event)
-      |> assign(:target, target)
-      |> assign(:confirm, resolve_confirm(action[:confirm], record))
       |> maybe_assign(:icon, action[:ui][:icon])
       |> maybe_assign(:class, action[:ui][:class])
+      |> assign(:phx_click, "row_action")
+      |> assign(:phx_value_event, event)
+      |> assign(:phx_value_id, record.id)
+      |> assign(:phx_target, target)
+      |> assign(:data_confirm, resolve_confirm(action[:confirm], record))
 
     ~H"""
-    <.dynamic_component
-      phx-click="row_action"
-      phx-value-event={@event}
-      phx-value-id={@record_id}
-      phx-target={@target}
-      data-confirm={@confirm}
-      {assigns}
-    />
+    <.dynamic_component {assigns} />
     """
   end
 end

@@ -54,23 +54,24 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
           JS.push("row_action", value: push_value, target: target)
       end
 
+    # ONLY WHAT THE COMPONENT DECLARES, PLUS REAL ATTRIBUTES. The map below is splatted straight at the
+    # UI adapter, whose `button/1` declares `attr :rest, :global` — so every key it does not recognise
+    # was written into the DOM as an attribute of its own (`record_id`, `target`, `confirm`), on every
+    # row of every table. The bindings now travel under their own names; `MishkaGervaz.Helpers`
+    # dashes the `phx_`/`data_` keys on the way through `dynamic_component/1`.
     assigns =
       %{__changed__: %{}}
       |> assign(:module, ui)
       |> assign(:function, :button)
       |> assign(:variant, :default)
       |> assign(:label, resolve_label(action[:ui][:label]) || humanize(action[:name]))
-      |> assign(:click_js, click_js)
-      |> assign(:confirm, resolve_confirm(action[:confirm], record))
       |> assign(:icon, action[:ui][:icon] || "hero-pencil-square")
       |> maybe_assign(:class, action[:ui][:class])
+      |> assign(:phx_click, click_js)
+      |> assign(:data_confirm, resolve_confirm(action[:confirm], record))
 
     ~H"""
-    <.dynamic_component
-      phx-click={@click_js}
-      data-confirm={@confirm}
-      {assigns}
-    />
+    <.dynamic_component {assigns} />
     """
   end
 end

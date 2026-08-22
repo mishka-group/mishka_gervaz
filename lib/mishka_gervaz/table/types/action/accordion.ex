@@ -42,8 +42,15 @@ defmodule MishkaGervaz.Table.Types.Action.Accordion do
 
       ~H""
     else
-      is_expanded = assigns[:state] && assigns[:state].expanded_id == to_string(record.id)
-
+      # Whether the row is open is NOT read here. `MishkaGervaz.Table.Templates.Table` works it out
+      # again for the caret it draws and for the detail row itself; this button only asks for the
+      # toggle. It used to be computed and handed to `button/1`, which has no use for it either and
+      # published it as an `is_expanded` attribute.
+      # ONLY WHAT THE COMPONENT DECLARES, PLUS REAL ATTRIBUTES. The map below is splatted straight at the
+      # UI adapter, whose `button/1` declares `attr :rest, :global` — so every key it does not recognise
+      # was written into the DOM as an attribute of its own (`record_id`, `target`, `confirm`), on every
+      # row of every table. The bindings now travel under their own names; `MishkaGervaz.Helpers`
+      # dashes the `phx_`/`data_` keys on the way through `dynamic_component/1`.
       assigns =
         %{__changed__: %{}}
         |> assign(:module, ui)
@@ -53,19 +60,14 @@ defmodule MishkaGervaz.Table.Types.Action.Accordion do
           :label,
           resolve_label(action[:ui][:label]) || dgettext("mishka_gervaz", "Expand")
         )
-        |> assign(:record_id, record.id)
-        |> assign(:target, target)
-        |> assign(:is_expanded, is_expanded)
         |> maybe_assign(:icon, action[:ui][:icon])
         |> maybe_assign(:class, action[:ui][:class])
+        |> assign(:phx_click, "expand_row")
+        |> assign(:phx_value_id, record.id)
+        |> assign(:phx_target, target)
 
       ~H"""
-      <.dynamic_component
-        phx-click="expand_row"
-        phx-value-id={@record_id}
-        phx-target={@target}
-        {assigns}
-      />
+      <.dynamic_component {assigns} />
       """
     end
   end
