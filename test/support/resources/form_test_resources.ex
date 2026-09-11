@@ -1382,6 +1382,14 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
           end
         end
 
+        # DECLARED NOWHERE, so every sub-field below comes from the column's constraint and from
+        # nothing else — which is the only way to test what the inference does with each type.
+        field :readings do
+          ui do
+            label "Readings"
+          end
+        end
+
         # And a single map with declared keys, the same way.
         field :settings, :key_map do
           options [
@@ -1397,7 +1405,7 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
 
       groups do
         group :main do
-          fields [:title, :slots, :links, :settings]
+          fields [:title, :slots, :links, :settings, :readings]
 
           ui do
             label "Main"
@@ -1457,6 +1465,22 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
     attribute :settings, :map do
       default %{}
       public? true
+    end
+
+    attribute :readings, {:array, :map} do
+      default []
+      public? true
+
+      constraints items: [
+                    fields: [
+                      label: [type: :string],
+                      count: [type: :integer],
+                      ratio: [type: :float],
+                      active: [type: :boolean],
+                      taken_on: [type: :date],
+                      extra: [type: :map]
+                    ]
+                  ]
     end
 
     create_timestamp :inserted_at

@@ -454,15 +454,27 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   defp infer_nested_fields_from_constrained_map(_), do: []
 
-  defp constraint_type_to_field_type(:string), do: :text
-  defp constraint_type_to_field_type(:integer), do: :number
-  defp constraint_type_to_field_type(:float), do: :number
-  defp constraint_type_to_field_type(:decimal), do: :number
-  defp constraint_type_to_field_type(:boolean), do: :checkbox
-  defp constraint_type_to_field_type(:date), do: :date
-  defp constraint_type_to_field_type(:map), do: :json
-  defp constraint_type_to_field_type({:array, _}), do: :json
-  defp constraint_type_to_field_type(_), do: :text
+  # Ash expands a shorthand before anyone else reads it: `type: :map` inside a `fields:` constraint
+  # is `Ash.Type.Map` by the time this transformer sees it. Matching the shorthands alone therefore
+  # matched nothing, and every sub-field of every constrained map fell through to a text box — a
+  # `:map` got one, a `:boolean` got one, an `:integer` got one. Normalised first, so a constraint
+  # written either way gets the control its type asks for.
+  defp constraint_type_to_field_type(type) do
+    case Ash.Type.get_type(type) do
+      Ash.Type.String -> :text
+      Ash.Type.Integer -> :number
+      Ash.Type.Float -> :number
+      Ash.Type.Decimal -> :number
+      Ash.Type.Boolean -> :checkbox
+      Ash.Type.Date -> :date
+      Ash.Type.DateTime -> :datetime
+      Ash.Type.UtcDatetime -> :datetime
+      Ash.Type.UtcDatetimeUsec -> :datetime
+      Ash.Type.Map -> :json
+      {:array, _inner} -> :json
+      _other -> :text
+    end
+  end
 
   defp merge_nested_fields(explicit, inferred, auto_fields) do
     explicit_map = Map.new(explicit, &{&1.name, &1})
