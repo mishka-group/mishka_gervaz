@@ -116,6 +116,21 @@ defmodule MishkaGervaz.Form.Types.Field.Nested do
     |> MishkaGervaz.Form.Types.Field.KeyMap.parse_params(%{keys: keys})
   end
 
+  # AND A KEY LIST IS A LIST OF THOSE, coerced and pruned row by row. A row with nothing left in it
+  # is dropped: pressing "add" and thinking better of it should cost nothing.
+  defp coerce(value, %{type: :key_list} = sub) do
+    keys = MishkaGervaz.Form.Types.Field.KeyMap.keys(sub)
+
+    value
+    |> MishkaGervaz.Form.Types.Field.KeyList.rows()
+    |> Enum.map(fn row ->
+      row
+      |> coerce_row(keys)
+      |> MishkaGervaz.Form.Types.Field.KeyMap.parse_params(%{keys: keys})
+    end)
+    |> Enum.reject(&(map_size(&1) == 0))
+  end
+
   defp coerce(value, _sub), do: value
 
   defp integer(""), do: :error

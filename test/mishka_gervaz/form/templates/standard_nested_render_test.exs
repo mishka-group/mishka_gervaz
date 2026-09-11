@@ -26,16 +26,17 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
 
   alias MishkaGervaz.Form.Templates.Standard
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
+  alias MishkaGervaz.Test.Resources.ConstrainedMapForm
   alias MishkaGervaz.Test.Resources.NestedForm
 
   # `render_component/2` wants a function component; the template is one, and rendering it is the
   # whole point — the crash lives between the field's shape and the HTML.
-  defp render_form(field) do
+  defp render_form(field, form \\ nil) do
     state =
       build_state(
         static_opts: [fields: [field], groups: []],
         mode: :create,
-        form: to_form(%{}, as: :form)
+        form: form || to_form(%{}, as: :form)
       )
 
     static = %{state.static | notices: []}
@@ -126,7 +127,8 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
           :datetime,
           :range,
           :json,
-          :key_map
+          :key_map,
+          :key_list
         ] do
       test "#{type}", %{base: base} do
         type = unquote(type)
@@ -198,6 +200,76 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
         end)
 
       assert is_binary(render_form(field))
+    end
+  end
+
+  # A LIST OF KEY MAPS, one row of controls per entry. The rows live one level inside a
+  # constrained-map row, which is the one place `add_nested`/`remove_nested` cannot reach — so the
+  # buttons carry the whole address, and a render that drops any part of it silently makes them
+  # no-ops.
+  describe "a key list draws a row of controls per entry" do
+    setup do
+      keys = [
+        [name: :name, type: :text, placeholder: "e.g. label"],
+        [name: :type, type: :select, options: ~w(string integer)],
+        [name: :required, type: :toggle, label: "Required"]
+      ]
+
+      field =
+        ConstrainedMapForm
+        |> FormInfo.field(:slots)
+        |> Map.update!(:nested_fields, fn [first | rest] ->
+          [
+            first
+            |> Map.put(:name, :attrs)
+            |> Map.put(:type, :key_list)
+            |> Map.put(:options, keys)
+            |> Map.put(:add_label, "+ Add Attribute")
+            |> Map.put(:remove_label, "Drop it")
+            | rest
+          ]
+        end)
+
+      form =
+        ConstrainedMapForm
+        |> AshPhoenix.Form.for_create(:create, forms: [auto?: false])
+        |> AshPhoenix.Form.validate(%{
+          "slots" => %{
+            "0" => %{"attrs" => %{"0" => %{"name" => "label", "required" => "true"}}}
+          }
+        })
+        |> Phoenix.Component.to_form()
+
+      %{html: render_form(field, form)}
+    end
+
+    test "with the buttons that add one and take one away", %{html: html} do
+      assert html =~ ~s|phx-click="add_key_row"|
+      assert html =~ ~s|phx-click="remove_key_row"|
+      assert html =~ "+ Add Attribute", "the declaration names the add button"
+      assert html =~ "Drop it", "and the remove one"
+    end
+
+    # Every part of the address comes from the declaration, and every part is checked against it
+    # again on the way back — so all of it has to be on the button for the event to do anything.
+    test "each naming the field, the row it sits in, itself, and which row to drop", %{html: html} do
+      assert html =~ ~s|phx-value-field="slots"|
+      assert html =~ ~s|phx-value-index="0"|
+      assert html =~ ~s|phx-value-sub="attrs"|
+      assert html =~ ~s|phx-value-row="0"|
+    end
+
+    test "and draws the row it was given, through the adapter", %{html: html} do
+      assert html =~ ~s|name="form[slots][0][attrs][0][name]"|
+      assert html =~ ~s|value="label"|
+      assert html =~ ~s|name="form[slots][0][attrs][0][type]"|
+      assert html =~ ~s|name="form[slots][0][attrs][0][required]"|
+    end
+
+    # A FORM CANNOT POST AN EMPTY LIST. Without the sentinel the key is simply missing once the last
+    # row goes, and "missing" reads as "unchanged" everywhere downstream.
+    test "with the sentinel that lets an empty list be posted at all", %{html: html} do
+      assert html =~ ~s|name="form[slots][0][attrs][_empty]"|
     end
   end
 end

@@ -658,6 +658,60 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
+  defp key_list_rows(assigns) do
+    ~H"""
+    <div class="space-y-[9px]">
+      <div
+        :for={{row, index} <- Enum.with_index(@rows)}
+        class="rounded-[11px] border border-[#ecebe6] bg-[#fbfbf9] p-3"
+      >
+        <div class="mb-2 flex items-center justify-between gap-3">
+          <span class="text-[10px] font-bold text-[#a8a5a0]">{index + 1}</span>
+          <button
+            :if={@editable?}
+            type="button"
+            phx-click="remove_key_row"
+            phx-value-field={@owner_field}
+            phx-value-index={@owner_index}
+            phx-value-sub={@sf.name}
+            phx-value-row={index}
+            phx-target={@target}
+            class="inline-flex h-6 shrink-0 items-center rounded-[7px] px-2 text-[11px] font-semibold text-[#c0392b] transition-colors hover:bg-[#fdf4f3]"
+          >
+            {@sf.remove_label || dgettext("mishka_gervaz", "Remove")}
+          </button>
+        </div>
+        <.key_map_inputs
+          ui={@ui}
+          keys={@keys}
+          held={row}
+          input_name={"#{@input_name}[#{index}]"}
+          input_id={"#{@input_id}_#{index}"}
+        />
+      </div>
+
+      <%!-- A FORM CANNOT POST AN EMPTY LIST. Without this the key would simply be missing from the
+      params once the last row went, and "missing" reads as "unchanged" everywhere downstream — so
+      removing the final row would never stick. `KeyList.rows/1` drops it again on the way in, and
+      a list nobody can empty has no need to say it is empty. --%>
+      <input :if={@editable?} type="hidden" name={"#{@input_name}[_empty]"} value="1" />
+
+      <button
+        :if={@editable?}
+        type="button"
+        phx-click="add_key_row"
+        phx-value-field={@owner_field}
+        phx-value-index={@owner_index}
+        phx-value-sub={@sf.name}
+        phx-target={@target}
+        class="inline-flex h-9 w-full items-center justify-center rounded-[11px] border border-dashed border-[#dcdbf5] bg-[#f7f6fd] text-[11.5px] font-semibold text-[#4f4bcc] transition-colors hover:border-[#c3c1f0] hover:bg-[#f2f1fc]"
+      >
+        {@sf.add_label || dgettext("mishka_gervaz", "+ Add")}
+      </button>
+    </div>
+    """
+  end
+
   # `__changed__: nil` is what makes a map built here a valid assigns map — the same thing
   # `sub_field_base/1` does, and for the same reason: the adapter component calls `assign_new/3` on
   # what it is handed, and that raises on a plain map with no change tracking in it.
@@ -1482,7 +1536,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             name: "#{@form_name}[#{@nested_field.name}][#{idx}][#{sf.name}]",
             id: "#{@static.id}_#{@form_name}_#{@nested_field.name}_#{idx}_#{sf.name}",
             value: get_entry_value(entry, sf.name),
-            errors: Map.get(errors, sf.name, [])
+            errors: Map.get(errors, sf.name, []),
+            field: to_string(@nested_field.name),
+            index: to_string(idx)
           )}
         <% end %>
       </.nested_card>
@@ -1513,6 +1569,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp submitted_once?(%{form: %{source: %{submitted_once?: submitted}}}), do: submitted
   defp submitted_once?(_state), do: false
 
+  # `owner_field` / `owner_index` say WHICH ROW OF WHICH FIELD this sub-field belongs to, which only
+  # a `:key_list` needs: its add and remove buttons have to name a list one level inside a row, and
+  # the name of the input alone (`form[slots][0][attrs]`) is the wrong thing to take that apart
+  # from. They are nil on the embedded path, where rows are AshPhoenix forms addressed by path.
   defp render_sub_field(assigns, sf, opts) do
     assigns
     |> assign(:sf, sf)
@@ -1521,6 +1581,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:input_id, opts[:id])
     |> assign(:input_value, opts[:value])
     |> assign(:sub_errors, opts[:errors] || [])
+    |> assign(:owner_field, opts[:field])
+    |> assign(:owner_index, opts[:index])
+    |> assign(:target, assigns[:myself])
     |> sub_field()
   end
 
@@ -1568,6 +1631,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(assigns.sf))
     |> assign(:held, (is_map(assigns.input_value) && assigns.input_value) || %{})
     |> key_map_inputs()
+  end
+
+  # AND A LIST OF THOSE MAPS, a row of controls per entry with buttons to add and take away. The
+  # buttons name the list they belong to — field, row index, sub-field — because it lives one level
+  # inside a constrained-map row, which is the one place `add_nested`/`remove_nested` cannot reach.
+  # Where no owner is known (the embedded path) the rows are still drawn; only the buttons are not.
+  defp sub_field_input(%{sf: %{type: :key_list}} = assigns) do
+    assigns
+    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(assigns.sf))
+    |> assign(:rows, MishkaGervaz.Form.Types.Field.KeyList.rows(assigns.input_value))
+    |> assign(:editable?, is_binary(assigns.owner_field) and not assigns.sf.readonly)
+    |> key_list_rows()
   end
 
   defp sub_field_input(%{sf: %{type: :json}} = assigns) do
@@ -1815,6 +1890,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       rows: nil,
       class: nil,
       span: nil,
+      add_label: nil,
+      remove_label: nil,
       visible: true,
       readonly: parent_readonly
     }
@@ -1836,6 +1913,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       rows: Map.get(sf, :rows),
       class: Map.get(sf, :class),
       span: Map.get(sf, :span) || auto_span(type),
+      add_label: resolve_callable(Map.get(sf, :add_label)),
+      remove_label: resolve_callable(Map.get(sf, :remove_label)),
       visible: Map.get(sf, :visible, true),
       readonly: parent_readonly or resolve_sub_readonly(Map.get(sf, :readonly, false), state)
     }
@@ -1849,6 +1928,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp auto_span(:textarea), do: 2
   defp auto_span(:json), do: 2
+  defp auto_span(:key_list), do: 2
   defp auto_span(_), do: nil
 
   defp resolve_callable(f) when is_function(f, 0), do: f.()

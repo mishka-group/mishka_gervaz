@@ -48,7 +48,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     :toggle,
     :range,
     :json,
-    :key_map
+    :key_map,
+    :key_list
   ]
 
   @type position :: integer() | :first | :last | {:before, atom()} | {:after, atom()}
@@ -113,7 +114,7 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
       type: {:list, :any},
       doc:
         "What this sub-field may contain: the choices for a `:select`, or the declared keys for a " <>
-          "`:key_map` (each `[name:, type:, label:, placeholder:]`)."
+          "`:key_map` or `:key_list` (each `[name:, type:, label:, placeholder:]`)."
     ],
     position: [
       type: :any,
@@ -137,8 +138,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField.Ui do
   @moduledoc """
   UI/presentation configuration for a
   `MishkaGervaz.Form.Entities.NestedField` — label, placeholder,
-  description, CSS class, rows (for textarea sub-fields), and grid
-  span.
+  description, CSS class, rows (for textarea sub-fields), grid span,
+  and the add/remove button labels a `:key_list` sub-field draws.
   """
 
   @type t :: %__MODULE__{
@@ -148,6 +149,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField.Ui do
           class: String.t() | nil,
           rows: integer() | nil,
           span: pos_integer() | nil,
+          add_label: String.t() | (-> String.t()) | nil,
+          remove_label: String.t() | (-> String.t()) | nil,
           extra: map(),
           __spark_metadata__: map() | nil
         }
@@ -158,6 +161,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField.Ui do
             class: nil,
             rows: nil,
             span: nil,
+            add_label: nil,
+            remove_label: nil,
             extra: %{},
             __spark_metadata__: nil
 
@@ -185,6 +190,14 @@ defmodule MishkaGervaz.Form.Entities.NestedField.Ui do
     span: [
       type: :pos_integer,
       doc: "Grid column span (1-2)."
+    ],
+    add_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Label of the button that adds a row to a `:key_list` sub-field."
+    ],
+    remove_label: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Label of the button that removes one row of a `:key_list` sub-field."
     ],
     extra: [
       type: :map,

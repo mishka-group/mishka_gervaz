@@ -570,9 +570,99 @@ defmodule MishkaGervaz.Form.Web.Events do
     end
   end
 
+  # A LIST INSIDE A ROW. `add_nested` and `remove_nested` above reach the rows of a constrained-map
+  # field; a `:key_list` sub-field lives one level further in — `params[field][index][sub]` — and
+  # nothing reached there, which is why the only editor such a list could ever have was a JSON box.
+  def do_handle("add_key_row", %{"field" => field, "index" => index, "sub" => sub}, state, socket) do
+    update_key_rows(state, socket, field, index, sub, &(&1 ++ [%{}]))
+  end
+
+  def do_handle(
+        "remove_key_row",
+        %{"field" => field, "index" => index, "sub" => sub, "row" => row},
+        state,
+        socket
+      ) do
+    case whole_number(row) do
+      {:ok, at} -> update_key_rows(state, socket, field, index, sub, &List.delete_at(&1, at))
+      :error -> {:noreply, socket}
+    end
+  end
+
   def do_handle(event, params, _state, socket) do
     send(self(), {:form_event, event, params})
     {:noreply, socket}
+  end
+
+  # EVERY PART OF THE ADDRESS ARRIVED FROM THE CLIENT, so every part is checked against the
+  # declaration before anything is written: the field must be one this form declares, the sub-field
+  # must be a `:key_list` ON that field, and the row must exist. A crafted `phx-value` can otherwise
+  # put an arbitrary key into a constrained map.
+  defp update_key_rows(state, socket, field_name, index, sub, change) do
+    with %{} = form <- state.form,
+         true <- MishkaGervaz.Helpers.known_name?(field_name, state),
+         field_def when not is_nil(field_def) <-
+           Enum.find(state.static.fields, &(to_string(&1.name) == field_name)),
+         true <- key_list_sub?(field_def, sub),
+         {:ok, row_index} <- whole_number(index),
+         params <- AshPhoenix.Form.params(form.source),
+         entries <- get_constrained_map_entries(params, field_name, form),
+         entry when not is_nil(entry) <- Enum.at(entries, row_index) do
+      rows =
+        entry
+        |> Map.get(sub)
+        |> MishkaGervaz.Form.Types.Field.KeyList.rows()
+        |> change.()
+        |> Enum.with_index()
+        |> Map.new(fn {row, position} -> {to_string(position), row} end)
+
+      json_subs = json_sub_field_names(field_def)
+
+      updated =
+        entries
+        |> List.replace_at(row_index, Map.put(entry, sub, rows))
+        |> Enum.with_index()
+        |> Map.new(fn {one, position} ->
+          {to_string(position), decode_constrained_entry(one, json_subs)}
+        end)
+
+      revalidate(state, socket, Map.put(params, field_name, updated))
+    else
+      _refused -> {:noreply, socket}
+    end
+  end
+
+  defp key_list_sub?(field_def, sub) do
+    (Map.get(field_def, :nested_fields) || [])
+    |> Enum.any?(&(&1.type == :key_list and to_string(&1.name) == sub))
+  end
+
+  defp whole_number(value) do
+    case value |> to_string() |> Integer.parse() do
+      {number, ""} when number >= 0 -> {:ok, number}
+      _not_a_number -> :error
+    end
+  end
+
+  # The tail every one of these events shares: validate the rewritten params, rebuild the errors if
+  # this form is showing any yet, and hand the state back.
+  defp revalidate(state, socket, params) do
+    source = state.form.source
+
+    validated =
+      source
+      |> AshPhoenix.Form.validate(params)
+      |> Phoenix.Component.to_form()
+
+    errors =
+      if source.submitted_once? or source.type != :create do
+        validation_handler(state).build_errors(validated)
+      else
+        %{}
+      end
+
+    state = State.update(state, form: validated, errors: errors, dirty?: true)
+    {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
   end
 
   @doc false

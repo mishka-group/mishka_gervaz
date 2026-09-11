@@ -555,6 +555,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       class: ui && ui.class,
       span: ui && ui.span,
       description: ui && ui.description,
+      add_label: ui && resolve_label_value(ui.add_label),
+      remove_label: ui && resolve_label_value(ui.remove_label),
       position: nf.position
     }
   end

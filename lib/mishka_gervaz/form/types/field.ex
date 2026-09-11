@@ -55,6 +55,7 @@ defmodule MishkaGervaz.Form.Types.Field do
       # A map whose keys are KNOWN. `:json` stays the right answer for a shape nobody can predict;
       # this one is for the many constrained-map columns whose keys are declared and few.
       key_map: {Field.KeyMap, []},
+      key_list: {Field.KeyList, []},
       nested: {Field.Nested, []},
       array_of_maps: {Field.ArrayOfMaps, []},
       string_list: {Field.StringList, []},
