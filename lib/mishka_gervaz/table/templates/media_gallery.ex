@@ -128,12 +128,6 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
 
     ~H"""
     <div id={@static.id} class="mishka-gervaz-media-gallery">
-      <.render_initial_loading
-        :if={!@state.has_initial_data? and @state.loading in [:initial, :loading]}
-        static={@static}
-        state={@state}
-      />
-
       <div :if={@state.has_initial_data? or @state.loading == :loaded}>
         <.render_header static={@static} state={@state} myself={@myself} />
 
@@ -772,24 +766,6 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
         myself={@myself}
       />
     </form>
-    """
-  end
-
-  defp render_initial_loading(assigns) do
-    loading_text =
-      assigns.static.pagination_ui.loading_text || dgettext("mishka_gervaz", "Loading...")
-
-    assigns = assign(assigns, :loading_text, loading_text)
-
-    ~H"""
-    <.dynamic_component
-      module={@static.ui_adapter}
-      function={:loading_state}
-      type={:initial}
-      style={:spinner}
-      text={@loading_text}
-      class="py-12 text-center"
-    />
     """
   end
 

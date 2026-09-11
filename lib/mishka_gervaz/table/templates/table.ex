@@ -120,12 +120,6 @@ defmodule MishkaGervaz.Table.Templates.Table do
       {render_chrome_header(assigns)}
       {render_notices_at(assigns, :after_header)}
 
-      <.render_initial_loading
-        :if={!@state.has_initial_data? and @state.loading in [:initial, :loading]}
-        static={@static}
-        state={@state}
-      />
-
       <div
         :if={@state.has_initial_data? or @state.loading == :loaded}
         class={Shared.rail_class(@rail, :grid)}
@@ -819,6 +813,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp expanded_content({:safe, _} = safe), do: safe
   defp expanded_content(content), do: Phoenix.HTML.raw(content)
 
+  @doc """
+  The default loading state: the table's own header, and a spinner where the rows will be.
+
+  The header is drawn because it is the one part of a table that is already known before the read
+  returns — a title and a line of description, declared on the resource — and dropping it for the
+  length of the query would make the page arrive in two jumps instead of one. Without a state there
+  is no header to draw and this is the spinner alone.
+  """
   @impl true
   def render_loading(assigns) do
     loading_text =
@@ -828,36 +830,16 @@ defmodule MishkaGervaz.Table.Templates.Table do
     assigns = assign(assigns, :loading_text, loading_text)
 
     ~H"""
-    <div class="py-12 text-center">
-      <div class="inline-block size-8 animate-spin rounded-full border-4 border-[#dcdbf5] border-t-[#5b57d6]">
-      </div>
-      <p class="mt-2 text-[12.5px] font-medium text-[#8a877f]">{@loading_text}</p>
-    </div>
-    """
-  end
+    <div class="mishka-gervaz-table">
+      {@static && @state && render_chrome_header(assigns)}
 
-  defp render_initial_loading(assigns) do
-    loading_text = assigns.static.pagination_ui.loading_text
-
-    if MishkaGervaz.Helpers.exports?(assigns.static.ui_adapter, :loading, 1) do
-      assigns = assign(assigns, :loading_text, loading_text)
-
-      ~H"""
-      <.dynamic_component module={@static.ui_adapter} function={:loading} type={:initial} />
-      """
-    else
-      assigns = assign(assigns, :loading_text, loading_text)
-
-      ~H"""
       <div class="py-12 text-center">
         <div class="inline-block size-8 animate-spin rounded-full border-4 border-[#dcdbf5] border-t-[#5b57d6]">
         </div>
-        <p class="mt-2 text-[12.5px] font-medium text-[#8a877f]">
-          {@loading_text || dgettext("mishka_gervaz", "Loading...")}
-        </p>
+        <p class="mt-2 text-[12.5px] font-medium text-[#8a877f]">{@loading_text}</p>
       </div>
-      """
-    end
+    </div>
+    """
   end
 
   defp render_loading_overlay(assigns) do
