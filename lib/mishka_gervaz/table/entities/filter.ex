@@ -138,7 +138,10 @@ defmodule MishkaGervaz.Table.Entities.Filter do
     options: [
       type: {:or, [{:list, :any}, {:fun, 0}]},
       doc: """
-      Manual options list [{label, value}] or a zero-arity function that returns the list.
+      Manual options list, or a zero-arity function that returns one.
+
+      An option is `{label, value}`, `[label: label, value: value]`, or a bare value that is its
+      own label.
 
       A function is resolved once at mount time (page load), useful for dynamic options:
 

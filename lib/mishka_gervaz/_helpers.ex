@@ -283,6 +283,9 @@ defmodule MishkaGervaz.Helpers do
       iex> MishkaGervaz.Helpers.normalize_options(["foo", "bar"])
       [{"foo", "foo"}, {"bar", "bar"}]
 
+      iex> MishkaGervaz.Helpers.normalize_options([[label: "Admin", value: "admin"]])
+      [{"Admin", "admin"}]
+
       iex> MishkaGervaz.Helpers.normalize_options(nil)
       []
   """
@@ -291,12 +294,25 @@ defmodule MishkaGervaz.Helpers do
   def normalize_options(options) when is_list(options), do: Enum.map(options, &normalize_option/1)
   def normalize_options(_), do: []
 
-  @spec normalize_option({any(), any()} | atom() | any()) :: {String.t(), String.t()}
+  @spec normalize_option(keyword() | {any(), any()} | atom() | any()) :: {String.t(), String.t()}
   defp normalize_option({label, value}),
     do: {to_string(label), to_string(value)}
 
   defp normalize_option(value) when is_atom(value),
     do: {humanize(value), to_string(value)}
+
+  # `[label: "Admin", value: "admin"]` says what `{"Admin", "admin"}` says, and is what a reader
+  # reaches for once the pair stops being self-explanatory. Either half may be left out: a value
+  # alone is its own label, and a label alone is its own value.
+  defp normalize_option(option) when is_list(option) do
+    case {Keyword.keyword?(option) && option[:label], Keyword.keyword?(option) && option[:value]} do
+      {nil, nil} -> {to_string(option), to_string(option)}
+      {false, false} -> {to_string(option), to_string(option)}
+      {label, nil} -> {to_string(label), to_string(label)}
+      {nil, value} -> {to_string(value), to_string(value)}
+      {label, value} -> {to_string(label), to_string(value)}
+    end
+  end
 
   defp normalize_option(value),
     do: {to_string(value), to_string(value)}
