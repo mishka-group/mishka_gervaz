@@ -632,6 +632,72 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp global_col_class(4), do: "grid md:grid-cols-2 lg:grid-cols-4 gap-4"
   defp global_col_class(_), do: "grid gap-4"
 
+  # A MAP WHOSE KEYS ARE KNOWN, drawn one control per key — and drawn through the SAME UI adapter
+  # every other input in this form goes through, so a key map inherits the project's look, its
+  # disabled states and its markup for free. The alternative was a second set of hand-written
+  # inputs, which would have drifted from the adapter the first time either one changed.
+  defp key_map_inputs(assigns) do
+    ~H"""
+    <div class="grid grid-cols-2 gap-2.5">
+      <div :for={key <- @keys} class={(key.type == :textarea && "col-span-2") || ""}>
+        <label
+          class="mb-[5px] block text-[10px] font-bold text-[#8a877f]"
+          for={"#{@input_id}_#{key.name}"}
+        >
+          {key.label || MishkaGervaz.Helpers.humanize(key.name)}
+        </label>
+        {key_map_input(
+          @ui,
+          key,
+          "#{@input_name}[#{key.name}]",
+          "#{@input_id}_#{key.name}",
+          Map.get(@held, to_string(key.name))
+        )}
+      </div>
+    </div>
+    """
+  end
+
+  # `__changed__: nil` is what makes a map built here a valid assigns map — the same thing
+  # `sub_field_base/1` does, and for the same reason: the adapter component calls `assign_new/3` on
+  # what it is handed, and that raises on a plain map with no change tracking in it.
+  defp key_map_input(ui, key, name, id, value) do
+    %{__changed__: nil, module: ui, name: name, id: id, value: value}
+    |> Map.merge(key_map_control(key, value))
+    |> dynamic_component()
+  end
+
+  # A TOGGLE OR CHECKBOX THAT IS OFF SENDS NOTHING, so both are asked for with the hidden companion
+  # the adapter pairs with them — without it, unticking one could only ever leave the previous value
+  # standing.
+  defp key_map_control(%{type: :toggle}, value),
+    do: %{function: :toggle_input, checked: ticked?(value)}
+
+  defp key_map_control(%{type: :checkbox}, value),
+    do: %{
+      function: :checkbox,
+      value: "true",
+      checked: ticked?(value),
+      hidden_input: true,
+      label: nil
+    }
+
+  # An empty prompt rather than none, because a key left blank is how a key map says "not set" —
+  # a select with no empty option would be the one control that cannot express it.
+  defp key_map_control(%{type: :select} = key, _value),
+    do: %{function: :select, options: key.options, prompt: key.placeholder || ""}
+
+  defp key_map_control(%{type: :textarea} = key, _value),
+    do: %{function: :textarea, rows: 2, placeholder: key.placeholder}
+
+  defp key_map_control(%{type: :number} = key, _value),
+    do: %{function: :number_input, placeholder: key.placeholder}
+
+  defp key_map_control(key, _value),
+    do: %{function: :text_input, placeholder: key.placeholder}
+
+  defp ticked?(value), do: value in [true, "true", "on"]
+
   defp nested_span_class(nil), do: nil
   defp nested_span_class(1), do: "col-span-1"
   defp nested_span_class(2), do: "col-span-2"
@@ -1489,6 +1555,19 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:rows, assigns.sf.rows || 3)
     |> assign(:placeholder, assigns.sf.placeholder)
     |> dynamic_component()
+  end
+
+  # A MAP WHOSE KEYS ARE KNOWN, drawn as the controls their types ask for rather than as a JSON box.
+  #
+  # Each key is named `parent[index][field][key]`, which is the shape a form already posts for a
+  # nested map and the shape Phoenix hands back — so nothing downstream has to learn a new one. The
+  # values are typed on the way in by `Field.Nested.parse_params/2`, which coerces a key map the same
+  # way it coerces the row around it.
+  defp sub_field_input(%{sf: %{type: :key_map}} = assigns) do
+    assigns
+    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(assigns.sf))
+    |> assign(:held, (is_map(assigns.input_value) && assigns.input_value) || %{})
+    |> key_map_inputs()
   end
 
   defp sub_field_input(%{sf: %{type: :json}} = assigns) do

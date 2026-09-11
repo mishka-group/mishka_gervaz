@@ -47,7 +47,8 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     :hidden,
     :toggle,
     :range,
-    :json
+    :json,
+    :key_map
   ]
 
   @type position :: integer() | :first | :last | {:before, atom()} | {:after, atom()}
@@ -110,7 +111,9 @@ defmodule MishkaGervaz.Form.Entities.NestedField do
     ],
     options: [
       type: {:list, :any},
-      doc: "Options for select-type sub-fields."
+      doc:
+        "What this sub-field may contain: the choices for a `:select`, or the declared keys for a " <>
+          "`:key_map` (each `[name:, type:, label:, placeholder:]`)."
     ],
     position: [
       type: :any,

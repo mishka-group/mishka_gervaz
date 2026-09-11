@@ -52,6 +52,9 @@ defmodule MishkaGervaz.Form.Types.Field do
       multi_select: {Field.MultiSelect, []},
       relation: {Field.Relation, []},
       json: {Field.Json, [Ash.Type.Map]},
+      # A map whose keys are KNOWN. `:json` stays the right answer for a shape nobody can predict;
+      # this one is for the many constrained-map columns whose keys are declared and few.
+      key_map: {Field.KeyMap, []},
       nested: {Field.Nested, []},
       array_of_maps: {Field.ArrayOfMaps, []},
       string_list: {Field.StringList, []},

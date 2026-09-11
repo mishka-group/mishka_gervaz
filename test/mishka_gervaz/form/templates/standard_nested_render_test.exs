@@ -125,7 +125,8 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
           :date,
           :datetime,
           :range,
-          :json
+          :json,
+          :key_map
         ] do
       test "#{type}", %{base: base} do
         type = unquote(type)
@@ -137,6 +138,66 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
 
         assert is_binary(render_form(field))
       end
+    end
+  end
+
+  # THE SAME MISTAKE, ONE LEVEL DOWN. A `:key_map` draws one control per declared key, and each of
+  # those controls was being called as a plain function with a bare map for assigns — which is the
+  # exact crash this file was written about, made again inside the clause that draws them. The type
+  # was also missing from the list above, which is how it got through.
+  describe "a key map draws a control for each key it declares" do
+    setup do
+      keys = [
+        [name: :required, type: :toggle, label: "Required"],
+        [name: :default, type: :text, placeholder: "e.g. medium"],
+        [name: :doc, type: :textarea],
+        [name: :weight, type: :number],
+        [name: :kind, type: :select, options: [{"One", "one"}]],
+        [name: :pinned, type: :checkbox]
+      ]
+
+      field =
+        NestedForm
+        |> FormInfo.field(:tags)
+        |> Map.update!(:nested_fields, fn [first | rest] ->
+          [first |> Map.put(:type, :key_map) |> Map.put(:options, keys) | rest]
+        end)
+
+      %{html: render_form(field)}
+    end
+
+    test "and draws it through the adapter, not by hand", %{html: html} do
+      assert html =~ ~s|type="number"|
+      assert html =~ "<select"
+      assert html =~ "<textarea"
+      assert html =~ ~s|type="checkbox"|
+      assert html =~ "e.g. medium", "a key's placeholder reaches its control"
+      assert html =~ "Required", "and its label"
+    end
+
+    # A toggle or checkbox left off sends nothing at all, so the hidden companion is the only thing
+    # that makes "off" reachable — without it, unticking could only leave the previous value standing.
+    test "with the hidden companion every unticked box needs", %{html: html} do
+      assert html =~ ~s|type="hidden"|
+      assert html =~ ~s|value="false"|
+    end
+
+    # `parent[index][sub_field][key]` — the shape a form already posts for a nested map, so nothing
+    # downstream has to learn a new one.
+    test "named the way a form posts a nested map", %{html: html} do
+      assert html =~ "[name][required]"
+      assert html =~ "[name][kind]"
+    end
+
+    test "and a key map with nothing declared draws nothing rather than raising" do
+      field =
+        NestedForm
+        |> FormInfo.field(:tags)
+        |> Map.update!(:nested_fields, fn [first | rest] ->
+          [first |> Map.put(:type, :key_map) |> Map.put(:options, []) | rest]
+        end)
+
+      assert is_binary(render_form(field))
     end
   end
 end
