@@ -147,9 +147,6 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
   Resolves the `{module, function}` target a generated override should call,
   given the consuming module's `:components`, `:nested_components`,
   `:module_prefix`, and `:component_prefix` options.
-
-  Public so the macro can call it; also useful for testing the routing
-  logic directly without having to build a full adapter.
   """
   @spec resolve_target(atom(), module(), boolean(), String.t() | nil, String.t() | nil) ::
           {module(), atom()}
@@ -184,7 +181,7 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
       Defaults to `MishkaGervaz.UIAdapters.Tailwind`.
 
     * `:components` — module to source overrides from. Each component
-      function is wired only when the target module is loaded **and**
+      function is wired only when the target module is loaded and
       exports the corresponding 1-arity function.
 
     * `:nested_components` — when `true`, look for each component under a

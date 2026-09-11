@@ -6,9 +6,9 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHooks do
   `:on_bulk_action_error` (and the unarchive conflict-skip success branch)
   receive `(summary, state, socket)` and can return either:
 
-    * a plain `socket` — the core handler then fires its **default flash**
+    * a plain `socket` — the core handler then fires its default flash
       (e.g. `"3 succeeded, 2 failed"` on partial, or the error flash).
-    * `{:halt, socket}` — the core handler **skips** the default flash; the
+    * `{:halt, socket}` — the core handler skips the default flash; the
       hook is fully responsible for messaging.
 
   Use `silence/1` for the halt path and (optionally) `use_default/1` as a
@@ -69,15 +69,11 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHooks do
   @doc """
   Sets a flash message that reliably reaches the parent LiveView.
 
-  Bulk hooks run inside `MishkaGervaz.Table.Web.Live` — a `Phoenix.LiveComponent`.
-  Calling `Phoenix.LiveView.put_flash/3` directly only puts the flash on the
-  *component's* `@flash`, and Phoenix only copies it to the parent on a
-  subsequent `push_patch` / `push_navigate` (per the `put_flash/3` doc). The
-  parent's layout reads the parent's `@flash`, so a direct `put_flash` from
-  a hook often appears late or not at all.
+  Use this from a bulk hook rather than `Phoenix.LiveView.put_flash/3`, which
+  sets the flash on the component only.
 
-  This helper sends `{:put_flash, kind, msg}` to the LiveView process; admin
-  pages have a `handle_info/2` bridge that calls `put_flash/3` on the parent.
+  It sends `{:put_flash, kind, msg}` to the LiveView process; admin pages have
+  a `handle_info/2` bridge that calls `put_flash/3` on the parent.
   """
   @callback put_flash(Phoenix.LiveView.Socket.t(), atom(), String.t()) ::
               Phoenix.LiveView.Socket.t()

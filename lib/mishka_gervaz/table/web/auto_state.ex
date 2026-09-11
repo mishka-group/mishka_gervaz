@@ -3,8 +3,8 @@ defmodule MishkaGervaz.Table.Web.AutoState do
   Built-in state-transition rules for tables.
 
   Configured under the `hooks.builtins` DSL section. Each rule is opt-in
-  (default `false`) except `:clear_selection_after_bulk` which defaults to
-  `true` because it matches existing behavior.
+  (default `false`) except `:clear_selection_after_bulk`, which defaults to
+  `true`.
 
   Rules:
     * `:switch_to_active_on_empty_archive` — after a successful unarchive /

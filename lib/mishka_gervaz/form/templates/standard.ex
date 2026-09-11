@@ -44,30 +44,21 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   `MishkaGervaz.Form.Behaviours.FieldType` and are referenced directly
   in the field DSL (`field :foo, MyApp.FieldTypes.Color`).
 
-  ## Every input carries the form's id, so two forms on one page never collide
+  ## Input scoping
 
-  `render_input/4` puts `:table_id` — the UI adapter's name for "the scope this control belongs
-  to" — on the base assigns of every field, alongside the `:id` it takes from the Phoenix form
-  field. The adapter's searchable controls (`search_select`, `load_more_select`, `multi_select`,
-  `combobox`, `string_list_input`) build their wrapper id from that scope plus the field name, and
-  a page is free to mount two `MishkaGervaz.Form.Web.Live` components whose resources share a field
-  name: `/admin/dashboard/runtime/medias` mounts one for `MishkaCmsCore.Runtime.Media` and one for
-  `MishkaCmsCore.Runtime.MediaCategory`, both with a `site_id` relation. Without the scope both
-  render `search-select--site_id`, and morphdom — which matches nodes by id before anything else —
-  is then free to patch one form's dropdown with the other form's markup.
+  `render_input/4` puts `:table_id` — the UI adapter's name for the scope a control belongs to —
+  on the base assigns of every field, alongside the `:id` taken from the Phoenix form field. The
+  adapter's searchable controls (`search_select`, `load_more_select`, `multi_select`, `combobox`,
+  `string_list_input`) build their wrapper id from that scope plus the field name, so two forms on
+  one page may share a field name without their ids colliding.
 
-  `render_string_list_input/4` sets the same scope itself because it builds its assigns from the
+  `render_string_list_input/4` sets the same scope itself, since it builds its assigns from the
   template assigns rather than from that base.
 
-  ## The upload progress bar fills with an inline `style`
+  ## Upload progress
 
-  `render_upload_entries/1` sets its track width with `style="width: N%"`. The percentage arrives
-  from LiveView's upload state as the bytes land, so `w-[N%]` would be a class Tailwind's
-  build-time scanner never sees a literal for: no rule is generated, and the bar stays empty at
-  every width with nothing raised. Declaring the hundred and one widths is not open to this module
-  either — Gervaz is a library, and the Tailwind build that would carry the declaration belongs to
-  whichever application mounts the form.
-  `MishkaGervaz.UIAdapters.Tailwind.upload_progress/1` renders the same bar the same way.
+  `render_upload_entries/1` sets its track width with an inline `style="width: N%"` rather than a
+  Tailwind width class, as does `MishkaGervaz.UIAdapters.Tailwind.upload_progress/1`.
 
   See `MishkaGervaz.Form.Behaviours.Template`,
   `MishkaGervaz.Form.Behaviours.FieldType`,
@@ -632,13 +623,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp global_col_class(4), do: "grid md:grid-cols-2 lg:grid-cols-4 gap-4"
   defp global_col_class(_), do: "grid gap-4"
 
-  # One control per key, drawn through the same UI adapter every other input in this form goes
-  # through, so a key map inherits the project's look, disabled states and markup rather than
-  # carrying a second set of inputs that would drift from them.
-  # A row reaches here keyed either way: raw form params keep string keys, while a value read back
-  # through the form has been cast, and Ash casts the declared fields of a constrained map to atom
-  # keys. Reading only one of the two drew a stored row as empty, which looks exactly like the value
-  # having been lost.
+  # Draws one control per declared key through the UI adapter, reading each held value under
+  # either a string or an atom key.
   defp key_map_inputs(assigns) do
     ~H"""
     <div class="grid grid-cols-2 gap-2.5">
@@ -689,10 +675,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         />
       </div>
 
-      <%!-- A form cannot post an empty list. Without this marker the key would simply be missing
-      from the params once the last row went, and "missing" reads as "unchanged" everywhere
-      downstream, so removing the final row would never stick. `KeyList.rows/1` drops it again on
-      the way in, and a list nobody can empty has no need to say it is empty. --%>
       <input :if={@editable?} type="hidden" name={"#{@input_name}[_empty]"} value="1" />
 
       <button
@@ -708,15 +690,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  # Which list a button is talking about, in the vocabulary of the event that answers it.
-  #
-  # A `:key_list` sits in one of two places. At the top level it is a field of its own over an
-  # `{:array, :map}` column, and its rows are the rows `add_nested`/`remove_nested` have always
-  # added and removed. Inside a nested row it is one level further in — `params[field][index][sub]` —
-  # which those two cannot reach, so `add_key_row`/`remove_key_row` answer for it instead.
-  #
-  # Everything else about the two is identical, so the difference lives here rather than in a second
-  # copy of the markup.
+  # The phx-click attributes for a key list's add and remove buttons: `add_nested`/`remove_nested`
+  # for a top-level list, `add_key_row`/`remove_key_row` for one nested inside a row.
   defp row_event(%{kind: :top, field: field}, :add, _index),
     do: %{"phx-click" => "add_nested", "phx-value-field" => field}
 
@@ -744,20 +719,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       "phx-value-row" => index
     }
 
-  # Nothing can be added or removed, so the buttons are not drawn and never ask.
   defp row_event(_no_owner, _which, _index), do: %{}
 
-  # `__changed__: nil` makes a map built here a valid assigns map, the same way `sub_field_base/1`
-  # does: the adapter component calls `assign_new/3` on what it is handed, which raises on a plain
-  # map with no change tracking in it.
+  # Renders one key's control through the adapter, from an assigns map built here.
   defp key_map_input(ui, key, name, id, value) do
     %{__changed__: nil, module: ui, name: name, id: id, value: value}
     |> Map.merge(key_map_control(key, value))
     |> dynamic_component()
   end
 
-  # A toggle or checkbox that is off sends nothing, so both are drawn with the hidden companion the
-  # adapter pairs with them; without it, unticking one could only leave the previous value standing.
+  # The adapter assigns a key's type asks for: which component draws it, and its options.
   defp key_map_control(%{type: :toggle}, value),
     do: %{function: :toggle_input, checked: ticked?(value)}
 
@@ -770,8 +741,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       label: nil
     }
 
-  # An empty prompt rather than none: a key left blank is how a key map says "not set", and a select
-  # with no empty option would be the one control that cannot express it.
   defp key_map_control(%{type: :select} = key, _value),
     do: %{function: :select, options: key.options, prompt: key.placeholder || ""}
 
@@ -1096,18 +1065,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         errors={@wrapper_errors}
         required={@wrapper_required}
       >
-        <div class={[
-          "flex h-11 w-full items-center gap-2 rounded-[11px] border px-[14px] text-[13px] font-medium",
-          "cursor-not-allowed",
-          if(@is_loading,
-            do: "border-[#dcdbf5] bg-[#f7f6fd] text-[#4f4bcc]",
-            else: "border-[#ecebe6] bg-[#f6f5f2] text-[#8a877f]"
-          )
-        ]}>
-          <span
-            :if={@is_loading}
-            class="size-4 shrink-0 animate-spin rounded-full border-2 border-[#dcdbf5] border-t-[#5b57d6]"
-          />
+        <div
+          :if={@is_loading}
+          data-role="gervaz-field-skeleton"
+          aria-busy="true"
+          class="flex h-11 w-full items-center rounded-[11px] border border-[#f0efea] bg-[#faf9f6] px-[14px]"
+        >
+          <span class="h-[9px] w-2/5 animate-pulse rounded-full bg-[#f2f1ec]" aria-hidden="true" />
+          <span class="sr-only">{@disabled_prompt}</span>
+        </div>
+
+        <div
+          :if={!@is_loading}
+          class="flex h-11 w-full cursor-not-allowed items-center gap-2 rounded-[11px] border border-[#ecebe6] bg-[#f6f5f2] px-[14px] text-[13px] font-medium text-[#8a877f]"
+        >
           {@disabled_prompt}
         </div>
       </.dynamic_component>
@@ -1431,9 +1402,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> dynamic_component()
   end
 
-  # A map with declared keys, as a field of its own rather than a sub-field of a nested row. There is
-  # nothing to add or remove — the keys are the declaration — so this is the same row of controls a
-  # nested `:key_map` draws, with the field's own input name in front of it.
+  # Draws a top-level `:key_map` field: one row of controls, under the field's own input name.
   defp render_key_map_input(field, form_field, assigns) do
     held = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
 
@@ -1446,9 +1415,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> key_map_inputs()
   end
 
-  # And a list of those, over an `{:array, :map}` column. Its rows are the rows `add_nested` and
-  # `remove_nested` have always added and removed for a constrained-map field, so they answer for it
-  # rather than a third pair of events being written — see `row_event/3`.
+  # Draws a top-level `:key_list` field over an `{:array, :map}` column: one row of controls per
+  # entry, with add and remove buttons wired by `row_event/3`.
   defp render_key_list_input(field, form_field, assigns) do
     readonly? = evaluate_readonly(field, assigns.state)
 
@@ -1649,10 +1617,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp submitted_once?(%{form: %{source: %{submitted_once?: submitted}}}), do: submitted
   defp submitted_once?(_state), do: false
 
-  # `owner_field` / `owner_index` say which row of which field this sub-field belongs to. Only a
-  # `:key_list` needs them: its add and remove buttons address a list one level inside a row, and
-  # picking that apart from the input name (`form[slots][0][attrs]`) would be guesswork. They are
-  # nil on the embedded path, where rows are AshPhoenix forms addressed by path.
+  # Draws one sub-field of a nested row. `opts[:field]` and `opts[:index]` name the owning row, and
+  # are nil on the embedded path.
   defp render_sub_field(assigns, sf, opts) do
     assigns
     |> assign(:sf, sf)
@@ -1700,9 +1666,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> dynamic_component()
   end
 
-  # A map whose keys are known, drawn as the controls their types ask for rather than as a JSON box.
-  # Each key is named `parent[index][field][key]` — the shape a form already posts for a nested map
-  # and the shape Phoenix hands back. `Field.Nested.parse_params/2` casts the values on the way in.
   defp sub_field_input(%{sf: %{type: :key_map}} = assigns) do
     assigns
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(assigns.sf))
@@ -1710,10 +1673,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> key_map_inputs()
   end
 
-  # A list of those maps: a row of controls per entry, with buttons to add and remove. The buttons
-  # carry the whole address — field, row index, sub-field — because the list lives one level inside
-  # a constrained-map row, which `add_nested`/`remove_nested` cannot reach. On the embedded path no
-  # owner is known, so the rows are drawn without the buttons.
   defp sub_field_input(%{sf: %{type: :key_list}} = assigns) do
     editable? = is_binary(assigns.owner_field) and not assigns.sf.readonly
 
@@ -1883,9 +1842,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp type_error(nil, _sf, _show_type), do: []
   defp type_error(_value, _sf, false), do: []
 
-  # Every step is a reason NOT to check: a blank value has nothing to check, a type that resolved to
-  # no module has nothing to check it with, and a type module that declares no `validate/2` has
-  # nothing to say. Only a value that survives all three is asked.
   defp type_error(value, sf, true) do
     type_mod = MishkaGervaz.Form.Types.Field.get_or_passthrough(sf.type)
 
@@ -2011,9 +1967,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     }
   end
 
-  # `:name` when the map carries one, `:field` otherwise — the DSL entity names it one way and a
-  # hand-written map the other, and the twelve lines that follow did not care which. They were
-  # written out twice all the same.
+  # A sub-field's name: `:name` when the map carries one, `:field` otherwise.
   defp sub_field_name(%{name: name}), do: name
   defp sub_field_name(sf), do: Map.get(sf, :field, Map.get(sf, :name))
 

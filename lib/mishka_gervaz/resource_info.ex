@@ -59,11 +59,9 @@ defmodule MishkaGervaz.ResourceInfo do
       ResourceInfo.form_events(MyResource)
       ResourceInfo.form_data_loader(MyResource)
 
-  ## Not delegated (internal-only)
+  ## Not delegated
 
-  These accessors are intentionally not exposed here — they are
-  framework-internal and only meaningful inside the dispatcher / hook
-  runner / query builder. Call them on the info modules directly if needed:
+  These accessors have no delegate here. Call them on the info modules directly:
 
   - `MishkaGervaz.Resource.Info.Table.builtins/1` — internal hook-builtin map
   - `MishkaGervaz.Resource.Info.Table.get_hook/2` — internal sugar over `hooks/1`

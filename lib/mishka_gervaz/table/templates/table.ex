@@ -136,9 +136,6 @@ defmodule MishkaGervaz.Table.Templates.Table do
           {render_notices_at(assigns, :after_filters)}
         </div>
 
-        <%!-- The rail sits second in source order so that below 980px, where the grid collapses and
-              the explicit placement is dropped, it falls between the filter row and the first record
-              rather than under the whole list. --%>
         <div :if={@rail not in [nil, []]} class={Shared.rail_class(@rail, :rail)}>
           {render_slot(@rail)}
         </div>
@@ -816,10 +813,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
   @doc """
   The default loading state: the table's own header, and a spinner where the rows will be.
 
-  The header is drawn because it is the one part of a table that is already known before the read
-  returns — a title and a line of description, declared on the resource — and dropping it for the
-  length of the query would make the page arrive in two jumps instead of one. Without a state there
-  is no header to draw and this is the spinner alone.
+  Without a state there is no header to draw, and this is the spinner alone.
   """
   @impl true
   def render_loading(assigns) do

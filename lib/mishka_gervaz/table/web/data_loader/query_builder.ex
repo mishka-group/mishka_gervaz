@@ -156,9 +156,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.QueryBuilder do
         end)
       end
 
-      # A nil path param means "the rows where this column is empty", which in SQL is `IS NULL`.
-      # `= NULL` is never true, so a table scoped on a nullable attribute would silently read back
-      # empty instead of showing that scope's rows.
+      # Filters one path param; a nil value matches the rows where that column is null.
       defp filter_path_param(query, name, nil), do: Ash.Query.filter(query, is_nil(^ref(name)))
 
       defp filter_path_param(query, name, value),

@@ -85,9 +85,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       @doc """
       Whether this page replaces what is on screen or adds to it.
 
-      A numbered page always replaces: you asked for page 3, so pages 1 and 2 must go. Load-more and
-      infinite build a list as you go, so only their first page clears it — which is why this cannot
-      simply be `page == 1`.
+      A numbered page always replaces. Load-more and infinite build a list as you go, so only their
+      first page clears it.
       """
       @spec reset_stream?(atom(), pos_integer()) :: boolean()
       def reset_stream?(:numbered, _page), do: true
@@ -130,12 +129,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       Page options for one read.
 
       Normally page N is the Nth slice — `offset: (N-1) * size`. For a table that declared
-      `keep_loaded_records true` it is the FIRST N slices instead, read in one query from offset 0.
-
-      Those tables render the whole loaded list from state rather than appending to a stream, so a
-      reload has to return everything the reader had. Reading only the newest slice would either
-      shrink the list to 30 rows or, if the reload appended, duplicate what was already there — the
-      first is what happened when editing a design token collapsed a 92-row list back to 30.
+      `keep_loaded_records true` it is the first N slices instead, read in one query from offset 0.
+      Those tables render the whole loaded list from state rather than appending to a stream, so one
+      read must return everything the reader already had.
       """
       @spec build_page_opts(integer(), integer(), atom(), boolean(), boolean()) :: keyword()
       def build_page_opts(page, page_size, _pagination_type, count?, keep_loaded_records?) do

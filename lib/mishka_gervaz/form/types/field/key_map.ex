@@ -46,9 +46,7 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   ## Blank keys are dropped
 
   A key left blank is omitted from the stored map rather than written as `""`, and a toggle left
-  off is omitted rather than written as `false`. A constrained map is usually read by asking
-  whether a key is present — Phoenix's own `attr` treats `default: nil` and no default as different
-  things — so writing every declared key on every save would turn "not set" into "set to nothing".
+  off is omitted rather than written as `false`, so "not set" stays distinct from "set to nothing".
 
   Values are cast to their declared type before they reach the changeset; see
   `MishkaGervaz.Form.Types.Field.Nested`.
@@ -67,10 +65,6 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
 
   @impl true
   def parse_params(value, config) when is_map(value) and not is_struct(value) do
-    # Keyed either way. Form params arrive with string keys, but a value that has been through a cast
-    # — Ash hands the declared fields of a constrained map back as atoms — arrives with atom ones,
-    # and taking only the strings would have emptied it. String keys on the way out, because that is
-    # what the column stores.
     for key <- keys(config),
         raw = Map.get(value, to_string(key.name), Map.get(value, key.name)),
         not blank?(raw),

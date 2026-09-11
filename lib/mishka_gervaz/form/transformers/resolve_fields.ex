@@ -454,11 +454,8 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
 
   defp infer_nested_fields_from_constrained_map(_), do: []
 
-  # Ash expands a shorthand before anyone else reads it: `type: :map` inside a `fields:` constraint
-  # is `Ash.Type.Map` by the time this transformer sees it. Matching the shorthands alone therefore
-  # matched nothing, and every sub-field of every constrained map fell through to a text box — a
-  # `:map` got one, a `:boolean` got one, an `:integer` got one. Normalised first, so a constraint
-  # written either way gets the control its type asks for.
+  # Normalises a constrained map's field type (shorthand or module) and maps it
+  # to the form field type that renders it.
   defp constraint_type_to_field_type(type) do
     case Ash.Type.get_type(type) do
       Ash.Type.String -> :text

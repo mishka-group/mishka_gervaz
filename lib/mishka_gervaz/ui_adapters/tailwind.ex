@@ -20,7 +20,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @doc """
   The classes every field of this adapter wears when it is disabled or readonly.
 
-  Public so an adapter that overrides one input still switches it off the way its neighbours do.
+  Call it from an adapter that overrides one input, to switch it off the way its neighbours are.
   """
   @spec disabled_class() :: String.t()
   def disabled_class, do: @disabled_class
@@ -129,12 +129,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
-  The same field, for a control that grows down the page instead of holding one line.
-
-  A textarea and a JSON editor were the last two still on the pre-redesign look — `rounded-md`,
-  `border-[#e0ded7]`, a blue focus ring — so a Description sat in the same form as a Name and did not
-  look related to it. Everything but the height is shared with `input_class/1`; the height is the
-  one thing a multi-line field cannot borrow, since `rows` decides it.
+  The same field as `input_class/1`, for a control that grows down the page instead of holding one
+  line. Everything but the height is shared; `rows` decides the height, so `extra` carries it.
   """
   @spec multiline_class(String.t()) :: String.t()
   def multiline_class(extra) do
@@ -225,10 +221,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @doc """
   Single-select dropdown with search support for relation filters.
 
-  `multi_select` adapted for single selection, ordering included: whatever is currently selected is
-  merged in from `:selected_options` and sorted to the TOP of the list. That matters most when the
-  value arrived from the URL rather than from a click — the page opens already filtered, and without
-  the merge the dropdown would render a page of unrelated records with the active one nowhere in it.
+  `multi_select` adapted for single selection. Whatever is currently selected is merged in from
+  `:selected_options` and sorted to the top of the list, so a value restored from the URL is shown
+  even when it is not on the loaded page of options.
   """
   @impl true
   def search_select(assigns) do
@@ -287,7 +282,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
-      <%!-- Search input --%>
       <div class="relative">
         <.render_icon
           :if={@icon}
@@ -320,10 +314,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
       </div>
 
-      <%!-- Hidden input for form submission --%>
       <input type="hidden" name={@name} value={@current_value} />
 
-      <%!-- Dropdown options (only show when open and not disabled) --%>
       <div
         :if={@dropdown_open? && !@disabled}
         class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
@@ -422,7 +414,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
-      <%!-- Clickable trigger --%>
       <button
         type="button"
         class={[@class, "w-full text-left flex items-center justify-between cursor-pointer bg-white"]}
@@ -441,10 +432,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </span>
       </button>
 
-      <%!-- Hidden input for form submission --%>
       <input type="hidden" name={@name} value={@current_value} />
 
-      <%!-- Dropdown options (only show when open) --%>
       <div
         :if={@dropdown_open?}
         class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
@@ -480,7 +469,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </button>
       </div>
 
-      <%!-- Loading spinner --%>
       <span
         :if={@loading?}
         class="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
@@ -530,7 +518,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
-      <%!-- Search input --%>
       <div class="relative">
         <.render_icon
           :if={@icon}
@@ -557,10 +544,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
       </div>
 
-      <%!-- Hidden inputs for form submission --%>
       <input :for={val <- @selected} type="hidden" name={"#{@name}[]"} value={val} />
 
-      <%!-- Dropdown options (only show when open) --%>
       <div
         :if={@dropdown_open?}
         class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
@@ -856,11 +841,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:max`    - total number of bars
     * `:color`  - hex string (e.g. `"#1f9d6b"`) for the lit bars and the number
 
-  The colour rides an inline `style`, not a Tailwind class. It comes from the column's `:scale`
-  option — a page author's own hex values, chosen per row from the cell's value — so there is no
-  literal for Tailwind's build-time scanner to find. Written as `bg-[\#{@color}]` it produced no rule
-  at all: the lit bars drew with no background and the number with no colour, on every table using
-  this column type. An inline style is what a genuinely runtime value is for.
+  The colour rides an inline `style`, not a Tailwind class: it comes from the column's `:scale`
+  option, chosen per row from the cell's value, so there is no literal for Tailwind to find.
   """
   @impl true
   def cell_bars(assigns) do
@@ -1286,9 +1268,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Render a list of tags/chips with a `+N` inline expand/collapse toggle.
 
   Shows `:shown` chips, then a `+N` chip for the `:rest`. Clicking `+N` reveals the rest inline (the
-  `+N` swaps to a `- less` collapse handle); clicking it again — or anywhere outside — collapses. The
-  toggle is a pure `Phoenix.LiveView.JS` class swap (no `:focus`, no absolute panel), so it works on
-  click in every browser and is never clipped by the table's `overflow-x-auto` wrapper.
+  `+N` swaps to a `- less` collapse handle); clicking it again — or anywhere outside — collapses.
+  The toggle is a `Phoenix.LiveView.JS` class swap, so it is never clipped by the table's
+  `overflow-x-auto` wrapper.
 
   ## Assigns
     * `:id` - Stable, unique element id (namespaces the toggle targets)
@@ -1429,8 +1411,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   A two-line cell: a primary line over a quieter secondary one.
 
   The shape almost every admin row leads with — a name over its slug, a site over its date, a person
-  over their role. It was hand-written in a dozen resources before it lived here, each copy drifting a
-  little; a resource now hands over the two strings and this decides how they look.
+  over their role. A resource hands over the two strings and this decides how they look.
 
   `:title` is the row's headline — the thing you scan a column for — and `:meta` is a supporting pair
   that should not compete with it. A leading `:icon` indents the secondary line under the text rather
@@ -1976,11 +1957,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   The list/grid switch — one recessed tray with the active view lifted onto a white tile. The single
   switcher every admin page (and every `fallback: __MODULE__` adapter) uses.
 
-  The buttons are inlined rather than a child component: an unchanged child renders `data-phx-skip`
-  and an empty element, which lands in a tray the browser is rebuilding on view-switch, so the icon
-  vanishes — inlined here there is nothing to skip. The glyph goes through `switcher_icon_class/1` so
-  each name is a literal the runtime CSS compiler can emit a mask for (a name reaching a class only
-  through a variable is one it never sees, and the button collapses to an empty square).
+  The buttons are inlined here rather than drawn as a child component, and each glyph goes through
+  `switcher_icon_class/1` so its name reaches the CSS compiler as a literal.
 
   ## Assigns
     * `:switchable_templates` - List of template modules
@@ -2030,8 +2008,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def switcher_icon_class(name), do: "#{name} size-4"
 
   @doc """
-  A single switcher button. Kept for the behaviour's `template_switcher_button` callback; the switcher
-  itself inlines its buttons (see `template_switcher/1`) so nothing renders this as a child component.
+  A single switcher button, for the behaviour's `template_switcher_button` callback.
+  `template_switcher/1` inlines its own buttons rather than calling this.
   """
   @impl true
   def template_switcher_button(assigns) do
@@ -2161,7 +2139,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <ol class="flex items-center space-x-2">
         <%= for {step, index} <- Enum.with_index(@steps) do %>
           <li class="flex items-center">
-            <%!-- Connector line before step (except first) --%>
             <div
               :if={index > 0}
               class={[
@@ -2169,7 +2146,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 step_connector_class(step.status)
               ]}
             />
-            <%!-- Step circle --%>
             <div class="flex flex-col items-center">
               <div class={[
                 "flex items-center justify-center w-8 h-8 rounded-full border-2 text-xs font-medium",
@@ -2251,8 +2227,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @doc """
   The form's primary button — the same gradient the submit row wears.
 
-  Public so a template drawing its own navigation lands on the one shape rather than inventing a
-  second primary button beside it.
+  Call it from a template drawing its own navigation, so its primary button matches the submit row.
   """
   @spec primary_button_class(boolean()) :: list()
   def primary_button_class(enabled?) do
@@ -2346,12 +2321,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:entry` - a `Phoenix.LiveView.UploadEntry`
     * `:class` - wrapper classes (default `"w-full"`)
 
-  The fill width rides an inline `style`, not a Tailwind class, for the same reason as `cell_bars/1`
-  above: the percentage arrives from LiveView's upload state as the bytes land, so there is no
-  literal for Tailwind's build-time scanner to find. Written as `w-[\#{@entry.progress}%]` it
-  generates no rule at any width and the bar simply stays empty, with nothing raised. Declaring the
-  hundred and one widths would not rescue it either — Gervaz is a library, and the Tailwind build
-  that would have to carry that declaration belongs to whichever application mounts the form.
+  The fill width rides an inline `style`, not a Tailwind class, as in `cell_bars/1`: the percentage
+  arrives from LiveView's upload state as the bytes land, so there is no literal for Tailwind to
+  find.
   """
   @impl true
   def upload_progress(assigns) do
@@ -2583,7 +2555,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     ~H"""
     <div id={"string-list-#{@table_id}-#{@field_name}"} class={@class}>
-      <%!-- Hidden input ensures field present in params when list is empty --%>
       <input type="hidden" name={"form[#{@field_name}][]"} value="" />
 
       <%= for {item, idx} <- @items_with_index do %>

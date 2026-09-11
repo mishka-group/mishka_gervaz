@@ -2,15 +2,15 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
   @moduledoc """
   Behaviour for layout templates.
 
-  Templates define HOW data is structured and arranged:
+  Templates define how data is structured and arranged:
   - Table: Traditional rows and columns
   - MediaGallery: Image/file gallery with thumbnails
   - Kanban: Column-based board layout
   - List: Simple list layout
 
   Templates work together with UIAdapters:
-  - Template = WHERE things go (structure/layout)
-  - UIAdapter = HOW things look (styling/CSS)
+  - Template = where things go (structure/layout)
+  - UIAdapter = how things look (styling/CSS)
 
   ## Creating a Custom Template
 
@@ -210,7 +210,7 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
   @doc """
   Render the header section (for tables: thead, for grids: toolbar, etc.).
 
-  Optional - defaults to nothing, which is what a template whose page names itself wants.
+  Optional - defaults to nothing.
   """
   @callback render_header(assigns()) :: rendered()
 
@@ -281,9 +281,8 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
       end
 
   The defaults render the shared furniture from `MishkaGervaz.Table.Templates.Shared`, reading what
-  varies out of the resource's own `config` — `empty_state` and `error_state` are DSL entries, so a
-  template that only wants a different message or icon says so there rather than by overriding.
-  Override a callback when the *markup* differs, not the wording.
+  varies out of the resource's own `config`. `empty_state` and `error_state` are DSL entries: set a
+  different message or icon there, and override a callback only when the markup itself differs.
   """
   defmacro __using__(_opts) do
     quote do

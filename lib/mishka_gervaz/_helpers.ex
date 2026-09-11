@@ -85,10 +85,8 @@ defmodule MishkaGervaz.Helpers do
   Resolves an action's `confirm` — the sibling of `resolve_label/1` for a message that needs the
   record.
 
-  `confirm` is declared as `String.t() | (map() -> String.t()) | nil`, and the function form exists so
-  a prompt can name what it is about to act on ("Delete the draft “Autosave”?"). Only the string half
-  was ever honoured: a function reached `data-confirm` untouched, where `Phoenix.HTML.Safe` raises
-  because it has no implementation for a function.
+  `confirm` is declared as `String.t() | (map() -> String.t()) | nil`; the function form lets a
+  prompt name what it is about to act on ("Delete the draft “Autosave”?").
 
   ## Examples
 
@@ -244,11 +242,7 @@ defmodule MishkaGervaz.Helpers do
   @doc """
   Whether `module` defines `fun/arity`, loading the module first.
 
-  Prefer this over a bare `function_exported?/3` for any capability check on a module the caller
-  did not already invoke. `function_exported?/3` answers about modules that are *already in
-  memory*, so under Elixir's interactive code loading — what `mix phx.server` uses — it answers
-  `false` for a module that compiled fine and simply has not been reached yet, while answering
-  `true` for the same code in a release.
+  Prefer this over a bare `function_exported?/3`, which only sees modules already in memory.
 
   Returns `false` for `nil`, for a module that does not exist, and for anything that is not an
   atom.
@@ -301,9 +295,8 @@ defmodule MishkaGervaz.Helpers do
   defp normalize_option(value) when is_atom(value),
     do: {humanize(value), to_string(value)}
 
-  # `[label: "Admin", value: "admin"]` says what `{"Admin", "admin"}` says, and is what a reader
-  # reaches for once the pair stops being self-explanatory. Either half may be left out: a value
-  # alone is its own label, and a label alone is its own value.
+  # a keyword option, `[label: "Admin", value: "admin"]`. Either half may be left out, in which
+  # case the one given serves as both.
   defp normalize_option(option) when is_list(option) do
     case {Keyword.keyword?(option) && option[:label], Keyword.keyword?(option) && option[:value]} do
       {nil, nil} -> {to_string(option), to_string(option)}
@@ -484,8 +477,6 @@ defmodule MishkaGervaz.Helpers do
   - Table state (`static.filters`) — checks filter names (with explicit `:filters`)
   - Form state (`static.steps`) — checks step names (with explicit `:steps`)
   - Form state (`static.uploads`) — checks upload names (with explicit `:uploads`)
-
-  Avoids `String.to_existing_atom/1` and rescue blocks for safe user input validation.
 
   ## Examples
 
@@ -986,14 +977,11 @@ defmodule MishkaGervaz.Helpers do
 
   @doc """
   Normalizes an Ash primary-key type to one of `:uuid`, `:uuid_v7`,
-  `:integer`, or `:string`. Falls back to `:uuid` for anything else,
-  matching the conservative default Phoenix uses for `<input>` shapes.
+  `:integer`, or `:string`. Falls back to `:uuid` for anything else.
 
-  Recognises both the bare atom forms (`:uuid`, `:integer`, `:string`)
-  and the `Ash.Type.*` modules. Future `Ash.Type.UUIDv7` / `UUID7` /
-  `UUID` / `Integer` modules are matched by name string so a Spark
-  release that adds new vendor variants (`Ash.Type.UUIDv7Foo`) still
-  routes correctly.
+  Recognises the bare atom forms (`:uuid`, `:integer`, `:string`), the
+  `Ash.Type.*` modules, and name variants such as `Ash.Type.UUIDv7`,
+  which are matched by name string.
   """
   @spec normalize_id_type(any()) :: :uuid | :uuid_v7 | :integer | :string
   def normalize_id_type(type) when is_atom(type) do

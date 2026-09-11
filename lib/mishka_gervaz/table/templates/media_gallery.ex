@@ -27,24 +27,19 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
 
   ## The card's actions
 
-  A card is small, so its actions are not equals. One is the star over the thumbnail — a toggle you
-  read as state, not as a button. One is wide and labelled, because a card needs a control you can
-  hit without decoding a glyph. The rest are bordered squares beside it, red if they destroy
-  something. `split_actions/3` decides which is which, and `:overlay_action` / `:primary_action`
-  below let a resource whose actions are named differently say so.
+  A card draws its row actions in three parts: a star toggle over the thumbnail, one wide labelled
+  button, and bordered squares beside it, red if they destroy something. `split_actions/3` sorts
+  them, and the `:overlay_action` / `:primary_action` options below name which action goes where.
 
   ## The thumbnail that fails to load
 
-  A card paints its type glyph behind the thumbnail, so a file whose bytes have gone only has to hide
-  the broken `<img>` for the glyph to be what you see; a thumbnail that does arrive is put on white,
-  or a transparent PNG picks up the tile's tint. Both need to know how the image ended, which is a
-  question only the browser can answer.
+  A card paints its type glyph behind the thumbnail, so a broken `<img>` only has to be hidden for
+  the glyph to show through; a thumbnail that does load sits on white, so a transparent PNG does not
+  pick up the tile's tint.
 
-  This requires the consuming app to register a `MediaThumb` JS hook in its ADMIN bundle. It reads
+  The consuming app must register a `MediaThumb` JS hook in its admin bundle. It reads
   `data-loaded-background` from the hook element for the colour a loaded image sits on, and binds
-  `load`/`error` on the `<img>` inside it. The `onload=`/`onerror=` attributes it replaces cannot be
-  used by a host that enforces a Content-Security-Policy: `script-src` has no nonce or hash that
-  applies to an inline event handler, so the attribute itself is the violation.
+  `load`/`error` on the `<img>` inside it.
 
   ## Options
   - `:columns` - Number of grid columns (3, 4, 6, or 8)
@@ -79,8 +74,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   @doc """
   The switcher draws this glyph for the gallery view.
 
-  A grid of squares rather than a photo, matching every other card view in the admin so the
-  Table/Cards switch reads the same wherever it appears. Only the switcher asks for this.
+  A grid of squares, matching the other card views in the admin.
   """
   @impl true
   def icon, do: "hero-squares-2x2"
@@ -429,20 +423,17 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   @doc """
   The card's three action groups: the star over the thumbnail, the one wide button, and the squares.
 
-  A card has room for one action that says what it does; the rest are glyphs. Which action gets
-  which part is a `template_options` decision, defaulting to the names the media resource uses:
+  Which action gets which part is a `template_options` decision, defaulting to the names the media
+  resource uses:
 
       presentation do
         template_options [overlay_action: :pin, primary_action: :open]
       end
 
-  A resource whose `row_actions_layout` PLACES an action — inline, or behind a dropdown — has
-  already said where its actions go, so this hands them all back as one row rather than overruling
-  it. An empty layout is not an answer; every resource with row actions has one of those.
+  A resource whose `row_actions_layout` places an action — inline, or behind a dropdown — gets all
+  of them back under `:secondary`.
 
-  `featured?` fills the overlay's star. The DSL can only name one icon, because a resource cannot
-  know which record its action will be drawn on; the template can, so the file that IS featured
-  wears the filled star and the rest wear the outline.
+  When `featured?` is true the overlay's star is filled; otherwise it stays an outline.
   """
   @spec split_actions([map()], map(), boolean()) :: %{
           overlay: [map()],
@@ -485,7 +476,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   Whether this record is selected, under either selection mode.
 
   `select_all?` inverts the meaning of the set: everything is chosen except what is in
-  `excluded_ids`. Getting that backwards ticks every box the reader has just cleared.
+  `excluded_ids`.
   """
   @spec selected?(map(), map()) :: boolean()
   def selected?(%{select_all?: true, excluded_ids: excluded}, record),
@@ -496,13 +487,10 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   @doc """
   The URL of a record's thumbnail, or nil when it has none to show.
 
-  THE CARD IS THIS TEMPLATE'S, WHEREVER IT IS DRAWN. A resource gates its gallery columns with
-  `visible fn state -> state.template.name() == :media_gallery end`, which is the right thing to
-  write — but a template that BORROWS the card, by delegating `render_item/1` or by calling this,
-  has a different name in `state`, so the first visible column is no longer the thumbnail and every
-  file falls back to its type glyph. The page builder's Assets sheet showed a JPEG as a document
-  icon for exactly this reason. Borrowing the card borrows its column contract, so the question is
-  asked as this template.
+  The thumbnail is the first column visible to this template. Visibility is always asked as
+  `:media_gallery`, whichever template is drawing, so a template that borrows the card — by
+  delegating `render_item/1` or by calling this — still sees the columns a resource gated with
+  `visible fn state -> state.template.name() == :media_gallery end`.
   """
   @spec thumbnail_url(map(), map(), map()) :: String.t() | nil
   def thumbnail_url(static, state, record) do
@@ -531,8 +519,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   @doc """
   The glyph a file wears when there is no thumbnail to show instead.
 
-  Public because the sheet's list draws the same file smaller — see
-  `MishkaCmsCoreWeb.Templates.AssetsList` in the CMS.
+  See `MishkaCmsCoreWeb.Templates.AssetsList` in the CMS, which draws the same file smaller.
   """
   def type_glyph(%{type: :images} = assigns) do
     ~H"""

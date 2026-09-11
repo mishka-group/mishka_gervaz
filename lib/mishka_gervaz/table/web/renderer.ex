@@ -51,8 +51,7 @@ defmodule MishkaGervaz.Table.Web.Renderer do
   Whether the table has nothing to draw yet.
 
   True from the component's first render until the first read comes back, and never again — a later
-  page, filter or sort keeps the rows on screen and marks them stale instead. A template's loading
-  state answers this question and only this one.
+  page, filter or sort keeps the rows on screen and marks them stale instead.
   """
   @spec first_read_out?(MishkaGervaz.Table.Web.State.t()) :: boolean()
   def first_read_out?(state),
@@ -72,14 +71,8 @@ defmodule MishkaGervaz.Table.Web.Renderer do
     |> template.render()
   end
 
-  # `@static` and `@state` are handed over when there are any, so a skeleton can be drawn to the
-  # shape of the columns it is standing in for. Before the component has built its state there are
-  # none, and both arrive as nil.
-  #
-  # The wrapper is what makes any loading state legal as the root of a stateful component, which is
-  # a rule `render/1` meets by convention and a skeleton has no reason to know about: several are a
-  # bare `<.loading />`, and a component call is not the single static tag LiveView demands. It is
-  # `display: contents`, so the skeleton keeps whatever parent layout it was written for.
+  # Draws the template's loading state inside a `display: contents` wrapper.
+  # `@static` and `@state` are nil until the component has built its state.
   @spec render_loading(map(), MishkaGervaz.Table.Web.State.t() | nil) ::
           Phoenix.LiveView.Rendered.t()
   defp render_loading(assigns, state) do

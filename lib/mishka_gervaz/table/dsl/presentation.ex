@@ -10,8 +10,8 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
   - **UIAdapter**: Defines the styling (Tailwind, custom adapters wrapping
     a component library)
 
-  Templates control WHERE things go (rows/columns vs cards vs thumbnails).
-  UI Adapters control HOW things look (colors, spacing, component styles).
+  Templates control where things go (rows/columns vs cards vs thumbnails).
+  UI adapters control how things look (colours, spacing, component styles).
   """
 
   @theme_schema [
@@ -113,10 +113,8 @@ defmodule MishkaGervaz.Table.Dsl.Presentation do
       Keep every record loaded so far in `state.loaded_records`, for templates that cannot render
       from the stream.
 
-      A LiveView stream is one flat container that appends, which is exactly right for a list of
-      rows and wrong for a list the template GROUPS — section headings, date buckets, category
-      bands. Such a template cannot use `@streams`, so with `:load_more` or `:infinite` it would
-      only ever see the newest page in `records_result` and every earlier page would vanish.
+      Turn this on for a template that groups its rows — section headings, date buckets, category
+      bands — which cannot use `@streams`, a flat appending container.
 
       With this on, each page is appended to `state.loaded_records` (and a reset replaces it), so
       the template renders the full loaded set and load-more works as it does for every other table.

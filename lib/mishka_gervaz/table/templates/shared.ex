@@ -5,13 +5,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   These provide default implementations for common UI elements like
   filters, bulk actions, pagination, and template switcher.
 
-  ## Performance Optimization
+  ## Assigns
 
   All functions expect two key assigns:
   - `@static` - Same reference always (columns, filters, ui_adapter, etc.)
   - `@state` - Changes trigger re-render (page, filter_values, etc.)
-
-  This separation allows LiveView to skip re-rendering static parts.
 
   See `MishkaGervaz.Table.Behaviours.Template`,
   `MishkaGervaz.Table.Templates.Table`,
@@ -181,8 +179,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
     ~H"""
     <div data-role="gz-toolbar" class="flex flex-wrap items-center gap-3">
-      <%!-- A page's own controls lead the row on a wide screen and follow the search on a narrow one,
-            so each child carries its own `order` rather than relying on source order. --%>
       <div
         :if={@filter_actions not in [nil, []]}
         class="order-1 flex flex-none items-center gap-2 max-[860px]:order-2!"
@@ -200,11 +196,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         />
       </div>
 
-      <%!-- `display: contents` so this row lays the form's children out directly and each one's own
-            `order-*` puts it back in the design's sequence, whatever the source order. The archive
-            switch draws its own form and so has to stay a sibling: nested inside, the parser drops
-            it and its `status` radio serializes into `filter`, where it collides with a status
-            filter of the same name and narrows every search to nothing. --%>
       <form
         id={"#{@static.stream_name}-filter"}
         phx-change="filter"
@@ -619,14 +610,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc """
   The four class strings that put a page's `:rail` slot beside its records rather than above them.
 
-  `row-span-2` is what keeps the rail alongside both the toolbar and the records on a wide screen;
-  dropping the explicit placement below 980px lets the same markup flow between them, where it stays
-  reachable instead of being pushed under the whole list. Every template that honours a rail wants
-  the identical four strings, so they live here rather than being retyped per template.
-
   Returns `nil` for every region when the page passed no rail, and HEEx omits a `nil` attribute
-  entirely — so a template spreads these across its existing markup and still emits byte-identical
-  output on the pages that do not use one.
+  entirely, so a template can spread these across its markup unconditionally.
   """
   @spec rail_class(list() | nil, :grid | :top | :rail | :bottom) :: String.t() | nil
   def rail_class(rail, _region) when rail in [nil, []], do: nil
@@ -697,9 +682,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   One filter's input, resolved from its type — text, select, boolean, relation, date range — including
   the disabled state a `depends_on` filter wears until its parent has a value.
 
-  Public so a custom template can lay the filters out itself and still get every input type for free,
-  the same way `render_cell/1` and `render_row_actions/1` are (see
-  `MishkaDocumentWeb.Templates.DocumentCard`, which draws its own filter drawer).
+  Call it from a custom template that lays the filters out itself, the same way `render_cell/1` and
+  `render_row_actions/1` are called.
 
   Expects `:filter`, `:all_filters`, `:state`, `:static` and `:myself`.
   """
@@ -1071,11 +1055,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc """
   Whether this record's tick is on, under either selection mode.
 
-  Selection is stored one of two ways depending on the mode: normally `selected_ids` lists what is
-  ticked, but once "select all" is on it is `excluded_ids` that lists what has been *un*ticked — so
-  the same tick reads from a different set and with the opposite sense. Templates should not carry
-  that inversion themselves; the write side already lives in
-  `MishkaGervaz.Table.Web.Events.SelectionHandler`, and this is its read mirror.
+  Normally `selected_ids` lists what is ticked; once "select all" is on it is `excluded_ids` that
+  lists what has been un-ticked, so the same tick reads from a different set and with the opposite
+  sense.
   """
   @spec record_checked?(map(), term()) :: boolean()
   def record_checked?(%{select_all?: true, excluded_ids: excluded}, record_id),
@@ -1087,8 +1069,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc """
   The extra classes the resource asks this record's row to wear, if any.
 
-  `row do class do apply … end end` is where a resource says which records look different. The path
-  into the config is gervaz's own, so gervaz reads it rather than each template hand-walking it.
+  `row do class do apply … end end` is where a resource says which records look different.
   Callers compose the result — selection state usually has to win over it.
   """
   @spec custom_row_class(map(), map()) :: list() | String.t() | nil
@@ -1105,12 +1086,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   The five "is this part on?" flags a card template's `render/1` opens with.
 
   Each is a feature flag crossed with whether there is anything to show — `:paginate` alone does not
-  mean a pager, it means a pager *if* the count is known and non-zero. Card templates all want the
-  same five answers, so they ask once here instead of restating the conditions.
+  mean a pager, it means a pager if the count is known and non-zero.
 
   Assigns `show_checkboxes`, `show_filters`, `show_pagination`, `show_bulk_actions` and
-  `show_switcher`. `MishkaGervaz.Table.Templates.Table` deliberately does not use this — its filter
-  row also appears for the archive switch, so its `show_filters` is a different question.
+  `show_switcher`.
   """
   @spec assign_card_flags(map()) :: map()
   def assign_card_flags(%{static: static, state: state} = assigns) do
@@ -1218,7 +1197,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:page_info_format, pagination_ui.page_info_format || "Page {page} of {total}")
 
     ~H"""
-    <%!-- Loading indicator for "load more" --%>
     <div
       :if={@loading == :loading and @loading_type == :more}
       class="mt-4 border-t border-[#ecebe6] py-4 text-center"
@@ -1233,7 +1211,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       />
     </div>
 
-    <%!-- End-of-list marker for :infinite (the real load trigger is phx-viewport-bottom on tbody) --%>
     <div
       :if={@pagination_type == :infinite and not @has_more? and @loading != :loading and @page > 1}
       class="mt-4 border-t border-[#ecebe6] py-4 text-center text-[11px] font-medium text-[#a8a5a0]"
@@ -1241,7 +1218,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       {dgettext("mishka_gervaz", "End of results")}
     </div>
 
-    <%!-- Load-more / infinite pager: React 3-col grid (Show N per page · Load More · empty) --%>
     <div
       :if={@pagination_type in [:load_more, :infinite]}
       class="mt-[22px] grid grid-cols-[1fr_auto_1fr] items-center gap-3"
@@ -1269,7 +1245,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       <span></span>
     </div>
 
-    <%!-- Numbered pagination --%>
     <.render_numbered_pagination
       :if={@pagination_type == :numbered and @total_pages}
       static_id={@static_id}
@@ -1291,7 +1266,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       myself={@myself}
     />
 
-    <%!-- Fallback simple numbered pagination when total_pages is not available yet --%>
     <.dynamic_component
       :if={@pagination_type == :numbered and is_nil(@total_pages)}
       module={@ui_adapter}
@@ -1365,8 +1339,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         <% end %>
       </div>
 
-      <%!-- The third grid cell was left empty; the design ends the row with where you are, which is
-            the only part of the pager that says anything when every page button fits on screen. --%>
       <span :if={@show_total} class="text-right text-[12px] font-semibold text-[#a8a5a0]">
         {format_page_info(@page_info_format, @page, @total_pages, @total_count)}
       </span>
@@ -1664,9 +1636,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   The row actions a template should draw as buttons — everything except an `:accordion`.
 
   An `:accordion` action is a declaration that the row expands, not a button: a template renders the
-  caret itself, wherever its design puts it. `MishkaGervaz.Table.Templates.Table` drops it from its
-  action strip for exactly this reason, and a custom template that draws its own expand toggle wants
-  the same, or the action shows up a second time as a stray square beside it.
+  caret itself, wherever its design puts it.
   """
   @spec non_accordion_actions([map()]) :: [map()]
   def non_accordion_actions(row_actions) do
@@ -1788,8 +1758,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc """
   No header at all — the default for a template whose page already names itself.
 
-  A table puts its column headings here and a gallery its toolbar, but a card list has neither: the
-  page heading and the filter row under it are the only furniture above the records.
+  Returns an empty template.
   """
   @spec render_header(map()) :: Phoenix.LiveView.Rendered.t()
   def render_header(assigns), do: ~H""

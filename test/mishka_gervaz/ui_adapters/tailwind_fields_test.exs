@@ -115,12 +115,35 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
   # `rounded` (4px) and `bg-gray-100`, beside a 44px `rounded-[11px]` field on `#faf9f6`. It needs
   # the adapter's own numbers, and it is asserted here rather than rendered because reaching it
   # needs a mounted component, a loaded form and a parent field with no value.
+  #
+  # TWO STAND-INS, because the field is waiting for two different things. Waiting for a CHOICE is
+  # switched off and says so; waiting for OPTIONS is a control on its way and is drawn as a
+  # skeleton, the same as every list in this admin.
   describe "the stand-in for a field that is waiting" do
     @template File.read!("lib/mishka_gervaz/form/templates/standard.ex")
 
-    test "wears the field's shape and the switched-off colours" do
-      assert @template =~ ~s(flex h-11 w-full items-center gap-2 rounded-[11px] border px-[14px])
-      assert @template =~ ~s(border-[#ecebe6] bg-[#f6f5f2] text-[#8a877f])
+    test "wears the field's shape either way" do
+      shapes =
+        Regex.scan(~r/flex h-11 w-full[a-z0-9\[\]#\- ]*rounded-\[11px\]/, @template)
+
+      assert length(shapes) == 2, "both stand-ins are 44px and rounded-[11px]"
+    end
+
+    test "the one waiting on a choice keeps the switched-off colours" do
+      assert @template =~ ~s(border-[#ecebe6] bg-[#f6f5f2])
+      assert @template =~ ~s(text-[#8a877f])
+      assert @template =~ "cursor-not-allowed"
+    end
+
+    test "the one waiting on its options is a skeleton on the field's own background" do
+      assert @template =~ ~s(data-role="gervaz-field-skeleton")
+      assert @template =~ ~s(border-[#f0efea] bg-[#faf9f6])
+      assert @template =~ "animate-pulse"
+    end
+
+    test "and the skeleton still says what it is doing, for anything not looking at it" do
+      assert @template =~ ~s(aria-busy="true")
+      assert @template =~ ~s(<span class="sr-only">{@disabled_prompt}</span>)
     end
 
     test "and none of the old ones" do

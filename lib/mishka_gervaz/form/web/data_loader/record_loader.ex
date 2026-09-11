@@ -19,9 +19,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
         end
       end
 
-  Top-level helpers `keyword_put_if_set/3` and
-  `resolve_tenant_from_record/2` are public so user overrides can reuse
-  them without redefining.
+  `keyword_put_if_set/3` and `resolve_tenant_from_record/2` are public
+  helpers an override can reuse.
 
   See `MishkaGervaz.Form.Web.DataLoader`,
   `MishkaGervaz.Form.Web.DataLoader.Helpers`,

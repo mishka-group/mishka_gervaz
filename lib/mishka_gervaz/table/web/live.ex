@@ -19,7 +19,7 @@ defmodule MishkaGervaz.Table.Web.Live do
         current_user={@current_user}
       />
 
-  That's it! Everything else comes from the DSL defined on your resource.
+  Everything else comes from the DSL defined on your resource.
 
   ## Required Assigns
 

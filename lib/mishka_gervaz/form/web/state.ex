@@ -2,13 +2,9 @@ defmodule MishkaGervaz.Form.Web.State do
   @moduledoc """
   Single state struct for a MishkaGervaz form LiveView.
 
-  All per-request form state lives on `t:t/0`. Instead of scattering values
-  across LiveView assigns, every consumer of the form pipeline reads from
-  and writes to this struct, giving:
-
-  - One clearly-typed shape (`t:t/0` and `t:Static.t/0`).
-  - One place to thread updates (`update/2`).
-  - One source of truth for events, the renderer, and tests.
+  All per-request form state lives on `t:t/0`. Every consumer of the form
+  pipeline — events, the renderer, tests — reads from this struct and
+  writes to it through `update/2`.
 
   ## Performance split
 
@@ -250,15 +246,9 @@ defmodule MishkaGervaz.Form.Web.State do
     @moduledoc """
     Shared helpers for `MishkaGervaz.Form.Web.State`.
 
-    Two reasons these live outside the `__using__` macro:
-
-    1. **Reuse across the macro and user overrides.** A user module that
-       overrides `init/3` (via `use MishkaGervaz.Form.Web.State`) can
-       call any helper here without redefining it. The macro itself
-       imports them as `StateHelpers`.
-    2. **Smaller compiled bytecode per consumer.** Helpers compile once
-       in this module rather than being re-emitted into every macro
-       expansion.
+    A module that overrides `init/3` (via `use MishkaGervaz.Form.Web.State`)
+    can call any helper here without redefining it; the macro itself
+    imports them as `StateHelpers`.
 
     Two functional groups:
 
@@ -272,22 +262,16 @@ defmodule MishkaGervaz.Form.Web.State do
     ## `mode_allowed?/3` — `:restricted` semantics
 
     The `:restricted` field on a `source` map (or a per-mode entry in
-    `:access_rules`) accepts two shapes with **deliberately different
-    contracts**:
+    `:access_rules`) accepts two shapes, and they behave differently:
 
-    - `restricted: true` — applies the master gate. Mode is allowed iff
-      `state.master_user?`. Use this for the standard "admin-only"
-      pattern.
-    - `restricted: fn state -> boolean end` — function is the **final
-      word**. The master gate is **not** layered on top. Returning
-      `true` means "this user is restricted"; the mode is denied.
-      Returning `false` allows the mode unconditionally.
+    - `restricted: true` — applies the master gate. The mode is allowed
+      only when `state.master_user?`.
+    - `restricted: fn state -> boolean end` — the function is the final
+      word; the master gate is not layered on top. Returning `true`
+      means the user is restricted and the mode is denied, returning
+      `false` allows the mode unconditionally.
 
-    The asymmetry is intentional: the boolean form is the common case
-    where you just want master-only; the function form is the escape
-    hatch for callers that need the full state (role, dirty?, current
-    step, etc.) to decide and don't want master-gate sugar layered on.
-    Reach for the boolean unless you specifically need to bypass it.
+    Use the boolean form unless the decision needs the whole state.
 
     See `MishkaGervaz.Form.Web.State`,
     `MishkaGervaz.Form.Web.State.Access.Default`, and
@@ -716,40 +700,30 @@ defmodule MishkaGervaz.Form.Web.State do
       def update(%State{} = state, updates), do: struct(state, updates)
 
       @doc """
-      Applies a MOUNT'S OWN presentation choices over the ones the resource declared.
+      Applies a mount's own presentation choices over the ones the resource declared.
 
-      A resource has one `form` section, but the same form is mounted on surfaces that do not know
-      the same things. The Media library is a page that has to ask which site a file belongs to; the
-      page builder's Assets sheet already knows, because the page being edited belongs to one. Before
-      this, giving the sheet a shorter form meant shortening the library's too, or forking the
-      resource.
+      Three keys, all optional, all ignored when absent:
 
-      Two keys, both optional, both ignored when absent — a mount that passes neither behaves exactly
-      as it did:
+        * `:hidden_fields` — the fields this mount does not draw. The value still reaches the save:
+          `drop_protected_fields/2` only looks at fields that are still declared, and
+          `merge_defaults/2` then fills any param a hidden field would have carried. Pair this with
+          `defaults` for anything the action requires, or the save arrives without it.
+        * `:submit` — `false` draws no submit row. The `save` event is still accepted, so a form
+          with no button of its own can be submitted by something else: a dropzone that fires on
+          drop, a keystroke, a control the parent draws.
+        * `:submit_alternatives` — other ways to create this record, offered from a caret beside the
+          submit button. Each is a map with `:id`, `:label` and an optional `:description`, and then
+          either
 
-        * `:hidden_fields` — the fields THIS mount does not draw. The value still reaches the save:
-          `drop_protected_fields/2` only looks at fields that are still declared, and `merge_defaults/2`
-          then fills any param a hidden field would have carried. So pair this with `defaults` for
-          anything the action requires, or the save arrives without it.
-        * `:submit` — `false` draws no submit row. The `save` event stays ALLOWED, because a form
-          with no button of its own is submitted by something else: a dropzone that fires on drop, a
-          keystroke, a control the parent draws. Refusing the event here would make the form
-          unsubmittable rather than merely quiet.
-        * `:submit_alternatives` — OTHER WAYS TO CREATE this record, offered from a caret beside the
-          submit button instead of as a second button somewhere else on the page. Each is a map with
-          `:id`, `:label` and an optional `:description`, and then either
-
-            * `:navigate` — a path. The item is a link, so it LEAVES without submitting: no
-              validation, no record. That is the point when the other way collects its own details
-              elsewhere.
+            * `:navigate` — a path. The item is a link, so it leaves without submitting: no
+              validation, no record.
             * `:name` and `:value` — the item is a submit button of this same form, so the browser
               sends the pair with every field and the alternative reaches `before_save` as an
-              ordinary param, with the page needing to know none of the form's fields.
+              ordinary param.
 
-          Only while CREATING. "Another way to create" says nothing over a loaded record.
+          Offered only while creating; nothing is shown over a loaded record.
 
-      Applied at init only, like its table-side counterpart — a value the reader has since changed
-      must not be dragged back by an unrelated parent render.
+      Applied at init only, like its table-side counterpart.
       """
       @spec apply_presentation(State.t(), map()) :: State.t()
       def apply_presentation(%State{} = state, assigns) when is_map(assigns) do

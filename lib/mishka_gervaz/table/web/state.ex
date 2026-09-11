@@ -4,15 +4,9 @@ defmodule MishkaGervaz.Table.Web.State do
   @moduledoc """
   Single state struct for MishkaGervaz table.
 
-  Instead of scattered assigns, all table state is managed in this struct.
-  This provides:
+  All table state is held in this struct rather than in separate assigns.
 
-  - Clear state structure
-  - Easy state updates
-  - Type safety
-  - Single source of truth
-
-  ## Performance Optimization
+  ## State shape
 
   State is split into two parts:
   - `static` - Configuration that never changes (same reference for O(1) comparison)
@@ -507,25 +501,18 @@ defmodule MishkaGervaz.Table.Web.State do
       end
 
       @doc """
-      Applies a MOUNT'S OWN presentation choices over the ones the resource declared.
+      Applies one mount's own presentation choices over the ones the resource declared.
 
-      A resource has one `table` section, so one template and one switchable list — but the same
-      resource is mounted in more than one place, and those places are not the same surface. The
-      Media library is a page with room for a full card; the builder's Assets sheet is 420px of
-      overlay beside a canvas. Before this, giving the sheet its own look meant either changing the
-      library's template as well or forking the resource.
+      Two keys, both optional and both ignored when absent, so a mount that passes neither is left
+      unchanged:
 
-      Two keys, both optional, both ignored when absent — a mount that passes neither behaves exactly
-      as it did:
-
-        * `:template` — the template THIS mount starts with. A module, or the `name/0` of one the
+        * `:template` — the template this mount starts with. A module, or the `name/0` of one the
           resource already knows.
-        * `:switchable_templates` — what the switcher offers HERE. An empty list, or one entry,
-          turns the switcher off for this mount (`template_switching_enabled?/1` asks for more than
+        * `:switchable_templates` — what the switcher offers on this mount. An empty list, or one
+          entry, turns the switcher off here (`template_switching_enabled?/1` asks for more than
           one); the resource's own list is untouched everywhere else.
 
-      Applied at init only. The reader may switch templates afterwards, and re-applying on every
-      parent update would drag them back.
+      Call this at init only, since the reader may switch templates afterwards.
       """
       @spec apply_presentation(State.t(), map()) :: State.t()
       def apply_presentation(state, assigns) when is_map(assigns) do
