@@ -31,7 +31,7 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
 
     def render_loading(assigns) do
       ~H"""
-      <div data-testid="mock-loading">Loading...</div>
+      <div data-testid="mock-loading" data-loading-static={@static && @static.id}>Loading...</div>
       """
     end
 
@@ -40,10 +40,36 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
     defp stream_length(_), do: 0
   end
 
+  # What a skeleton is allowed to look like: several in this codebase are one component call and
+  # nothing else, which is not the single static tag a stateful component may have at its root.
+  defmodule RootlessTemplate do
+    use Phoenix.Component
+
+    def render(assigns), do: ~H"<div data-testid=\"rootless-template\"></div>"
+
+    def render_loading(assigns) do
+      assigns = assign_new(assigns, :rows, fn -> 2 end)
+
+      ~H"""
+      <.rows count={@rows} />
+      """
+    end
+
+    defp rows(assigns) do
+      ~H"""
+      <div :for={_row <- 1..@count//1} data-testid="rootless-row"></div>
+      """
+    end
+  end
+
+  # Loaded unless a test says otherwise: `render/1` draws the template's loading state until the
+  # first read returns, so a state fresh from `State.init/3` would answer every question about
+  # assigns, streams and template choice with the skeleton.
   defp create_state(opts \\ []) do
     state = State.init("test-id", User, nil)
-    template = Keyword.get(opts, :template, MockTemplate)
-    State.update(state, Keyword.merge([template: template], opts))
+    defaults = [template: MockTemplate, has_initial_data?: true, loading: :loaded]
+
+    State.update(state, Keyword.merge(defaults, opts))
   end
 
   defp create_assigns(state, opts \\ []) do
@@ -154,14 +180,8 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
       assert render_component(&Renderer.render/1, create_assigns(state)) =~ ~s(data-empty="false")
     end
 
-    test "false before the first load completes" do
-      state = create_state(total_count: 0, loading: :initial)
-
-      assert render_component(&Renderer.render/1, create_assigns(state)) =~ ~s(data-empty="false")
-    end
-
     test "false during a reload" do
-      state = create_state(total_count: 0, loading: :loading)
+      state = create_state(total_count: 0, has_initial_data?: true, loading: :loading)
 
       assert render_component(&Renderer.render/1, create_assigns(state)) =~ ~s(data-empty="false")
     end
@@ -201,6 +221,58 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
 
       # Same reference - enables O(1) comparison
       assert updated_state.static == original_static
+    end
+  end
+
+  # The one question a template's loading state answers: is there anything to draw yet. A later page
+  # or filter is not one of these — those keep the rows on screen and mark them stale.
+  describe "the first read" do
+    test "draws the template's loading state before it returns" do
+      for loading <- [:initial, :loading] do
+        state = create_state(has_initial_data?: false, loading: loading)
+
+        assert render_component(&Renderer.render/1, create_assigns(state)) =~
+                 ~s(data-testid="mock-loading")
+      end
+    end
+
+    test "hands the loading state the static it is standing in for" do
+      state = create_state(has_initial_data?: false, loading: :initial)
+
+      assert render_component(&Renderer.render/1, create_assigns(state)) =~
+               ~s(data-loading-static="test-id")
+    end
+
+    test "draws the table again for a reload, which keeps its rows" do
+      state = create_state(has_initial_data?: true, loading: :loading)
+
+      assert render_component(&Renderer.render/1, create_assigns(state)) =~
+               ~s(data-testid="mock-template")
+    end
+
+    test "is over once a read has returned, however few rows it found" do
+      state = create_state(has_initial_data?: true, loading: :loaded, total_count: 0)
+
+      assert render_component(&Renderer.render/1, create_assigns(state)) =~
+               ~s(data-testid="mock-template")
+    end
+
+    test "a loading state with no root tag of its own is still legal at a component root" do
+      state =
+        create_state(template: RootlessTemplate, has_initial_data?: false, loading: :initial)
+
+      result = render_component(&Renderer.render/1, create_assigns(state)) |> String.trim()
+
+      assert String.starts_with?(result, ~s(<div class="contents"))
+      assert String.ends_with?(result, "</div>")
+      assert result =~ ~s(data-testid="rootless-row")
+    end
+
+    test "first_read_out?/1 is the question itself" do
+      assert Renderer.first_read_out?(create_state(has_initial_data?: false, loading: :initial))
+      assert Renderer.first_read_out?(create_state(has_initial_data?: false, loading: :loading))
+      refute Renderer.first_read_out?(create_state(has_initial_data?: true, loading: :loading))
+      refute Renderer.first_read_out?(create_state(has_initial_data?: false, loading: :error))
     end
   end
 

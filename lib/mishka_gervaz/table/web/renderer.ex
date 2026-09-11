@@ -32,15 +32,31 @@ defmodule MishkaGervaz.Table.Web.Renderer do
   @doc """
   Renders the table through the template currently in effect.
 
-  Called by `MishkaGervaz.Table.Web.Live`. Passes `@static`, `@state`, the `@stream` for the
-  resource's stream name and an `@empty?` flag, and falls back to the loading state until the
-  first read returns.
+  Until the first read returns, the template's `c:MishkaGervaz.Table.Behaviours.Template.render_loading/1`
+  is drawn instead of its `render/1`. After that, `render/1` is passed `@static`, `@state`, the
+  `@stream` for the resource's stream name and an `@empty?` flag.
   """
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     state = assigns[:table_state]
-    if state, do: render_with_state(assigns, state), else: render_loading(assigns)
+
+    if is_nil(state) or first_read_out?(state) do
+      render_loading(assigns, state)
+    else
+      render_with_state(assigns, state)
+    end
   end
+
+  @doc """
+  Whether the table has nothing to draw yet.
+
+  True from the component's first render until the first read comes back, and never again — a later
+  page, filter or sort keeps the rows on screen and marks them stale instead. A template's loading
+  state answers this question and only this one.
+  """
+  @spec first_read_out?(MishkaGervaz.Table.Web.State.t()) :: boolean()
+  def first_read_out?(state),
+    do: not state.has_initial_data? and state.loading in [:initial, :loading]
 
   @spec render_with_state(map(), MishkaGervaz.Table.Web.State.t()) ::
           Phoenix.LiveView.Rendered.t()
@@ -56,11 +72,31 @@ defmodule MishkaGervaz.Table.Web.Renderer do
     |> template.render()
   end
 
-  @spec render_loading(map()) :: Phoenix.LiveView.Rendered.t()
-  defp render_loading(assigns) do
-    state = assigns[:table_state]
+  # `@static` and `@state` are handed over when there are any, so a skeleton can be drawn to the
+  # shape of the columns it is standing in for. Before the component has built its state there are
+  # none, and both arrive as nil.
+  #
+  # The wrapper is what makes any loading state legal as the root of a stateful component, which is
+  # a rule `render/1` meets by convention and a skeleton has no reason to know about: several are a
+  # bare `<.loading />`, and a component call is not the single static tag LiveView demands. It is
+  # `display: contents`, so the skeleton keeps whatever parent layout it was written for.
+  @spec render_loading(map(), MishkaGervaz.Table.Web.State.t() | nil) ::
+          Phoenix.LiveView.Rendered.t()
+  defp render_loading(assigns, state) do
     template = (state && state.template) || MishkaGervaz.Table.Templates.Table
-    template.render_loading(assigns)
+
+    inner =
+      assigns
+      |> assign(:static, state && state.static)
+      |> assign(:state, state)
+      |> assign_new(:myself, fn -> nil end)
+      |> template.render_loading()
+
+    assigns = assign(assigns, inner: inner, loading_id: state && state.static.id)
+
+    ~H"""
+    <div class="contents" data-gervaz-loading={@loading_id}>{@inner}</div>
+    """
   end
 
   @spec get_stream(map(), atom()) :: list() | tuple()
