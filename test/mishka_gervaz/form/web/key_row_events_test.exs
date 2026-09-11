@@ -84,8 +84,8 @@ defmodule MishkaGervaz.Form.Web.KeyRowEventsTest do
       assert attrs_of(socket) == %{"0" => %{"name" => "hint"}}
     end
 
-    # THE LAST ROW HAS TO BE REMOVABLE. An empty map is what says "this list is empty now"; leaving
-    # the key out instead would read as "unchanged" everywhere downstream.
+    # The last row has to be removable. An empty map says "this list is empty now"; leaving the key
+    # out instead would read as "unchanged" everywhere downstream.
     test "including the last one" do
       {:noreply, socket} =
         remove(socket_with(%{"0" => %{"name" => "label"}}), Map.put(@address, "row", "0"))
@@ -102,8 +102,8 @@ defmodule MishkaGervaz.Form.Web.KeyRowEventsTest do
     end
   end
 
-  # EVERY PART OF THE ADDRESS CAME FROM THE CLIENT. None of these may write anything, and none of
-  # them may crash the form either — a refused event is a no-op, not an error page.
+  # Every part of the address came from the client. None of these may write anything, and none may
+  # crash the form either — a refused event is a no-op, not an error page.
   describe "an address the declaration does not agree with" do
     test "a field this form does not declare" do
       {:noreply, socket} = add(socket_with(%{}), %{@address | "field" => "secrets"})

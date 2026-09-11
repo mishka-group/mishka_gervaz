@@ -632,10 +632,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp global_col_class(4), do: "grid md:grid-cols-2 lg:grid-cols-4 gap-4"
   defp global_col_class(_), do: "grid gap-4"
 
-  # A MAP WHOSE KEYS ARE KNOWN, drawn one control per key — and drawn through the SAME UI adapter
-  # every other input in this form goes through, so a key map inherits the project's look, its
-  # disabled states and its markup for free. The alternative was a second set of hand-written
-  # inputs, which would have drifted from the adapter the first time either one changed.
+  # One control per key, drawn through the same UI adapter every other input in this form goes
+  # through, so a key map inherits the project's look, disabled states and markup rather than
+  # carrying a second set of inputs that would drift from them.
   defp key_map_inputs(assigns) do
     ~H"""
     <div class="grid grid-cols-2 gap-2.5">
@@ -690,10 +689,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         />
       </div>
 
-      <%!-- A FORM CANNOT POST AN EMPTY LIST. Without this the key would simply be missing from the
-      params once the last row went, and "missing" reads as "unchanged" everywhere downstream — so
-      removing the final row would never stick. `KeyList.rows/1` drops it again on the way in, and
-      a list nobody can empty has no need to say it is empty. --%>
+      <%!-- A form cannot post an empty list. Without this marker the key would simply be missing
+      from the params once the last row went, and "missing" reads as "unchanged" everywhere
+      downstream, so removing the final row would never stick. `KeyList.rows/1` drops it again on
+      the way in, and a list nobody can empty has no need to say it is empty. --%>
       <input :if={@editable?} type="hidden" name={"#{@input_name}[_empty]"} value="1" />
 
       <button
@@ -712,18 +711,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  # `__changed__: nil` is what makes a map built here a valid assigns map — the same thing
-  # `sub_field_base/1` does, and for the same reason: the adapter component calls `assign_new/3` on
-  # what it is handed, and that raises on a plain map with no change tracking in it.
+  # `__changed__: nil` makes a map built here a valid assigns map, the same way `sub_field_base/1`
+  # does: the adapter component calls `assign_new/3` on what it is handed, which raises on a plain
+  # map with no change tracking in it.
   defp key_map_input(ui, key, name, id, value) do
     %{__changed__: nil, module: ui, name: name, id: id, value: value}
     |> Map.merge(key_map_control(key, value))
     |> dynamic_component()
   end
 
-  # A TOGGLE OR CHECKBOX THAT IS OFF SENDS NOTHING, so both are asked for with the hidden companion
-  # the adapter pairs with them — without it, unticking one could only ever leave the previous value
-  # standing.
+  # A toggle or checkbox that is off sends nothing, so both are drawn with the hidden companion the
+  # adapter pairs with them; without it, unticking one could only leave the previous value standing.
   defp key_map_control(%{type: :toggle}, value),
     do: %{function: :toggle_input, checked: ticked?(value)}
 
@@ -736,8 +734,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       label: nil
     }
 
-  # An empty prompt rather than none, because a key left blank is how a key map says "not set" —
-  # a select with no empty option would be the one control that cannot express it.
+  # An empty prompt rather than none: a key left blank is how a key map says "not set", and a select
+  # with no empty option would be the one control that cannot express it.
   defp key_map_control(%{type: :select} = key, _value),
     do: %{function: :select, options: key.options, prompt: key.placeholder || ""}
 
@@ -1569,10 +1567,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp submitted_once?(%{form: %{source: %{submitted_once?: submitted}}}), do: submitted
   defp submitted_once?(_state), do: false
 
-  # `owner_field` / `owner_index` say WHICH ROW OF WHICH FIELD this sub-field belongs to, which only
-  # a `:key_list` needs: its add and remove buttons have to name a list one level inside a row, and
-  # the name of the input alone (`form[slots][0][attrs]`) is the wrong thing to take that apart
-  # from. They are nil on the embedded path, where rows are AshPhoenix forms addressed by path.
+  # `owner_field` / `owner_index` say which row of which field this sub-field belongs to. Only a
+  # `:key_list` needs them: its add and remove buttons address a list one level inside a row, and
+  # picking that apart from the input name (`form[slots][0][attrs]`) would be guesswork. They are
+  # nil on the embedded path, where rows are AshPhoenix forms addressed by path.
   defp render_sub_field(assigns, sf, opts) do
     assigns
     |> assign(:sf, sf)
@@ -1620,12 +1618,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> dynamic_component()
   end
 
-  # A MAP WHOSE KEYS ARE KNOWN, drawn as the controls their types ask for rather than as a JSON box.
-  #
-  # Each key is named `parent[index][field][key]`, which is the shape a form already posts for a
-  # nested map and the shape Phoenix hands back — so nothing downstream has to learn a new one. The
-  # values are typed on the way in by `Field.Nested.parse_params/2`, which coerces a key map the same
-  # way it coerces the row around it.
+  # A map whose keys are known, drawn as the controls their types ask for rather than as a JSON box.
+  # Each key is named `parent[index][field][key]` — the shape a form already posts for a nested map
+  # and the shape Phoenix hands back. `Field.Nested.parse_params/2` casts the values on the way in.
   defp sub_field_input(%{sf: %{type: :key_map}} = assigns) do
     assigns
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(assigns.sf))
@@ -1633,10 +1628,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> key_map_inputs()
   end
 
-  # AND A LIST OF THOSE MAPS, a row of controls per entry with buttons to add and take away. The
-  # buttons name the list they belong to — field, row index, sub-field — because it lives one level
-  # inside a constrained-map row, which is the one place `add_nested`/`remove_nested` cannot reach.
-  # Where no owner is known (the embedded path) the rows are still drawn; only the buttons are not.
+  # A list of those maps: a row of controls per entry, with buttons to add and remove. The buttons
+  # carry the whole address — field, row index, sub-field — because the list lives one level inside
+  # a constrained-map row, which `add_nested`/`remove_nested` cannot reach. On the embedded path no
+  # owner is known, so the rows are drawn without the buttons.
   defp sub_field_input(%{sf: %{type: :key_list}} = assigns) do
     assigns
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(assigns.sf))

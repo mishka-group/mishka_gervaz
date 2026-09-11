@@ -1,6 +1,6 @@
 defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
   @moduledoc """
-  Nested sub-fields have to actually RENDER, which nothing asked before.
+  Nested sub-fields have to actually render, which nothing asked before.
 
   Every other test of this path checks the field's shape after transformation — is it `:nested`,
   does it have four sub-fields, is `nested_source` right. All of those passed while the template
@@ -67,7 +67,7 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
     end
   end
 
-  # A CLASS IS AN ADDITION, NOT A SWAP. Six resources in this project write
+  # A class is an addition, not a swap. Six resources in this project write
   # `class "font-mono text-sm"` on a code sub-field; none of them means "and drop the border".
   describe "a sub-field's own class" do
     test "is added to the adapter's, not swapped for it" do
@@ -110,7 +110,7 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
     end
   end
 
-  # ONE CLAUSE PER TYPE, so a fix that only reaches `:text` cannot pass for a fix.
+  # One clause per type, so a fix that only reaches `:text` cannot pass for a fix.
   describe "every sub-field type its own clause draws" do
     setup do
       %{base: FormInfo.field(NestedForm, :tags)}
@@ -143,10 +143,10 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
     end
   end
 
-  # THE SAME MISTAKE, ONE LEVEL DOWN. A `:key_map` draws one control per declared key, and each of
-  # those controls was being called as a plain function with a bare map for assigns — which is the
-  # exact crash this file was written about, made again inside the clause that draws them. The type
-  # was also missing from the list above, which is how it got through.
+  # The same mistake, one level down: a `:key_map` draws one control per declared key, and each of
+  # those controls was being called as a plain function with a bare map for assigns — the crash this
+  # file was written about, made again inside the clause that draws them. The type was also missing
+  # from the list above, which is how it got through.
   describe "a key map draws a control for each key it declares" do
     setup do
       keys = [
@@ -203,10 +203,9 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
     end
   end
 
-  # A LIST OF KEY MAPS, one row of controls per entry. The rows live one level inside a
-  # constrained-map row, which is the one place `add_nested`/`remove_nested` cannot reach — so the
-  # buttons carry the whole address, and a render that drops any part of it silently makes them
-  # no-ops.
+  # A list of key maps, one row of controls per entry. The rows live one level inside a
+  # constrained-map row, which `add_nested`/`remove_nested` cannot reach, so the buttons carry the
+  # whole address — and a render that drops any part of it silently makes them no-ops.
   describe "a key list draws a row of controls per entry" do
     setup do
       keys = [
@@ -266,7 +265,7 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
       assert html =~ ~s|name="form[slots][0][attrs][0][required]"|
     end
 
-    # A FORM CANNOT POST AN EMPTY LIST. Without the sentinel the key is simply missing once the last
+    # A form cannot post an empty list. Without the marker the key is simply missing once the last
     # row goes, and "missing" reads as "unchanged" everywhere downstream.
     test "with the sentinel that lets an empty list be posted at all", %{html: html} do
       assert html =~ ~s|name="form[slots][0][attrs][_empty]"|

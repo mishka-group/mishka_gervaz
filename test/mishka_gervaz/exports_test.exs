@@ -1,14 +1,14 @@
 defmodule MishkaGervaz.ExportsTest do
   @moduledoc """
-  `function_exported?/3` answers about a module that is ALREADY IN MEMORY.
+  `function_exported?/3` answers about a module that is already in memory.
 
-  Under Elixir's interactive code loading — which is what `mix phx.server` uses — a module that
-  compiled perfectly and has simply not been reached yet is not in memory, so the answer is `false`.
-  As a capability check that means "no, this type module has no `parse_params/2`" in development and
-  "yes" in a release, which is the worst shape a bug can have.
+  Under Elixir's interactive code loading, which is what `mix phx.server` uses, a module that
+  compiled fine and has simply not been reached yet is not in memory, so the answer is `false`. As a
+  capability check that means "no, this type module has no `parse_params/2`" in development and
+  "yes" in a release.
 
   It was not hypothetical. `MishkaGervaz.Form.Types.Field.Nested` is named in the type registry as
-  DATA and never called by name, so nothing loaded it, so `custom_parse_params?` was false, so every
+  data and never called by name, so nothing loaded it, `custom_parse_params?` was false, and every
   nested field's values went to the changeset uncast — a `:toggle` sub-field storing the string
   `"true"` and every reader that asked `== true` saying no.
 
@@ -31,7 +31,7 @@ defmodule MishkaGervaz.ExportsTest do
     refute :erlang.module_loaded(@unloaded),
            "the purge has to have worked for this to mean anything"
 
-    refute function_exported?(@unloaded, :parse_params, 2), "which is exactly the bug"
+    refute function_exported?(@unloaded, :parse_params, 2), "which is the bug itself"
 
     assert Helpers.exports?(@unloaded, :parse_params, 2)
   end

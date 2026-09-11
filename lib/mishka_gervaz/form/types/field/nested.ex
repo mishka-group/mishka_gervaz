@@ -1,6 +1,6 @@
 defmodule MishkaGervaz.Form.Types.Field.Nested do
   @moduledoc """
-  Nested / embedded form field type. Used for `inputs_for` and constrained-map fields.
+  Nested / embedded form field type, used for `inputs_for` and constrained-map columns.
 
   ## Example
 
@@ -19,24 +19,25 @@ defmodule MishkaGervaz.Form.Types.Field.Nested do
         end
       end
 
-  ## Sub-fields are typed on the way IN, not only on the way out
+  ## Sub-field values are cast on the way in
 
-  A browser sends every input as a string. For a top-level field that is Ash's problem and Ash solves
-  it — the attribute has a type and the cast happens at the changeset. A nested field on a
-  constrained MAP column has no such luck: `attrs: {:array, :map}` with `fields: [opts: [type: :map]]`
-  accepts whatever shape it is handed, so a `:checkbox` sub-field stored `"true"`, a `:number` stored
-  `"3"`, and every reader downstream had to know that and cope.
+  A browser sends every input as a string. For a top-level field Ash casts it at the changeset,
+  because the attribute has a type. A nested field on a constrained-map column does not get that:
+  `attrs: {:array, :map}` with `fields: [opts: [type: :map]]` accepts whatever shape it is handed,
+  so a `:checkbox` sub-field would store `"true"` and a `:number` sub-field `"3"`.
 
-  They did not cope. A component declaring `required` through the form stored the string `"true"`,
-  and `Inspector.required?/1` — which asks `== true`, as anything reading a boolean should — saw a
-  string and said no. The declaration looked right in the form and did nothing anywhere else.
+  So `parse_params/2` casts each row by its sub-field's declared type before the value reaches the
+  changeset:
 
-  So `parse_params/2` coerces each row by the sub-field's DECLARED type before the value reaches the
-  changeset: the declaration is already there, it is the only thing that knows what the string was
-  meant to be, and doing it once here is the alternative to every reader guessing.
+  | Sub-field type        | Cast                                                        |
+  |-----------------------|-------------------------------------------------------------|
+  | `:checkbox`, `:toggle`| `"true"` / `"on"` / `"1"` to `true`; `"false"` / `"off"` / `"0"` / `""` to `false` |
+  | `:number`             | integer, then float                                          |
+  | `:key_map`            | each declared key cast, then blanks dropped                  |
+  | `:key_list`           | each row cast and pruned, then empty rows dropped            |
 
-  Anything it cannot make sense of is left exactly as it came. A value that is already the right type
-  — a record being re-submitted, a param built in code — passes through untouched.
+  Anything it cannot make sense of is left exactly as it came, and a value that is already the
+  right type — a record being re-submitted, a param built in code — passes through untouched.
 
   See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
@@ -82,10 +83,9 @@ defmodule MishkaGervaz.Form.Types.Field.Nested do
 
   defp coerce_row(row, _declared), do: row
 
-  # A CHECKBOX THAT IS NOT TICKED SENDS NOTHING AT ALL, which is why `false` is reachable here only
-  # through the hidden companion input the template pairs with it. An absent key is left absent
-  # rather than invented: "unticked" and "this form does not draw that field" are different, and only
-  # the first one is this function's business.
+  # An unticked checkbox sends nothing, so `false` only reaches here through the hidden companion
+  # input the template pairs with it. An absent key stays absent rather than being invented as
+  # `false`: "unticked" and "this form does not draw that field" are different things.
   defp coerce(value, %{type: type}) when type in [:checkbox, :toggle] do
     cond do
       value in @truthy -> true
@@ -105,9 +105,9 @@ defmodule MishkaGervaz.Form.Types.Field.Nested do
     end
   end
 
-  # A KEY MAP IS A ROW OF ITS OWN, so its declared keys are coerced the same way this row's were —
-  # and THEN pruned, in that order: a toggle left off arrives as the string "false" from its hidden
-  # companion, which is only recognisable as "nothing to store" once it is a boolean.
+  # A key map is a row of its own, so its declared keys are cast the same way this row's were, and
+  # then pruned — in that order. A toggle left off arrives as the string "false" from its hidden
+  # companion, and is only recognisable as "nothing to store" once it is a boolean.
   defp coerce(value, %{type: :key_map} = sub) when is_map(value) and not is_struct(value) do
     keys = MishkaGervaz.Form.Types.Field.KeyMap.keys(sub)
 
@@ -116,8 +116,8 @@ defmodule MishkaGervaz.Form.Types.Field.Nested do
     |> MishkaGervaz.Form.Types.Field.KeyMap.parse_params(%{keys: keys})
   end
 
-  # AND A KEY LIST IS A LIST OF THOSE, coerced and pruned row by row. A row with nothing left in it
-  # is dropped: pressing "add" and thinking better of it should cost nothing.
+  # A key list is a list of those, cast and pruned row by row. A row with nothing left in it is
+  # dropped, so adding a row and then leaving it costs nothing.
   defp coerce(value, %{type: :key_list} = sub) do
     keys = MishkaGervaz.Form.Types.Field.KeyMap.keys(sub)
 

@@ -19,9 +19,9 @@ defmodule MishkaGervaz.Form.Types.KeyListTest do
     ]
   end
 
-  # A FORM POSTS `attrs[0][name]`, `attrs[1][name]`, which Phoenix hands back as an index-keyed map —
-  # and a map has no order, so the indices ARE the order. A record read back off the column is
-  # already a list and is taken as it stands.
+  # A form posts `attrs[0][name]`, `attrs[1][name]`, which Phoenix hands back as an index-keyed map;
+  # a map has no order, so the indices are the order. A value read back off the column is already a
+  # list and is taken as it stands.
   describe "rows/1" do
     test "reads an index-keyed map in index order, not map order" do
       posted = %{"10" => %{"name" => "k"}, "2" => %{"name" => "b"}, "0" => %{"name" => "a"}}
@@ -67,10 +67,9 @@ defmodule MishkaGervaz.Form.Types.KeyListTest do
     end
   end
 
-  # THE PAIR PRODUCTION ACTUALLY RUNS. `Nested.parse_params/2` is what the form calls, and it
-  # coerces each row by its declared type BEFORE pruning it — a toggle left off arrives as the
-  # string "false" from its hidden companion, and is only recognisable as nothing-to-store once it
-  # is a boolean.
+  # The pair production actually runs. `Nested.parse_params/2` is what the form calls, and it casts
+  # each row by its declared type before pruning it: a toggle left off arrives as the string "false"
+  # from its hidden companion, and is only recognisable as nothing-to-store once it is a boolean.
   describe "through Nested.parse_params/2, the way the form calls it" do
     defp field do
       %{nested_fields: [%{name: :attrs, type: :key_list, options: declared()}]}

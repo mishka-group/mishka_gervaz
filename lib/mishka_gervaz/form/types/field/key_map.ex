@@ -1,17 +1,15 @@
 defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   @moduledoc """
-  A MAP whose keys are known, drawn as real controls instead of a JSON box.
+  Map field type whose keys are declared, drawn as one control per key.
 
-  ## What it is for
+  Use it for a constrained-map column whose shape is fixed and small — a Phoenix attribute's
+  `opts`, a set of feature switches, a pair of coordinates. Use `:json` instead when the keys are
+  not known ahead of time.
 
-  `:json` is the right field for a map whose shape nobody can predict — a settings blob, an imported
-  payload, a schema fragment. It is the wrong one for a map whose keys are *declared and few*, and a
-  great many constrained-map columns are exactly that: a Phoenix attribute's `opts` is
-  `required` / `default` / `doc` and nothing else, forever.
+  Each declared key is rendered through the form's UI adapter in the control its `:type` asks for,
+  and the field hands back a plain map with string keys.
 
-  Given a JSON textarea for those three, an author has to know the key names, know they are strings,
-  know the quoting, and get the braces right — to tick one box. This draws the keys the declaration
-  names, in the controls their types ask for, and hands back a map.
+  ## Example
 
       nested_field :opts, :key_map do
         options [
@@ -21,18 +19,31 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
         ]
       end
 
-  Each key takes `:name` and optionally `:type` (`:text`, `:textarea`, `:toggle`, `:checkbox`,
-  `:number`, `:select`), `:label`, `:placeholder` and, for a select, `:options`.
+  ## Declaring keys
 
-  ## Empty means absent
+  Keys are read from `options`, the same place a `:select` keeps the list it offers. Each key is a
+  keyword list or a map:
 
-  A key left blank is DROPPED rather than written as `""`, and a toggle left off is dropped rather
-  than written as `false`. A constrained map is read by asking whether a key is there — Phoenix's own
-  `attr` treats `default: nil` and no default as different things — so writing every declared key on
-  every save would turn "not set" into "set to nothing" for every reader downstream.
+  | Key            | Required      | Meaning                                                     |
+  |----------------|---------------|-------------------------------------------------------------|
+  | `:name`        | yes           | the key written into the map                                 |
+  | `:type`        | no (`:text`)  | `:text`, `:textarea`, `:toggle`, `:checkbox`, `:number`, `:select` |
+  | `:label`       | no            | shown above the control; humanized from `:name` otherwise    |
+  | `:placeholder` | no            | placeholder text, or the empty option's label on a `:select` |
+  | `:options`     | for `:select` | the choices, as `{label, value}` pairs or bare values        |
 
-  See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field.Nested`, which
-  coerces a key map's values the same way it coerces the row around it.
+  ## Blank keys are dropped
+
+  A key left blank is omitted from the stored map rather than written as `""`, and a toggle left
+  off is omitted rather than written as `false`. A constrained map is usually read by asking
+  whether a key is present — Phoenix's own `attr` treats `default: nil` and no default as different
+  things — so writing every declared key on every save would turn "not set" into "set to nothing".
+
+  Values are cast to their declared type before they reach the changeset; see
+  `MishkaGervaz.Form.Types.Field.Nested`.
+
+  See `MishkaGervaz.Form.Behaviours.FieldType`, `MishkaGervaz.Form.Types.Field`, and
+  `MishkaGervaz.Form.Types.Field.KeyList` for the repeating version.
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
@@ -57,10 +68,13 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   def default_ui, do: %{type: :key_map}
 
   @doc """
-  The declared keys, normalised to maps carrying at least `:name` and `:type`.
+  The declared keys, normalised to maps with `:name`, `:type`, `:label`, `:placeholder` and
+  `:options`.
 
-  Read off the sub-field's `options`, which is where a `:select` sub-field already keeps the list it
-  offers — one place on the declaration for "what this field may contain", whatever the field is.
+  Reads `:keys` if the config carries one, `:options` otherwise. Keys with no `:name` are dropped.
+
+      iex> MishkaGervaz.Form.Types.Field.KeyMap.keys(%{options: [[name: :doc]]})
+      [%{name: :doc, type: :text, label: nil, placeholder: nil, options: []}]
   """
   @spec keys(map() | keyword() | nil) :: [map()]
   def keys(config) do

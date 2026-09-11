@@ -38,7 +38,7 @@ defmodule MishkaGervaz.Form.Types.KeyMapTest do
     end
   end
 
-  # EMPTY MEANS ABSENT. A constrained map is read by asking whether a key is there — Phoenix's own
+  # Empty means absent. A constrained map is read by asking whether a key is there — Phoenix's own
   # `attr` treats `default: nil` and no default as different things — so writing every declared key
   # on every save would turn "not set" into "set to nothing" for every reader downstream.
   describe "parse_params/2" do

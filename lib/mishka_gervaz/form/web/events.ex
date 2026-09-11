@@ -570,9 +570,8 @@ defmodule MishkaGervaz.Form.Web.Events do
     end
   end
 
-  # A LIST INSIDE A ROW. `add_nested` and `remove_nested` above reach the rows of a constrained-map
-  # field; a `:key_list` sub-field lives one level further in — `params[field][index][sub]` — and
-  # nothing reached there, which is why the only editor such a list could ever have was a JSON box.
+  # `add_nested` and `remove_nested` above reach the rows of a constrained-map field. A `:key_list`
+  # sub-field lives one level further in, at `params[field][index][sub]`, which these two address.
   def do_handle("add_key_row", %{"field" => field, "index" => index, "sub" => sub}, state, socket) do
     update_key_rows(state, socket, field, index, sub, &(&1 ++ [%{}]))
   end
@@ -594,10 +593,10 @@ defmodule MishkaGervaz.Form.Web.Events do
     {:noreply, socket}
   end
 
-  # EVERY PART OF THE ADDRESS ARRIVED FROM THE CLIENT, so every part is checked against the
+  # Every part of the address arrives from the client, so every part is checked against the
   # declaration before anything is written: the field must be one this form declares, the sub-field
-  # must be a `:key_list` ON that field, and the row must exist. A crafted `phx-value` can otherwise
-  # put an arbitrary key into a constrained map.
+  # must be a `:key_list` on that field, and the row must exist. Without those checks a crafted
+  # `phx-value` could put an arbitrary key into a constrained map.
   defp update_key_rows(state, socket, field_name, index, sub, change) do
     with %{} = form <- state.form,
          true <- MishkaGervaz.Helpers.known_name?(field_name, state),
@@ -644,8 +643,8 @@ defmodule MishkaGervaz.Form.Web.Events do
     end
   end
 
-  # The tail every one of these events shares: validate the rewritten params, rebuild the errors if
-  # this form is showing any yet, and hand the state back.
+  # The tail these events share: validate the rewritten params, rebuild the errors if this form is
+  # showing any yet, and hand the state back.
   defp revalidate(state, socket, params) do
     source = state.form.source
 
