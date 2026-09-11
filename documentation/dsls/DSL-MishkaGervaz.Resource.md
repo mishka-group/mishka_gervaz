@@ -2461,7 +2461,7 @@ Define a sub-field within a nested/embedded form field.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`name`](#mishka_gervaz-form-fields-field-nested_field-name){: #mishka_gervaz-form-fields-field-nested_field-name .spark-required} | `atom` |  | Sub-field name. Must match an attribute on the embedded resource. |
-| [`type`](#mishka_gervaz-form-fields-field-nested_field-type){: #mishka_gervaz-form-fields-field-nested_field-type } | `nil \| :text \| :textarea \| :number \| :checkbox \| :date \| :datetime \| :select \| :hidden \| :toggle \| :range \| :json` |  | Sub-field type. Nil for auto-detection from embedded attribute. |
+| [`type`](#mishka_gervaz-form-fields-field-nested_field-type){: #mishka_gervaz-form-fields-field-nested_field-type } | `nil \| :text \| :textarea \| :number \| :checkbox \| :date \| :datetime \| :select \| :hidden \| :toggle \| :range \| :json \| :key_map \| :key_list` |  | Sub-field type. Nil for auto-detection from embedded attribute. |
 ### Options
 
 | Name | Type | Default | Docs |
@@ -2470,7 +2470,7 @@ Define a sub-field within a nested/embedded form field.
 | [`visible`](#mishka_gervaz-form-fields-field-nested_field-visible){: #mishka_gervaz-form-fields-field-nested_field-visible } | `boolean` | `true` | Whether this sub-field is visible. |
 | [`readonly`](#mishka_gervaz-form-fields-field-nested_field-readonly){: #mishka_gervaz-form-fields-field-nested_field-readonly } | `boolean` | `false` | Render as read-only. |
 | [`default`](#mishka_gervaz-form-fields-field-nested_field-default){: #mishka_gervaz-form-fields-field-nested_field-default } | `any` |  | Default value for this sub-field. |
-| [`options`](#mishka_gervaz-form-fields-field-nested_field-options){: #mishka_gervaz-form-fields-field-nested_field-options } | `list(any)` |  | Options for select-type sub-fields. |
+| [`options`](#mishka_gervaz-form-fields-field-nested_field-options){: #mishka_gervaz-form-fields-field-nested_field-options } | `list(any)` |  | What this sub-field may contain: the choices for a `:select`, or the declared keys for a `:key_map` or `:key_list` (each `[name:, type:, label:, placeholder:]`). |
 | [`position`](#mishka_gervaz-form-fields-field-nested_field-position){: #mishka_gervaz-form-fields-field-nested_field-position } | `any` |  | Position in the nested field list (integer, :first, :last, {:before, :field}, {:after, :field}). |
 
 
@@ -2494,6 +2494,8 @@ UI/presentation configuration for the nested sub-field.
 | [`class`](#mishka_gervaz-form-fields-field-nested_field-ui-class){: #mishka_gervaz-form-fields-field-nested_field-ui-class } | `String.t` |  | CSS classes for this sub-field input. |
 | [`rows`](#mishka_gervaz-form-fields-field-nested_field-ui-rows){: #mishka_gervaz-form-fields-field-nested_field-ui-rows } | `integer` |  | Number of rows for textarea sub-fields. |
 | [`span`](#mishka_gervaz-form-fields-field-nested_field-ui-span){: #mishka_gervaz-form-fields-field-nested_field-ui-span } | `pos_integer` |  | Grid column span (1-2). |
+| [`add_label`](#mishka_gervaz-form-fields-field-nested_field-ui-add_label){: #mishka_gervaz-form-fields-field-nested_field-ui-add_label } | `String.t \| (-> any)` |  | Label of the button that adds a row to a `:key_list` sub-field. |
+| [`remove_label`](#mishka_gervaz-form-fields-field-nested_field-ui-remove_label){: #mishka_gervaz-form-fields-field-nested_field-ui-remove_label } | `String.t \| (-> any)` |  | Label of the button that removes one row of a `:key_list` sub-field. |
 | [`extra`](#mishka_gervaz-form-fields-field-nested_field-ui-extra){: #mishka_gervaz-form-fields-field-nested_field-ui-extra } | `map` | `%{}` | Additional options. |
 
 
