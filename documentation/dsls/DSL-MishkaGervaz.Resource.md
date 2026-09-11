@@ -2338,7 +2338,7 @@ Define a form field.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`name`](#mishka_gervaz-form-fields-field-name){: #mishka_gervaz-form-fields-field-name .spark-required} | `atom` |  | Field identifier. |
-| [`type`](#mishka_gervaz-form-fields-field-type){: #mishka_gervaz-form-fields-field-type } | `nil \| :text \| :password \| :textarea \| :number \| :checkbox \| :date \| :datetime \| :select \| :multi_select \| :relation \| :json \| :nested \| :array_of_maps \| :string_list \| :file \| :hidden \| :toggle \| :range \| :upload \| :combobox \| module` |  | Field type. Built-in atom, custom module implementing FieldType behaviour, or nil for auto-detection from Ash attribute. |
+| [`type`](#mishka_gervaz-form-fields-field-type){: #mishka_gervaz-form-fields-field-type } | `nil \| :text \| :password \| :textarea \| :number \| :checkbox \| :date \| :datetime \| :select \| :multi_select \| :relation \| :json \| :key_map \| :key_list \| :nested \| :array_of_maps \| :string_list \| :file \| :hidden \| :toggle \| :range \| :upload \| :combobox \| module` |  | Field type. Built-in atom, custom module implementing FieldType behaviour, or nil for auto-detection from Ash attribute. |
 ### Options
 
 | Name | Type | Default | Docs |

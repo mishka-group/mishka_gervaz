@@ -14,7 +14,9 @@ defmodule MishkaGervaz.Form.Web.KeyRowEventsTest do
 
   import MishkaGervaz.Test.FormWebHelpers
 
+  alias MishkaGervaz.Form.Types.Field.KeyList
   alias MishkaGervaz.Form.Web.Events
+  alias MishkaGervaz.Form.Web.Events.Helpers, as: EventsHelpers
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Test.Resources.ConstrainedMapForm
 
@@ -136,6 +138,115 @@ defmodule MishkaGervaz.Form.Web.KeyRowEventsTest do
 
       assert {:noreply, _socket} = add(socket, @address)
       assert {:noreply, _socket} = remove(socket, Map.put(@address, "row", "0"))
+    end
+  end
+
+  # A top-level `:key_list` is a field over an `{:array, :map}` column, and its rows are the rows
+  # `add_nested` and `remove_nested` have always added and removed for a constrained-map field. No
+  # third pair of events was written for it; these prove the existing two reach it.
+  describe "the existing nested events answer for a top-level key list" do
+    defp top_socket(links) do
+      form =
+        ConstrainedMapForm
+        |> AshPhoenix.Form.for_create(:create, forms: [auto?: false])
+        |> AshPhoenix.Form.validate(%{"title" => "t", "links" => links})
+        |> Phoenix.Component.to_form()
+
+      [fields: [FormInfo.field(ConstrainedMapForm, :links)], groups: []]
+      |> then(&build_state(static_opts: &1, mode: :create, form: form))
+      |> build_socket()
+    end
+
+    defp links_of(socket) do
+      socket.assigns.form_state.form.source
+      |> AshPhoenix.Form.params()
+      |> Map.get("links")
+    end
+
+    test "add_nested appends a row" do
+      {:noreply, socket} = Events.handle("add_nested", %{"field" => "links"}, top_socket(%{}))
+
+      assert links_of(socket) == %{"0" => %{}}
+    end
+
+    test "and keeps the rows already there, in order" do
+      rows = %{"0" => %{"platform" => "github"}, "1" => %{"platform" => "mastodon"}}
+
+      {:noreply, socket} = Events.handle("add_nested", %{"field" => "links"}, top_socket(rows))
+
+      assert %{
+               "0" => %{"platform" => "github"},
+               "1" => %{"platform" => "mastodon"},
+               "2" => %{}
+             } = links_of(socket)
+    end
+
+    test "remove_nested takes one out and closes the gap" do
+      rows = %{"0" => %{"platform" => "github"}, "1" => %{"platform" => "mastodon"}}
+
+      {:noreply, socket} =
+        Events.handle("remove_nested", %{"field" => "links", "index" => "0"}, top_socket(rows))
+
+      assert links_of(socket) == %{"0" => %{"platform" => "mastodon"}}
+    end
+
+    test "including the last one" do
+      {:noreply, socket} =
+        Events.handle(
+          "remove_nested",
+          %{"field" => "links", "index" => "0"},
+          top_socket(%{"0" => %{"platform" => "github"}})
+        )
+
+      assert links_of(socket) == %{}
+    end
+
+    test "and a field this form does not declare writes nothing" do
+      {:noreply, socket} = Events.handle("add_nested", %{"field" => "secrets"}, top_socket(%{}))
+
+      assert links_of(socket) == %{}
+    end
+  end
+
+  # What the form calls on the way in. A top-level field is cast by its own type module, so the
+  # marker becomes an empty list and a row left blank never reaches the column.
+  describe "parse_params for a top-level key list" do
+    defp links_field, do: FormInfo.field(ConstrainedMapForm, :links)
+
+    test "types each row and drops the blanks" do
+      posted = %{
+        "_empty" => "1",
+        "0" => %{"platform" => "github", "url" => "https://gh"},
+        "1" => %{"platform" => "  ", "url" => ""}
+      }
+
+      assert KeyList.parse_params(posted, links_field()) == [
+               %{"platform" => "github", "url" => "https://gh"}
+             ]
+    end
+
+    test "and the marker alone empties the list rather than leaving it untouched" do
+      assert KeyList.parse_params(%{"_empty" => "1"}, links_field()) == []
+    end
+
+    test "through the helper the form actually calls" do
+      params = %{"links" => %{"_empty" => "1", "0" => %{"platform" => "github"}}}
+
+      assert %{"links" => [%{"platform" => "github"}]} =
+               EventsHelpers.parse_typed_params([field_config(links_field())], params)
+    end
+
+    # The flag that decides whether the type module is consulted at all is computed from the field,
+    # so a top-level key list has to arrive at the form already carrying it.
+    test "and the field says it has a parse_params to call" do
+      assert field_config(links_field()).custom_parse_params?
+    end
+
+    defp field_config(field) do
+      attributes =
+        Map.new(Ash.Resource.Info.attributes(ConstrainedMapForm), &{&1.name, &1})
+
+      MishkaGervaz.Form.Web.State.FieldBuilder.Default.build_field_config(field, attributes, %{})
     end
   end
 end

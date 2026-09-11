@@ -11,6 +11,17 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
 
   ## Example
 
+  As a field of its own, over a `:map` column:
+
+      field :settings, :key_map do
+        options [
+          [name: :theme, type: :select, options: ~w(light dark), label: "Theme"],
+          [name: :compact, type: :toggle, label: "Compact"]
+        ]
+      end
+
+  Or as a sub-field of a nested row, which is where a Phoenix attribute's `opts` lives:
+
       nested_field :opts, :key_map do
         options [
           [name: :required, type: :toggle, label: "Required"],
@@ -56,10 +67,15 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
 
   @impl true
   def parse_params(value, config) when is_map(value) and not is_struct(value) do
-    value
-    |> Map.take(Enum.map(keys(config), &to_string(name_of(&1))))
-    |> Enum.reject(fn {_key, raw} -> blank?(raw) end)
-    |> Map.new()
+    # Keyed either way. Form params arrive with string keys, but a value that has been through a cast
+    # — Ash hands the declared fields of a constrained map back as atoms — arrives with atom ones,
+    # and taking only the strings would have emptied it. String keys on the way out, because that is
+    # what the column stores.
+    for key <- keys(config),
+        raw = Map.get(value, to_string(key.name), Map.get(value, key.name)),
+        not blank?(raw),
+        into: %{},
+        do: {to_string(key.name), raw}
   end
 
   def parse_params(value, _config), do: value
@@ -102,8 +118,6 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   end
 
   defp normalise(_other), do: %{name: nil, type: :text, label: nil, placeholder: nil, options: []}
-
-  defp name_of(%{name: name}), do: name
 
   defp fetch(config, key) when is_map(config), do: Map.get(config, key)
   defp fetch(config, key) when is_list(config), do: Keyword.get(config, key)

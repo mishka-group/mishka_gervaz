@@ -1366,11 +1366,38 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
             end
           end
         end
+
+        # A list of maps with declared keys as a field in its own right, rather than as a sub-field
+        # of a nested row.
+        field :links, :key_list do
+          options [
+            [name: :platform, type: :text, placeholder: "e.g. github"],
+            [name: :url, type: :text, placeholder: "https://…"]
+          ]
+
+          ui do
+            label "Links"
+            add_label "+ Add Link"
+            remove_label "Drop"
+          end
+        end
+
+        # And a single map with declared keys, the same way.
+        field :settings, :key_map do
+          options [
+            [name: :theme, type: :text, label: "Theme"],
+            [name: :compact, type: :toggle, label: "Compact"]
+          ]
+
+          ui do
+            label "Settings"
+          end
+        end
       end
 
       groups do
         group :main do
-          fields [:title, :slots]
+          fields [:title, :slots, :links, :settings]
 
           ui do
             label "Main"
@@ -1420,6 +1447,16 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
                       ]
                     ]
                   ]
+    end
+
+    attribute :links, {:array, :map} do
+      default []
+      public? true
+    end
+
+    attribute :settings, :map do
+      default %{}
+      public? true
     end
 
     create_timestamp :inserted_at

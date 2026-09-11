@@ -42,6 +42,16 @@ defmodule MishkaGervaz.Form.Types.KeyMapTest do
   # `attr` treats `default: nil` and no default as different things — so writing every declared key
   # on every save would turn "not set" into "set to nothing" for every reader downstream.
   describe "parse_params/2" do
+    # Keyed either way. Form params arrive with string keys, but a value that has been through a cast
+    # — Ash hands the declared fields of a constrained map back as atoms — arrives with atom ones,
+    # and taking only the strings emptied it.
+    test "reads an atom-keyed value too, and stores string keys either way" do
+      assert KeyMap.parse_params(%{required: true, doc: "hi"}, %{options: declared()}) == %{
+               "required" => true,
+               "doc" => "hi"
+             }
+    end
+
     test "keeps only the declared keys" do
       value = %{"required" => "true", "doc" => "hi", "smuggled" => "x"}
 

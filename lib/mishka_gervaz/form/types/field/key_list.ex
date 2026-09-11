@@ -9,6 +9,22 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
 
   ## Example
 
+  As a field of its own, over an `{:array, :map}` column:
+
+      field :social_links, :key_list do
+        options [
+          [name: :platform, type: :text, placeholder: "e.g. github"],
+          [name: :url, type: :text, placeholder: "https://…"]
+        ]
+
+        ui do
+          label "Social links"
+          add_label "+ Add link"
+        end
+      end
+
+  Or as a sub-field of a nested row, which is where a Phoenix slot's `attrs` lives:
+
       nested_field :attrs, :key_list do
         options [
           [name: :name, type: :text, placeholder: "e.g. label"],
@@ -28,10 +44,16 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
 
   ## Where it works
 
-  Rows are added and removed by the `add_key_row` and `remove_key_row` events, which address a list
-  one level inside a constrained-map row. That means a `:key_list` belongs on a `field … :nested`
-  over a `{:array, :map}` column. On an embedded nested field the rows still render, but without
-  the two buttons.
+  Both positions carry the same controls; only the events behind the two buttons differ, because
+  the two lists sit at different depths in the params:
+
+  | Position                        | Column               | Rows added and removed by       |
+  |---------------------------------|----------------------|----------------------------------|
+  | a field of its own              | `{:array, :map}`     | `add_nested` / `remove_nested`   |
+  | a sub-field of a `:nested` field | a constrained map    | `add_key_row` / `remove_key_row` |
+
+  A sub-field only gets the buttons on the constrained-map path, where a row has an index to
+  address. On an embedded nested field its rows still render, read-only.
 
   ## Empty rows are dropped
 
@@ -84,7 +106,12 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
 
   def rows(value) when is_map(value) and not is_struct(value) do
     value
-    |> Enum.sort_by(fn {index, _row} -> position(index) end)
+    |> Enum.sort_by(fn {index, _row} ->
+      case index |> to_string() |> Integer.parse() do
+        {number, ""} -> number
+        _not_a_number -> 0
+      end
+    end)
     |> Enum.map(&elem(&1, 1))
     |> Enum.filter(&plain_map?/1)
   end
@@ -92,11 +119,4 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
   def rows(_value), do: []
 
   defp plain_map?(row), do: is_map(row) and not is_struct(row)
-
-  defp position(index) do
-    case index |> to_string() |> Integer.parse() do
-      {number, ""} -> number
-      _not_a_number -> 0
-    end
-  end
 end

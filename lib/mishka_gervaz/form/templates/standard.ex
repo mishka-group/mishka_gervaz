@@ -635,6 +635,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   # One control per key, drawn through the same UI adapter every other input in this form goes
   # through, so a key map inherits the project's look, disabled states and markup rather than
   # carrying a second set of inputs that would drift from them.
+  # A row reaches here keyed either way: raw form params keep string keys, while a value read back
+  # through the form has been cast, and Ash casts the declared fields of a constrained map to atom
+  # keys. Reading only one of the two drew a stored row as empty, which looks exactly like the value
+  # having been lost.
   defp key_map_inputs(assigns) do
     ~H"""
     <div class="grid grid-cols-2 gap-2.5">
@@ -650,7 +654,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           key,
           "#{@input_name}[#{key.name}]",
           "#{@input_id}_#{key.name}",
-          Map.get(@held, to_string(key.name))
+          Map.get(@held, to_string(key.name), Map.get(@held, key.name))
         )}
       </div>
     </div>
@@ -669,15 +673,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <button
             :if={@editable?}
             type="button"
-            phx-click="remove_key_row"
-            phx-value-field={@owner_field}
-            phx-value-index={@owner_index}
-            phx-value-sub={@sf.name}
-            phx-value-row={index}
             phx-target={@target}
             class="inline-flex h-6 shrink-0 items-center rounded-[7px] px-2 text-[11px] font-semibold text-[#c0392b] transition-colors hover:bg-[#fdf4f3]"
+            {row_event(@owner, :remove, index)}
           >
-            {@sf.remove_label || dgettext("mishka_gervaz", "Remove")}
+            {@remove_label || dgettext("mishka_gervaz", "Remove")}
           </button>
         </div>
         <.key_map_inputs
@@ -698,18 +698,54 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <button
         :if={@editable?}
         type="button"
-        phx-click="add_key_row"
-        phx-value-field={@owner_field}
-        phx-value-index={@owner_index}
-        phx-value-sub={@sf.name}
         phx-target={@target}
         class="inline-flex h-9 w-full items-center justify-center rounded-[11px] border border-dashed border-[#dcdbf5] bg-[#f7f6fd] text-[11.5px] font-semibold text-[#4f4bcc] transition-colors hover:border-[#c3c1f0] hover:bg-[#f2f1fc]"
+        {row_event(@owner, :add, nil)}
       >
-        {@sf.add_label || dgettext("mishka_gervaz", "+ Add")}
+        {@add_label || dgettext("mishka_gervaz", "+ Add")}
       </button>
     </div>
     """
   end
+
+  # Which list a button is talking about, in the vocabulary of the event that answers it.
+  #
+  # A `:key_list` sits in one of two places. At the top level it is a field of its own over an
+  # `{:array, :map}` column, and its rows are the rows `add_nested`/`remove_nested` have always
+  # added and removed. Inside a nested row it is one level further in — `params[field][index][sub]` —
+  # which those two cannot reach, so `add_key_row`/`remove_key_row` answer for it instead.
+  #
+  # Everything else about the two is identical, so the difference lives here rather than in a second
+  # copy of the markup.
+  defp row_event(%{kind: :top, field: field}, :add, _index),
+    do: %{"phx-click" => "add_nested", "phx-value-field" => field}
+
+  defp row_event(%{kind: :top, field: field}, :remove, index),
+    do: %{
+      "phx-click" => "remove_nested",
+      "phx-value-field" => field,
+      "phx-value-index" => index
+    }
+
+  defp row_event(%{kind: :sub} = owner, :add, _index),
+    do: %{
+      "phx-click" => "add_key_row",
+      "phx-value-field" => owner.field,
+      "phx-value-index" => owner.index,
+      "phx-value-sub" => owner.sub
+    }
+
+  defp row_event(%{kind: :sub} = owner, :remove, index),
+    do: %{
+      "phx-click" => "remove_key_row",
+      "phx-value-field" => owner.field,
+      "phx-value-index" => owner.index,
+      "phx-value-sub" => owner.sub,
+      "phx-value-row" => index
+    }
+
+  # Nothing can be added or removed, so the buttons are not drawn and never ask.
+  defp row_event(_no_owner, _which, _index), do: %{}
 
   # `__changed__: nil` makes a map built here a valid assigns map, the same way `sub_field_base/1`
   # does: the adapter component calls `assign_new/3` on what it is handed, which raises on a plain
@@ -1321,6 +1357,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       :string_list ->
         render_string_list_input(ui, field, form_field, assigns)
 
+      :key_map ->
+        render_key_map_input(field, form_field, assigns)
+
+      :key_list ->
+        render_key_list_input(field, form_field, assigns)
+
       :nested ->
         render_nested_input(ui, field, form_field, assigns)
 
@@ -1387,6 +1429,46 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
     |> assign(:target, assigns[:myself])
     |> dynamic_component()
+  end
+
+  # A map with declared keys, as a field of its own rather than a sub-field of a nested row. There is
+  # nothing to add or remove — the keys are the declaration — so this is the same row of controls a
+  # nested `:key_map` draws, with the field's own input name in front of it.
+  defp render_key_map_input(field, form_field, assigns) do
+    held = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+
+    assigns
+    |> assign(:ui, assigns.static.ui_adapter)
+    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(field))
+    |> assign(:held, ((is_map(held) and not is_struct(held)) && held) || %{})
+    |> assign(:input_name, form_field.name)
+    |> assign(:input_id, form_field.id)
+    |> key_map_inputs()
+  end
+
+  # And a list of those, over an `{:array, :map}` column. Its rows are the rows `add_nested` and
+  # `remove_nested` have always added and removed for a constrained-map field, so they answer for it
+  # rather than a third pair of events being written — see `row_event/3`.
+  defp render_key_list_input(field, form_field, assigns) do
+    readonly? = evaluate_readonly(field, assigns.state)
+
+    assigns
+    |> assign(:ui, assigns.static.ui_adapter)
+    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(field))
+    |> assign(
+      :rows,
+      MishkaGervaz.Form.Types.Field.KeyList.rows(
+        Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+      )
+    )
+    |> assign(:editable?, not readonly?)
+    |> assign(:add_label, resolve_nested_label(field, :add_label, nil))
+    |> assign(:remove_label, resolve_nested_label(field, :remove_label, nil))
+    |> assign(:owner, (readonly? && nil) || %{kind: :top, field: to_string(field.name)})
+    |> assign(:input_name, form_field.name)
+    |> assign(:input_id, form_field.id)
+    |> assign(:target, assigns[:myself])
+    |> key_list_rows()
   end
 
   defp render_nested_input(ui, field, form_field, assigns) do
@@ -1633,10 +1715,24 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   # a constrained-map row, which `add_nested`/`remove_nested` cannot reach. On the embedded path no
   # owner is known, so the rows are drawn without the buttons.
   defp sub_field_input(%{sf: %{type: :key_list}} = assigns) do
+    editable? = is_binary(assigns.owner_field) and not assigns.sf.readonly
+
     assigns
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(assigns.sf))
     |> assign(:rows, MishkaGervaz.Form.Types.Field.KeyList.rows(assigns.input_value))
-    |> assign(:editable?, is_binary(assigns.owner_field) and not assigns.sf.readonly)
+    |> assign(:editable?, editable?)
+    |> assign(:add_label, assigns.sf.add_label)
+    |> assign(:remove_label, assigns.sf.remove_label)
+    |> assign(
+      :owner,
+      (editable? &&
+         %{
+           kind: :sub,
+           field: assigns.owner_field,
+           index: assigns.owner_index,
+           sub: assigns.sf.name
+         }) || nil
+    )
     |> key_list_rows()
   end
 

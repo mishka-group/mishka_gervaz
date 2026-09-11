@@ -154,6 +154,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :multi_select,
     :relation,
     :json,
+    :key_map,
+    :key_list,
     :nested,
     :array_of_maps,
     :string_list,

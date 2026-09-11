@@ -625,7 +625,20 @@ defmodule MishkaGervaz.Form.Web.Events do
           {to_string(position), decode_constrained_entry(one, json_subs)}
         end)
 
-      revalidate(state, socket, Map.put(params, field_name, updated))
+      validated =
+        form.source
+        |> AshPhoenix.Form.validate(Map.put(params, field_name, updated))
+        |> Phoenix.Component.to_form()
+
+      errors =
+        if form.source.submitted_once? or form.source.type != :create do
+          validation_handler(state).build_errors(validated)
+        else
+          %{}
+        end
+
+      state = State.update(state, form: validated, errors: errors, dirty?: true)
+      {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
     else
       _refused -> {:noreply, socket}
     end
@@ -641,27 +654,6 @@ defmodule MishkaGervaz.Form.Web.Events do
       {number, ""} when number >= 0 -> {:ok, number}
       _not_a_number -> :error
     end
-  end
-
-  # The tail these events share: validate the rewritten params, rebuild the errors if this form is
-  # showing any yet, and hand the state back.
-  defp revalidate(state, socket, params) do
-    source = state.form.source
-
-    validated =
-      source
-      |> AshPhoenix.Form.validate(params)
-      |> Phoenix.Component.to_form()
-
-    errors =
-      if source.submitted_once? or source.type != :create do
-        validation_handler(state).build_errors(validated)
-      else
-        %{}
-      end
-
-    state = State.update(state, form: validated, errors: errors, dirty?: true)
-    {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
   end
 
   @doc false
