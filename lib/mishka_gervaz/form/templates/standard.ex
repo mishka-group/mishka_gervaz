@@ -1652,7 +1652,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp adapter_class(ui, fun, args, fallback) do
-    case Code.ensure_loaded?(ui) and function_exported?(ui, fun, length(args)) do
+    case MishkaGervaz.Helpers.exports?(ui, fun, length(args)) do
       true -> apply(ui, fun, args)
       false -> fallback
     end
@@ -1725,7 +1725,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     with false <- blank_sub_value?(value),
          true <- is_atom(type_mod) and not is_nil(type_mod),
-         true <- Map.get(sf, :custom_validate?, function_exported?(type_mod, :validate, 2)),
+         true <-
+           Map.get(sf, :custom_validate?, MishkaGervaz.Helpers.exports?(type_mod, :validate, 2)),
          {:error, message} <- type_mod.validate(value, %{ash_type: Map.get(sf, :ash_type)}) do
       [message]
     else

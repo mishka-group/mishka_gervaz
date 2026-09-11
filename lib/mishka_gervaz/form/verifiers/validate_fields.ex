@@ -40,7 +40,7 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
   end
 
   defp collect_resource_fields(module) do
-    if function_exported?(module, :spark_dsl_config, 0) do
+    if MishkaGervaz.Helpers.exports?(module, :spark_dsl_config, 0) do
       [
         Ash.Resource.Info.attributes(module),
         Ash.Resource.Info.relationships(module),

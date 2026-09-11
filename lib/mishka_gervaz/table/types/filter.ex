@@ -65,9 +65,14 @@ defmodule MishkaGervaz.Table.Types.Filter do
     filter_type = Map.get(filter, :type, :text)
 
     cond do
-      is_atom(filter_type) and function_exported?(filter_type, :render_input, 3) -> filter_type
-      is_atom(filter_type) -> get_or_passthrough(filter_type)
-      true -> default()
+      is_atom(filter_type) and MishkaGervaz.Helpers.exports?(filter_type, :render_input, 3) ->
+        filter_type
+
+      is_atom(filter_type) ->
+        get_or_passthrough(filter_type)
+
+      true ->
+        default()
     end
   end
 end

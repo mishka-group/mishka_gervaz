@@ -80,9 +80,14 @@ defmodule MishkaGervaz.Table.Types.Action do
     action_type = Map.get(action, :type, :event)
 
     cond do
-      is_atom(action_type) and function_exported?(action_type, :render, 5) -> action_type
-      is_atom(action_type) -> get_or_passthrough(action_type)
-      true -> default()
+      is_atom(action_type) and MishkaGervaz.Helpers.exports?(action_type, :render, 5) ->
+        action_type
+
+      is_atom(action_type) ->
+        get_or_passthrough(action_type)
+
+      true ->
+        default()
     end
   end
 end

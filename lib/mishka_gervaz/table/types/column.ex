@@ -83,7 +83,7 @@ defmodule MishkaGervaz.Table.Types.Column do
 
       cond do
         is_atom(explicit_type) and explicit_type != nil and
-            function_exported?(explicit_type, :render, 4) ->
+            MishkaGervaz.Helpers.exports?(explicit_type, :render, 4) ->
           explicit_type
 
         is_atom(explicit_type) and explicit_type != nil ->

@@ -242,6 +242,33 @@ defmodule MishkaGervaz.Helpers do
   def resolve_options(_), do: []
 
   @doc """
+  Whether `module` defines `fun/arity` — LOADING IT FIRST, which is the whole point.
+
+  `function_exported?/3` answers about a module that is already in memory and says `false` about
+  every other one, including a module that compiled perfectly and simply has not been reached yet.
+  Under Elixir's interactive code loading — which is what `mix phx.server` uses — that is most of
+  them, so a plain `function_exported?/3` is a capability check that quietly reads "no" in
+  development and "yes" in a release.
+
+  It read "no" for real: `MishkaGervaz.Form.Types.Field.Nested` is named in the type registry as
+  data and never called by name, so nothing loaded it, so `custom_parse_params?` was `false`, so
+  every nested field's values reached the changeset uncast — the very typing this library does on
+  the way in, skipped, in the environment where somebody would notice.
+
+      iex> MishkaGervaz.Helpers.exports?(Enum, :map, 2)
+      true
+
+      iex> MishkaGervaz.Helpers.exports?(nil, :map, 2)
+      false
+  """
+  @spec exports?(module() | nil, atom(), arity()) :: boolean()
+  def exports?(module, fun, arity) when is_atom(module) and not is_nil(module) do
+    Code.ensure_loaded?(module) and function_exported?(module, fun, arity)
+  end
+
+  def exports?(_module, _fun, _arity), do: false
+
+  @doc """
   Normalizes a list of options for HTML select elements.
 
   Converts various option formats to `{label, value}` tuples with string values,

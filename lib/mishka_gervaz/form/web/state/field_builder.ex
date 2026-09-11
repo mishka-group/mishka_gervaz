@@ -30,6 +30,8 @@ defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
     quote do
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
+      alias MishkaGervaz.Helpers
+
       import MishkaGervaz.Helpers,
         only: [humanize: 1, get_ui_label: 1, get_resource_attributes: 1]
 
@@ -99,12 +101,9 @@ defmodule MishkaGervaz.Form.Web.State.FieldBuilder do
         |> Map.put(:attribute, attr)
         |> Map.put(:resolved_label, label)
         |> Map.put(:resolved_type, resolve_type(field, attributes))
-        |> Map.put(:custom_sanitize?, !!(type_mod && function_exported?(type_mod, :sanitize, 2)))
-        |> Map.put(:custom_validate?, !!(type_mod && function_exported?(type_mod, :validate, 2)))
-        |> Map.put(
-          :custom_parse_params?,
-          !!(type_mod && function_exported?(type_mod, :parse_params, 2))
-        )
+        |> Map.put(:custom_sanitize?, Helpers.exports?(type_mod, :sanitize, 2))
+        |> Map.put(:custom_validate?, Helpers.exports?(type_mod, :validate, 2))
+        |> Map.put(:custom_parse_params?, Helpers.exports?(type_mod, :parse_params, 2))
       end
 
       defoverridable build: 2, resolve_type: 2, sort_by_order: 2, build_field_config: 3

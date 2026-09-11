@@ -839,7 +839,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp render_initial_loading(assigns) do
     loading_text = assigns.static.pagination_ui.loading_text
 
-    if function_exported?(assigns.static.ui_adapter, :loading, 1) do
+    if MishkaGervaz.Helpers.exports?(assigns.static.ui_adapter, :loading, 1) do
       assigns = assign(assigns, :loading_text, loading_text)
 
       ~H"""
