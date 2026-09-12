@@ -13,6 +13,8 @@ defmodule MishkaGervaz.Table.Types.Action.PermanentDestroy do
   `MishkaGervaz.Table.Behaviours.ActionType`,
   `MishkaGervaz.Table.Entities.RowAction`, and
   `MishkaGervaz.Table.Entities.BulkAction`.
+
+  `MishkaGervaz.Table.Behaviours.ActionType` documents what may go in the assigns map.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
@@ -21,11 +23,6 @@ defmodule MishkaGervaz.Table.Types.Action.PermanentDestroy do
   import MishkaGervaz.Helpers, only: [dynamic_component: 1, maybe_assign: 3, resolve_label: 1]
 
   @impl true
-  # ONLY WHAT THE COMPONENT DECLARES, PLUS REAL ATTRIBUTES. The map below is splatted straight at the
-  # UI adapter, whose `button/1` declares `attr :rest, :global` — so every key it does not recognise
-  # was written into the DOM as an attribute of its own (`record_id`, `target`, `confirm`), on every
-  # row of every table. The bindings now travel under their own names; `MishkaGervaz.Helpers`
-  # dashes the `phx_`/`data_` keys on the way through `dynamic_component/1`.
   def render(_assigns, action, record, ui, target) do
     assigns =
       %{__changed__: %{}}

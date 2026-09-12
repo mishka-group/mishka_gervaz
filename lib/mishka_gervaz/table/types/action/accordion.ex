@@ -24,6 +24,8 @@ defmodule MishkaGervaz.Table.Types.Action.Accordion do
   `MishkaGervaz.Table.Behaviours.ActionType`,
   `MishkaGervaz.Table.Entities.RowAction`, and
   `MishkaGervaz.Table.Entities.BulkAction`.
+
+  `MishkaGervaz.Table.Behaviours.ActionType` documents what may go in the assigns map.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
@@ -42,15 +44,6 @@ defmodule MishkaGervaz.Table.Types.Action.Accordion do
 
       ~H""
     else
-      # Whether the row is open is NOT read here. `MishkaGervaz.Table.Templates.Table` works it out
-      # again for the caret it draws and for the detail row itself; this button only asks for the
-      # toggle. It used to be computed and handed to `button/1`, which has no use for it either and
-      # published it as an `is_expanded` attribute.
-      # ONLY WHAT THE COMPONENT DECLARES, PLUS REAL ATTRIBUTES. The map below is splatted straight at the
-      # UI adapter, whose `button/1` declares `attr :rest, :global` — so every key it does not recognise
-      # was written into the DOM as an attribute of its own (`record_id`, `target`, `confirm`), on every
-      # row of every table. The bindings now travel under their own names; `MishkaGervaz.Helpers`
-      # dashes the `phx_`/`data_` keys on the way through `dynamic_component/1`.
       assigns =
         %{__changed__: %{}}
         |> assign(:module, ui)

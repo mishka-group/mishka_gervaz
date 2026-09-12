@@ -160,4 +160,82 @@ defmodule MishkaGervaz.Table.Types.Action.ActionMarkupTest do
   end
 
   defp attr_names_of(rendered), do: rendered |> html() |> attr_names()
+
+  # THE DOCUMENTED PATTERN IS HELD TO THE SAME RULE AS THE BUILT-INS.
+  #
+  # `MishkaGervaz.Table.Behaviours.ActionType`'s moduledoc carries the example a developer copies
+  # when they write their own type, and an example is only a contract if something runs it. This
+  # module is that example, transcribed: it reads the incoming assigns for state, builds a fresh map,
+  # and names its bindings `phx_*` / `data_*`. If the doc drifts back to splatting the incoming
+  # assigns — or to `:record_id` and friends — this fails the way a built-in would.
+  defmodule DocumentedExample do
+    @behaviour MishkaGervaz.Table.Behaviours.ActionType
+
+    use Phoenix.Component
+
+    import MishkaGervaz.Helpers, only: [dynamic_component: 1, humanize: 1]
+
+    @impl true
+    def render(assigns, action, record, ui, target) do
+      master? = assigns[:state] && assigns[:state].master_user?
+
+      assigns =
+        %{__changed__: %{}}
+        |> assign(:module, ui)
+        |> assign(:function, :button)
+        |> assign(:label, action[:ui][:label] || humanize(action[:name]))
+        |> assign(:icon, action[:ui][:icon])
+        |> assign(:class, action[:ui][:class] || "text-orange-600 hover:text-orange-800")
+        |> assign(:phx_click, action[:event] || "confirm")
+        |> assign(:phx_value_id, record.id)
+        |> assign(:phx_target, target)
+        |> assign(:data_confirm, (master? && action[:confirm]) || "Are you sure?")
+
+      ~H"""
+      <.dynamic_component {assigns} />
+      """
+    end
+  end
+
+  describe "the example in the behaviour's moduledoc" do
+    test "writes its bindings and nothing else" do
+      action = %{ui: %{label: "Archive"}, confirm: "Archive this record?", name: :archive}
+      state = %{master_user?: true}
+
+      names =
+        DocumentedExample.render(
+          %{state: state, __changed__: %{}},
+          action,
+          @record,
+          @ui,
+          @target
+        )
+        |> assert_only(@button_attrs)
+
+      assert "phx-click" in names
+      assert "phx-value-id" in names
+      assert "phx-target" in names
+      assert "data-confirm" in names
+    end
+
+    # Reading the incoming assigns is the half the example exists to show — a type that needs the
+    # table's state must be able to have it without the state reaching the markup.
+    test "reads the table state without rendering it" do
+      action = %{ui: %{}, confirm: "Master only", name: :archive}
+
+      html =
+        DocumentedExample.render(
+          %{state: %{master_user?: false}, __changed__: %{}},
+          action,
+          @record,
+          @ui,
+          @target
+        )
+        |> html()
+
+      assert html =~ "Are you sure?"
+      refute html =~ "Master only"
+      refute html =~ "master_user"
+    end
+  end
 end

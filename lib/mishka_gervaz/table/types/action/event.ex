@@ -23,6 +23,8 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
   `MishkaGervaz.Table.Behaviours.ActionType`,
   `MishkaGervaz.Table.Entities.RowAction`, and
   `MishkaGervaz.Table.Entities.BulkAction`.
+
+  `MishkaGervaz.Table.Behaviours.ActionType` documents what may go in the assigns map.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
@@ -47,11 +49,6 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
         _ -> Jason.encode!(%{id: record.id})
       end
 
-    # ONLY WHAT THE COMPONENT DECLARES, PLUS REAL ATTRIBUTES. The map below is splatted straight at the
-    # UI adapter, whose `button/1` declares `attr :rest, :global` — so every key it does not recognise
-    # was written into the DOM as an attribute of its own (`record_id`, `target`, `confirm`), on every
-    # row of every table. The bindings now travel under their own names; `MishkaGervaz.Helpers`
-    # dashes the `phx_`/`data_` keys on the way through `dynamic_component/1`.
     assigns =
       %{__changed__: %{}}
       |> assign(:module, ui)

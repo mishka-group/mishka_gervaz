@@ -18,6 +18,8 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
   `MishkaGervaz.Table.Behaviours.ActionType`,
   `MishkaGervaz.Table.Entities.RowAction`, and
   `MishkaGervaz.Table.Entities.BulkAction`.
+
+  `MishkaGervaz.Table.Behaviours.ActionType` documents what may go in the assigns map.
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
