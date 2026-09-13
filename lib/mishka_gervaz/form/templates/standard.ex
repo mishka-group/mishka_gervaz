@@ -1038,6 +1038,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:ui, assigns.static.ui_adapter)
   end
 
+  # Draws one field: the adapter's `field_wrapper` — label, errors and the field's `ui.description`
+  # help text — around the control `render_input/4` builds for its type. A field waiting on a parent
+  # (`depends_on`) gets a skeleton or a prompt in place of the control instead.
   defp render_field_by_type(assigns) do
     ui = assigns.ui
     field = assigns.field_config
@@ -1054,6 +1057,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_label, label)
         |> assign(:wrapper_errors, [])
         |> assign(:wrapper_required, Map.get(field, :required, false))
+        |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
         |> assign(:disabled_prompt, disabled_prompt)
         |> assign(:is_loading, is_loading)
 
@@ -1062,6 +1066,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:field_wrapper}
         label={@wrapper_label}
+        description={@wrapper_description}
         errors={@wrapper_errors}
         required={@wrapper_required}
       >
@@ -1089,6 +1094,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_label, label)
         |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
+        |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
         |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
 
       ~H"""
@@ -1096,6 +1102,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:field_wrapper}
         label={@wrapper_label}
+        description={@wrapper_description}
         errors={@wrapper_errors}
         required={@wrapper_required}
       >

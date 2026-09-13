@@ -396,7 +396,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
           placeholder: String.t() | nil,
-          description: String.t() | nil,
+          description: String.t() | (-> String.t()) | nil,
           icon: String.t() | nil,
           class: String.t() | nil,
           wrapper_class: String.t() | nil,
@@ -439,8 +439,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
       doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     description: [
-      type: :string,
-      doc: "Help text below the field."
+      type: {:or, [:string, {:fun, 0}]},
+      doc: "Help text below the field. String or `fn -> gettext(...) end` for i18n."
     ],
     icon: [
       type: :string,

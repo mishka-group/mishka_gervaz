@@ -2058,6 +2058,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  Render a field wrapper with label, input, error display and help text.
+
+  ## Assigns
+    * `:label` - label text above the input
+    * `:required` - whether to mark the label required
+    * `:field_name` - the input's id, used as the label's `for`
+    * `:errors` - error messages, rendered below the input
+    * `:description` - help text, rendered below the errors
+    * `:class` - extra wrapper classes
+  """
   @impl true
   def field_wrapper(assigns) do
     assigns =
@@ -2066,6 +2077,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:field_name, fn -> nil end)
       |> assign_new(:required, fn -> false end)
       |> assign_new(:errors, fn -> [] end)
+      |> assign_new(:description, fn -> nil end)
       |> assign_new(:class, fn -> "flex flex-col gap-[7px]" end)
 
     has_errors = assigns.errors != []
@@ -2081,6 +2093,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         {render_slot(@inner_block)}
       </div>
       <.field_error :if={@has_errors} errors={@errors} />
+      <p
+        :if={@description}
+        data-role="gervaz-field-description"
+        class="text-[11.5px] font-medium leading-[1.5] text-[#8a877f]"
+      >
+        {@description}
+      </p>
     </div>
     """
   end
