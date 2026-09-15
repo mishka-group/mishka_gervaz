@@ -37,8 +37,8 @@ defmodule MishkaGervaz.MixProject do
   defp deps do
     [
       {:spark, "~> 2.7"},
-      {:ash, "~> 3.32"},
-      {:splode, "~> 0.3.2"},
+      {:ash, "~> 3.33"},
+      {:splode, "~> 0.3"},
       {:gettext, "~> 1.0"},
       {:phoenix_live_view, "~> 1.2", optional: true},
       {:ash_phoenix, "~> 2.3"},
@@ -46,10 +46,10 @@ defmodule MishkaGervaz.MixProject do
       {:html_sanitize_ex, "~> 1.5"},
 
       # Test&Dev-only dependencies
-      {:ex_doc, "~> 0.40.3", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.40", only: [:dev, :test], runtime: false},
       {:sourceror, "~> 1.12", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4.7", only: [:dev, :test], runtime: false},
-      {:igniter, "~> 0.8.3", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:igniter, "~> 0.8", only: [:dev, :test], runtime: false},
       {:ash_archival, "~> 2.0", only: :test}
     ]
   end
