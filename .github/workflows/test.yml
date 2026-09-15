@@ -4,7 +4,7 @@ permissions:
 
 on:
   push:
-    branches: [master, fix/elixir-1.20-warnings]
+    branches: [master]
   pull_request:
     branches: [master]
 
