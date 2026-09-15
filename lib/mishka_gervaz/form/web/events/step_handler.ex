@@ -91,7 +91,7 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
             socket
 
           next_step ->
-            if can_advance?(state, current) do
+            if apply(__MODULE__, :can_advance?, [state, current]) do
               step_states =
                 state.step_states
                 |> Map.put(current, :completed)

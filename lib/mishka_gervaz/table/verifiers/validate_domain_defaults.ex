@@ -205,8 +205,6 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateDomainDefaults do
     end
   end
 
-  defp validate_page_size_in_options(_, _, _), do: :ok
-
   defp validate_max_page_size(nil, _options, _module), do: :ok
 
   defp validate_max_page_size(max, options, module) when is_list(options) and options != [] do

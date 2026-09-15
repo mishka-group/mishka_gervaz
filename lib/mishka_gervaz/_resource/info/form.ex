@@ -275,12 +275,12 @@ defmodule MishkaGervaz.Resource.Info.Form do
     if master_user?, do: master_action, else: tenant_action
   end
 
-  defp resolve_action_value(action, _master_user?, _action_type) when is_atom(action) do
-    action
-  end
-
   defp resolve_action_value(nil, _master_user?, action_type) do
     action_type
+  end
+
+  defp resolve_action_value(action, _master_user?, _action_type) when is_atom(action) do
+    action
   end
 
   @doc """

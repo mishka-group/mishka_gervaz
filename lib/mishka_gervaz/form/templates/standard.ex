@@ -1164,9 +1164,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     dgettext("mishka_gervaz", "Select %{field} first", field: field_name)
   end
 
-  defp get_disabled_prompt(_, _, _),
-    do: dgettext("mishka_gervaz", "Select parent field first")
-
   defp render_input(ui, field, form_field, assigns) do
     type = Map.get(field, :type, :text)
 
@@ -1439,7 +1436,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:editable?, not readonly?)
     |> assign(:add_label, resolve_nested_label(field, :add_label, nil))
     |> assign(:remove_label, resolve_nested_label(field, :remove_label, nil))
-    |> assign(:owner, (readonly? && nil) || %{kind: :top, field: to_string(field.name)})
+    |> assign(:owner, %{kind: :top, field: to_string(field.name)})
     |> assign(:input_name, form_field.name)
     |> assign(:input_id, form_field.id)
     |> assign(:target, assigns[:myself])
@@ -1853,7 +1850,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     type_mod = MishkaGervaz.Form.Types.Field.get_or_passthrough(sf.type)
 
     with false <- blank_sub_value?(value),
-         true <- is_atom(type_mod) and not is_nil(type_mod),
          true <-
            Map.get(sf, :custom_validate?, MishkaGervaz.Helpers.exports?(type_mod, :validate, 2)),
          {:error, message} <- type_mod.validate(value, %{ash_type: Map.get(sf, :ash_type)}) do
@@ -1976,7 +1972,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   # A sub-field's name: `:name` when the map carries one, `:field` otherwise.
   defp sub_field_name(%{name: name}), do: name
-  defp sub_field_name(sf), do: Map.get(sf, :field, Map.get(sf, :name))
+  defp sub_field_name(sf), do: Map.get(sf, :field)
 
   defp auto_span(:textarea), do: 2
   defp auto_span(:json), do: 2

@@ -612,7 +612,6 @@ defmodule MishkaGervaz.Table.Templates.Table do
     end
   end
 
-  defp find_matching_override(nil, _record), do: nil
   defp find_matching_override([], _record), do: nil
 
   defp find_matching_override(overrides, record) do

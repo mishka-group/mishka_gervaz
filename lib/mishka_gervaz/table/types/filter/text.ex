@@ -26,7 +26,6 @@ defmodule MishkaGervaz.Table.Types.Filter.Text do
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType
   use Phoenix.Component
-  require Ash.Query
   import MishkaGervaz.Helpers, only: [get_ui_label: 1]
 
   @impl true

@@ -39,7 +39,7 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
   alias MishkaGervaz.Table.Web.State
 
   @type state :: State.t()
-  @type record :: struct()
+  @type record_struct :: struct()
   @type archive_status :: :active | :archived
 
   @doc """
@@ -48,15 +48,15 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
   Uses the appropriate action based on archive status and user type.
   """
   @callback get_record(state :: state(), id :: String.t(), archive_status :: archive_status()) ::
-              record()
+              record_struct()
 
   @doc """
   Deletes a record using the source destroy action.
 
   Returns `{:ok, deleted_record}` or `{:error, reason}`.
   """
-  @callback delete_record(state :: state(), record :: record()) ::
-              {:ok, record()} | {:error, term()}
+  @callback delete_record(state :: state(), record :: record_struct()) ::
+              {:ok, record_struct()} | {:error, term()}
 
   @doc """
   Destroys a record with a specific Ash action.
@@ -66,26 +66,26 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
   """
   @callback destroy_record(
               state :: state(),
-              record :: record(),
+              record :: record_struct(),
               action :: atom() | {atom(), atom()}
             ) ::
-              {:ok, record()} | {:error, term()}
+              {:ok, record_struct()} | {:error, term()}
 
   @doc """
   Restores an archived record.
 
   Returns `{:ok, restored_record}` or `{:error, reason}`.
   """
-  @callback unarchive_record(state :: state(), record :: record()) ::
-              {:ok, record()} | {:error, term()}
+  @callback unarchive_record(state :: state(), record :: record_struct()) ::
+              {:ok, record_struct()} | {:error, term()}
 
   @doc """
   Permanently destroys an archived record.
 
   Returns `{:ok, destroyed_record}` or `{:error, reason}`.
   """
-  @callback permanent_destroy_record(state :: state(), record :: record()) ::
-              {:ok, record()} | {:error, term()}
+  @callback permanent_destroy_record(state :: state(), record :: record_struct()) ::
+              {:ok, record_struct()} | {:error, term()}
 
   @doc """
   Updates a record with a specific Ash action.
@@ -95,10 +95,10 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
   """
   @callback update_record(
               state :: state(),
-              record :: record(),
+              record :: record_struct(),
               action :: atom() | {atom(), atom()}
             ) ::
-              {:ok, record()} | {:error, term()}
+              {:ok, record_struct()} | {:error, term()}
 
   defmacro __using__(_opts) do
     quote do
