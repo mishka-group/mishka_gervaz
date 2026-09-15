@@ -1918,10 +1918,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   @doc "Format a filter value for display in a chip."
   @spec format_chip_value(term()) :: String.t()
+  def format_chip_value(value) when is_boolean(value), do: to_string(value)
   def format_chip_value(value) when is_atom(value), do: Phoenix.Naming.humanize(value)
   def format_chip_value(value) when is_binary(value), do: value
   def format_chip_value(value) when is_list(value), do: Enum.join(value, ", ")
-  def format_chip_value(value) when is_boolean(value), do: to_string(value)
   def format_chip_value(%{} = value), do: inspect(value)
   def format_chip_value(value), do: to_string(value)
 end

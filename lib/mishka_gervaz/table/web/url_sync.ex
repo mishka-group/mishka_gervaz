@@ -432,11 +432,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     if :template in (config[:params] || []) do
       template = Map.get(state, :template)
 
-      if template do
-        template_name =
-          if is_atom(template), do: template, else: template.name()
-
-        Map.put(params, build_key(prefix, "template"), to_string(template_name))
+      if is_atom(template) do
+        Map.put(params, build_key(prefix, "template"), to_string(template))
       else
         params
       end
@@ -760,12 +757,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     end
   end
 
-  @dialyzer {:nowarn_function, extract_path: 1}
-  @spec extract_path(String.t() | any()) :: String.t() | nil
+  @spec extract_path(String.t()) :: String.t() | nil
   defp extract_path(uri) when is_binary(uri) do
     %URI{path: path} = URI.parse(uri)
     path
   end
-
-  defp extract_path(_), do: nil
 end

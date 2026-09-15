@@ -75,15 +75,6 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   @spec parse_value(term(), map()) :: map() | nil
   def parse_value(nil, _filter), do: nil
   def parse_value(%{} = value, filter), do: parse_range(value, filter)
-
-  def parse_value(params, filter) when is_map(params) do
-    field_name = to_string(filter.name)
-    from_value = Map.get(params, "#{field_name}_from")
-    to_value = Map.get(params, "#{field_name}_to")
-
-    parse_range(%{from: from_value, to: to_value}, filter)
-  end
-
   def parse_value(_, _filter), do: nil
 
   @spec parse_range(map(), map()) :: map() | nil

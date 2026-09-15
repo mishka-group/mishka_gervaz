@@ -45,7 +45,7 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
   defmodule RootlessTemplate do
     use Phoenix.Component
 
-    def render(assigns), do: ~H"<div data-testid='rootless-template'></div>"
+    def render(assigns), do: ~H'<div data-testid="rootless-template"></div>'
 
     def render_loading(assigns) do
       assigns = assign_new(assigns, :rows, fn -> 2 end)

@@ -2919,7 +2919,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp step_label_class(:error, _current), do: "font-semibold text-[#c0392b]"
   defp step_label_class(_, _), do: "font-medium text-[#8a877f]"
 
-  defp format_accept(nil), do: ""
   defp format_accept(accept) when is_binary(accept), do: accept
   defp format_accept(accept) when is_list(accept), do: Enum.join(accept, ", ")
 

@@ -73,8 +73,6 @@ defmodule MishkaGervaz.Table.Web.Events do
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Errors
 
-  require Ash.Query
-
   @type socket :: Phoenix.LiveView.Socket.t()
   @type state :: State.t()
 

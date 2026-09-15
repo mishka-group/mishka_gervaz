@@ -85,8 +85,6 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Errors
 
-  require Ash.Query
-
   @doc false
   @spec put_error_flash(Phoenix.LiveView.Socket.t(), Exception.t()) ::
           Phoenix.LiveView.Socket.t()
