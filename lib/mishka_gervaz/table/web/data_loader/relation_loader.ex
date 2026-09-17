@@ -148,7 +148,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
   def maybe_apply_search(query, nil), do: query
 
   def maybe_apply_search(query, {field, term}) when is_binary(term) and term != "" do
-    Ash.Query.filter(query, contains(^Ash.Expr.ref(field), ^term))
+    Ash.Query.filter(query, contains(^Ash.Expr.ref(field), ^Ash.CiString.new(term)))
   end
 
   def maybe_apply_search(query, _), do: query

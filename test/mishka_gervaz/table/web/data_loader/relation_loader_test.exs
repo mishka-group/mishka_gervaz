@@ -279,6 +279,19 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoaderTest do
       assert result.options == []
       assert result.has_more? == false
     end
+
+    test "matches records whatever the case of the search term" do
+      create_records(OptionalPaginationResource, 3, fn i -> %{name: "Alpha #{i}"} end)
+      create_records(OptionalPaginationResource, 2, fn i -> %{name: "Beta #{i}"} end)
+
+      filter = build_filter(OptionalPaginationResource, mode: :search, page_size: 10)
+      state = build_mock_state(master_user())
+
+      {:ok, result} = RelationLoader.search_options(filter, state, "aLPHA")
+
+      assert length(result.options) == 3
+      assert Enum.all?(result.options, fn {label, _id} -> String.starts_with?(label, "Alpha") end)
+    end
   end
 
   # ============================================================================

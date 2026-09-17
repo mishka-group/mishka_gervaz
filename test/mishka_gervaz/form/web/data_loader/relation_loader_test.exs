@@ -263,6 +263,31 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoaderTest do
   end
 
   # ============================================================================
+  # search_options - letter case
+  # ============================================================================
+
+  describe "search_options letter case" do
+    test "matches records whatever the case of the search term" do
+      create_records(OptionalPaginationResource, 3, fn i -> %{name: "Alpha #{i}"} end)
+      create_records(OptionalPaginationResource, 2, fn i -> %{name: "Beta #{i}"} end)
+
+      field =
+        build_field(OptionalPaginationResource,
+          mode: :search,
+          page_size: 20,
+          search_field: :name
+        )
+
+      state = build_state(master_user())
+
+      {:ok, options, false} = RelationLoader.search_options(field, state, "aLPHA")
+
+      assert length(options) == 3
+      assert Enum.all?(options, fn {label, _id} -> String.starts_with?(label, "Alpha") end)
+    end
+  end
+
+  # ============================================================================
   # resolve_selected - value_field set
   # ============================================================================
 
