@@ -5,6 +5,11 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
   This module provides functions for fetching, deleting, unarchiving, and
   permanently destroying records.
 
+  Every write runs as `state.current_user` with `authorize?: true`, so the action's
+  policies and validations both run. Give a record a write of your own only with
+  `authorize?: true`; pass `authorize?: false` from seeds and boot code, never from a
+  table event.
+
   ## Customization
 
   You can create a custom RecordHandler:
@@ -139,17 +144,8 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
 
       def delete_record(state, record) do
         action = State.get_action(state, :destroy)
-        tenant = if state.master_user?, do: nil, else: Map.get(state.current_user, :site_id)
 
-        opts = [
-          action: action,
-          actor: state.current_user,
-          return_destroyed?: true
-        ]
-
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        Ash.destroy(record, opts)
+        Ash.destroy(record, write_opts(state, action, return_destroyed?: true))
       end
 
       @impl true
@@ -167,17 +163,7 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
               action
           end
 
-        tenant = if state.master_user?, do: nil, else: Map.get(state.current_user, :site_id)
-
-        opts = [
-          action: action,
-          actor: state.current_user,
-          return_destroyed?: true
-        ]
-
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        Ash.destroy(record, opts)
+        Ash.destroy(record, write_opts(state, action, return_destroyed?: true))
       end
 
       @impl true
@@ -189,16 +175,7 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
           Info.archive_action_for(state.static.resource, :restore, state.master_user?) ||
             :unarchive
 
-        tenant = if state.master_user?, do: nil, else: Map.get(state.current_user, :site_id)
-
-        opts = [
-          action: action,
-          actor: state.current_user
-        ]
-
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        Ash.update(record, opts)
+        Ash.update(record, write_opts(state, action, []))
       end
 
       @impl true
@@ -211,17 +188,7 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
           Info.archive_action_for(state.static.resource, :destroy, state.master_user?) ||
             :permanent_destroy
 
-        tenant = if state.master_user?, do: nil, else: Map.get(state.current_user, :site_id)
-
-        opts = [
-          action: action,
-          actor: state.current_user,
-          return_destroyed?: true
-        ]
-
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        Ash.destroy(record, opts)
+        Ash.destroy(record, write_opts(state, action, return_destroyed?: true))
       end
 
       @impl true
@@ -239,16 +206,15 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandler do
               action
           end
 
+        Ash.update(record, %{}, write_opts(state, action, []))
+      end
+
+      @spec write_opts(State.t(), atom(), keyword()) :: keyword()
+      defp write_opts(state, action, extra) do
         tenant = if state.master_user?, do: nil, else: Map.get(state.current_user, :site_id)
+        opts = [action: action, actor: state.current_user, authorize?: true] ++ extra
 
-        opts = [
-          action: action,
-          actor: state.current_user
-        ]
-
-        opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-        Ash.update(record, %{}, opts)
+        if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
       end
 
       defoverridable get_record: 3,

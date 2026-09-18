@@ -192,7 +192,13 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
     tenant = if state.current_user, do: Map.get(state.current_user, :site_id), else: nil
 
     opts =
-      [action: ash_action, actor: state.current_user, notify?: true, return_records?: true]
+      [
+        action: ash_action,
+        actor: state.current_user,
+        authorize?: true,
+        notify?: true,
+        return_records?: true
+      ]
       |> then(fn list -> if tenant, do: Keyword.put(list, :tenant, tenant), else: list end)
 
     {opts, effective_type}
