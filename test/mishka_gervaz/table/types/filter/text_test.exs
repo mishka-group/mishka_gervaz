@@ -75,8 +75,8 @@ defmodule MishkaGervaz.Types.Filter.TextTest do
     alias MishkaGervaz.Test.Resources.ComplexTestResource, as: Row
 
     setup do
-      Ash.DataLayer.Ets.stop(Row)
-      on_exit(fn -> Ash.DataLayer.Ets.stop(Row) end)
+      MishkaGervaz.Test.Ets.stop(Row)
+      on_exit(fn -> MishkaGervaz.Test.Ets.stop(Row) end)
 
       for {title, content} <- [
             {"Contact us", "Reach the team"},

@@ -269,7 +269,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.QueryBuilderPathParamsTest do
   defp unique, do: System.unique_integer([:positive])
 
   defp clear_ets(resource) do
-    Ash.DataLayer.Ets.stop(resource)
+    MishkaGervaz.Test.Ets.stop(resource)
   rescue
     _ -> :ok
   end

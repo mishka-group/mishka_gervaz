@@ -30,7 +30,7 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
 
   defp clear_ets(resource) do
     try do
-      Ash.DataLayer.Ets.stop(resource)
+      MishkaGervaz.Test.Ets.stop(resource)
     rescue
       _ -> :ok
     end

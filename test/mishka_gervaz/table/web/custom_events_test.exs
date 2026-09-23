@@ -251,7 +251,7 @@ defmodule MishkaGervaz.Table.Web.CustomEventsTest do
 
   defp clear_ets do
     try do
-      Ash.DataLayer.Ets.stop(TestResource)
+      MishkaGervaz.Test.Ets.stop(TestResource)
     rescue
       _ -> :ok
     end

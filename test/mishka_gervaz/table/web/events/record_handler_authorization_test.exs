@@ -53,7 +53,7 @@ defmodule MishkaGervaz.Table.Web.Events.RecordHandlerAuthorizationTest do
   setup do
     on_exit(fn ->
       try do
-        Ash.DataLayer.Ets.stop(Resource)
+        MishkaGervaz.Test.Ets.stop(Resource)
       rescue
         _ -> :ok
       end
