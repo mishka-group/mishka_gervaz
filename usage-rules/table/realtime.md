@@ -56,8 +56,10 @@ delivered twice counts once. The count runs as a task, one per burst of notifica
 table counts at once, so its first row arrives with its total. A numbered table left past its last
 page loads the last page.
 
-A row the table puts in over realtime is not checked against the filters: under an active filter
-or search the rows on screen can differ from the total until the next load.
+A row that arrives or changes over realtime is checked against the same read before it is shown:
+one that does not match the filters, search or `path_params` is not inserted, and one edited out of
+them leaves the list, closing its expanded row if it had one. A manual read, which cannot be asked about one row, shows every row as it
+arrives.
 
 Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
 default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor

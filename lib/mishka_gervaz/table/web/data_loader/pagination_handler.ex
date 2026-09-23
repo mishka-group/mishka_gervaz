@@ -94,7 +94,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       on an action that paginates, and a data layer that cannot count all read instead — one row
       with `count: true`, or every row for a table without pagination. Returns `:skip` when the
       table keeps no count — a type other than `:numbered` with `show_total false` — or when the
-      read fails.
+      read returns an error. A read that raises raises here too, as it does in `load_page/5`.
       """
       @spec load_total(State.t(), Ash.Query.t(), atom(), any()) ::
               {:ok, %{total_count: non_neg_integer(), total_pages: pos_integer() | nil}} | :skip
@@ -119,8 +119,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
               :skip
           end
         end
-      rescue
-        _error -> :skip
       end
 
       @spec count_rows(Ash.Query.t(), boolean()) :: {:ok, non_neg_integer()} | :error

@@ -8,6 +8,7 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
   again rather than adding or subtracting one is what these pin: a site admin receives each
   site-scoped notification twice, the tab that deletes a row has already taken it off its total, and
   a row that arrives or changes is counted under the table's filters, not merely because it arrived.
+  The same read decides whether that row is shown at all (`DataLoader.in_view?/2`).
 
   On a connected socket the count is a task, one per burst; these drive both that path and the
   immediate one a disconnected socket — or an empty table — takes.
@@ -92,6 +93,8 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
     {socket.assigns[:refresh_total_seq] || 0, state.filter_values, state.archive_status,
      state.path_params, state.current_page_size}
   end
+
+  defp refused(query), do: Ash.Query.add_error(query, "the read is refused")
 
   defp with_hooks(state, hooks),
     do: %{state | static: %{state.static | hooks: Map.merge(state.static.hooks || %{}, hooks)}}
@@ -265,15 +268,37 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
       assert DataLoader.load_total(state) == :skip
     end
 
-    test "a read that fails is skipped, not raised" do
+    test "a read that returns an error is skipped" do
+      state =
+        BasicResource
+        |> loaded(master_user(), nil)
+        |> with_hooks(%{on_load: fn query, _state -> {:cont, refused(query)} end})
+
+      assert DataLoader.load_total(state) == :skip
+    end
+
+    test "a hook that raises raises here too, as it does when the table loads" do
+      state =
+        BasicResource
+        |> loaded(master_user(), nil)
+        |> with_hooks(%{on_load: fn _query, _state -> raise "the read cannot be built" end})
+
+      assert_raise RuntimeError, "the read cannot be built", fn ->
+        DataLoader.load_total(state)
+      end
+    end
+
+    test "an action the resource does not have raises, as it does in load_page" do
       state = loaded(BasicResource, master_user(), nil)
 
-      assert PaginationHandler.Default.load_total(
-               state,
-               Ash.Query.new(BasicResource),
-               :no_such_read,
-               nil
-             ) == :skip
+      assert_raise ArgumentError, ~r/No such read action/, fn ->
+        PaginationHandler.Default.load_total(
+          state,
+          Ash.Query.new(BasicResource),
+          :no_such_read,
+          nil
+        )
+      end
     end
   end
 
@@ -552,6 +577,99 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
     end
   end
 
+  describe "DataLoader.in_view?/2 — whether a row belongs in the view" do
+    test "under a search, a matching row does and another does not" do
+      [article] =
+        create!(FilterableResource, 1, fn _ ->
+          %{title: "Article", category: "tech", status: "published"}
+        end)
+
+      [report] =
+        create!(FilterableResource, 1, fn _ ->
+          %{title: "Report", category: "news", status: "draft"}
+        end)
+
+      state =
+        FilterableResource
+        |> loaded(master_user(), 1)
+        |> State.update(filter_values: %{search: "Article"})
+
+      assert DataLoader.in_view?(state, article.id)
+      refute DataLoader.in_view?(state, report.id)
+    end
+
+    test "through the table's on_load hook" do
+      [on] = create!(HooksResource, 1, fn _ -> %{name: "On", active: true} end)
+      [off] = create!(HooksResource, 1, fn _ -> %{name: "Off", active: false} end)
+
+      state =
+        HooksResource
+        |> loaded(master_user(), 1)
+        |> with_hooks(%{
+          on_load: fn query, _state -> {:cont, Ash.Query.filter(query, active)} end
+        })
+
+      assert DataLoader.in_view?(state, on.id)
+      refute DataLoader.in_view?(state, off.id)
+    end
+
+    test "under the table's path_params" do
+      [first, second] = create!(BasicResource, 2)
+
+      state =
+        BasicResource
+        |> loaded(master_user(), 1)
+        |> Map.put(:path_params, %{name: first.name})
+
+      assert DataLoader.in_view?(state, first.id)
+      refute DataLoader.in_view?(state, second.id)
+    end
+
+    test "for a site admin, never another site's row" do
+      [mine] = create!(MultiTenantResource, 1, fn _ -> %{name: "Mine"} end, tenant: "site-a")
+      [theirs] = create!(MultiTenantResource, 1, fn _ -> %{name: "Theirs"} end, tenant: "site-b")
+
+      state = loaded(MultiTenantResource, tenant_user("site-a"), 1)
+
+      assert DataLoader.in_view?(state, mine.id)
+      refute DataLoader.in_view?(state, theirs.id)
+    end
+
+    test "in the archived view, an archived row does and an active one does not" do
+      [archived, active] = create!(ArchivableResource, 2)
+      Ash.destroy!(archived)
+
+      state = loaded(ArchivableResource, master_user(), 1, archive_status: :archived)
+
+      assert DataLoader.in_view?(state, archived.id)
+      refute DataLoader.in_view?(state, active.id)
+    end
+
+    test "a read that returns an error shows the row, as a row arrived before" do
+      [row] = create!(BasicResource, 1)
+
+      state =
+        BasicResource
+        |> loaded(master_user(), 1)
+        |> with_hooks(%{on_load: fn query, _state -> {:cont, refused(query)} end})
+
+      assert DataLoader.in_view?(state, row.id)
+    end
+
+    test "a hook that raises raises here too, as it does when the table loads" do
+      [row] = create!(BasicResource, 1)
+
+      state =
+        BasicResource
+        |> loaded(master_user(), 1)
+        |> with_hooks(%{on_load: fn _query, _state -> raise "the read cannot be built" end})
+
+      assert_raise RuntimeError, "the read cannot be built", fn ->
+        DataLoader.in_view?(state, row.id)
+      end
+    end
+  end
+
   describe "a notification the table handles itself" do
     test "a created row is inserted first, and the total counts it in the same update" do
       create!(BasicResource, 3)
@@ -648,13 +766,28 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
           %{title: "Report", category: "news", status: "draft"}
         end)
 
-      socket =
-        FilterableResource
-        |> loaded(master_user(), 3, filter_values: %{search: "Article"})
-        |> socket()
-        |> notify(notification(FilterableResource, :create, report))
+      state = loaded(FilterableResource, master_user(), 3, filter_values: %{search: "Article"})
+      socket = state |> socket() |> notify(notification(FilterableResource, :create, report))
 
       assert total(socket) == 3
+      assert inserted_ids(socket, state) == [], "a row the search excludes was shown"
+    end
+
+    test "under a search, a matching row is shown and counted" do
+      create!(FilterableResource, 3, fn i ->
+        %{title: "Article #{i}", category: "tech", status: "published"}
+      end)
+
+      [matching] =
+        create!(FilterableResource, 1, fn _ ->
+          %{title: "Article 9", category: "news", status: "draft"}
+        end)
+
+      state = loaded(FilterableResource, master_user(), 3, filter_values: %{search: "Article"})
+      socket = state |> socket() |> notify(notification(FilterableResource, :create, matching))
+
+      assert total(socket) == 4
+      assert inserted_ids(socket, state) == [matching.id]
     end
 
     test "under a search, a row edited out of it leaves the total" do
@@ -665,13 +798,31 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
 
       edited = Ash.update!(first, %{title: "Note"})
 
-      socket =
-        FilterableResource
-        |> loaded(master_user(), 3, filter_values: %{search: "Article"})
-        |> socket()
-        |> notify(notification(FilterableResource, :update, edited))
+      state = loaded(FilterableResource, master_user(), 3, filter_values: %{search: "Article"})
+      socket = state |> socket() |> notify(notification(FilterableResource, :update, edited))
 
       assert total(socket) == 2
+      assert inserted_ids(socket, state) == []
+      assert length(deleted_dom_ids(socket, state)) == 1, "the edited-out row stayed in the list"
+    end
+
+    test "an expanded row edited out of the view leaves, and its expansion closes" do
+      [first | _rest] =
+        create!(FilterableResource, 2, fn i ->
+          %{title: "Article #{i}", category: "tech", status: "published"}
+        end)
+
+      edited = Ash.update!(first, %{title: "Note"})
+
+      state =
+        FilterableResource
+        |> loaded(master_user(), 2, filter_values: %{search: "Article"})
+        |> State.update(expanded_id: first.id)
+
+      socket = state |> socket() |> notify(notification(FilterableResource, :update, edited))
+
+      assert length(deleted_dom_ids(socket, state)) == 1
+      assert socket.assigns.table_state.expanded_id == nil
     end
 
     test "in the archived view, a row archived elsewhere joins the archived total" do

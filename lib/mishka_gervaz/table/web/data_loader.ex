@@ -9,6 +9,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   - Stream management
   - Async result handling
   - The total after realtime changes (`refresh_total/1`)
+  - Whether a realtime row belongs in the view (`in_view?/2`)
 
   ## Sub-builders
 
@@ -96,6 +97,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
   @spec refresh_total(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate refresh_total(socket), to: __MODULE__.Default
+
+  @spec in_view?(State.t(), term()) :: boolean()
+  defdelegate in_view?(state, id), to: __MODULE__.Default
 
   @spec reload(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate reload(socket, state), to: __MODULE__.Default
@@ -242,7 +246,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       Returns what the resource's `PaginationHandler.load_total/4` returns:
       `{:ok, %{total_count: count, total_pages: pages}}`, or `:skip` when the table keeps no count
-      or the read fails.
+      or the read returns an error.
       """
       @spec load_total(State.t()) ::
               {:ok, %{total_count: non_neg_integer(), total_pages: pos_integer() | nil}} | :skip
@@ -260,6 +264,36 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           )
         else
           :skip
+        end
+      end
+
+      @doc """
+      Whether the row `id` is one the table's read returns now — its filters, search,
+      `path_params`, the `on_load` hook, the view's read action and the tenant.
+
+      The table asks before it shows a row that arrived or changed over realtime: a row that does
+      not match is not inserted, and one edited out of the view leaves it. `true` when the read
+      cannot answer — a manual read, or a read that returns an error — so such a row is shown as it
+      arrives. A hook or read that raises raises here too, as it does when the table loads.
+      """
+      @spec in_view?(State.t(), term()) :: boolean()
+      def in_view?(state, id) do
+        tenant_mod = resolve_tenant_resolver(state.static.resource)
+
+        query =
+          state
+          |> read_query()
+          |> Ash.Query.do_filter(id: id)
+          |> Ash.Query.for_read(tenant_mod.get_read_action(state), %{},
+            actor: state.current_user,
+            tenant: tenant_mod.get_tenant(state)
+          )
+
+        with nil <- Map.get(query.action, :manual),
+             {:ok, found?} when is_boolean(found?) <- Ash.exists(query) do
+          found?
+        else
+          _cannot_tell -> true
         end
       end
 
@@ -657,6 +691,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_async: 2,
                      load_async: 3,
                      load_total: 1,
+                     in_view?: 2,
                      refresh_total: 1,
                      handle_async: 3,
                      reload: 2,

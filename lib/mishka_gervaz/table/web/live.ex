@@ -404,6 +404,24 @@ defmodule MishkaGervaz.Table.Web.Live do
   @spec reload_and_insert(Phoenix.LiveView.Socket.t(), State.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   defp reload_and_insert(socket, state, record) do
+    if DataLoader.in_view?(state, record.id),
+      do: load_and_insert(socket, state, record),
+      else: leave_view(socket, state, record)
+  end
+
+  @spec leave_view(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp leave_view(socket, %State{expanded_id: id} = state, %{id: id} = record) do
+    socket
+    |> assign(:table_state, State.update(state, expanded_id: nil, expanded_data: nil))
+    |> stream_delete(state.static.stream_name, record)
+  end
+
+  defp leave_view(socket, state, record),
+    do: stream_delete(socket, state.static.stream_name, record)
+
+  @spec load_and_insert(Phoenix.LiveView.Socket.t(), State.t(), map()) ::
+          Phoenix.LiveView.Socket.t()
+  defp load_and_insert(socket, state, record) do
     preloads = State.get_preloads(state)
     action = get_action_for_view(state)
 
