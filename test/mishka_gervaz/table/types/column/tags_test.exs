@@ -17,7 +17,13 @@ defmodule MishkaGervaz.Types.Column.TagsTest do
 
   defp render(record, column \\ column()) do
     # The first arg is the table's joined display string; Tags must ignore it and read the record.
-    joined = record |> Map.get(column.source) |> List.wrap() |> Enum.join(" ")
+    joined =
+      MishkaGervaz.Table.Behaviours.Template.get_cell_value(record, %{
+        source: column.source,
+        default: nil,
+        separator: nil
+      })
+
     rendered_to_string(Tags.render(joined, column, record, @ui))
   end
 
@@ -26,6 +32,36 @@ defmodule MishkaGervaz.Types.Column.TagsTest do
       behaviours = Tags.__info__(:attributes)[:behaviour] || []
       assert MishkaGervaz.Table.Behaviours.ColumnType in behaviours
       assert function_exported?(Tags, :render, 4)
+    end
+  end
+
+  describe "a chip given as a map" do
+    test "wears its own class and tooltip, and its label as the text" do
+      html =
+        render(%{
+          dependencies: [%{label: "FA", class: "chip-fa", title: "FA — missing"}, "plain"]
+        })
+
+      assert html =~ ~s(class="chip-fa")
+      assert html =~ ~s(title="FA — missing")
+      assert html =~ ">FA<"
+      refute html =~ "%{"
+    end
+
+    test "falls back to the column's chip class when it names none" do
+      html = render(%{dependencies: [%{label: "EN"}]}, column(%{badge_class: "chip-default"}))
+
+      assert html =~ ~s(class="chip-default")
+      refute html =~ "title="
+    end
+
+    test "counts toward +N like any other chip" do
+      chips = for code <- ~w(en fa fr de), do: %{label: String.upcase(code)}
+
+      html = render(%{dependencies: chips}, column(%{max_items: 3}))
+
+      assert html =~ "+1"
+      assert html =~ "DE"
     end
   end
 

@@ -105,7 +105,7 @@ ui do
 end
 
 ui do type :bars;    extra %{max: 4, percent: true} end
-ui do type :tags;    extra %{max_items: 3} end
+ui do type :tags;    extra %{max_items: 3} end   # items: strings, or %{label:, class:, title:}
 ui do type :avatars; extra %{max_items: 3, label_field: :display_name, tints: %{}} end
 ```
 

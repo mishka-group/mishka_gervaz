@@ -16,6 +16,9 @@ defmodule MishkaGervaz.Table.Types.Column.Tags do
   (`gz-tags-<field>-<record_id>`), so several `:tags` columns in the same row/table each toggle
   independently.
 
+  An item is a string, or `%{label: …, class: …, title: …}` for a chip styled on its own — see
+  `MishkaGervaz.UIAdapters.Tailwind.cell_tags/1`.
+
   ## Options (via `column.ui.extra`)
 
     * `:max_items`   — chips shown before collapsing into `+N` (default `2`)

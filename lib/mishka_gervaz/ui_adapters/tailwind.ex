@@ -1279,6 +1279,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:more` - Count for the `+N` chip (`0` hides the toggle)
     * `:badge_class` - Chip CSS class
     * `:empty` - Text shown when there are no chips (default `"—"`)
+
+  A chip is a string, or a map for a chip that looks unlike its neighbours:
+  `%{label: "FA", class: "…", title: "…"}` — `:class` replaces `:badge_class` for that chip alone,
+  `:title` becomes its tooltip, and both may be left out.
   """
   @tags_default_badge "inline-block max-w-full truncate align-middle rounded-[7px] border border-[#d6e3f5] bg-[#eaf1fb] px-2 py-[3px] font-['Space_Grotesk'] text-[10.5px] font-semibold text-[#3a6cb5]"
 
@@ -1308,9 +1312,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       class="flex min-w-0 max-w-full flex-wrap items-center gap-[6px]"
       phx-click-away={@more > 0 && tags_collapse(@id)}
     >
-      <span :for={item <- @shown} class={@badge_class}>{item}</span>
+      <span
+        :for={item <- @shown}
+        class={tag_class(item, @badge_class)}
+        title={tag_title(item)}
+      >{tag_label(item)}</span>
       <span id={@id <> "-rest"} class="hidden [&:not(.hidden)]:contents">
-        <span :for={item <- @rest} class={@badge_class}>{item}</span>
+        <span
+          :for={item <- @rest}
+          class={tag_class(item, @badge_class)}
+          title={tag_title(item)}
+        >{tag_label(item)}</span>
       </span>
       <button :if={@more > 0} type="button" class={@toggle_class} phx-click={tags_toggle(@id)}>
         <span id={@id <> "-more"}>+{@more}</span>
@@ -1325,6 +1337,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </span>
     """
   end
+
+  defp tag_label(%{label: label}), do: label
+  defp tag_label(item), do: item
+
+  defp tag_class(%{class: class}, _badge_class) when is_binary(class), do: class
+  defp tag_class(_item, badge_class), do: badge_class
+
+  defp tag_title(%{title: title}), do: title
+  defp tag_title(_item), do: nil
 
   defp tags_toggle(id) do
     JS.toggle_class("hidden", to: "##{id}-rest")
