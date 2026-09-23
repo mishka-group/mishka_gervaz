@@ -34,6 +34,10 @@ Generated from the schema, always current:
 `:relation` · or a module implementing `MishkaGervaz.Table.Behaviours.FilterType`
 ([../customization/types.md](../customization/types.md)).
 
+`:text` matches part of a value **without case**, and a `%` or `_` in the term is that character —
+the term is an `Ash.CiString`, an escaped `ILIKE` on AshPostgres. A relation filter's search matches
+the same way. Anything else — a word boundary, a prefix only — is a custom `apply`.
+
 ## Options
 
 | Option | Type | Default | Note |

@@ -69,6 +69,55 @@ defmodule MishkaGervaz.Types.Filter.TextTest do
     end
   end
 
+  # READ BACK, NOT ONLY BUILT: the term is matched without case, and a LIKE wildcard in it is a
+  # character like any other. The ETS data layer here, AshPostgres's escaped ILIKE in production.
+  describe "what a search finds" do
+    alias MishkaGervaz.Test.Resources.ComplexTestResource, as: Row
+
+    setup do
+      Ash.DataLayer.Ets.stop(Row)
+      on_exit(fn -> Ash.DataLayer.Ets.stop(Row) end)
+
+      for {title, content} <- [
+            {"Contact us", "Reach the team"},
+            {"contact form", nil},
+            {"Other", "Contact the owner"},
+            {"100% sure", nil},
+            {"Snake_case", nil}
+          ],
+          do: Ash.create!(Row, %{title: title, content: content})
+
+      :ok
+    end
+
+    defp titles(query), do: query |> Ash.read!() |> Enum.map(& &1.title) |> Enum.sort()
+
+    test "a lowercase term finds a capitalized title" do
+      assert Row |> Ash.Query.new() |> Text.build_query(:title, "contact") |> titles() ==
+               ["Contact us", "contact form"]
+    end
+
+    test "an uppercase term finds a lowercase title" do
+      assert Row |> Ash.Query.new() |> Text.build_query(:title, "CONTACT FORM") |> titles() ==
+               ["contact form"]
+    end
+
+    test "across fields, a match in any of them, whatever its case" do
+      found =
+        Row
+        |> Ash.Query.new()
+        |> Text.build_query(:search, "CONTACT", %{fields: [:title, :content]})
+        |> titles()
+
+      assert found == ["Contact us", "Other", "contact form"]
+    end
+
+    test "a % or _ in the term is that character, not a wildcard" do
+      assert Row |> Ash.Query.new() |> Text.build_query(:title, "0%") |> titles() == ["100% sure"]
+      assert Row |> Ash.Query.new() |> Text.build_query(:title, "_") |> titles() == ["Snake_case"]
+    end
+  end
+
   describe "behaviour implementation" do
     test "implements FilterType behaviour" do
       behaviours = Text.__info__(:attributes)[:behaviour] || []
