@@ -137,29 +137,44 @@ defmodule MishkaGervaz.Table.Web.DataLoader.QueryBuilder do
       @doc """
       Apply path params as permanent (non-clearable) query filters.
       Only applies when the param name matches an actual attribute on the resource.
+
+      | value | filter |
+      | --- | --- |
+      | `nil` | `is_nil(attribute)` |
+      | a list, on a scalar attribute | `attribute in list` |
+      | anything else | `attribute == value` |
+
+      An array attribute is compared with `==` whatever the value is, so a list there still means
+      the whole array.
       """
       @spec apply_path_params(Ash.Query.t(), map(), module()) :: Ash.Query.t()
       def apply_path_params(query, path_params, _resource) when map_size(path_params) == 0,
         do: query
 
       def apply_path_params(query, path_params, resource) do
-        attribute_names =
+        attributes =
           resource
           |> Ash.Resource.Info.attributes()
-          |> MapSet.new(& &1.name)
+          |> Map.new(&{&1.name, &1})
 
         Enum.reduce(path_params, query, fn {param_name, value}, acc ->
-          case MapSet.member?(attribute_names, param_name) do
-            true -> filter_path_param(acc, param_name, value)
-            false -> acc
+          case Map.fetch(attributes, param_name) do
+            {:ok, attribute} -> filter_path_param(acc, attribute, value)
+            :error -> acc
           end
         end)
       end
 
-      # Filters one path param; a nil value matches the rows where that column is null.
-      defp filter_path_param(query, name, nil), do: Ash.Query.filter(query, is_nil(^ref(name)))
+      defp filter_path_param(query, %{name: name}, nil),
+        do: Ash.Query.filter(query, is_nil(^ref(name)))
 
-      defp filter_path_param(query, name, value),
+      defp filter_path_param(query, %{name: name, type: {:array, _item}}, value),
+        do: Ash.Query.filter(query, ^ref(name) == ^value)
+
+      defp filter_path_param(query, %{name: name}, values) when is_list(values),
+        do: Ash.Query.filter(query, ^ref(name) in ^values)
+
+      defp filter_path_param(query, %{name: name}, value),
         do: Ash.Query.filter(query, ^ref(name) == ^value)
 
       @doc """

@@ -20,8 +20,17 @@ end
 ## Path params filter the query
 
 A route with params — `"/admin/dashboard/document/sections/:workspace_version_id"` — puts them on
-`state.path_params`, and **any path param whose name matches a resource attribute becomes an
-equality filter on the query**.
+`state.path_params`, and **any path param whose name matches a resource attribute becomes a
+filter on the query**:
+
+| value | filter |
+|---|---|
+| `nil` | `is_nil(attribute)` |
+| a list, on a scalar attribute | `attribute in list` |
+| anything else | `attribute == value` |
+
+An array attribute is compared with `==` whatever the value is. A mount can pass a list itself —
+`url_state={%{path_params: %{key: @keys}}}` shows only the rows whose `key` is one of `@keys`.
 
 That is usually what you want. When it is not, name the param something that is not an attribute:
 

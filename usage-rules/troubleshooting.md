@@ -62,7 +62,7 @@ that failed. Runtime symptoms follow.
 | a cell renders blank or raises | `ui do type … end` names an atom with no renderer module — see the renderer-backed list in [table/columns.md](table/columns.md) |
 | a column shows `%Ash.NotLoaded{}` | the relationship is not in `source.preload` |
 | a master sees one relationship, a tenant another | intended — that is `preload master:` / `tenant:` with the alias mapping |
-| no rows after adding a route param | a path param whose name matches an attribute became an equality filter. See [table/identity.md](table/identity.md) |
+| no rows after adding a route param | a path param whose name matches an attribute became a filter. See [table/identity.md](table/identity.md) |
 | a bulk-action flash never appears | `Phoenix.LiveView.put_flash/3` from inside the component — use `BulkActionHooks.put_flash/3` **and** add the `{:put_flash, kind, msg}` bridge |
 | the table never auto-refreshes | the parent does not forward `:gervaz_refresh` |
 | realtime updates never arrive | the parent does not forward `%Phoenix.Socket.Broadcast{}`, or `realtime.prefix` does not match the resource's `pub_sub` topic |
