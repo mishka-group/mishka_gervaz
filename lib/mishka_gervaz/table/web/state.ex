@@ -503,7 +503,7 @@ defmodule MishkaGervaz.Table.Web.State do
       @doc """
       Applies one mount's own presentation choices over the ones the resource declared.
 
-      Two keys, both optional and both ignored when absent, so a mount that passes neither is left
+      Three keys, all optional and all ignored when absent, so a mount that passes none is left
       unchanged:
 
         * `:template` — the template this mount starts with. A module, or the `name/0` of one the
@@ -511,6 +511,9 @@ defmodule MishkaGervaz.Table.Web.State do
         * `:switchable_templates` — what the switcher offers on this mount. An empty list, or one
           entry, turns the switcher off here (`template_switching_enabled?/1` asks for more than
           one); the resource's own list is untouched everywhere else.
+        * `:url_sync` — `false` stops this mount pushing its state into the address bar. The
+          `url_state` it was given still applies, `path_params` included; only the patch back is
+          dropped. Every other mount keeps the resource's own setting.
 
       Call this at init only, since the reader may switch templates afterwards.
       """
@@ -519,9 +522,16 @@ defmodule MishkaGervaz.Table.Web.State do
         state
         |> override_switchables(Map.get(assigns, :switchable_templates))
         |> override_template(Map.get(assigns, :template))
+        |> override_url_sync(Map.get(assigns, :url_sync))
       end
 
       def apply_presentation(state, _assigns), do: state
+
+      defp override_url_sync(%{static: %{url_sync_config: config} = static} = state, false)
+           when is_map(config),
+           do: %{state | static: %{static | url_sync_config: Map.put(config, :enabled, false)}}
+
+      defp override_url_sync(state, _other), do: state
 
       defp override_switchables(state, nil), do: state
 

@@ -414,6 +414,67 @@ defmodule MishkaGervaz.Table.Web.StateTest do
       assert {:ok, %{template: Templates.Table}} = State.switch_template(applied, Templates.Table)
     end
 
+    # A TABLE EMBEDDED IN ANOTHER PAGE MUST NOT WRITE THAT PAGE'S ADDRESS. The page that owns the
+    # resource keeps syncing; this mount alone stops patching.
+    test "url_sync: false stops this mount pushing its state into the address" do
+      state = %State{
+        static: %State.Static{
+          switchable_templates: [],
+          resource: User,
+          url_sync_config: %{enabled: true, mode: :bidirectional}
+        },
+        template: Templates.Table
+      }
+
+      embedded = State.apply_presentation(state, %{url_sync: false})
+
+      refute State.bidirectional_url_sync?(embedded)
+      assert State.bidirectional_url_sync?(state), "and the resource's own setting is untouched"
+    end
+
+    # Turning the push off is not turning the table deaf: what it was handed still scopes it.
+    test "url_sync: false keeps the path params it was handed" do
+      state = %State{
+        static: %State.Static{
+          switchable_templates: [],
+          resource: User,
+          url_sync_config: %{enabled: true, mode: :bidirectional}
+        },
+        template: Templates.Table
+      }
+
+      scoped =
+        state
+        |> State.apply_presentation(%{url_sync: false})
+        |> State.apply_url_state(%{path_params: %{name: ["a", "b"]}})
+
+      assert scoped.path_params == %{name: ["a", "b"]}
+    end
+
+    test "anything but false leaves the resource's url sync as it was" do
+      state = %State{
+        static: %State.Static{
+          switchable_templates: [],
+          resource: User,
+          url_sync_config: %{enabled: true, mode: :bidirectional}
+        },
+        template: Templates.Table
+      }
+
+      for value <- [true, nil, "false", :off] do
+        assert State.bidirectional_url_sync?(State.apply_presentation(state, %{url_sync: value}))
+      end
+    end
+
+    test "url_sync: false on a resource that declares no url sync is a no-op" do
+      state = %State{
+        static: %State.Static{switchable_templates: [], resource: User, url_sync_config: nil},
+        template: Templates.Table
+      }
+
+      assert State.apply_presentation(state, %{url_sync: false}) == state
+    end
+
     test "rubbish is ignored rather than believed" do
       state = %State{
         static: %State.Static{switchable_templates: [Templates.Table], resource: User},

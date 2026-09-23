@@ -23,8 +23,9 @@ decodes the URL, and answers a handful of messages.
 | `url_state` | — | from `UrlSync.decode/3`; `nil` disables URL sync for this mount |
 | `template` | — | mount-time override: a template module, or the `name/0` of one in `switchable_templates` |
 | `switchable_templates` | — | mount-time override of the switcher list |
+| `url_sync` | — | `false` stops this mount patching the address bar; `url_state` (and its `path_params`) still applies. For a table inside a page that owns its own URL |
 
-`template` / `switchable_templates` are applied **at init only** — a later parent render will not
+`template` / `switchable_templates` / `url_sync` are applied **at init only** — a later parent render will not
 drag back a choice the reader has since changed.
 
 ## Form
