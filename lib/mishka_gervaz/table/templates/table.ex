@@ -551,8 +551,10 @@ defmodule MishkaGervaz.Table.Templates.Table do
         phx-value-column={column.name}
         phx-target={@myself}
       >
-        <div class="flex items-center gap-1">
-          <span>{resolve_label(column.label) || Phoenix.Naming.humanize(column.name)}</span>
+        <div class="flex min-w-0 items-center gap-1">
+          <span class="truncate">
+            {resolve_label(column.label) || Phoenix.Naming.humanize(column.name)}
+          </span>
           <.sort_indicator
             :if={column.name in @sortable_columns}
             column={column.name}
@@ -561,7 +563,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           />
         </div>
       </div>
-      <div :if={@show_actions} class="px-[16px] text-right text-sm font-medium">
+      <div :if={@show_actions} class={["text-right", header_type()]}>
         {dgettext("mishka_gervaz", "Actions")}
       </div>
     </div>
@@ -863,7 +865,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     assigns = assigns |> assign(:direction, direction) |> assign(:position, position)
 
     ~H"""
-    <span class="ml-1 inline-flex items-center">
+    <span class="ml-1 inline-flex shrink-0 items-center">
       <%= cond do %>
         <% @direction == :asc -> %>
           <span class="text-[#5b57d6]">&#9650;</span>
@@ -940,8 +942,13 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp type_track(_type_module, 0), do: "minmax(190px,1.7fr)"
   defp type_track(_type_module, _index), do: "minmax(0,1fr)"
 
+  # Every header cell's type, the Actions cell's included.
+  @header_type "px-[16px] text-[11px] font-bold tracking-[0.03em] text-[#8a877f]"
+
+  defp header_type, do: @header_type
+
   defp header_cell_classes(column, sortable_columns) do
-    base = "px-[16px] text-left text-[11px] font-bold tracking-[0.03em] text-[#8a877f]"
+    base = "min-w-0 text-left " <> @header_type
 
     sortable_extra =
       if column.name in sortable_columns, do: " cursor-pointer", else: ""
