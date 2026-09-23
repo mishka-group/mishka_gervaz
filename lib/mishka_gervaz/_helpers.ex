@@ -1056,7 +1056,9 @@ defmodule MishkaGervaz.Helpers do
 
   @doc """
   Returns the normalized id-type for a `:relation` entity, defaulting
-  to `:uuid` when the related resource cannot be found.
+  to `:uuid` when the related resource cannot be found. A `:relation`
+  entity with no related resource and its own `options` list is
+  `:string` — its values are the list's, not a resource's keys.
 
   Combines `relation_target_resource/2` and `primary_key_type/1`. For
   non-relation entities returns `nil`.
@@ -1064,9 +1066,10 @@ defmodule MishkaGervaz.Helpers do
   @spec relation_id_type(map(), module() | nil) ::
           :uuid | :uuid_v7 | :integer | :string | nil
   def relation_id_type(%{type: :relation} = entity, parent) do
-    case relation_target_resource(entity, parent) do
-      nil -> :uuid
-      resource -> primary_key_type(resource)
+    case {relation_target_resource(entity, parent), Map.get(entity, :options)} do
+      {nil, options} when is_list(options) or is_function(options, 0) -> :string
+      {nil, _no_list} -> :uuid
+      {resource, _options} -> primary_key_type(resource)
     end
   end
 

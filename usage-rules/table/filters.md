@@ -135,6 +135,18 @@ can pick**; `source` / `fields` / `apply` decide **what picking it does**.
 `:load_more` pages, `:search` / `:search_multi` query as the reader types. `min_chars` and
 `page_size` only matter for the paginated modes.
 
+A `:relation` filter that declares `options` has no resource behind it: the list is loaded whole,
+searched in memory by label or value, and its values are strings. That is the searchable
+multi-select for a list the database does not hold as rows:
+
+```elixir
+filter :language, :relation do
+  mode :search_multi
+  min_chars 1
+  options fn -> MyApp.Languages.options() end   # [{"EN", "en"}, {"FA", "fa"}]
+end
+```
+
 ## Rules the compiler enforces
 
 - A `filters do … end` block must define at least one filter.

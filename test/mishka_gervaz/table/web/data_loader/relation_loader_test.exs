@@ -22,6 +22,68 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoaderTest do
     ParentResource
   }
 
+  # A FIXED LIST, NO RESOURCE: nothing here may be read from a database, so the state names none.
+  describe "a filter with its own option list" do
+    defp static_filter(extra \\ %{}) do
+      Map.merge(
+        %{
+          name: :language,
+          source: nil,
+          mode: :search_multi,
+          options: fn -> [{"EN", "en"}, {"FA", "fa"}, [label: "Français", value: "fr"], "de"] end
+        },
+        extra
+      )
+    end
+
+    @no_resource %{static: %{resource: nil}, current_user: nil}
+
+    test "loads the whole list, normalized to {label, value}" do
+      assert {:ok, %{options: options, has_more?: false, total_count: 4}} =
+               RelationLoader.load_options(static_filter(), @no_resource)
+
+      assert options == [{"EN", "en"}, {"FA", "fa"}, {"Français", "fr"}, {"de", "de"}]
+    end
+
+    test "searches label and value alike, ignoring case" do
+      assert {:ok, %{options: [{"FA", "fa"}]}} =
+               RelationLoader.search_options(static_filter(), @no_resource, "Fa")
+
+      assert {:ok, %{options: [{"Français", "fr"}]}} =
+               RelationLoader.search_options(static_filter(), @no_resource, "fran")
+
+      assert {:ok, %{options: []}} =
+               RelationLoader.search_options(static_filter(), @no_resource, "zu")
+    end
+
+    test "has nothing more to load: the list came whole" do
+      assert {:ok, %{options: [], has_more?: false}} =
+               RelationLoader.load_more_options(static_filter(), @no_resource)
+    end
+
+    test "reads a selection back from the list, labels and all" do
+      assert {:ok, [{"EN", "en"}, {"Français", "fr"}]} =
+               RelationLoader.resolve_selected(static_filter(), @no_resource, ["fr", "en"])
+
+      assert {:ok, []} = RelationLoader.resolve_selected(static_filter(), @no_resource, ["zu"])
+    end
+
+    test "offers the nil option first when the filter asks for it" do
+      filter = static_filter(%{include_nil: "No language"})
+
+      assert {:ok, %{options: [{"No language", "__nil__"} | _]}} =
+               RelationLoader.load_options(filter, @no_resource)
+
+      assert {:ok, [{"No language", "__nil__"}]} =
+               RelationLoader.resolve_selected(filter, @no_resource, ["__nil__"])
+    end
+
+    test "takes a plain list as well as a function" do
+      filter = static_filter(%{options: [{"EN", "en"}]})
+      assert {:ok, %{options: [{"EN", "en"}]}} = RelationLoader.load_options(filter, @no_resource)
+    end
+  end
+
   defp master_user, do: %{id: "master-123", site_id: nil, role: :admin}
   defp tenant_user, do: %{id: "tenant-456", site_id: "site-abc", role: :user}
 

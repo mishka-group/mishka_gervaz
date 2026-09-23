@@ -425,5 +425,13 @@ defmodule MishkaGervaz.HelpersTest do
       assert Helpers.relation_id_type(%{type: :text}, nil) == nil
       assert Helpers.relation_id_type(%{type: :select}, nil) == nil
     end
+
+    # Its values are the list's own, so a code like "fa" is a value to keep, not a search term.
+    test "is :string for a relation entity that brings its own option list" do
+      for options <- [[{"EN", "en"}], fn -> [{"EN", "en"}] end] do
+        entity = %{type: :relation, name: :language, source: nil, resource: nil, options: options}
+        assert Helpers.relation_id_type(entity, MishkaGervaz.Test.Resources.FormPost) == :string
+      end
+    end
   end
 end

@@ -8,6 +8,18 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
   - `:search` - Search with pagination (single select)
   - `:search_multi` - Search with pagination (multi select)
 
+  ## A fixed list instead of a resource
+
+  A `:relation` filter with no relationship or `resource` behind it that declares `options` — a
+  list, or a zero-arity function returning one — is served from that list: loaded whole, searched by
+  label or value in memory, and its selection read back from it. It is how a list the database does not hold as rows —
+  the languages a site publishes — gets the searchable multi-select:
+
+      filter :language, :relation do
+        mode :search_multi
+        options fn -> [{"EN", "en"}, {"FA", "fa"}] end
+      end
+
   ## Usage
 
       # Load initial options
@@ -244,6 +256,59 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
     MishkaGervaz.Helpers.resolve_label(record, display_field, state)
   end
 
+  @doc """
+  The filter's own option list, normalized to `{label, value}` — or `nil` when a relationship or a
+  `resource` supplies its options. A relation filter's `options` alone says nothing: the table fills
+  it with the options it loaded from the relationship.
+  """
+  @spec static_options(map(), map()) :: list({String.t(), any()}) | nil
+  def static_options(filter, state) do
+    table_resource = get_in(state, [Access.key(:static, %{}), Access.key(:resource)])
+
+    case MishkaGervaz.Helpers.relation_target_resource(filter, table_resource) do
+      nil -> own_options(filter)
+      _resource -> nil
+    end
+  end
+
+  defp own_options(%{options: options}) when is_function(options, 0),
+    do: own_options(%{options: options.()})
+
+  defp own_options(%{options: options}) when is_list(options) do
+    Enum.map(options, fn
+      {label, value} -> {to_string(label), value}
+      [label: label, value: value] -> {to_string(label), value}
+      value -> {to_string(value), value}
+    end)
+  end
+
+  defp own_options(_filter), do: nil
+
+  @doc """
+  A page of a static option list: all of it, or the options whose label or value contains `term`,
+  ignoring case.
+  """
+  @spec static_page(map(), list({String.t(), any()}), String.t() | nil) :: map()
+  def static_page(filter, options, term) do
+    matching =
+      case term do
+        blank when blank in [nil, ""] -> options
+        term -> Enum.filter(options, &static_match?(&1, String.downcase(term)))
+      end
+
+    %{
+      options: get_nil_option(filter) ++ matching,
+      page: 1,
+      has_more?: false,
+      total_count: length(matching)
+    }
+  end
+
+  defp static_match?({label, value}, term),
+    do:
+      String.contains?(String.downcase(label), term) or
+        String.contains?(String.downcase(to_string(value)), term)
+
   @doc false
   @spec resolve_resource(map(), map()) :: module()
   def resolve_resource(%{resource: resource}, _state) when not is_nil(resource), do: resource
@@ -340,54 +405,74 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
           resolve_resource: 2,
           resolve_display_field: 2,
           get_tenant: 1,
-          resolve_load_action: 3
+          resolve_load_action: 3,
+          static_options: 2,
+          static_page: 3
         ]
 
       @impl true
       @spec load_options(map(), map(), keyword()) :: {:ok, map()} | {:error, term()}
       def load_options(filter, state, opts \\ []) do
-        page = Keyword.get(opts, :page, 1)
-        resource = resolve_resource(filter, state)
-        display_field = resolve_display_field(filter, resource)
+        case static_options(filter, state) do
+          nil ->
+            page = Keyword.get(opts, :page, 1)
+            resource = resolve_resource(filter, state)
+            display_field = resolve_display_field(filter, resource)
 
-        case filter.mode do
-          :static -> load_all_options(filter, state, resource, display_field)
-          _ -> load_paginated_options(filter, state, resource, display_field, page, nil)
+            case filter.mode do
+              :static -> load_all_options(filter, state, resource, display_field)
+              _ -> load_paginated_options(filter, state, resource, display_field, page, nil)
+            end
+
+          options ->
+            {:ok, static_page(filter, options, nil)}
         end
       end
 
       @impl true
       @spec search_options(map(), map(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
       def search_options(filter, state, search_term, opts \\ []) do
-        page = Keyword.get(opts, :page, 1)
-        resource = resolve_resource(filter, state)
-        display_field = resolve_display_field(filter, resource)
+        case static_options(filter, state) do
+          nil ->
+            page = Keyword.get(opts, :page, 1)
+            resource = resolve_resource(filter, state)
+            display_field = resolve_display_field(filter, resource)
 
-        search_field =
-          cond do
-            filter[:search_field] -> filter[:search_field]
-            is_atom(display_field) -> display_field
-            true -> :name
-          end
+            search_field =
+              cond do
+                filter[:search_field] -> filter[:search_field]
+                is_atom(display_field) -> display_field
+                true -> :name
+              end
 
-        load_paginated_options(
-          filter,
-          state,
-          resource,
-          display_field,
-          page,
-          {search_field, search_term}
-        )
+            load_paginated_options(
+              filter,
+              state,
+              resource,
+              display_field,
+              page,
+              {search_field, search_term}
+            )
+
+          options ->
+            {:ok, static_page(filter, options, search_term)}
+        end
       end
 
       @impl true
       @spec load_more_options(map(), map(), keyword()) :: {:ok, map()} | {:error, term()}
       def load_more_options(filter, state, opts \\ []) do
-        page = Keyword.get(opts, :page, 1)
-        resource = resolve_resource(filter, state)
-        display_field = resolve_display_field(filter, resource)
+        case static_options(filter, state) do
+          nil ->
+            page = Keyword.get(opts, :page, 1)
+            resource = resolve_resource(filter, state)
+            display_field = resolve_display_field(filter, resource)
 
-        load_paginated_options(filter, state, resource, display_field, page, nil)
+            load_paginated_options(filter, state, resource, display_field, page, nil)
+
+          _whole_list_already_loaded ->
+            {:ok, %{options: [], page: 1, has_more?: false, total_count: 0}}
+        end
       end
 
       @impl true
@@ -397,6 +482,22 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
       def resolve_selected(_filter, _state, nil), do: {:ok, []}
 
       def resolve_selected(filter, state, selected_ids) when is_list(selected_ids) do
+        case static_options(filter, state) do
+          nil ->
+            resolve_selected_records(filter, state, selected_ids)
+
+          options ->
+            wanted = Enum.map(selected_ids, &to_string/1)
+
+            {nil_selected, _real} =
+              Enum.split_with(selected_ids, &(&1 == "__nil__" or &1 == :nil_value))
+
+            nil_options = if nil_selected != [], do: get_nil_option(filter), else: []
+            {:ok, nil_options ++ Enum.filter(options, &(to_string(elem(&1, 1)) in wanted))}
+        end
+      end
+
+      defp resolve_selected_records(filter, state, selected_ids) do
         {nil_selected, real_ids} =
           Enum.split_with(selected_ids, &(&1 == "__nil__" or &1 == :nil_value))
 
