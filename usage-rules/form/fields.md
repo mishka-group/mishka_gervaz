@@ -56,7 +56,7 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 | `virtual` | bool | `false` | not a resource attribute |
 | `resource` | Ash resource | — | **required** for virtual `:relation` / `:select` |
 | `derive_value` | `fn record -> value` | — | how edit mode reads a virtual field off the record |
-| `options` | list \| `fn -> list` | — | function runs at load |
+| `options` | list \| `fn -> list` \| `fn state -> list` | — | function runs at load; `fn state` only on a resource-less `:relation` |
 | `options_source` | `{resource, action, display_field}` | — | ⚠ not wired — use `options` or `load` |
 | `display_field` | atom \| `fn r ->` \| `fn r, state ->` | — | relation label |
 | `search_field` | atom | — | autocomplete field |
@@ -132,6 +132,29 @@ loaded record — a virtual field has no attribute to read. A virtual many-relat
 
 `value_field` stores a non-primary-key attribute from the chosen record.
 `include_nil fn -> dgettext(…) end` adds a labelled "none" option — useful for "auto-generate".
+
+A choice that follows another field but is **not rows of a resource** — the languages of the picked
+site — is a `:relation` with no `resource` whose `options` is `fn state -> list end`. It is read again
+on every load, a `depends_on` change included, and it loads at init even while the parent is empty or
+restricted, so the function decides what that means (a site admin's own site, say):
+
+```elixir
+field :language, :relation do
+  depends_on :site_id
+  mode :search
+
+  options fn state ->
+    site_id =
+      if state.master_user?,
+        do: Map.get(state.field_values, :site_id),
+        else: Map.get(state.current_user, :site_id)
+
+    MyApp.Languages.options_for(site_id)   # [{"EN", "en"}, {"FA", "fa"}]
+  end
+end
+```
+
+A picked `include_nil` parent arrives as `"__nil__"`, not `nil`.
 
 ## Which knob changes a value, and where — compared
 

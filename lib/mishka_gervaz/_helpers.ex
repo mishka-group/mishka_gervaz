@@ -1067,7 +1067,7 @@ defmodule MishkaGervaz.Helpers do
           :uuid | :uuid_v7 | :integer | :string | nil
   def relation_id_type(%{type: :relation} = entity, parent) do
     case {relation_target_resource(entity, parent), Map.get(entity, :options)} do
-      {nil, options} when is_list(options) or is_function(options, 0) -> :string
+      {nil, options} when is_list(options) or is_function(options) -> :string
       {nil, _no_list} -> :uuid
       {resource, _options} -> primary_key_type(resource)
     end

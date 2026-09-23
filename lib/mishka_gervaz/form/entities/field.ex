@@ -219,8 +219,16 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   doc: "Derive value from record on edit. `fn record -> value end`"
                 ],
                 options: [
-                  type: {:or, [{:list, :any}, {:fun, 0}]},
-                  doc: "Static options or function returning options."
+                  type: {:or, [{:list, :any}, {:fun, 0}, {:fun, 1}]},
+                  doc: """
+                  Static options or function returning options.
+
+                  A `:relation` field with no `resource` may take `fn state -> options end`: it is
+                  read with the form state each time the field's options load — at init, on search,
+                  and when a `depends_on` parent changes — so it can offer what the parent's value
+                  (`state.field_values`) allows. Such a field loads at init even while its parent is
+                  empty or out of reach; the function decides what an empty parent means.
+                  """
                 ],
                 options_source: [
                   type: {:tuple, [{:behaviour, Ash.Resource}, :atom, :atom]},

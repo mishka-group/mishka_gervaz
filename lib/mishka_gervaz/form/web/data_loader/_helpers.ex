@@ -182,12 +182,15 @@ defmodule MishkaGervaz.Form.Web.DataLoader.Helpers do
   def load_dependent_relations(socket, state, load_fn) when is_function(load_fn, 3) do
     state.static.fields
     |> Enum.filter(fn field ->
-      field.depends_on != nil and
-        Map.has_key?(state.field_values, field.depends_on) and
-        field.type == :relation
+      field.depends_on != nil and field.type == :relation and
+        (Map.has_key?(state.field_values, field.depends_on) or options_of_state?(field))
     end)
     |> Enum.reduce(socket, fn field, acc -> load_fn.(acc, state, field.name) end)
   end
+
+  # Its options are the state's to decide, an empty parent included — see the `options` field doc.
+  defp options_of_state?(field),
+    do: is_nil(Map.get(field, :resource)) and is_function(Map.get(field, :options), 1)
 
   @doc false
   @spec load_readonly_relation_options(

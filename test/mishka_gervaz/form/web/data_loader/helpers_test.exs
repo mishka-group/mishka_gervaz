@@ -320,6 +320,43 @@ defmodule MishkaGervaz.Form.Web.DataLoader.HelpersTest do
       assert results == [:state_id]
     end
 
+    # A field whose options are the state's to decide loads with its parent empty — the parent may be
+    # a restricted field the user never sees, and the function knows what that means.
+    test "loads a resource-less relation whose options are a function of the state, parent empty" do
+      state =
+        state_with(
+          static: [
+            fields: [
+              %{name: :site_id, depends_on: nil, type: :relation},
+              %{
+                name: :language,
+                depends_on: :site_id,
+                type: :relation,
+                resource: nil,
+                options: fn _state -> [] end
+              },
+              %{
+                name: :other,
+                depends_on: :site_id,
+                type: :relation,
+                resource: nil,
+                options: [{"A", "a"}]
+              }
+            ]
+          ],
+          field_values: %{}
+        )
+
+      calls = :ets.new(:calls, [:public])
+
+      Helpers.load_dependent_relations(:socket, state, fn socket, _state, name ->
+        :ets.insert(calls, {name})
+        socket
+      end)
+
+      assert :ets.tab2list(calls) == [{:language}]
+    end
+
     test "no-op when no dependent relations satisfy the predicate" do
       state =
         state_with(

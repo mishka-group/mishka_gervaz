@@ -434,6 +434,57 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoaderTest do
     end
   end
 
+  # OPTIONS THAT FOLLOW ANOTHER FIELD. With no resource behind it, a relation field may take its
+  # options from the form state, read again on every load — the languages of whichever site is picked.
+  describe "static options that are a function of the form state" do
+    defp by_site(state) do
+      case state.field_values[:site_id] do
+        "site-a" -> [{"EN", "en"}, {"FA", "fa"}]
+        "__nil__" -> [{"EN", "en"}, {"FA", "fa"}, {"FR", "fr"}]
+        _none -> []
+      end
+    end
+
+    defp language_field,
+      do: %{name: :language, type: :relation, resource: nil, options: &by_site/1, mode: :search}
+
+    defp picked(site_id),
+      do: Map.put(build_state(master_user()), :field_values, %{site_id: site_id})
+
+    test "load_options reads the parent's value as it is now" do
+      assert {:ok, [], false} = RelationLoader.load_options(language_field(), picked(nil))
+
+      assert {:ok, [{"EN", "en"}, {"FA", "fa"}], false} =
+               RelationLoader.load_options(language_field(), picked("site-a"))
+
+      assert {:ok, [_, _, {"FR", "fr"}], false} =
+               RelationLoader.load_options(language_field(), picked("__nil__"))
+    end
+
+    test "search_options searches the state's options" do
+      assert {:ok, [{"FR", "fr"}], false} =
+               RelationLoader.search_options(language_field(), picked("__nil__"), "fr")
+
+      assert {:ok, [], false} =
+               RelationLoader.search_options(language_field(), picked("site-a"), "fr")
+    end
+
+    test "resolve_selected reads a value back from the state's options" do
+      assert {:ok, [{"FA", "fa"}]} =
+               RelationLoader.resolve_selected(language_field(), picked("site-a"), ["fa"])
+    end
+
+    test "a zero-arity function still works, and a list is its own options" do
+      zero = %{language_field() | options: fn -> [{"EN", "en"}] end}
+      assert {:ok, [{"EN", "en"}], false} = RelationLoader.load_options(zero, picked(nil))
+
+      assert MishkaGervaz.Form.Web.DataLoader.RelationLoader.field_options(
+               %{options: [{"X", "x"}]},
+               %{}
+             ) == [{"X", "x"}]
+    end
+  end
+
   # ============================================================================
   # Pagination boundary with value_field
   # ============================================================================

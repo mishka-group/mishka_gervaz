@@ -120,6 +120,18 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
     prepend_nil_option(base, include_nil)
   end
 
+  @doc """
+  A resource-less field's own options: its list, its zero-arity function's list, or — for
+  `fn state -> options end` — what the form state makes of them now.
+  """
+  @spec field_options(map(), map()) :: list()
+  def field_options(%{options: options}, state) when is_function(options, 1), do: options.(state)
+
+  def field_options(%{options: options}, _state),
+    do: MishkaGervaz.Helpers.resolve_options(options)
+
+  def field_options(_field, _state), do: []
+
   @doc false
   def prepend_nil_option(options, nil), do: options
   def prepend_nil_option(options, false), do: options
@@ -305,7 +317,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           maybe_apply_custom_load: 3,
           get_display_value: 2,
           get_record_value: 2,
-          resolve_selected_fallback: 7
+          resolve_selected_fallback: 7,
+          field_options: 2
         ]
 
       @spec load_options(map(), State.t(), keyword()) ::
@@ -315,7 +328,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case resource do
           nil ->
-            {:ok, Map.get(field, :options) || [], false}
+            {:ok, field_options(field, state), false}
 
           resource when is_atom(resource) ->
             page = Keyword.get(opts, :page, 1)
@@ -335,7 +348,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case resource do
           nil ->
-            static_options = Map.get(field, :options) || []
+            static_options = field_options(field, state)
 
             filtered =
               Enum.filter(static_options, fn {label, _} ->
@@ -378,7 +391,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case resource do
           nil ->
-            static_options = Map.get(field, :options) || []
+            static_options = field_options(field, state)
 
             matched =
               Enum.filter(static_options, fn {_, value} ->
