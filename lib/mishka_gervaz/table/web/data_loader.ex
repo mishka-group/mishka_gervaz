@@ -8,6 +8,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   - Filtering and sorting
   - Stream management
   - Async result handling
+  - The total after realtime changes (`refresh_total/1`)
 
   ## Sub-builders
 
@@ -88,6 +89,13 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec handle_async(atom(), {:ok, any()} | {:exit, any()}, Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
   defdelegate handle_async(name, result, socket), to: __MODULE__.Default
+
+  @spec load_total(State.t()) ::
+          {:ok, %{total_count: non_neg_integer(), total_pages: pos_integer() | nil}} | :skip
+  defdelegate load_total(state), to: __MODULE__.Default
+
+  @spec refresh_total(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defdelegate refresh_total(socket), to: __MODULE__.Default
 
   @spec reload(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate reload(socket, state), to: __MODULE__.Default
@@ -192,15 +200,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         sync_url? = Keyword.get(opts, :sync_url, true)
         loading_type = if reset, do: :reset, else: :more
 
-        query_mod = resolve_query_builder(state.static.resource)
-        hook_mod = resolve_hook_runner(state.static.resource)
-
-        query = query_mod.build_query(state)
-
-        query =
-          state.static.hooks
-          |> hook_mod.run_hook(:on_load, [query, state])
-          |> hook_mod.apply_hook_result(query)
+        query = read_query(state)
 
         state = State.update(state, loading: :loading, loading_type: loading_type)
 
@@ -223,6 +223,176 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
         pagination_mod.load_page(state, query, page, action, tenant)
       end
+
+      @spec read_query(State.t()) :: Ash.Query.t()
+      defp read_query(state) do
+        query_mod = resolve_query_builder(state.static.resource)
+        hook_mod = resolve_hook_runner(state.static.resource)
+
+        query = query_mod.build_query(state)
+
+        state.static.hooks
+        |> hook_mod.run_hook(:on_load, [query, state])
+        |> hook_mod.apply_hook_result(query)
+      end
+
+      @doc """
+      The table's total from the read a load makes now — filters, search, `path_params`, the
+      `on_load` hook, the archive view's action and the tenant — without loading a page.
+
+      Returns what the resource's `PaginationHandler.load_total/4` returns:
+      `{:ok, %{total_count: count, total_pages: pages}}`, or `:skip` when the table keeps no count
+      or the read fails.
+      """
+      @spec load_total(State.t()) ::
+              {:ok, %{total_count: non_neg_integer(), total_pages: pos_integer() | nil}} | :skip
+      def load_total(state) do
+        pagination_mod = resolve_pagination_handler(state.static.resource)
+        tenant_mod = resolve_tenant_resolver(state.static.resource)
+
+        if Code.ensure_loaded?(pagination_mod) and
+             function_exported?(pagination_mod, :load_total, 4) do
+          pagination_mod.load_total(
+            state,
+            read_query(state),
+            tenant_mod.get_read_action(state),
+            tenant_mod.get_tenant(state)
+          )
+        else
+          :skip
+        end
+      end
+
+      @doc """
+      Brings the table's total — "Showing N", the page count, the empty state — up to date with
+      the data, in the socket's `:table_state`.
+
+      The table calls it for every realtime notification it handles itself. Call it from an
+      `on_realtime` hook that adds or removes rows and returns `{:halt, socket}`:
+
+          on_realtime fn notification, socket ->
+            {:halt, socket |> redraw(notification) |> MishkaGervaz.Table.Web.DataLoader.refresh_total()}
+          end
+
+      On a connected socket the count runs as a task, one at a time: its result is applied unless
+      a newer total or a load has landed since, and calls while it runs are counted once more after
+      it. A call while a load is in flight is counted once the load lands. A row going into an empty
+      table is counted at once, so it arrives with its total; so is every call on a socket that is
+      not connected. A numbered table left past its last page loads the last page. A table with no
+      total yet, or one that keeps no count, is left as it is.
+      """
+      @spec refresh_total(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+      def refresh_total(%{assigns: %{table_state: %State{loading: :loading}}} = socket),
+        do: Phoenix.Component.assign(socket, :refresh_total_after_load, true)
+
+      def refresh_total(%{assigns: %{table_state: %State{total_count: total} = state}} = socket)
+          when is_integer(total) do
+        cond do
+          total == 0 and inserting?(socket, state) ->
+            apply_total(socket, state, load_total(state))
+
+          socket.assigns[:refresh_total_running] ->
+            Phoenix.Component.assign(socket, :refresh_total_again, true)
+
+          not Phoenix.LiveView.connected?(socket) ->
+            apply_total(socket, state, load_total(state))
+
+          true ->
+            start_refresh_total(socket, state)
+        end
+      end
+
+      def refresh_total(socket), do: socket
+
+      @spec inserting?(Phoenix.LiveView.Socket.t(), State.t()) :: boolean()
+      defp inserting?(socket, state) do
+        case socket.assigns[:streams] do
+          %{} = streams ->
+            match?(%{inserts: [_ | _]}, Map.get(streams, state.static.stream_name))
+
+          _no_streams ->
+            false
+        end
+      end
+
+      @spec start_refresh_total(Phoenix.LiveView.Socket.t(), State.t()) ::
+              Phoenix.LiveView.Socket.t()
+      defp start_refresh_total(socket, state) do
+        marker = total_marker(socket, state)
+
+        socket
+        |> Phoenix.Component.assign(:refresh_total_running, true)
+        |> Phoenix.Component.assign(:refresh_total_again, false)
+        |> Phoenix.LiveView.start_async(:refresh_total, fn -> {marker, load_total(state)} end)
+      end
+
+      @spec refresh_total_done(Phoenix.LiveView.Socket.t(), tuple() | nil, term()) ::
+              Phoenix.LiveView.Socket.t()
+      defp refresh_total_done(socket, marker, result) do
+        state = socket.assigns.table_state
+        again? = socket.assigns[:refresh_total_again] == true
+
+        socket =
+          socket
+          |> Phoenix.Component.assign(:refresh_total_running, false)
+          |> Phoenix.Component.assign(:refresh_total_again, false)
+
+        socket =
+          if state.loading != :loading and marker == total_marker(socket, state),
+            do: apply_total(socket, state, result),
+            else: socket
+
+        if again?, do: refresh_total(socket), else: socket
+      end
+
+      @spec total_marker(Phoenix.LiveView.Socket.t(), State.t()) :: tuple()
+      defp total_marker(socket, state) do
+        {socket.assigns[:refresh_total_seq] || 0, state.filter_values, state.archive_status,
+         state.path_params, state.current_page_size}
+      end
+
+      @spec bump_total_seq(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+      defp bump_total_seq(socket),
+        do:
+          Phoenix.Component.assign(
+            socket,
+            :refresh_total_seq,
+            (socket.assigns[:refresh_total_seq] || 0) + 1
+          )
+
+      @spec apply_total(Phoenix.LiveView.Socket.t(), State.t(), {:ok, map()} | :skip) ::
+              Phoenix.LiveView.Socket.t()
+      defp apply_total(socket, _state, :skip), do: socket
+
+      defp apply_total(socket, state, {:ok, totals}) do
+        state = State.update(state, totals)
+
+        socket =
+          socket
+          |> Phoenix.Component.assign(:table_state, state)
+          |> bump_total_seq()
+
+        if past_last_page?(state),
+          do: load_async(socket, state, page: state.total_pages, reset: true),
+          else: socket
+      end
+
+      @spec past_last_page?(State.t()) :: boolean()
+      defp past_last_page?(%State{page: page, total_pages: pages} = state)
+           when is_integer(page) and is_integer(pages) and page > pages do
+        resolve_pagination_handler(state.static.resource).get_pagination_type(state) == :numbered
+      end
+
+      defp past_last_page?(_state), do: false
+
+      @spec refresh_total_after_load(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+      defp refresh_total_after_load(%{assigns: %{refresh_total_after_load: true}} = socket) do
+        socket
+        |> Phoenix.Component.assign(:refresh_total_after_load, false)
+        |> refresh_total()
+      end
+
+      defp refresh_total_after_load(socket), do: socket
 
       @doc """
       Handle async result from data loading.
@@ -261,7 +431,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> Phoenix.Component.assign(:skip_next_url_sync?, false)
         |> Phoenix.LiveView.stream(state.static.stream_name, records, reset: reset)
         |> then(fn s -> if skip_url_sync?, do: s, else: maybe_sync_url(s, state) end)
+        |> bump_total_seq()
         |> MishkaGervaz.Table.Web.AutoState.after_load(state)
+        |> refresh_total_after_load()
       end
 
       def handle_async(:load_data, {:exit, reason}, socket) do
@@ -280,8 +452,16 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             records_result: AsyncResult.failed(state.records_result, error)
           )
 
-        Phoenix.Component.assign(socket, :table_state, state)
+        socket
+        |> Phoenix.Component.assign(:table_state, state)
+        |> refresh_total_after_load()
       end
+
+      def handle_async(:refresh_total, {:ok, {marker, result}}, socket),
+        do: refresh_total_done(socket, marker, result)
+
+      def handle_async(:refresh_total, {:exit, _reason}, socket),
+        do: refresh_total_done(socket, nil, :skip)
 
       @doc """
       Reload data with current filters/sort (for refresh after changes).
@@ -476,6 +656,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      maybe_load: 2,
                      load_async: 2,
                      load_async: 3,
+                     load_total: 1,
+                     refresh_total: 1,
                      handle_async: 3,
                      reload: 2,
                      load_more: 2,

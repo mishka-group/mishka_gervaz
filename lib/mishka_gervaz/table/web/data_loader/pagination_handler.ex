@@ -5,6 +5,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
   ## Overridable Functions
 
   - `load_page/5` - Load a specific page of data
+  - `load_total/4` - Read the table's total without loading a page; a `load_page/5` override that
+    changes the read or how its total is produced overrides this too, or returns `:skip`
   - `get_pagination_type/1` - Get pagination type from state
   - `calculate_total_pages/2` - Calculate total pages from count
   - `build_page_opts/3` - Build pagination options for query
@@ -79,6 +81,80 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
 
           {page, page_result, keep? or reset_stream?(pagination_type, page), pagination_info}
+        end
+      end
+
+      @doc """
+      The table's total as `load_page/5` would report it, without loading a page.
+
+      Returns `{:ok, %{total_count: count, total_pages: pages}}` for the same query, action and
+      tenant — `total_pages` is `nil` for a table without pagination. It is counted with
+      `Ash.count/2`, unless that could differ from what the read reports: a manual read, a query
+      carrying its own `full_count` in its context or a `before_action`, a table without pagination
+      on an action that paginates, and a data layer that cannot count all read instead — one row
+      with `count: true`, or every row for a table without pagination. Returns `:skip` when the
+      table keeps no count — a type other than `:numbered` with `show_total false` — or when the
+      read fails.
+      """
+      @spec load_total(State.t(), Ash.Query.t(), atom(), any()) ::
+              {:ok, %{total_count: non_neg_integer(), total_pages: pos_integer() | nil}} | :skip
+      def load_total(state, query, action, tenant) do
+        page_size = state.current_page_size || state.static.page_size
+        paginated? = not is_nil(state.static.config[:pagination]) and not is_nil(page_size)
+
+        if paginated? and not count_requested?(state, get_pagination_type(state)) do
+          :skip
+        else
+          query
+          |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+          |> count_rows(paginated?)
+          |> case do
+            {:ok, count} when paginated? ->
+              {:ok, %{total_count: count, total_pages: calculate_total_pages(count, page_size)}}
+
+            {:ok, count} ->
+              {:ok, %{total_count: count, total_pages: nil}}
+
+            :error ->
+              :skip
+          end
+        end
+      rescue
+        _error -> :skip
+      end
+
+      @spec count_rows(Ash.Query.t(), boolean()) :: {:ok, non_neg_integer()} | :error
+      defp count_rows(query, paginated?) do
+        if count_by_reading?(query, paginated?) do
+          read_count(query, paginated?)
+        else
+          case Ash.count(query) do
+            {:ok, count} when is_integer(count) -> {:ok, count}
+            _cannot_count -> read_count(query, paginated?)
+          end
+        end
+      end
+
+      @spec count_by_reading?(Ash.Query.t(), boolean()) :: boolean()
+      defp count_by_reading?(%Ash.Query{action: action} = query, paginated?) do
+        not is_nil(Map.get(action, :manual)) or
+          not is_nil((query.context || %{})[:full_count]) or
+          query.before_action != [] or
+          (not paginated? and Map.get(action, :pagination) not in [false, nil])
+      end
+
+      @spec read_count(Ash.Query.t(), boolean()) :: {:ok, non_neg_integer()} | :error
+      defp read_count(query, true) do
+        case Ash.read(query, page: [offset: 0, limit: 1, count: true]) do
+          {:ok, %{count: count}} when is_integer(count) -> {:ok, count}
+          _no_count -> :error
+        end
+      end
+
+      defp read_count(query, false) do
+        case Ash.read(query) do
+          {:ok, read_result} -> {:ok, length(extract_results(read_result))}
+          {:error, _error} -> :error
         end
       end
 
@@ -176,6 +252,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       end
 
       defoverridable load_page: 5,
+                     load_total: 4,
                      get_pagination_type: 1,
                      count_requested?: 2,
                      reset_stream?: 2,

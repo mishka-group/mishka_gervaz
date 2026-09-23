@@ -27,6 +27,10 @@ end
 Most may return `socket`, `{:cont, socket}` or `{:halt, socket}`. `:halt` stops the built-in
 behaviour.
 
+An `on_realtime` that halts and adds or removes rows itself hands its socket through
+`MishkaGervaz.Table.Web.DataLoader.refresh_total/1`, so "Showing N", the page count and the empty
+state follow — see [realtime.md](realtime.md).
+
 `on_load` is the query hook — it is also how a table is backed by something other than the
 database:
 

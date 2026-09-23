@@ -59,7 +59,7 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
 
       hooks do
         on_realtime fn notification, socket ->
-          if notification.data.created_by_id == socket.assigns.current_user.id do
+          if notification.data.created_by_id == socket.assigns.table_state.current_user.id do
             {:halt, socket}
           else
             {:cont, put_flash(socket, :info, "New record added!")}
@@ -94,7 +94,7 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     on_realtime: [
       type: {:fun, 2},
       doc:
-        "`fn notification, socket -> socket | {:cont, socket} | {:halt, socket}` - PubSub received. Return {:halt, socket} to skip update."
+        "`fn notification, socket -> socket | {:cont, socket} | {:halt, socket}` - PubSub received. Return {:halt, socket} to skip the table's own update; a hook that adds or removes rows itself pipes its socket through `MishkaGervaz.Table.Web.DataLoader.refresh_total/1`."
     ],
     on_expand: [
       type: {:fun, 2},

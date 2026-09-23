@@ -346,45 +346,58 @@ defmodule MishkaGervaz.Table.Web.Live do
     if State.record_visible?(state, record) do
       supports_archive = Info.archive_enabled?(state.static.resource)
 
-      case action.type do
-        :create ->
-          if state.archive_status == :active do
-            reload_and_insert(socket, state, record)
-          else
-            socket
-          end
-
-        :update ->
-          record_archived? = Map.get(record, :archived_at) != nil
-
-          matches_view? =
-            (state.archive_status == :active and not record_archived?) or
-              (state.archive_status == :archived and record_archived?)
-
-          if matches_view? do
-            reload_and_insert(socket, state, record)
-          else
-            stream_delete(socket, state.static.stream_name, record)
-          end
-
-        :destroy ->
-          permanent_destroy_action =
-            Info.archive_action_for(state.static.resource, :destroy, state.master_user?)
-
-          is_permanent_delete = action.name == permanent_destroy_action
-
-          if supports_archive and not is_permanent_delete do
-            if state.archive_status == :archived do
-              reload_and_insert(socket, state, record)
-            else
-              stream_delete(socket, state.static.stream_name, record)
-            end
-          else
-            stream_delete(socket, state.static.stream_name, record)
-          end
-      end
+      socket
+      |> apply_notification_action(action, record, state, supports_archive)
+      |> DataLoader.refresh_total()
     else
       socket
+    end
+  end
+
+  @spec apply_notification_action(
+          Phoenix.LiveView.Socket.t(),
+          map(),
+          map(),
+          State.t(),
+          boolean()
+        ) :: Phoenix.LiveView.Socket.t()
+  defp apply_notification_action(socket, action, record, state, supports_archive) do
+    case action.type do
+      :create ->
+        if state.archive_status == :active do
+          reload_and_insert(socket, state, record)
+        else
+          socket
+        end
+
+      :update ->
+        record_archived? = Map.get(record, :archived_at) != nil
+
+        matches_view? =
+          (state.archive_status == :active and not record_archived?) or
+            (state.archive_status == :archived and record_archived?)
+
+        if matches_view? do
+          reload_and_insert(socket, state, record)
+        else
+          stream_delete(socket, state.static.stream_name, record)
+        end
+
+      :destroy ->
+        permanent_destroy_action =
+          Info.archive_action_for(state.static.resource, :destroy, state.master_user?)
+
+        is_permanent_delete = action.name == permanent_destroy_action
+
+        if supports_archive and not is_permanent_delete do
+          if state.archive_status == :archived do
+            reload_and_insert(socket, state, record)
+          else
+            stream_delete(socket, state.static.stream_name, record)
+          end
+        else
+          stream_delete(socket, state.static.stream_name, record)
+        end
     end
   end
 

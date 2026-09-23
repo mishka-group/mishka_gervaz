@@ -517,6 +517,7 @@ defmodule MishkaGervaz.Test.DataLoader.ArchivableResource do
 
   archive do
     archive_related([])
+    exclude_read_actions([:archived, :get_archived, :master_archived, :master_get_archived])
   end
 
   mishka_gervaz do

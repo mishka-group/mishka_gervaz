@@ -47,6 +47,33 @@ incoming record against the current user.
 To take control of an update entirely, use the `on_realtime` hook and return `{:halt, socket}`
 ([hooks.md](hooks.md)).
 
+## The total follows
+
+After each notification it handles, the table counts its total again with its own read —
+filters, search, `path_params`, `on_load`, the archive view's action and the tenant — so
+"Showing N", the page count and the empty state follow rows added and removed, and a notification
+delivered twice counts once. The count runs as a task, one per burst of notifications; an empty
+table counts at once, so its first row arrives with its total. A numbered table left past its last
+page loads the last page.
+
+A row the table puts in over realtime is not checked against the filters: under an active filter
+or search the rows on screen can differ from the total until the next load.
+
+Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
+default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor
+its empty state over realtime — use `show_total true` where rows arrive live.
+
+A hook that halts and changes rows itself asks for the same:
+
+```elixir
+on_realtime fn notification, socket ->
+  {:halt,
+   socket
+   |> redraw_rows(notification)
+   |> MishkaGervaz.Table.Web.DataLoader.refresh_total()}
+end
+```
+
 ## TODO
 - [ ] `prefix` set (compile fails otherwise)
 - [ ] `pubsub` reachable — set on the domain
@@ -54,6 +81,7 @@ To take control of an update entirely, use the `on_realtime` hook and return `{:
 - [ ] Parent LiveView forwards `%Phoenix.Socket.Broadcast{}` via `send_update/2`
 - [ ] `visible` declared for any multitenant resource
 - [ ] `enabled false` on tables backed by a data layer with nothing to subscribe to
+- [ ] An `on_realtime` that halts and adds or removes rows calls `DataLoader.refresh_total/1`
 
 ## DSL reference
 

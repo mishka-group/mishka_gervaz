@@ -451,7 +451,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           myself={@myself}
         />
         <span class="flex-1"></span>
-        <span :if={@range_label} class="text-[12px] font-medium text-[#a8a5a0]">
+        <span
+          :if={@range_label}
+          id={"#{@static.id}-total"}
+          class="text-[12px] font-medium text-[#a8a5a0]"
+        >
           {@range_label}
         </span>
         <.dynamic_component
