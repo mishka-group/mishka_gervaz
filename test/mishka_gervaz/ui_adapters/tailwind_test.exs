@@ -28,16 +28,16 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
       html =
         select(%{
           options: [
-            {"Mishka Blog", [{"Collection", "Elixir.MishkaBlog.Collection"}]},
-            {"Mishka File Seller", [{"Collection", "Elixir.MishkaFileSeller.Collection"}]}
+            {"Mishka Blog", [{"Tag", "Elixir.MishkaBlog.Tag"}]},
+            {"Mishka Document", [{"Tag", "Elixir.MishkaDocument.Tag"}]}
           ]
         })
 
       assert html =~ ~s(<optgroup label="Mishka Blog">)
-      assert html =~ ~s(<optgroup label="Mishka File Seller">)
+      assert html =~ ~s(<optgroup label="Mishka Document">)
       # same display label, but distinct values under their own groups
-      assert html =~ ~s(<option value="Elixir.MishkaBlog.Collection")
-      assert html =~ ~s(<option value="Elixir.MishkaFileSeller.Collection")
+      assert html =~ ~s(<option value="Elixir.MishkaBlog.Tag")
+      assert html =~ ~s(<option value="Elixir.MishkaDocument.Tag")
     end
 
     test "flat and grouped entries can be mixed" do
