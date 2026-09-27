@@ -1128,8 +1128,14 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   defp bulk_action_visible_for_status?(_, _status), do: true
 
-  defp bulk_action_visible?(%{restricted: true}, _archive_status, %{master_user?: false}),
-    do: false
+  defp bulk_action_visible?(
+         %{restricted: true} = action,
+         archive_status,
+         %{master_user?: true} = state
+       ),
+       do: bulk_action_visible?(Map.delete(action, :restricted), archive_status, state)
+
+  defp bulk_action_visible?(%{restricted: true}, _archive_status, _state), do: false
 
   defp bulk_action_visible?(%{visible: visible}, _archive_status, state)
        when is_function(visible, 1) do

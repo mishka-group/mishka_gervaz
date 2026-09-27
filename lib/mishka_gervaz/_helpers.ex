@@ -555,7 +555,7 @@ defmodule MishkaGervaz.Helpers do
   Checks if an entity (filter, action, etc.) is accessible based on visibility and restrictions.
 
   Handles:
-  - `restricted: true` with non-master user → not accessible
+  - `restricted: true` → accessible only when `state.master_user?` is `true`
   - `visible: false` → not accessible
   - `visible: fn state -> boolean end` → calls function
 
@@ -567,6 +567,9 @@ defmodule MishkaGervaz.Helpers do
       iex> MishkaGervaz.Helpers.accessible?(%{restricted: true}, %{master_user?: true})
       true
 
+      iex> MishkaGervaz.Helpers.accessible?(%{restricted: true}, %{})
+      false
+
       iex> MishkaGervaz.Helpers.accessible?(%{visible: false}, %{})
       false
 
@@ -574,7 +577,10 @@ defmodule MishkaGervaz.Helpers do
       true
   """
   @spec accessible?(map(), map()) :: boolean()
-  def accessible?(%{restricted: true}, %{master_user?: false}), do: false
+  def accessible?(%{restricted: true} = element, %{master_user?: true} = state),
+    do: accessible?(Map.delete(element, :restricted), state)
+
+  def accessible?(%{restricted: true}, _state), do: false
   def accessible?(%{visible: visible}, state) when is_function(visible, 1), do: visible.(state)
   def accessible?(%{visible: false}, _state), do: false
   def accessible?(_, _), do: true

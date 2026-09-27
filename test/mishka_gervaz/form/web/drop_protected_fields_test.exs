@@ -1,18 +1,24 @@
 defmodule MishkaGervaz.Form.Web.DropProtectedFieldsTest do
   @moduledoc """
-  Tests for `drop_protected_fields` in SubmitHandler.
-
-  Since drop_protected_fields is private, we test it indirectly through the
-  submit handler module's internal helpers. We extract the logic and test it
-  via the same pattern used in the implementation.
+  Tests for `drop_protected_fields/2`, `field_restricted?/2` and `field_readonly?/2` in
+  `MishkaGervaz.Form.Web.Events.SubmitHandler`.
   """
   use ExUnit.Case, async: true
+
+  import MishkaGervaz.Form.Web.Events.SubmitHandler,
+    only: [drop_protected_fields: 2, field_restricted?: 2, field_readonly?: 2]
 
   describe "field_restricted? logic" do
     test "restricted boolean true blocks non-master" do
       field = %{restricted: true, readonly: false}
       state = %{master_user?: false}
       assert field_restricted?(field, state)
+    end
+
+    test "restricted boolean true blocks a state that does not say the user is a master" do
+      field = %{restricted: true, readonly: false}
+      assert field_restricted?(field, %{})
+      assert field_restricted?(field, %{master_user?: nil})
     end
 
     test "restricted boolean true allows master" do
@@ -176,27 +182,5 @@ defmodule MishkaGervaz.Form.Web.DropProtectedFieldsTest do
 
       refute Map.has_key?(result, "host")
     end
-  end
-
-  # Mirror the private functions from SubmitHandler for testing
-  defp field_restricted?(%{restricted: true}, %{master_user?: false}), do: true
-  defp field_restricted?(%{restricted: f}, state) when is_function(f, 1), do: not f.(state)
-  defp field_restricted?(_, _), do: false
-
-  defp field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
-  defp field_readonly?(%{readonly: true}, _), do: true
-  defp field_readonly?(_, _), do: false
-
-  defp drop_protected_fields(state, params) do
-    state.static.fields
-    |> Enum.reduce(params, fn field, acc ->
-      field_key = to_string(field.name)
-
-      cond do
-        field_restricted?(field, state) -> Map.delete(acc, field_key)
-        field_readonly?(field, state) -> Map.delete(acc, field_key)
-        true -> acc
-      end
-    end)
   end
 end

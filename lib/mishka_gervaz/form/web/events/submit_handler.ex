@@ -131,7 +131,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   @doc false
   @spec field_restricted?(map(), map()) :: boolean()
-  def field_restricted?(%{restricted: true}, %{master_user?: false}), do: true
+  def field_restricted?(%{restricted: true}, %{master_user?: true}), do: false
+  def field_restricted?(%{restricted: true}, _state), do: true
 
   def field_restricted?(%{restricted: f}, state) when is_function(f, 1),
     do: not f.(state)

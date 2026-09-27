@@ -434,4 +434,27 @@ defmodule MishkaGervaz.HelpersTest do
       end
     end
   end
+
+  describe "accessible?/2 on a restricted element" do
+    test "shows it to a master" do
+      assert Helpers.accessible?(%{restricted: true}, %{master_user?: true})
+    end
+
+    test "hides it from a user who is not a master" do
+      refute Helpers.accessible?(%{restricted: true}, %{master_user?: false})
+    end
+
+    test "hides it when the state does not say the user is a master" do
+      refute Helpers.accessible?(%{restricted: true}, %{})
+      refute Helpers.accessible?(%{restricted: true}, %{master_user?: nil})
+    end
+
+    test "still applies visible to a master" do
+      refute Helpers.accessible?(%{restricted: true, visible: false}, %{master_user?: true})
+
+      assert Helpers.accessible?(%{restricted: true, visible: fn _ -> true end}, %{
+               master_user?: true
+             })
+    end
+  end
 end
