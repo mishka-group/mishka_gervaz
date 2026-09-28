@@ -41,6 +41,8 @@ defmodule MishkaGervaz.Form.Web.Live do
   - `defaults` - Map of default field values for create mode (e.g., `%{workspace_id: @workspace_id}`).
     A picker's default is saved only while the picker still holds it: once it is cleared, or emptied
     because a field it depends on changed, the save leaves it out.
+    An update that leaves the key out, such as the `send_update/2` a table's Edit sends with only a
+    `record_id`, keeps the defaults the form has. Pass `defaults: nil` to drop them.
 
   ## After a save
 
@@ -90,8 +92,8 @@ defmodule MishkaGervaz.Form.Web.Live do
     resource = Map.get(assigns, :resource) || socket.assigns[:resource]
     current_user = Map.get(assigns, :current_user) || socket.assigns[:current_user]
     record_id = Map.get(assigns, :record_id)
-    defaults = Map.get(assigns, :defaults)
     existing_state = socket.assigns[:form_state]
+    defaults = Map.get(assigns, :defaults, existing_state && existing_state.defaults)
 
     socket =
       if is_nil(existing_state) do

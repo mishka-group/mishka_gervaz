@@ -52,7 +52,8 @@ drag back a choice the reader has since changed.
 | `submit_alternatives` | — | other ways to create, offered from a caret beside the submit button |
 
 Changing `record_id` or `defaults` re-initializes the form. The other three are applied **at init
-only**.
+only**. An update that leaves `defaults` out, such as the `send_update/2` a table's Edit sends with
+only a `record_id`, keeps the defaults the form has; pass `defaults: nil` to drop them.
 
 ### `hidden_fields` + `defaults` go together
 

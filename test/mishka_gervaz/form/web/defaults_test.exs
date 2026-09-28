@@ -4,10 +4,11 @@ defmodule MishkaGervaz.Form.Web.DefaultsTest do
 
   The defaults assign allows parent LiveViews to pass default field values
   to the form component, which are merged into form params on create submission.
+  An update that leaves `defaults` out, as a table's Edit does, keeps the ones the form has.
   """
   use ExUnit.Case, async: true
 
-  alias MishkaGervaz.Form.Web.State
+  alias MishkaGervaz.Form.Web.{Live, State}
   import MishkaGervaz.Test.FormWebHelpers
 
   describe "defaults in state" do
@@ -32,6 +33,34 @@ defmodule MishkaGervaz.Form.Web.DefaultsTest do
       updated = State.update(state, mode: :update)
       assert updated.defaults == %{workspace_id: "ws-123"}
       assert updated.mode == :update
+    end
+  end
+
+  describe "an update that leaves out defaults, as a table's Edit sends" do
+    test "keeps the page's defaults while editing and once back on create" do
+      socket = mount(%{defaults: %{site_id: "site-1"}})
+      assert socket.assigns.form_state.defaults == %{site_id: "site-1"}
+
+      socket = component_update(socket, %{record_id: Ash.UUID.generate()})
+      assert socket.assigns.form_state.defaults == %{site_id: "site-1"}
+
+      socket = component_update(socket, %{record_id: nil})
+      assert socket.assigns.form_state.defaults == %{site_id: "site-1"}
+    end
+
+    test "drops them when it gives defaults: nil" do
+      socket = %{defaults: %{site_id: "site-1"}} |> mount() |> component_update(%{defaults: nil})
+
+      assert socket.assigns.form_state.defaults == nil
+    end
+
+    test "takes new ones when it gives them" do
+      socket =
+        %{defaults: %{site_id: "site-1"}}
+        |> mount()
+        |> component_update(%{record_id: nil, defaults: %{site_id: "site-2"}})
+
+      assert socket.assigns.form_state.defaults == %{site_id: "site-2"}
     end
   end
 
@@ -120,6 +149,25 @@ defmodule MishkaGervaz.Form.Web.DefaultsTest do
       assert result["site_id"] == "site-1"
       assert result["language"] == "fa"
     end
+  end
+
+  @form_id "form-post-form"
+
+  defp mount(assigns) do
+    socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, flash: %{}}}
+
+    component_update(
+      socket,
+      Map.merge(
+        %{resource: MishkaGervaz.Test.Resources.FormPost, current_user: %{id: "user-1"}},
+        assigns
+      )
+    )
+  end
+
+  defp component_update(socket, assigns) do
+    {:ok, socket} = Live.update(Map.put(assigns, :id, @form_id), socket)
+    socket
   end
 
   # Mirrors the merge_defaults logic from SubmitHandler
