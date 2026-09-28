@@ -927,4 +927,32 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
       assert inserted_ids(socket, state) == [record.id]
     end
   end
+
+  describe "a load on a connected socket" do
+    test "reads, and counts, in the Gettext locale of the page" do
+      create!(HooksResource, 2, fn i -> %{name: "On #{i}", active: true} end)
+      test_pid = self()
+
+      tell_locale = fn query ->
+        Ash.Query.before_action(query, fn query ->
+          send(test_pid, {:read_locale, Gettext.get_locale(MishkaGervaz.Test.Gettext)})
+          query
+        end)
+      end
+
+      state =
+        HooksResource
+        |> loaded(master_user(), 2)
+        |> with_hooks(%{on_load: fn query, _state -> {:cont, tell_locale.(query)} end})
+
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+      socket = state |> socket() |> connected()
+
+      DataLoader.load_async(socket, state)
+      assert_receive {:read_locale, "fa"}
+
+      DataLoader.refresh_total(socket)
+      assert_receive {:read_locale, "fa"}
+    end
+  end
 end

@@ -78,8 +78,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   alias MishkaGervaz.Errors
   alias Phoenix.LiveView.AsyncResult
 
-  require Phoenix.LiveView
-
   @spec maybe_load(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate maybe_load(socket, state), to: __MODULE__.Default
 
@@ -211,7 +209,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         socket
         |> Phoenix.Component.assign(:table_state, state)
         |> Phoenix.Component.assign(:skip_next_url_sync?, !sync_url?)
-        |> Phoenix.LiveView.start_async(:load_data, fn ->
+        |> MishkaGervaz.Messages.start_async(:load_data, fn ->
           execute_load(state, query, page)
         end)
       end
@@ -357,7 +355,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         socket
         |> Phoenix.Component.assign(:refresh_total_running, true)
         |> Phoenix.Component.assign(:refresh_total_again, false)
-        |> Phoenix.LiveView.start_async(:refresh_total, fn -> {marker, load_total(state)} end)
+        |> MishkaGervaz.Messages.start_async(:refresh_total, fn -> {marker, load_total(state)} end)
       end
 
       @spec refresh_total_done(Phoenix.LiveView.Socket.t(), tuple() | nil, term()) ::

@@ -37,6 +37,11 @@ defmodule MishkaGervaz.Errors do
   A message whose last character ends a sentence (`.` `!` `?` `…` `؟` `۔` `。` and the like, before
   any closing quote or bracket) is shown as written. Any other message is joined to its field's name
   through the `"%{field} %{message}"` template.
+
+  A reason that is not a validation error is worded too: `:not_found`, and an
+  `Ash.Error.Query.NotFound` with no primary key, as `"This record is no longer here."`; an
+  `Ash.Error.Forbidden` by its policy's `custom_message`, else as `"You are not allowed to do
+  this."`; any other exception by its own message.
   """
 
   use Splode,
@@ -53,6 +58,7 @@ defmodule MishkaGervaz.Errors do
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Resource.Info.Table, as: TableInfo
 
+  @placeholder ~r/%\{([^}]*)\}/
   @sentence_end ~r/[.!?…؟۔。！？｡।॥။።។།‼⁇⁈⁉։][\s"'”’»)\]」』〉》]*\z/u
 
   @doc """
@@ -100,6 +106,9 @@ defmodule MishkaGervaz.Errors do
   def format_flash_message(%{message: message} = error, resource) when is_binary(message),
     do: extract_error_message(error, resource)
 
+  def format_flash_message(error, resource) when is_exception(error),
+    do: extract_error_message(error, resource)
+
   def format_flash_message(error, _resource) when is_binary(error), do: error
 
   def format_flash_message(error, _resource) do
@@ -110,7 +119,9 @@ defmodule MishkaGervaz.Errors do
   Extracts a human-readable message from various error formats.
 
   `resource` is the resource whose declared labels name the error's field. An Ash error AshPhoenix
-  can show on a form (`AshPhoenix.FormData.Error`) is read the way the form reads it.
+  can show on a form (`AshPhoenix.FormData.Error`) is read the way the form reads it; one the form
+  shows on no field is read by its own message. An error class holding several errors, such as
+  `Ash.Error.Invalid`, joins the message of each, a repeated message once.
 
   ## Examples
 
@@ -129,43 +140,65 @@ defmodule MishkaGervaz.Errors do
   @spec extract_error_message(any(), module() | nil) :: String.t()
   def extract_error_message(error, resource \\ nil)
 
-  def extract_error_message(%Ash.Error.Invalid{errors: errors}, resource) when is_list(errors) do
+  def extract_error_message(%{errors: errors} = error, resource)
+      when is_exception(error) and is_list(errors) do
     format_ash_errors(errors, :all, resource)
   end
 
   def extract_error_message(error, resource) do
-    case AshPhoenix.FormData.Error.impl_for(error) do
-      nil ->
-        plain_message(error, resource)
+    case form_errors(error) do
+      [] ->
+        own_message(error, resource)
 
-      impl ->
-        error
-        |> impl.to_form_error()
-        |> List.wrap()
+      form_errors ->
+        form_errors
         |> Enum.map(fn {field, message, vars} ->
           field_message(message, vars, field, resource)
         end)
+        |> Enum.uniq()
         |> Enum.join(list_separator())
     end
   end
 
-  defp plain_message(%{field: field, message: message} = error, resource)
+  defp form_errors(error) do
+    case AshPhoenix.FormData.Error.impl_for(error) do
+      nil -> []
+      impl -> error |> impl.to_form_error() |> List.wrap()
+    end
+  end
+
+  defp own_message(%{class: :forbidden} = error, _resource) when is_exception(error) do
+    case Map.get(error, :custom_message) do
+      message when is_binary(message) -> translate_error(message, Map.get(error, :vars))
+      _none -> dgettext("mishka_gervaz", "You are not allowed to do this.")
+    end
+  end
+
+  defp own_message(%Ash.Error.Query.NotFound{}, _resource), do: not_found()
+
+  defp own_message(%{field: field, message: message} = error, resource)
        when is_binary(message) do
     field_message(message, Map.get(error, :vars), field, resource)
   end
 
-  defp plain_message(%{message: message} = error, _resource) when is_binary(message),
+  defp own_message(%{message: message} = error, _resource) when is_binary(message),
     do: translate_error(message, Map.get(error, :vars))
 
-  defp plain_message(error, _resource) when is_binary(error), do: error
-  defp plain_message(error, _resource), do: inspect(error)
+  defp own_message(error, _resource) when is_exception(error),
+    do: translate_error(Exception.message(error), [])
+
+  defp own_message(error, _resource) when is_binary(error), do: error
+  defp own_message(error, _resource), do: inspect(error)
+
+  defp not_found, do: dgettext("mishka_gervaz", "This record is no longer here.")
 
   @doc """
   Translates an error's own message in the `"errors"` domain and fills its `%{key}` placeholders
   from `vars`.
 
   Uses `dngettext` when `vars` holds an integer `:count`. A list var is joined with `", "`, and a
-  value `String.Chars` cannot print is inspected.
+  value `String.Chars` cannot print is inspected. A message with a `%{key}` placeholder `vars` does
+  not fill is returned as written.
 
   ## Examples
 
@@ -176,13 +209,24 @@ defmodule MishkaGervaz.Errors do
   def translate_error(message, vars) when is_binary(message) do
     bindings = bindings(vars)
 
-    case bindings do
-      %{count: count} when is_integer(count) ->
-        Gettext.dngettext(backend(), "errors", message, message, count, bindings)
+    cond do
+      unfilled_placeholder?(message, bindings) ->
+        message
 
-      _ ->
+      is_integer(bindings[:count]) ->
+        Gettext.dngettext(backend(), "errors", message, message, bindings.count, bindings)
+
+      true ->
         Gettext.dgettext(backend(), "errors", message, bindings)
     end
+  end
+
+  defp unfilled_placeholder?(message, bindings) do
+    bound = MapSet.new(bindings, fn {key, _value} -> to_string(key) end)
+
+    @placeholder
+    |> Regex.scan(message, capture: :all_but_first)
+    |> Enum.any?(fn [key] -> not MapSet.member?(bound, key) end)
   end
 
   @doc """
@@ -201,7 +245,7 @@ defmodule MishkaGervaz.Errors do
         ) ::
           String.t()
   def field_message(message, vars, field, resource) do
-    (message || "is invalid")
+    (message || dgettext_noop("errors", "is invalid"))
     |> translate_error(vars)
     |> with_field(field, resource)
   end
@@ -272,17 +316,24 @@ defmodule MishkaGervaz.Errors do
     dngettext("mishka_gervaz", "%{count} error occurred", "%{count} errors occurred", count)
   end
 
-  defp format_reason(%Ash.Error.Invalid{errors: errors}, resource) when is_list(errors) do
+  defp format_reason(%{errors: errors} = reason, resource)
+       when is_exception(reason) and is_list(errors) do
     format_ash_errors(errors, 3, resource)
   end
+
+  defp format_reason(:not_found, _resource), do: not_found()
+
+  defp format_reason(reason, resource) when is_exception(reason),
+    do: extract_error_message(reason, resource)
 
   defp format_reason(reason, _resource) when is_binary(reason), do: reason
   defp format_reason(reason, _resource), do: inspect(reason)
 
   defp format_ash_errors(errors, take, resource) do
     errors
-    |> maybe_take(take)
     |> Enum.map(&extract_error_message(&1, resource))
+    |> Enum.uniq()
+    |> maybe_take(take)
     |> Enum.join(list_separator())
   end
 

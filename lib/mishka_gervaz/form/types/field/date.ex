@@ -12,6 +12,7 @@ defmodule MishkaGervaz.Form.Types.Field.Date do
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  use MishkaGervaz.Messages
 
   @impl true
   def render(assigns, _config), do: assigns
@@ -20,7 +21,7 @@ defmodule MishkaGervaz.Form.Types.Field.Date do
   def validate(value, _config) when is_binary(value) and value != "" do
     case Date.from_iso8601(value) do
       {:ok, _} -> {:ok, value}
-      {:error, _} -> {:error, "must be a valid date"}
+      {:error, _} -> {:error, dgettext_noop("errors", "must be a valid date")}
     end
   end
 

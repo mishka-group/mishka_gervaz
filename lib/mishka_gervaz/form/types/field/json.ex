@@ -21,6 +21,7 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  use MishkaGervaz.Messages
 
   @impl true
   def render(assigns, _config), do: assigns
@@ -30,9 +31,14 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
     ash_type = Map.get(config || %{}, :ash_type)
 
     cond do
-      map_type?(ash_type) and not is_map(value) -> {:error, "must be a JSON object"}
-      array_type?(ash_type) and not is_list(value) -> {:error, "must be a JSON array"}
-      true -> {:ok, value}
+      map_type?(ash_type) and not is_map(value) ->
+        {:error, dgettext_noop("errors", "must be a JSON object")}
+
+      array_type?(ash_type) and not is_list(value) ->
+        {:error, dgettext_noop("errors", "must be a JSON array")}
+
+      true ->
+        {:ok, value}
     end
   end
 
@@ -42,13 +48,18 @@ defmodule MishkaGervaz.Form.Types.Field.Json do
     case Jason.decode(value) do
       {:ok, decoded} ->
         cond do
-          map_type?(ash_type) and not is_map(decoded) -> {:error, "must be a JSON object"}
-          array_type?(ash_type) and not is_list(decoded) -> {:error, "must be a JSON array"}
-          true -> {:ok, value}
+          map_type?(ash_type) and not is_map(decoded) ->
+            {:error, dgettext_noop("errors", "must be a JSON object")}
+
+          array_type?(ash_type) and not is_list(decoded) ->
+            {:error, dgettext_noop("errors", "must be a JSON array")}
+
+          true ->
+            {:ok, value}
         end
 
       {:error, _} ->
-        {:error, "must be valid JSON"}
+        {:error, dgettext_noop("errors", "must be valid JSON")}
     end
   end
 

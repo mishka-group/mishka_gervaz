@@ -55,9 +55,16 @@ config :mishka_gervaz, :gettext_backend, MyApp.Gettext
 ```
 
 All library strings live in the **`mishka_gervaz` gettext domain**
-(`priv/gettext/<locale>/LC_MESSAGES/mishka_gervaz.po`). Label options accept
-`fn -> dgettext("mishka_gervaz", "Title") end` — prefer that over a bare string wherever a label
-reaches a human.
+(`priv/gettext/<locale>/LC_MESSAGES/mishka_gervaz.po`), except the messages a form field type
+refuses a value with, which are in the **`errors` domain** beside Ash's own. With `:gettext_backend`
+set to your backend, give your translators both of the library's templates,
+`priv/gettext/mishka_gervaz.pot` and `priv/gettext/errors.pot`, merged into yours. Label options
+accept `fn -> dgettext("mishka_gervaz", "Title") end` — prefer that over a bare string wherever a
+label reaches a human.
+
+A table's or form's loads run in the Gettext locale of the page. For your own work in another
+process whose result holds words, use `MishkaGervaz.Messages.start_async/4`,
+`MishkaGervaz.Messages.assign_async/4` or `MishkaGervaz.Messages.in_caller_locale/1`.
 
 Then add the extension in two places:
 

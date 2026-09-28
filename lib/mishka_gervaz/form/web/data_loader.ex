@@ -41,8 +41,6 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
   alias MishkaGervaz.Form.Web.State
 
-  require Phoenix.LiveView
-
   @spec load_record(Phoenix.LiveView.Socket.t(), State.t(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   defdelegate load_record(socket, state, record_id), to: __MODULE__.Default
@@ -116,7 +114,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
         socket
         |> Phoenix.Component.assign(:form_state, state)
-        |> Phoenix.LiveView.start_async(:load_record, fn ->
+        |> MishkaGervaz.Messages.start_async(:load_record, fn ->
           record_mod.load_for_edit(state, record_id, tenant: tenant, actor: actor)
         end)
       end
@@ -179,7 +177,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
           socket
           |> Phoenix.Component.assign(:form_state, state)
-          |> Phoenix.LiveView.start_async(
+          |> MishkaGervaz.Messages.start_async(
             {:load_relation, field_name},
             fn ->
               relation_mod.load_options(field, state, tenant: tenant)
@@ -215,7 +213,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
           socket
           |> Phoenix.Component.assign(:form_state, state)
-          |> Phoenix.LiveView.start_async(
+          |> MishkaGervaz.Messages.start_async(
             {:search_relation, field_name},
             fn ->
               relation_mod.search_options(field, state, search_term, tenant: tenant)

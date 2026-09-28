@@ -115,8 +115,12 @@ end
 A failed row or bulk action flashes `"<action> failed: <reason>"`. `<action>` is the action's `ui`
 label, else its humanized name. Each error in `<reason>` is translated in the host's `errors`
 Gettext domain, its placeholders filled after, and one that is not a whole sentence (by its last
-character, `.` `!` `?` `؟` `。` …) follows its field's form field or column label. Every fixed word is
-in the `mishka_gervaz` domain. See `MishkaGervaz.Errors`.
+character, `.` `!` `?` `؟` `。` …) follows its field's form field or column label. A row that is gone
+reads "This record is no longer here.", and a policy refusal its `custom_message`, else "You are not
+allowed to do this.". Every fixed word is in the `mishka_gervaz` domain. See `MishkaGervaz.Errors`.
+
+The action is the row action that was clicked: `:destroy`, `:unarchive` and `:permanent_destroy`
+buttons send their action's name as `phx-value-action`.
 
 ## 3. Full overrides
 

@@ -38,6 +38,7 @@ defmodule MishkaGervaz.Table.Types.Action.Destroy do
       |> maybe_assign(:class, action[:ui][:class])
       |> assign(:phx_click, "delete")
       |> assign(:phx_value_id, record.id)
+      |> assign(:phx_value_action, to_string(action[:name]))
       |> assign(:phx_target, target)
       |> assign(
         :data_confirm,

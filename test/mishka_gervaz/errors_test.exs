@@ -338,6 +338,131 @@ defmodule MishkaGervaz.ErrorsTest do
     end
   end
 
+  describe "an Ash error that names no field" do
+    test "a changeset error added as a sentence is shown in the flash" do
+      [error] =
+        TranslatedLabels
+        |> Ash.Changeset.new()
+        |> Ash.Changeset.add_error("That tag is archived.")
+        |> Map.fetch!(:errors)
+
+      reason = %Ash.Error.Invalid{errors: [error, error]}
+
+      assert Errors.extract_error_message(error, TranslatedLabels) == "That tag is archived."
+
+      assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: reason)) ==
+               "Destroy failed: That tag is archived."
+    end
+
+    test "a query error with a message and no field is shown in the flash" do
+      [error] =
+        TranslatedLabels
+        |> Ash.Query.new()
+        |> Ash.Query.add_error(message: "You cannot read these.")
+        |> Map.fetch!(:errors)
+
+      assert Errors.format_flash_message(LoadFailed.exception(reason: error)) ==
+               "Failed to load data: You cannot read these."
+    end
+
+    test "a record not found with no primary key says so in words" do
+      error = Ash.Error.Query.NotFound.exception(resource: TranslatedLabels)
+
+      assert Errors.format_flash_message(
+               Failed.exception(action: :destroy, reason: %Ash.Error.Invalid{errors: [error]})
+             ) == "Destroy failed: This record is no longer here."
+    end
+
+    test "reads in Persian" do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+      error = Ash.Error.Changes.InvalidChanges.exception(message: "That tag is archived.")
+
+      assert Errors.format_flash_message(
+               Failed.exception(action: :permanent_destroy, reason: error)
+             ) == "حذف همیشگی انجام نشد: این برچسب بایگانی شده است."
+    end
+  end
+
+  describe "a failure that is not a validation error" do
+    test "a record that is gone says so in words" do
+      error = Failed.exception(action: :unarchive, label: "Bring back", reason: :not_found)
+
+      assert Errors.format_flash_message(error) ==
+               "Bring back failed: This record is no longer here."
+    end
+
+    test "a policy refusal says the admin may not do it" do
+      reason =
+        Ash.Error.to_error_class(Ash.Error.Forbidden.Policy.exception(resource: TranslatedLabels))
+
+      assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: reason)) ==
+               "Destroy failed: You are not allowed to do this."
+    end
+
+    test "a policy refusal with its own message shows that message" do
+      reason =
+        Ash.Error.to_error_class(
+          Ash.Error.Forbidden.Policy.exception(
+            resource: TranslatedLabels,
+            custom_message: "That label is not one this site can use."
+          )
+        )
+
+      assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: reason)) ==
+               "Destroy failed: That label is not one this site can use."
+    end
+
+    test "an unknown error shows its own words" do
+      reason =
+        Ash.Error.to_error_class(Ash.Error.Unknown.UnknownError.exception(error: "db down"))
+
+      assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: reason)) ==
+               "Destroy failed: db down"
+
+      assert Errors.format_flash_message(reason) == "db down"
+    end
+
+    test "reads in Persian" do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+
+      assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: :not_found)) ==
+               "حذف انجام نشد: این رکورد دیگر اینجا نیست."
+
+      forbidden =
+        Ash.Error.to_error_class(Ash.Error.Forbidden.Policy.exception(resource: TranslatedLabels))
+
+      assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: forbidden)) ==
+               "حذف انجام نشد: شما اجازهٔ این کار را ندارید."
+    end
+  end
+
+  describe "a message with a placeholder its vars do not fill" do
+    test "is shown as written, logs nothing and makes no atom" do
+      key = "zz_unbound_#{System.unique_integer([:positive])}"
+      message = "bad value %{#{key}}"
+
+      log =
+        ExUnit.CaptureLog.capture_log([level: :error], fn ->
+          assert Errors.translate_error(message, []) == message
+
+          assert Errors.format_flash_message(%RuntimeError{message: message}) == message
+
+          assert Errors.extract_error_message(%{field: :title, message: message}) ==
+                   "Title #{message}"
+        end)
+
+      refute log =~ "missing Gettext bindings"
+      assert_raise ArgumentError, fn -> String.to_existing_atom(key) end
+    end
+
+    test "a placeholder its vars fill is still translated" do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+
+      assert Errors.translate_error("length must be greater than or equal to %{min}", min: 3) ==
+               "باید دست‌کم 3 نویسه باشد"
+    end
+  end
+
   describe "in English" do
     test "reads as it did before translation" do
       Gettext.put_locale(MishkaGervaz.Test.Gettext, "en")

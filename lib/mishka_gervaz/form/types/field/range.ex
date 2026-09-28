@@ -14,6 +14,7 @@ defmodule MishkaGervaz.Form.Types.Field.Range do
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  use MishkaGervaz.Messages
 
   @impl true
   def render(assigns, _config), do: assigns
@@ -24,7 +25,7 @@ defmodule MishkaGervaz.Form.Types.Field.Range do
   def validate(value, _config) when is_binary(value) and value != "" do
     case Float.parse(value) do
       {_, _} -> {:ok, value}
-      :error -> {:error, "must be a number"}
+      :error -> {:error, dgettext_noop("errors", "must be a number")}
     end
   end
 

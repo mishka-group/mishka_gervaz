@@ -122,7 +122,7 @@ msgstr "Archive"
 msgid "Restore"
 msgstr "Restore"
 
-#: lib/mishka_gervaz/table/types/action/destroy.ex:44
+#: lib/mishka_gervaz/table/types/action/destroy.ex:45
 #, elixir-autogen
 msgid "Are you sure?"
 msgstr "Are you sure?"
@@ -177,12 +177,12 @@ msgid_plural "%{count} files"
 msgstr[0] "%{count} file"
 msgstr[1] "%{count} files"
 
-#: lib/mishka_gervaz/errors.ex:82
+#: lib/mishka_gervaz/errors.ex:88
 #, elixir-autogen, elixir-format
 msgid "%{action} failed: %{reason}"
 msgstr ""
 
-#: lib/mishka_gervaz/errors.ex:272
+#: lib/mishka_gervaz/errors.ex:316
 #, elixir-autogen, elixir-format
 msgid "%{count} error occurred"
 msgid_plural "%{count} errors occurred"
@@ -217,7 +217,7 @@ msgid_plural "%{count} unarchived"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/mishka_gervaz/errors.ex:215
+#: lib/mishka_gervaz/errors.ex:259
 #, elixir-autogen, elixir-format
 msgid "%{field} %{message}"
 msgstr ""
@@ -239,7 +239,7 @@ msgstr ""
 msgid "+ Add"
 msgstr ""
 
-#: lib/mishka_gervaz/errors.ex:265
+#: lib/mishka_gervaz/errors.ex:309
 #, elixir-autogen, elixir-format
 msgid "Action"
 msgstr ""
@@ -254,7 +254,7 @@ msgstr ""
 msgid "All selected"
 msgstr ""
 
-#: lib/mishka_gervaz/errors.ex:106
+#: lib/mishka_gervaz/errors.ex:115
 #, elixir-autogen, elixir-format
 msgid "An error occurred: %{error}"
 msgstr ""
@@ -293,7 +293,7 @@ msgstr ""
 msgid "Failed to load data"
 msgstr ""
 
-#: lib/mishka_gervaz/errors.ex:89
+#: lib/mishka_gervaz/errors.ex:95
 #, elixir-autogen, elixir-format
 msgid "Failed to load data: %{reason}"
 msgstr ""
@@ -313,7 +313,7 @@ msgstr ""
 msgid "Loading options..."
 msgstr ""
 
-#: lib/mishka_gervaz/table/types/action/permanent_destroy.ex:45
+#: lib/mishka_gervaz/table/types/action/permanent_destroy.ex:46
 #, elixir-autogen, elixir-format
 msgid "Permanently delete this record? This cannot be undone."
 msgstr ""
@@ -328,7 +328,7 @@ msgstr ""
 msgid "Remove"
 msgstr ""
 
-#: lib/mishka_gervaz/table/types/action/unarchive.ex:47
+#: lib/mishka_gervaz/table/types/action/unarchive.ex:48
 #, elixir-autogen, elixir-format
 msgid "Restore this record?"
 msgstr ""
@@ -378,7 +378,7 @@ msgstr ""
 msgid "Uploading…"
 msgstr ""
 
-#: lib/mishka_gervaz/errors.ex:95
+#: lib/mishka_gervaz/errors.ex:101
 #, elixir-autogen, elixir-format
 msgid "Validation failed: %{errors}"
 msgstr ""
@@ -389,8 +389,18 @@ msgid "per page"
 msgstr ""
 
 #. Joins the messages of several errors in one line.
-#: lib/mishka_gervaz/errors.ex:294
+#: lib/mishka_gervaz/errors.ex:345
 #, elixir-autogen, elixir-format
 msgctxt "list separator"
 msgid ", "
+msgstr ""
+
+#: lib/mishka_gervaz/errors.ex:193
+#, elixir-autogen, elixir-format
+msgid "This record is no longer here."
+msgstr ""
+
+#: lib/mishka_gervaz/errors.ex:173
+#, elixir-autogen, elixir-format
+msgid "You are not allowed to do this."
 msgstr ""

@@ -22,3 +22,6 @@ msgstr[1] "باید دست‌کم %{count} نویسه باشد"
 
 msgid "That label is not one this site can use."
 msgstr "این برچسب را این سایت نمی‌تواند به کار ببرد."
+
+msgid "That tag is archived."
+msgstr "این برچسب بایگانی شده است."

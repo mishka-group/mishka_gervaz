@@ -18,6 +18,7 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  use MishkaGervaz.Messages
 
   @impl true
   def render(assigns, _config), do: assigns
@@ -25,7 +26,7 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   @impl true
   def validate(value, config) when is_number(value) do
     if integer_type?(Map.get(config || %{}, :ash_type)) and not is_integer(value) do
-      {:error, "must be a whole number"}
+      {:error, dgettext_noop("errors", "must be a whole number")}
     else
       {:ok, value}
     end
@@ -38,11 +39,11 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
       _ ->
         if integer_type?(Map.get(config || %{}, :ash_type)) do
-          {:error, "must be a whole number"}
+          {:error, dgettext_noop("errors", "must be a whole number")}
         else
           case Float.parse(value) do
             {_, _} -> {:ok, value}
-            :error -> {:error, "must be a number"}
+            :error -> {:error, dgettext_noop("errors", "must be a number")}
           end
         end
     end

@@ -10,6 +10,37 @@ defmodule MishkaGervaz.Form.Types.FieldTest do
 
   alias MishkaGervaz.Form.Types.Field, as: Registry
 
+  describe "the messages a field type refuses a value with" do
+    @errors_pot Path.expand("../../../../priv/gettext/errors.pot", __DIR__)
+
+    test "are msgids of the errors domain a translator is given" do
+      alias MishkaGervaz.Form.Types.Field.{Date, DateTime, Json, Number, Range}
+
+      refusals = [
+        Number.validate(1.5, %{ash_type: :integer}),
+        Number.validate("1.5", %{ash_type: :integer}),
+        Number.validate("x", %{ash_type: :float}),
+        Range.validate("x", %{}),
+        Date.validate("x", %{}),
+        DateTime.validate("x", %{}),
+        Json.validate([], %{ash_type: :map}),
+        Json.validate(%{}, %{ash_type: {:array, :string}}),
+        Json.validate("{", %{})
+      ]
+
+      messages = for {:error, message} <- refusals, uniq: true, do: message
+      assert length(messages) == 7
+
+      msgids =
+        @errors_pot
+        |> Expo.PO.parse_file!()
+        |> Map.fetch!(:messages)
+        |> MapSet.new(&IO.iodata_to_binary(&1.msgid))
+
+      assert Enum.reject(messages ++ ["is invalid"], &MapSet.member?(msgids, &1)) == []
+    end
+  end
+
   describe "get/1" do
     test "returns the module for built-in atoms" do
       assert Registry.get(:text) == MishkaGervaz.Form.Types.Field.Text

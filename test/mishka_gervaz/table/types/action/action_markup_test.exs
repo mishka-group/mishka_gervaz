@@ -38,7 +38,7 @@ defmodule MishkaGervaz.Table.Types.Action.ActionMarkupTest do
   # Everything `button/1` and `nav_link/1` are entitled to write. `title` is the adapter's rendering
   # of `label`; the rest are the bindings the table drives rows with.
   @button_attrs ~w(type class title phx-click phx-target phx-value-id phx-value-event
-                   phx-value-values data-confirm disabled)
+                   phx-value-action phx-value-values data-confirm disabled)
   @link_attrs ~w(href class title data-phx-link data-phx-link-state)
 
   # Rendered without LiveViewTest: a `Rendered` struct is `Phoenix.HTML.Safe`, so this is the same
@@ -134,6 +134,19 @@ defmodule MishkaGervaz.Table.Types.Action.ActionMarkupTest do
       names = Link.render(%{}, action, @record, @ui, nil) |> assert_only(@link_attrs)
 
       assert "href" in names
+    end
+  end
+
+  describe "a button whose click event is shared by every action of its type" do
+    test "names the action that was clicked" do
+      for {mod, name} <- [{Destroy, :purge}, {Unarchive, :bring_back}, {PermanentDestroy, :wipe}] do
+        action = %{ui: %{}, confirm: "Sure?", name: name}
+
+        [opening] =
+          Regex.run(~r/<[a-zA-Z][^>]*>/, html(mod.render(%{}, action, @record, @ui, @target)))
+
+        assert opening =~ ~s(phx-value-action="#{name}"), inspect(mod)
+      end
     end
   end
 

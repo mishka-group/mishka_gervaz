@@ -491,7 +491,7 @@ defmodule MishkaGervaz.Form.Web.State do
       fields
       |> Enum.filter(&static_relation?/1)
       |> Task.async_stream(
-        fn field -> {field.name, load_relation(field, current_user)} end,
+        MishkaGervaz.Messages.in_caller_locale(&{&1.name, load_relation(&1, current_user)}),
         timeout: :infinity,
         ordered: false,
         on_timeout: :kill_task

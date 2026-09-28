@@ -38,6 +38,7 @@ defmodule MishkaGervaz.Table.Types.Action.PermanentDestroy do
       |> assign(:phx_click, "row_action")
       |> assign(:phx_value_event, "permanent_destroy")
       |> assign(:phx_value_id, record.id)
+      |> assign(:phx_value_action, to_string(action[:name]))
       |> assign(:phx_target, target)
       |> assign(
         :data_confirm,

@@ -82,3 +82,12 @@ msgstr "برخی کارها انجام نشد؛ گزارش‌ها را ببین�
 
 msgid "Title"
 msgstr "عنوان"
+
+msgid "Destroy"
+msgstr "حذف"
+
+msgid "This record is no longer here."
+msgstr "این رکورد دیگر اینجا نیست."
+
+msgid "You are not allowed to do this."
+msgstr "شما اجازهٔ این کار را ندارید."

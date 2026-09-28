@@ -12,6 +12,7 @@ defmodule MishkaGervaz.Form.Types.Field.DateTime do
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  use MishkaGervaz.Messages
 
   @impl true
   def render(assigns, _config), do: assigns
@@ -21,7 +22,7 @@ defmodule MishkaGervaz.Form.Types.Field.DateTime do
     cond do
       match?({:ok, _}, NaiveDateTime.from_iso8601(value)) -> {:ok, value}
       match?({:ok, _, _}, DateTime.from_iso8601(value)) -> {:ok, value}
-      true -> {:error, "must be a valid date and time"}
+      true -> {:error, dgettext_noop("errors", "must be a valid date and time")}
     end
   end
 

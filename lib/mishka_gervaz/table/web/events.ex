@@ -471,7 +471,7 @@ defmodule MishkaGervaz.Table.Web.Events do
     {:noreply, socket}
   end
 
-  def do_handle("delete", %{"id" => id}, state, socket) do
+  def do_handle("delete", %{"id" => id} = params, state, socket) do
     id = sanitize(state, id)
     record = get_record(state, id, state.archive_status)
 
@@ -483,10 +483,10 @@ defmodule MishkaGervaz.Table.Web.Events do
           {:noreply, socket}
 
         {:halt, {:confirm, _message}} ->
-          do_delete(state, record, socket)
+          do_delete(state, record, socket, params)
 
         _ ->
-          do_delete(state, record, socket)
+          do_delete(state, record, socket, params)
       end
     end
   end
@@ -528,7 +528,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :unarchive,
-              label: row_action_label(state, params["event"], :unarchive),
+              label: row_action_label(state, params, :unarchive),
               reason: reason,
               record_id: id
             )
@@ -576,7 +576,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :permanent_destroy,
-              label: row_action_label(state, params["event"], :permanent_destroy),
+              label: row_action_label(state, params, :permanent_destroy),
               reason: reason,
               record_id: id
             )
@@ -920,17 +920,27 @@ defmodule MishkaGervaz.Table.Web.Events do
   The label of the row action a failed row event ran, for its error flash, or `nil` when the action
   declares none.
 
-  The action is the one `event` names, else the first row action of `type`, dropdown items
-  included.
+  `params` are the event's params. The action is the row action of `type` named by `"action"`, else
+  the one `"event"` names, else the first row action of `type`, dropdown items included.
   """
-  @spec row_action_label(State.t(), String.t() | nil, atom()) :: String.t() | nil
-  def row_action_label(state, event, type) do
+  @spec row_action_label(State.t(), map(), atom()) :: String.t() | nil
+  def row_action_label(state, params, type) do
+    entities = row_action_entities(state)
+    event = params["event"]
+
     entity =
-      (is_binary(event) && find_row_action_by_event(state, event)) ||
-        Enum.find(row_action_entities(state), &(Map.get(&1, :type) == type))
+      clicked_row_action(entities, params["action"], type) ||
+        (is_binary(event) && find_row_action_by_event(state, event)) ||
+        Enum.find(entities, &(Map.get(&1, :type) == type))
 
     MishkaGervaz.Helpers.resolve_ui_label(entity)
   end
+
+  defp clicked_row_action(entities, name, type) when is_binary(name) do
+    Enum.find(entities, &(Map.get(&1, :type) == type and to_string(&1.name) == name))
+  end
+
+  defp clicked_row_action(_entities, _name, _type), do: nil
 
   defp row_action_entities(%{static: static}) do
     items =
@@ -988,7 +998,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :update,
-              label: row_action_label(state, params["event"], :update),
+              label: row_action_label(state, params, :update),
               reason: reason,
               record_id: id
             )
@@ -1046,7 +1056,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :destroy,
-              label: row_action_label(state, params["event"], :destroy),
+              label: row_action_label(state, params, :destroy),
               reason: reason,
               record_id: id
             )
@@ -1094,12 +1104,15 @@ defmodule MishkaGervaz.Table.Web.Events do
   Deletes one record, runs the `:delete` action hooks and the `after_delete` hook, then drops
   the row from the stream and the header count.
 
+  `params` are the `"delete"` event's params; their `"action"` names the row action a failed
+  delete's flash is labelled with (see `row_action_label/3`).
+
   Public so a `RecordHandler` override can defer the destroy itself to the default behaviour
   rather than re-implementing the surrounding bookkeeping.
   """
-  @spec do_delete(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
+  @spec do_delete(State.t(), map(), Phoenix.LiveView.Socket.t(), map()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def do_delete(state, record, socket) do
+  def do_delete(state, record, socket, params \\ %{}) do
     result = delete_record(state, record)
     run_action_hook(state, :after_row_action, :delete, [result, state])
 
@@ -1133,7 +1146,7 @@ defmodule MishkaGervaz.Table.Web.Events do
           Errors.Action.Failed.exception(
             resource: state.static.resource,
             action: :destroy,
-            label: row_action_label(state, nil, :destroy),
+            label: row_action_label(state, params, :destroy),
             reason: reason,
             record_id: record.id
           )

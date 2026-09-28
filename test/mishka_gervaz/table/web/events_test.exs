@@ -1534,6 +1534,54 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
       assert flash!() =~ ~r/\ADelete forever failed: /
     end
 
+    test "names the destroy row action that was clicked, not the first of its type" do
+      socket =
+        refused_socket([
+          row_action(:purge, :destroy, :master_destroy, "Purge"),
+          row_action(:delete, :destroy, :master_destroy, "Delete")
+        ])
+
+      Events.handle("delete", %{"id" => item!().id, "action" => "delete"}, socket)
+
+      assert flash!() =~ ~r/\ADelete failed: /
+    end
+
+    test "names the unarchive and permanent_destroy row actions that were clicked" do
+      socket =
+        refused_socket([
+          row_action(:restore, :unarchive, nil, "Restore"),
+          row_action(:bring_back, :unarchive, nil, "Bring back"),
+          row_action(:wipe, :permanent_destroy, nil, "Wipe"),
+          row_action(:purge, :permanent_destroy, nil, "Delete forever")
+        ])
+
+      id = Ash.UUID.generate()
+
+      Events.handle(
+        "row_action",
+        %{"event" => "unarchive", "action" => "bring_back", "id" => id},
+        socket
+      )
+
+      assert flash!() =~ ~r/\ABring back failed: /
+
+      Events.handle(
+        "row_action",
+        %{"event" => "permanent_destroy", "action" => "purge", "id" => id},
+        socket
+      )
+
+      assert flash!() =~ ~r/\ADelete forever failed: /
+    end
+
+    test "a row that is gone says so in the flash" do
+      socket = refused_socket([row_action(:bring_back, :unarchive, nil, "Bring back")])
+
+      Events.handle("unarchive", %{"id" => Ash.UUID.generate()}, socket)
+
+      assert flash!() == "Bring back failed: This record is no longer here."
+    end
+
     test "names a row action with no label by the action it ran" do
       socket = refused_socket([row_action(:trash, :destroy, :master_destroy, nil)])
 

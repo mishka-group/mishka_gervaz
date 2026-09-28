@@ -33,10 +33,17 @@ defmodule MishkaGervaz.Messages do
 
   ## Translation Domain
 
-  All MishkaGervaz translations use the `mishka_gervaz` domain. Translation
-  files should be placed at:
+  All MishkaGervaz translations use the `mishka_gervaz` domain, except the messages a form field
+  type refuses a value with, which use the `errors` domain. Translation files should be placed at:
 
       priv/gettext/LOCALE/LC_MESSAGES/mishka_gervaz.po
+      priv/gettext/LOCALE/LC_MESSAGES/errors.po
+
+  ## Work in another process
+
+  A new process has no Gettext locale of its own. Run work whose result holds words through
+  `start_async/4`, `assign_async/4` or `in_caller_locale/1` so it is translated in the locale of
+  the process that started it.
 
   """
 
@@ -56,6 +63,8 @@ defmodule MishkaGervaz.Messages do
       # With config-based backend
       use MishkaGervaz.Messages
   """
+  require Phoenix.LiveView
+
   @default_backend Application.compile_env(:mishka_gervaz, :gettext_backend, MishkaGervaz.Gettext)
 
   defmacro __using__(opts) do
@@ -74,5 +83,87 @@ defmodule MishkaGervaz.Messages do
   """
   def gettext_backend do
     Application.get_env(:mishka_gervaz, :gettext_backend, MishkaGervaz.Gettext)
+  end
+
+  @doc """
+  Wraps `fun`, of arity 0 or 1, to run in the Gettext locales of the process that calls this.
+
+  Give the wrapped function to the work another process runs, such as `Task.async/1` or
+  `Task.async_stream/3`: a new process starts with no locale of its own, so words it translates are
+  otherwise in the default locale. The locale set with `Gettext.put_locale/1` and each one set with
+  `Gettext.put_locale/2` are carried.
+
+  ## Examples
+
+      Gettext.put_locale(MyApp.Gettext, "fa")
+
+      Task.async(MishkaGervaz.Messages.in_caller_locale(fn -> Gettext.get_locale(MyApp.Gettext) end))
+      |> Task.await()
+      #=> "fa"
+  """
+  @spec in_caller_locale((-> result) | (arg -> result)) :: (-> result) | (arg -> result)
+        when result: term(), arg: term()
+  def in_caller_locale(fun) when is_function(fun, 0) do
+    locales = caller_locales()
+
+    fn ->
+      put_locales(locales)
+      fun.()
+    end
+  end
+
+  def in_caller_locale(fun) when is_function(fun, 1) do
+    locales = caller_locales()
+
+    fn arg ->
+      put_locales(locales)
+      fun.(arg)
+    end
+  end
+
+  @doc """
+  `Phoenix.LiveView.start_async/4`, with `fun` run in the caller's Gettext locales
+  (`in_caller_locale/1`).
+
+  Use it in place of `Phoenix.LiveView.start_async/4` wherever the result holds words a person
+  reads.
+  """
+  @spec start_async(Phoenix.LiveView.Socket.t(), term(), (-> term()), keyword()) ::
+          Phoenix.LiveView.Socket.t()
+  def start_async(socket, name, fun, opts \\ []) when is_function(fun, 0) do
+    Phoenix.LiveView.start_async(socket, name, in_caller_locale(fun), opts)
+  end
+
+  @doc """
+  `Phoenix.LiveView.assign_async/4`, with `fun` run in the caller's Gettext locales
+  (`in_caller_locale/1`).
+  """
+  @spec assign_async(
+          Phoenix.LiveView.Socket.t(),
+          atom() | [atom()],
+          (-> {:ok, map()} | {:error, term()}),
+          keyword()
+        ) :: Phoenix.LiveView.Socket.t()
+  def assign_async(socket, keys, fun, opts \\ []) when is_function(fun, 0) do
+    Phoenix.LiveView.assign_async(socket, keys, in_caller_locale(fun), opts)
+  end
+
+  defp caller_locales do
+    for {key, locale} <- Process.get(), is_binary(locale), gettext_key?(key), do: {key, locale}
+  end
+
+  defp gettext_key?(Gettext), do: true
+
+  defp gettext_key?(key) when is_atom(key) do
+    Code.ensure_loaded?(key) and function_exported?(key, :__gettext__, 1)
+  end
+
+  defp gettext_key?(_key), do: false
+
+  defp put_locales(locales) do
+    Enum.each(locales, fn
+      {Gettext, locale} -> Gettext.put_locale(locale)
+      {backend, locale} -> Gettext.put_locale(backend, locale)
+    end)
   end
 end

@@ -1,0 +1,56 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/mishka_gervaz/errors.ex:248
+#, elixir-autogen, elixir-format
+msgid "is invalid"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/json.ex:38
+#: lib/mishka_gervaz/form/types/field/json.ex:55
+#, elixir-autogen, elixir-format
+msgid "must be a JSON array"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/json.ex:35
+#: lib/mishka_gervaz/form/types/field/json.ex:52
+#, elixir-autogen, elixir-format
+msgid "must be a JSON object"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/number.ex:46
+#: lib/mishka_gervaz/form/types/field/range.ex:28
+#, elixir-autogen, elixir-format
+msgid "must be a number"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/date.ex:24
+#, elixir-autogen, elixir-format
+msgid "must be a valid date"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/datetime.ex:25
+#, elixir-autogen, elixir-format
+msgid "must be a valid date and time"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/number.ex:29
+#: lib/mishka_gervaz/form/types/field/number.ex:42
+#, elixir-autogen, elixir-format
+msgid "must be a whole number"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/json.ex:62
+#, elixir-autogen, elixir-format
+msgid "must be valid JSON"
+msgstr ""
