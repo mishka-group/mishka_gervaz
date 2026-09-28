@@ -19,7 +19,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       end
 
   Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
-  `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`,
+  `save_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`,
   `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`)
   are public so user overrides can reuse them — they live outside the
   `__using__` macro to avoid per-consumer compile cost.
@@ -30,6 +30,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   `MishkaGervaz.Form.Web.DataLoader`,
   `MishkaGervaz.Form.Web.UploadHelpers`, and the sibling sub-handlers.
   """
+
+  use MishkaGervaz.Messages
 
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
@@ -54,6 +56,58 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       Enum.reduce(opts, msg, fn {key, value}, acc ->
         String.replace(acc, "%{#{key}}", to_string(value))
       end)
+    end)
+  end
+
+  @doc """
+  The errors a failed save shows, as `{field_errors, form_errors}`.
+
+  `field_errors` maps a field name to its messages and `form_errors` lists the messages no field
+  shows. An error under a field that has no nested form, such as one id of a relation field's
+  `[:tag_ids, 0]`, is shown on that field. When the save failed and none of its errors can be shown,
+  `form_errors` holds one message saying the changes were not saved.
+  """
+  @spec save_errors(AshPhoenix.Form.t(), MapSet.t()) :: {map(), list(String.t())}
+  def save_errors(ash_form, field_names) do
+    form = Phoenix.Component.to_form(ash_form)
+
+    {nested_field_errors, nested_form_errors} =
+      ash_form
+      |> AshPhoenix.Form.raw_errors()
+      |> Enum.flat_map(&path_error(&1, ash_form.form_keys))
+      |> Enum.split_with(fn {field, _msg} -> MapSet.member?(field_names, field) end)
+
+    field_errors =
+      Enum.reduce(nested_field_errors, format_form_errors(form), fn {field, msg}, acc ->
+        Map.update(acc, field, [msg], &(&1 ++ [msg]))
+      end)
+
+    form_errors =
+      extract_form_level_errors(form, field_names) ++ Enum.map(nested_form_errors, &elem(&1, 1))
+
+    if field_errors == %{} and form_errors == [] do
+      {field_errors, [dgettext("mishka_gervaz", "The changes were not saved.")]}
+    else
+      {field_errors, form_errors}
+    end
+  end
+
+  defp path_error(%{path: [key | _]} = error, form_keys) when is_atom(key) do
+    if Keyword.has_key?(form_keys, key) or is_nil(AshPhoenix.FormData.Error.impl_for(error)) do
+      []
+    else
+      error
+      |> AshPhoenix.FormData.Error.to_form_error()
+      |> List.wrap()
+      |> Enum.map(fn {_field, msg, vars} -> {key, interpolate(msg, vars)} end)
+    end
+  end
+
+  defp path_error(_error, _form_keys), do: []
+
+  defp interpolate(msg, vars) do
+    Enum.reduce(vars, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", to_string(value))
     end)
   end
 
@@ -157,6 +211,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         only: [
           format_form_errors: 1,
           extract_form_level_errors: 2,
+          save_errors: 2,
           cleanup_temp_uploads: 1,
           push_js_hook: 4,
           merge_defaults: 2,
@@ -210,14 +265,12 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
                 after_save(state, record, socket)
 
               {:error, updated_form} ->
-                updated_form = Phoenix.Component.to_form(updated_form)
-                errors = format_form_errors(updated_form)
                 field_names = MapSet.new(state.static.fields, & &1.name)
-                form_errors = extract_form_level_errors(updated_form, field_names)
+                {errors, form_errors} = save_errors(updated_form, field_names)
 
                 state =
                   State.update(state,
-                    form: updated_form,
+                    form: Phoenix.Component.to_form(updated_form),
                     errors: errors,
                     form_errors: form_errors
                   )

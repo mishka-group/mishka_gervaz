@@ -515,24 +515,30 @@ defmodule MishkaGervaz.Table.Web.RefreshTest do
 
     test "cancelled timer does not send message" do
       socket = mock_socket(%{refresh_timer: nil, refresh_paused: false})
-      config = %{enabled: true, interval: 100}
+      config = %{enabled: true, interval: 60_000}
 
       socket_with_timer = Refresh.schedule(socket, config)
+      timer = socket_with_timer.assigns.refresh_timer
+      assert is_integer(Process.read_timer(timer))
+
       Refresh.pause(socket_with_timer)
 
-      # Wait and verify no message
-      refute_receive :gervaz_refresh, 200
+      assert Process.read_timer(timer) == false
+      refute_received :gervaz_refresh
     end
 
     test "stopped timer does not send message" do
       socket = mock_socket(%{refresh_timer: nil, refresh_paused: false})
-      config = %{enabled: true, interval: 100}
+      config = %{enabled: true, interval: 60_000}
 
       socket_with_timer = Refresh.schedule(socket, config)
+      timer = socket_with_timer.assigns.refresh_timer
+      assert is_integer(Process.read_timer(timer))
+
       Refresh.stop(socket_with_timer)
 
-      # Wait and verify no message
-      refute_receive :gervaz_refresh, 200
+      assert Process.read_timer(timer) == false
+      refute_received :gervaz_refresh
     end
   end
 

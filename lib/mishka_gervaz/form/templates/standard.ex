@@ -132,6 +132,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
             {render_uploads_section(assigns)}
             {render_notices_at(assigns, :before_submit)}
+            {render_form_errors(assigns)}
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
           </.form>
@@ -420,6 +421,27 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         end
     end
   end
+
+  @doc """
+  Draws `state.form_errors`, the messages of a failed save that no field shows, as one `:error`
+  alert above the submit row. Draws nothing when there are none.
+  """
+  def render_form_errors(%{state: %{form_errors: [_ | _] = messages}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:form_error_messages, messages)
+      |> assign(:ui, assigns.static.ui_adapter)
+
+    ~H"""
+    <div id={@static.id <> "-form-errors"} class="mb-4">
+      <.dynamic_component module={@ui} function={:alert} type={:error} icon="hero-exclamation-circle">
+        <p :for={message <- @form_error_messages}>{message}</p>
+      </.dynamic_component>
+    </div>
+    """
+  end
+
+  def render_form_errors(assigns), do: ~H""
 
   @doc false
   def render_notices_at(assigns, position) do
