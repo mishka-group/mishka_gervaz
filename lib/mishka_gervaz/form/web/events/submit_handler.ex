@@ -195,9 +195,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   @doc false
   @spec field_readonly?(map(), map()) :: boolean()
-  def field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
-  def field_readonly?(%{readonly: true}, _), do: true
-  def field_readonly?(_, _), do: false
+  defdelegate field_readonly?(field, state), to: State.Helpers
 
   defmacro __using__(_opts) do
     quote do

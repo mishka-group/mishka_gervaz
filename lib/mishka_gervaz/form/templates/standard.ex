@@ -86,6 +86,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
+  alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
 
   @impl true
@@ -2008,9 +2009,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     MishkaGervaz.Helpers.resolve_options(Map.get(field, :options))
   end
 
-  defp evaluate_readonly(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
-  defp evaluate_readonly(%{readonly: val}, _state) when is_boolean(val), do: val
-  defp evaluate_readonly(_, _state), do: false
+  defp evaluate_readonly(field, state), do: State.Helpers.field_readonly?(field, state)
 
   defp resolve_sub_readonly(f, state) when is_function(f, 1) and not is_nil(state), do: f.(state)
   defp resolve_sub_readonly(val, _state) when is_boolean(val), do: val

@@ -157,6 +157,87 @@ defmodule MishkaGervaz.Test.Resources.PickerEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.SavingActionArticle do
+  @moduledoc """
+  A form whose actions leave some fields out: a site user's `:create` takes no `:region_id`,
+  a master's `:master_update` takes neither `:summary` nor `:region_id`.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.PickerRegion
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :saving_action_article
+        route "/admin/saving-action-articles"
+      end
+
+      source do
+        actions do
+          create {:master_create, :create}
+          update {:master_update, :update}
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+        field :summary, :text
+
+        field :region_id, :relation do
+          resource PickerRegion
+          display_field :name
+          mode :search
+        end
+
+        field :hint, :text do
+          virtual true
+        end
+
+        field :locked, :text do
+          readonly true
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :summary, :string, public?: true
+    attribute :region_id, :uuid, public?: true
+    attribute :locked, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :master_create do
+      accept [:title, :summary, :region_id, :locked]
+    end
+
+    create :create do
+      accept [:title, :summary, :locked]
+    end
+
+    update :master_update do
+      accept [:title, :locked]
+    end
+
+    update :update do
+      accept [:title, :summary, :locked]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.RaisingCreate do
   @moduledoc """
   A create action whose change raises while the changeset is built.

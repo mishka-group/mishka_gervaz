@@ -162,6 +162,14 @@ every field that depends on it, directly or down the chain, is emptied: it leave
 is never saved; a required dependent left empty is refused on save. Dependents whose parent still
 has a value, or whose `options` read the state, load their options again.
 
+## Read-only fields
+
+A field is drawn read-only and left out of what the form saves when it declares `readonly`, or when
+the action the form saves with — `create` or `update`, master or tenant — neither accepts it nor
+takes it as an argument. A `virtual` field is exempt. When `state.form` is not an AshPhoenix form,
+only `readonly` decides. Hide such a field with `show_on` or `visible` when it should not be shown
+at all.
+
 ## Which knob changes a value, and where — compared
 
 Seven options touch "the value". They act at different points, and picking the wrong one is the

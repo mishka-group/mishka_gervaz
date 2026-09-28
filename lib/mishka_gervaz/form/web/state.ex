@@ -437,6 +437,54 @@ defmodule MishkaGervaz.Form.Web.State do
       end
     end
 
+    @doc """
+    Whether `field` is drawn read-only and left out of what the form saves.
+
+    True when the field declares `readonly true` or `readonly fn state -> … end` says so, or when
+    `taken_by_action?/2` is false.
+
+        if field_readonly?(field, state), do: Map.delete(params, to_string(field.name)), else: params
+    """
+    @spec field_readonly?(map(), map()) :: boolean()
+    def field_readonly?(field, state),
+      do: declared_readonly?(field, state) or not taken_by_action?(field, state)
+
+    @doc """
+    Whether the action `state.form` saves with accepts `field` or takes it as an argument.
+
+    A `virtual` field is always taken. When `state.form` is not an `AshPhoenix.Form`, or its action
+    is not on its resource, the answer is `true` and the field is left as declared.
+    """
+    @spec taken_by_action?(map(), map()) :: boolean()
+    def taken_by_action?(%{virtual: true}, _state), do: true
+
+    def taken_by_action?(%{name: name}, state) do
+      case saving_action(state) do
+        nil -> true
+        action -> name in action.accept or Enum.any?(action.arguments, &(&1.name == name))
+      end
+    end
+
+    def taken_by_action?(_field, _state), do: true
+
+    defp saving_action(%{
+           form: %Phoenix.HTML.Form{source: %AshPhoenix.Form{resource: resource, action: action}}
+         })
+         when is_atom(resource) and is_atom(action) do
+      case Ash.Resource.Info.action(resource, action) do
+        %{accept: accept} = found when is_list(accept) -> found
+        _ -> nil
+      end
+    end
+
+    defp saving_action(_state), do: nil
+
+    defp declared_readonly?(%{readonly: readonly}, state) when is_function(readonly, 1),
+      do: readonly.(state)
+
+    defp declared_readonly?(%{readonly: true}, _state), do: true
+    defp declared_readonly?(_field, _state), do: false
+
     @doc false
     @spec load_static_relation_options(list(map()), map() | nil) :: map()
     def load_static_relation_options(fields, current_user) do

@@ -169,9 +169,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.Helpers do
 
   @doc false
   @spec field_readonly?(map(), State.t()) :: boolean()
-  def field_readonly?(%{readonly: f}, state) when is_function(f, 1), do: f.(state)
-  def field_readonly?(%{readonly: true}, _state), do: true
-  def field_readonly?(_field, _state), do: false
+  defdelegate field_readonly?(field, state), to: State.Helpers
 
   @doc false
   @spec load_dependent_relations(
