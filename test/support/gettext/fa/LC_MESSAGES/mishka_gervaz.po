@@ -1,0 +1,84 @@
+msgid ""
+msgstr ""
+"Language: fa\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "%{field} %{message}"
+msgstr "«%{field}» %{message}"
+
+msgid "%{action} failed: %{reason}"
+msgstr "%{action} انجام نشد: %{reason}"
+
+msgid "Validation failed: %{errors}"
+msgstr "داده‌ها پذیرفته نشد: %{errors}"
+
+msgid "Failed to load data: %{reason}"
+msgstr "داده‌ها بار نشد: %{reason}"
+
+msgid "An error occurred: %{error}"
+msgstr "خطایی رخ داد: %{error}"
+
+msgctxt "list separator"
+msgid ", "
+msgstr "، "
+
+msgid "%{count} error occurred"
+msgid_plural "%{count} errors occurred"
+msgstr[0] "%{count} خطا رخ داد"
+msgstr[1] "%{count} خطا رخ داد"
+
+msgid "%{succeeded}, %{failed}."
+msgstr "%{succeeded}، %{failed}."
+
+msgid "%{count} succeeded"
+msgid_plural "%{count} succeeded"
+msgstr[0] "%{count} مورد انجام شد"
+msgstr[1] "%{count} مورد انجام شد"
+
+msgid "%{count} failed"
+msgid_plural "%{count} failed"
+msgstr[0] "%{count} مورد انجام نشد"
+msgstr[1] "%{count} مورد انجام نشد"
+
+msgid "The changes were not saved."
+msgstr "تغییرها ذخیره نشد."
+
+msgid "Post title"
+msgstr "عنوان نوشته"
+
+msgid "Heading"
+msgstr "سرتیتر"
+
+msgid "Web address"
+msgstr "نشانی وب"
+
+msgid "Category"
+msgstr "دسته"
+
+msgid "Label ids"
+msgstr "برچسب‌ها"
+
+msgid "Publish"
+msgstr "انتشار"
+
+msgid "Permanent destroy"
+msgstr "حذف همیشگی"
+
+msgid "%{count} unarchived"
+msgid_plural "%{count} unarchived"
+msgstr[0] "%{count} مورد بازگردانده شد"
+msgstr[1] "%{count} مورد بازگردانده شد"
+
+msgid "%{count} skipped"
+msgid_plural "%{count} skipped"
+msgstr[0] "%{count} مورد کنار گذاشته شد"
+msgstr[1] "%{count} مورد کنار گذاشته شد"
+
+msgid "%{unarchived}, %{skipped} — a record with the same name already exists."
+msgstr "%{unarchived}، %{skipped} — رکوردی با همین نام از پیش هست."
+
+msgid "Some operations failed; check logs."
+msgstr "برخی کارها انجام نشد؛ گزارش‌ها را ببینید."
+
+msgid "Title"
+msgstr "عنوان"

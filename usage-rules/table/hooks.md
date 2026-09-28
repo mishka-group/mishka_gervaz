@@ -110,6 +110,14 @@ on_row_action_error :delete, fn reason, _state, socket ->
 end
 ```
 
+### Wording of the default error flashes
+
+A failed row or bulk action flashes `"<action> failed: <reason>"`. `<action>` is the action's `ui`
+label, else its humanized name. Each error in `<reason>` is translated in the host's `errors`
+Gettext domain, its placeholders filled after, and one that is not a whole sentence (by its last
+character, `.` `!` `?` `؟` `。` …) follows its field's form field or column label. Every fixed word is
+in the `mishka_gervaz` domain. See `MishkaGervaz.Errors`.
+
 ## 3. Full overrides
 
 Replace the built-in handler entirely:

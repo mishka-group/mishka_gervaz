@@ -85,6 +85,8 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Errors
 
+  use MishkaGervaz.Messages
+
   @doc false
   @spec put_error_flash(Phoenix.LiveView.Socket.t(), Exception.t()) ::
           Phoenix.LiveView.Socket.t()
@@ -92,6 +94,52 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
     message = Errors.format_flash_message(error)
     send(self(), {:put_flash, :error, message})
     socket
+  end
+
+  @doc """
+  The flash a bulk action that failed on some records puts: how many it did and how many failed.
+  """
+  @spec partial_summary(BulkActionResult.t()) :: String.t()
+  def partial_summary(%BulkActionResult{succeeded_count: succeeded, failed_count: failed}) do
+    gettext_comment("Joins the counts of a bulk action that failed on some records.")
+
+    dgettext("mishka_gervaz", "%{succeeded}, %{failed}.",
+      succeeded:
+        dngettext("mishka_gervaz", "%{count} succeeded", "%{count} succeeded", succeeded),
+      failed: dngettext("mishka_gervaz", "%{count} failed", "%{count} failed", failed)
+    )
+  end
+
+  @doc """
+  The flash a bulk restore puts when it skipped records whose name another record already has.
+  """
+  @spec unarchive_skip_summary(BulkActionResult.t()) :: String.t()
+  def unarchive_skip_summary(%BulkActionResult{} = summary) do
+    gettext_comment("Joins the counts of a bulk restore that skipped records.")
+
+    base =
+      dgettext(
+        "mishka_gervaz",
+        "%{unarchived}, %{skipped} — a record with the same name already exists.",
+        unarchived:
+          dngettext(
+            "mishka_gervaz",
+            "%{count} unarchived",
+            "%{count} unarchived",
+            summary.succeeded_count
+          ),
+        skipped:
+          dngettext(
+            "mishka_gervaz",
+            "%{count} skipped",
+            "%{count} skipped",
+            summary.skipped_count
+          )
+      )
+
+    if summary.status == :partial_success,
+      do: base <> " " <> dgettext("mishka_gervaz", "Some operations failed; check logs."),
+      else: base
   end
 
   @doc false
@@ -311,6 +359,8 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
       import MishkaGervaz.Table.Web.Events.BulkActionHandler,
         only: [
           put_error_flash: 2,
+          partial_summary: 1,
+          unarchive_skip_summary: 1,
           run_lifecycle_hook: 4,
           apply_lifecycle_socket: 5,
           apply_lifecycle_with_default: 6,
@@ -431,6 +481,7 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
               Errors.Action.Failed.exception(
                 resource: state.static.resource,
                 action: action.name,
+                label: MishkaGervaz.Helpers.resolve_ui_label(action),
                 reason: reason,
                 record_id: nil
               )
@@ -554,8 +605,7 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
       end
 
       defp default_partial_flash(socket, %BulkActionResult{} = summary) do
-        msg = "#{summary.succeeded_count} succeeded, #{summary.failed_count} failed."
-        send(self(), {:put_flash, :info, msg})
+        send(self(), {:put_flash, :info, partial_summary(summary)})
         socket
       end
 
@@ -564,6 +614,7 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           Errors.Action.Failed.exception(
             resource: state.static.resource,
             action: action.name,
+            label: MishkaGervaz.Helpers.resolve_ui_label(action),
             reason: {:bulk_action_failed, summary.status, summary.failed_errors},
             record_id: nil
           )
@@ -678,16 +729,7 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
       end
 
       defp default_unarchive_skip_flash(socket, %BulkActionResult{} = summary) do
-        base =
-          "#{summary.succeeded_count} unarchived, #{summary.skipped_count} skipped — " <>
-            "a record with the same name already exists."
-
-        msg =
-          if summary.status == :partial_success,
-            do: base <> " Some operations failed; check logs.",
-            else: base
-
-        send(self(), {:put_flash, :info, msg})
+        send(self(), {:put_flash, :info, unarchive_skip_summary(summary)})
         socket
       end
 

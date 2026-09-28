@@ -51,6 +51,22 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandlerTest do
     end
   end
 
+  describe "build_errors/1 in Persian" do
+    test "translates each message, then fills its placeholders" do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+
+      form = %Phoenix.HTML.Form{
+        errors: [
+          {:title, {"is required", []}},
+          {:title, {"length must be greater than or equal to %{min}", [min: 3]}}
+        ]
+      }
+
+      assert ValidationHandler.build_errors(form) ==
+               %{title: ["الزامی است", "باید دست‌کم 3 نویسه باشد"]}
+    end
+  end
+
   describe "override pattern" do
     test "user can override build_errors via use" do
       defmodule TestValidationOverride do

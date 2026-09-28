@@ -70,10 +70,12 @@ defmodule MishkaGervaz.Form.Web.Events.SaveErrorsTest do
         static_opts: [fields: fields, groups: []]
       )
 
+    title = Keyword.get(opts, :title, "An article")
+
     params =
       if Enum.any?(fields, &(&1.name == :label_ids)),
-        do: %{"title" => "An article"},
-        else: %{"title" => "An article", "label_ids" => label_ids}
+        do: %{"title" => title},
+        else: %{"title" => title, "label_ids" => label_ids}
 
     {:noreply, socket} = Events.handle("save", %{"form" => params}, build_socket(state))
 
@@ -107,6 +109,57 @@ defmodule MishkaGervaz.Form.Web.Events.SaveErrorsTest do
       assert state.errors == %{}
       assert state.form_errors == []
       assert [%{title: "An article"}] = Ash.read!(RelationErrorArticle)
+    end
+  end
+
+  describe "an error said on the form names its field" do
+    test "a message that is not a sentence follows the field's name" do
+      state = save([Ash.UUID.generate()], fields: [@title, %{@labels | name: :other_ids}])
+
+      assert state.form_errors == ["Label ids could not be found"]
+    end
+
+    test "so does an error on an attribute the form does not show" do
+      state = save([], fields: [@labels], title: nil)
+
+      assert state.form_errors == ["Title is required"]
+    end
+  end
+
+  describe "in Persian" do
+    setup do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+      :ok
+    end
+
+    test "an error on a field is said in Persian" do
+      state = save([Ash.UUID.generate()])
+
+      assert state.errors[:label_ids] == ["پیدا نشد"]
+    end
+
+    test "an error on the form names its field in Persian" do
+      state = save([Ash.UUID.generate()], fields: [@title, %{@labels | name: :other_ids}])
+
+      assert state.form_errors == ["«برچسب‌ها» پیدا نشد"]
+    end
+
+    test "a sentence on the form is said alone, in Persian" do
+      state = save([label!("foreign").id], fields: [@title, %{@labels | name: :other_ids}])
+
+      assert state.form_errors == ["این برچسب را این سایت نمی‌تواند به کار ببرد."]
+    end
+
+    test "an error on an attribute the form does not show names it in Persian" do
+      state = save([], fields: [@labels], title: nil)
+
+      assert state.form_errors == ["«عنوان» الزامی است"]
+    end
+
+    test "a save no error of which can be shown says so in Persian" do
+      state = save([], action: :locked_create)
+
+      assert state.form_errors == ["تغییرها ذخیره نشد."]
     end
   end
 

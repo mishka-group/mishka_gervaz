@@ -20,6 +20,23 @@ defmodule MishkaGervaz.Errors do
 
       # Format error for flash message
       MishkaGervaz.Errors.format_flash_message(error)
+
+  ## Translation
+
+  Every word these functions return goes through the Gettext backend
+  `MishkaGervaz.Messages.gettext_backend/0` names, in the locale of the calling process:
+
+  - MishkaGervaz's own words and templates in the `"mishka_gervaz"` domain.
+  - An error's own message, such as Ash's `"is required"`, in the `"errors"` domain, with
+    `dngettext` when its vars hold an integer `:count`. Its `%{key}` placeholders are filled from
+    the error's vars after it is translated.
+  - A field's name from the label the resource declares for it: its form field's `ui` label, else
+    its table column's label. A field with neither is named by its humanized name in the
+    `"mishka_gervaz"` domain.
+
+  A message whose last character ends a sentence (`.` `!` `?` `…` `؟` `۔` `。` and the like, before
+  any closing quote or bracket) is shown as written. Any other message is joined to its field's name
+  through the `"%{field} %{message}"` template.
   """
 
   use Splode,
@@ -29,36 +46,71 @@ defmodule MishkaGervaz.Errors do
     ],
     unknown_error: MishkaGervaz.Errors.Unknown
 
+  use MishkaGervaz.Messages
+
+  import MishkaGervaz.Helpers, only: [resolve_label: 1, resolve_ui_label: 1]
+
+  alias MishkaGervaz.Resource.Info.Form, as: FormInfo
+  alias MishkaGervaz.Resource.Info.Table, as: TableInfo
+
+  @sentence_end ~r/[.!?…؟۔。！？｡।॥။።។།‼⁇⁈⁉։][\s"'”’»)\]」』〉》]*\z/u
+
   @doc """
   Formats an error into a human-readable flash message.
 
-  Handles MishkaGervaz errors, Ash errors, and generic errors.
+  Handles MishkaGervaz errors, Ash errors, and generic errors. `resource` names the fields of an
+  error that has no resource of its own; an `Action.Failed` or `Data.LoadFailed` uses its own
+  `:resource` when `resource` is `nil`.
+
+  An `Action.Failed` names its action by its `:label` (a string or a zero-arity function), else by
+  its humanized `:action`.
 
   ## Examples
 
       iex> error = MishkaGervaz.Errors.Action.Failed.exception(action: :archive, reason: "forbidden")
       iex> MishkaGervaz.Errors.format_flash_message(error)
       "Archive failed: forbidden"
+
+      iex> error = MishkaGervaz.Errors.Action.Failed.exception(action: :archive, label: "Delete", reason: "forbidden")
+      iex> MishkaGervaz.Errors.format_flash_message(error)
+      "Delete failed: forbidden"
   """
-  @spec format_flash_message(any()) :: String.t()
-  def format_flash_message(%__MODULE__.Action.Failed{action: action, reason: reason}) do
-    "#{humanize_action(action)} failed: #{format_reason(reason)}"
+  @spec format_flash_message(any(), module() | nil) :: String.t()
+  def format_flash_message(error, resource \\ nil)
+
+  def format_flash_message(%__MODULE__.Action.Failed{} = error, resource) do
+    dgettext("mishka_gervaz", "%{action} failed: %{reason}",
+      action: action_word(error),
+      reason: format_reason(error.reason, resource || error.resource)
+    )
   end
 
-  def format_flash_message(%__MODULE__.Data.LoadFailed{reason: reason}) do
-    "Failed to load data: #{format_reason(reason)}"
+  def format_flash_message(%__MODULE__.Data.LoadFailed{} = error, resource) do
+    dgettext("mishka_gervaz", "Failed to load data: %{reason}",
+      reason: format_reason(error.reason, resource || error.resource)
+    )
   end
 
-  def format_flash_message(%Ash.Error.Invalid{errors: errors}) when is_list(errors) do
-    "Validation failed: #{format_ash_errors(errors, 3)}"
+  def format_flash_message(%Ash.Error.Invalid{errors: errors}, resource) when is_list(errors) do
+    dgettext("mishka_gervaz", "Validation failed: %{errors}",
+      errors: format_ash_errors(errors, 3, resource)
+    )
   end
 
-  def format_flash_message(%{message: message}) when is_binary(message), do: message
-  def format_flash_message(error) when is_binary(error), do: error
-  def format_flash_message(error), do: "An error occurred: #{inspect(error)}"
+  def format_flash_message(%{message: message} = error, resource) when is_binary(message),
+    do: extract_error_message(error, resource)
+
+  def format_flash_message(error, _resource) when is_binary(error), do: error
+
+  def format_flash_message(error, _resource) do
+    dgettext("mishka_gervaz", "An error occurred: %{error}", error: inspect(error))
+  end
 
   @doc """
   Extracts a human-readable message from various error formats.
+
+  `resource` is the resource whose declared labels name the error's field. An Ash error AshPhoenix
+  can show on a form (`AshPhoenix.FormData.Error`) is read the way the form reads it.
 
   ## Examples
 
@@ -73,85 +125,190 @@ defmodule MishkaGervaz.Errors do
 
       iex> MishkaGervaz.Errors.extract_error_message(%{field: :title, message: "must be at least %{min}", vars: [min: 3]})
       "Title must be at least 3"
-
-  A message that starts with a capital letter is a whole sentence and is returned as written; any
-  other message follows its field's name, with `_id` dropped and underscores as spaces. `%{key}`
-  placeholders are filled from the error's `:vars`.
   """
-  @spec extract_error_message(any()) :: String.t()
-  def extract_error_message(%Ash.Error.Invalid{errors: errors}) when is_list(errors) do
-    format_ash_errors(errors, :all)
+  @spec extract_error_message(any(), module() | nil) :: String.t()
+  def extract_error_message(error, resource \\ nil)
+
+  def extract_error_message(%Ash.Error.Invalid{errors: errors}, resource) when is_list(errors) do
+    format_ash_errors(errors, :all, resource)
   end
 
-  def extract_error_message(%{field: field, message: message} = error) when is_binary(message) do
-    message
-    |> interpolate(Map.get(error, :vars))
-    |> with_field(field)
-  end
+  def extract_error_message(error, resource) do
+    case AshPhoenix.FormData.Error.impl_for(error) do
+      nil ->
+        plain_message(error, resource)
 
-  def extract_error_message(%{message: message}) when is_binary(message), do: message
-  def extract_error_message(error) when is_binary(error), do: error
-  def extract_error_message(error), do: inspect(error)
-
-  defp interpolate(message, vars) when is_list(vars) or is_map(vars) do
-    Enum.reduce(vars, message, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", to_string(value))
-    end)
-  end
-
-  defp interpolate(message, _vars), do: message
-
-  defp with_field(message, nil), do: message
-
-  defp with_field(message, field) do
-    if sentence?(message), do: message, else: "#{humanize_field(field)} #{message}"
-  end
-
-  defp sentence?(message) do
-    case String.first(message) do
-      nil -> false
-      first -> first != String.downcase(first)
+      impl ->
+        error
+        |> impl.to_form_error()
+        |> List.wrap()
+        |> Enum.map(fn {field, message, vars} ->
+          field_message(message, vars, field, resource)
+        end)
+        |> Enum.join(list_separator())
     end
   end
 
-  defp humanize_field(field) do
-    field
-    |> to_string()
-    |> String.replace_suffix("_id", "")
-    |> String.replace("_", " ")
-    |> String.capitalize()
+  defp plain_message(%{field: field, message: message} = error, resource)
+       when is_binary(message) do
+    field_message(message, Map.get(error, :vars), field, resource)
   end
 
-  defp humanize_action(nil), do: "Action"
+  defp plain_message(%{message: message} = error, _resource) when is_binary(message),
+    do: translate_error(message, Map.get(error, :vars))
 
-  defp humanize_action(action) when is_atom(action) do
-    action |> to_string() |> String.replace("_", " ") |> String.capitalize()
-  end
+  defp plain_message(error, _resource) when is_binary(error), do: error
+  defp plain_message(error, _resource), do: inspect(error)
 
-  defp humanize_action(action) when is_binary(action), do: String.capitalize(action)
-  defp humanize_action(_), do: "Action"
+  @doc """
+  Translates an error's own message in the `"errors"` domain and fills its `%{key}` placeholders
+  from `vars`.
 
-  defp format_reason({:bulk_action_failed, _status, errors}) when is_list(errors) do
-    case errors do
-      [single] -> extract_error_message(single)
-      list -> "#{length(list)} errors occurred"
+  Uses `dngettext` when `vars` holds an integer `:count`. A list var is joined with `", "`, and a
+  value `String.Chars` cannot print is inspected.
+
+  ## Examples
+
+      iex> MishkaGervaz.Errors.translate_error("must be at least %{min}", min: 3)
+      "must be at least 3"
+  """
+  @spec translate_error(String.t(), keyword() | map() | nil) :: String.t()
+  def translate_error(message, vars) when is_binary(message) do
+    bindings = bindings(vars)
+
+    case bindings do
+      %{count: count} when is_integer(count) ->
+        Gettext.dngettext(backend(), "errors", message, message, count, bindings)
+
+      _ ->
+        Gettext.dgettext(backend(), "errors", message, bindings)
     end
   end
 
-  defp format_reason(%Ash.Error.Invalid{errors: errors}) when is_list(errors) do
-    format_ash_errors(errors, 3)
+  @doc """
+  An error message about `field`, as a person reads it.
+
+  `message` is translated with `translate_error/2`. A translated message that ends a sentence is
+  returned as written; any other is joined to the field's name through the `"%{field} %{message}"`
+  template. `field` is named by the label `resource` declares for it, else by its humanized name.
+  A `nil` field, or AshPhoenix's `:_form` for the whole form, returns the message alone.
+  """
+  @spec field_message(
+          String.t() | nil,
+          keyword() | map() | nil,
+          atom() | String.t() | nil,
+          module() | nil
+        ) ::
+          String.t()
+  def field_message(message, vars, field, resource) do
+    (message || "is invalid")
+    |> translate_error(vars)
+    |> with_field(field, resource)
   end
 
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
+  defp with_field(message, field, _resource) when field in [nil, :_form], do: message
 
-  defp format_ash_errors(errors, take) do
+  defp with_field(message, field, resource) do
+    if sentence?(message) do
+      message
+    else
+      dgettext("mishka_gervaz", "%{field} %{message}",
+        field: field_name(resource, field),
+        message: message
+      )
+    end
+  end
+
+  defp sentence?(message), do: Regex.match?(@sentence_end, message)
+
+  defp field_name(resource, field) do
+    declared_field_label(resource, field) || humanized_field(field)
+  end
+
+  defp declared_field_label(resource, field)
+       when is_atom(resource) and not is_nil(resource) and is_atom(field) do
+    if Spark.Dsl.is?(resource, Ash.Resource) do
+      resolve_ui_label(FormInfo.field(resource, field)) ||
+        column_label(TableInfo.column(resource, field))
+    end
+  end
+
+  defp declared_field_label(_resource, _field), do: nil
+
+  defp column_label(nil), do: nil
+  defp column_label(column), do: resolve_label(column.label) || resolve_ui_label(column)
+
+  defp humanized_field(field) do
+    words =
+      field
+      |> to_string()
+      |> String.replace_suffix("_id", "")
+      |> String.replace("_", " ")
+      |> String.capitalize()
+
+    Gettext.dgettext(backend(), "mishka_gervaz", words)
+  end
+
+  defp action_word(%{label: label, action: action}) do
+    resolve_label(label) || humanized_action(action)
+  end
+
+  defp humanized_action(action) when is_atom(action) and not is_nil(action) do
+    words = action |> to_string() |> String.replace("_", " ") |> String.capitalize()
+    Gettext.dgettext(backend(), "mishka_gervaz", words)
+  end
+
+  defp humanized_action(action) when is_binary(action) and action != "" do
+    Gettext.dgettext(backend(), "mishka_gervaz", String.capitalize(action))
+  end
+
+  defp humanized_action(_action), do: dgettext("mishka_gervaz", "Action")
+
+  defp format_reason({:bulk_action_failed, _status, [single]}, resource),
+    do: extract_error_message(single, resource)
+
+  defp format_reason({:bulk_action_failed, _status, errors}, _resource) when is_list(errors) do
+    count = length(errors)
+    dngettext("mishka_gervaz", "%{count} error occurred", "%{count} errors occurred", count)
+  end
+
+  defp format_reason(%Ash.Error.Invalid{errors: errors}, resource) when is_list(errors) do
+    format_ash_errors(errors, 3, resource)
+  end
+
+  defp format_reason(reason, _resource) when is_binary(reason), do: reason
+  defp format_reason(reason, _resource), do: inspect(reason)
+
+  defp format_ash_errors(errors, take, resource) do
     errors
-    |> Enum.map(&extract_error_message/1)
     |> maybe_take(take)
-    |> Enum.join(", ")
+    |> Enum.map(&extract_error_message(&1, resource))
+    |> Enum.join(list_separator())
   end
 
   defp maybe_take(list, :all), do: list
   defp maybe_take(list, n) when is_integer(n), do: Enum.take(list, n)
+
+  defp list_separator do
+    gettext_comment("Joins the messages of several errors in one line.")
+    dpgettext("mishka_gervaz", "list separator", ", ")
+  end
+
+  defp bindings(nil), do: %{}
+
+  defp bindings(vars) when is_list(vars) or is_map(vars) do
+    Map.new(vars, fn {key, value} -> {key, printable(value)} end)
+  end
+
+  defp bindings(_vars), do: %{}
+
+  defp printable(value) when is_binary(value) or is_number(value), do: value
+  defp printable(%Regex{} = value), do: Regex.source(value)
+  defp printable(value) when is_list(value), do: Enum.map_join(value, ", ", &printable/1)
+
+  defp printable(value) do
+    if String.Chars.impl_for(value), do: to_string(value), else: inspect(value)
+  end
+
+  defp backend, do: MishkaGervaz.Messages.gettext_backend()
 end

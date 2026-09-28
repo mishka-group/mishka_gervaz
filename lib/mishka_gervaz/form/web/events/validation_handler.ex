@@ -104,12 +104,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       """
       @spec build_errors(Phoenix.HTML.Form.t()) :: map()
       def build_errors(form) do
-        form.errors
-        |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
-          Enum.reduce(opts, msg, fn {key, value}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(value))
-          end)
-        end)
+        MishkaGervaz.Form.Web.Events.SubmitHandler.format_form_errors(form)
       end
 
       defp merge_field_type_errors(form, []), do: form

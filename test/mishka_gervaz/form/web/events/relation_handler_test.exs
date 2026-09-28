@@ -11,6 +11,26 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandlerTest do
 
   alias MishkaGervaz.Form.Web.Events.RelationHandler
 
+  describe "revalidate_form/2" do
+    alias MishkaGervaz.Test.Resources.TranslatedLabels
+
+    test "says a field's errors in the reader's language" do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+      record = Ash.create!(TranslatedLabels, %{title: "A post"})
+
+      form =
+        record
+        |> AshPhoenix.Form.for_update(:update)
+        |> Phoenix.Component.to_form()
+
+      state =
+        MishkaGervaz.Test.FormWebHelpers.build_state(mode: :update, form: form)
+        |> RelationHandler.revalidate_form(%{title: nil})
+
+      assert state.errors[:title] == ["الزامی است"]
+    end
+  end
+
   describe "get_search_term/2" do
     test "prefers `_search_<field>` key when present" do
       params = %{"_search_tags" => "abc", "value" => "ignored"}

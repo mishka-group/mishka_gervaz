@@ -495,7 +495,7 @@ defmodule MishkaGervaz.Table.Web.Events do
     do_handle("delete", params, state, socket)
   end
 
-  def do_handle("unarchive", %{"id" => id}, state, socket) do
+  def do_handle("unarchive", %{"id" => id} = params, state, socket) do
     id = sanitize(state, id)
     record = get_record(state, id, :archived)
 
@@ -528,6 +528,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :unarchive,
+              label: row_action_label(state, params["event"], :unarchive),
               reason: reason,
               record_id: id
             )
@@ -538,7 +539,7 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
-  def do_handle("permanent_destroy", %{"id" => id}, state, socket) do
+  def do_handle("permanent_destroy", %{"id" => id} = params, state, socket) do
     id = sanitize(state, id)
     record = get_record(state, id, :archived)
 
@@ -575,6 +576,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :permanent_destroy,
+              label: row_action_label(state, params["event"], :permanent_destroy),
               reason: reason,
               record_id: id
             )
@@ -914,6 +916,31 @@ defmodule MishkaGervaz.Table.Web.Events do
     ArgumentError -> nil
   end
 
+  @doc """
+  The label of the row action a failed row event ran, for its error flash, or `nil` when the action
+  declares none.
+
+  The action is the one `event` names, else the first row action of `type`, dropdown items
+  included.
+  """
+  @spec row_action_label(State.t(), String.t() | nil, atom()) :: String.t() | nil
+  def row_action_label(state, event, type) do
+    entity =
+      (is_binary(event) && find_row_action_by_event(state, event)) ||
+        Enum.find(row_action_entities(state), &(Map.get(&1, :type) == type))
+
+    MishkaGervaz.Helpers.resolve_ui_label(entity)
+  end
+
+  defp row_action_entities(%{static: static}) do
+    items =
+      Enum.flat_map(static.row_action_dropdowns || [], fn dropdown ->
+        Enum.filter(dropdown.items, &is_map_key(&1, :name))
+      end)
+
+    (static.row_actions || []) ++ items
+  end
+
   @doc false
   @spec do_update(State.t(), map(), atom(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -932,7 +959,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   end
 
   @doc false
-  def do_update_with_name(state, %{"id" => id}, action_spec, socket, action_name) do
+  def do_update_with_name(state, %{"id" => id} = params, action_spec, socket, action_name) do
     id = sanitize(state, id)
     record = get_record(state, id, state.archive_status)
 
@@ -961,6 +988,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :update,
+              label: row_action_label(state, params["event"], :update),
               reason: reason,
               record_id: id
             )
@@ -979,7 +1007,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   @doc false
   @spec do_destroy(State.t(), map(), atom(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def do_destroy(state, %{"id" => id}, action_spec, socket) do
+  def do_destroy(state, %{"id" => id} = params, action_spec, socket) do
     id = sanitize(state, id)
     record = get_record(state, id, state.archive_status)
     action_name = update_action_name(action_spec)
@@ -1018,6 +1046,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             Errors.Action.Failed.exception(
               resource: state.static.resource,
               action: :destroy,
+              label: row_action_label(state, params["event"], :destroy),
               reason: reason,
               record_id: id
             )
@@ -1104,6 +1133,7 @@ defmodule MishkaGervaz.Table.Web.Events do
           Errors.Action.Failed.exception(
             resource: state.static.resource,
             action: :destroy,
+            label: row_action_label(state, nil, :destroy),
             reason: reason,
             record_id: record.id
           )

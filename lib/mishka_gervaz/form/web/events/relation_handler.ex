@@ -450,12 +450,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
         errors =
           if show_errors? do
-            validated.errors
-            |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
-              Enum.reduce(opts, msg, fn {key, val}, acc ->
-                String.replace(acc, "%{#{key}}", to_string(val))
-              end)
-            end)
+            MishkaGervaz.Form.Web.Events.SubmitHandler.format_form_errors(validated)
           else
             %{}
           end

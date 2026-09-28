@@ -221,6 +221,58 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionLifecycleTest do
     end
   end
 
+  describe "the flashes a bulk action puts" do
+    alias MishkaGervaz.Table.Web.Events.BulkActionResult
+
+    test "a failure names the action by its label" do
+      state = build_state(%{})
+      handler = fn _ids, _state -> {:error, "the printer is off"} end
+      action = %{name: :do_thing, handler: handler, ui: %{label: "Send to print"}}
+
+      BulkActionHandler.Default.execute(action, [], state, socket())
+
+      assert_received {:put_flash, :error, "Send to print failed: the printer is off"}
+    end
+
+    test "a failure of an action with no label names it by its humanized name" do
+      state = build_state(%{})
+      handler = fn _ids, _state -> {:error, "the printer is off"} end
+      action = %{name: :do_thing, handler: handler}
+
+      BulkActionHandler.Default.execute(action, [], state, socket())
+
+      assert_received {:put_flash, :error, "Do thing failed: the printer is off"}
+    end
+
+    test "a partial failure counts what was done and what failed" do
+      summary = %BulkActionResult{succeeded_count: 2, failed_count: 1}
+
+      assert BulkActionHandler.partial_summary(summary) == "2 succeeded, 1 failed."
+    end
+
+    test "a restore that skipped records says why" do
+      summary = %BulkActionResult{succeeded_count: 3, skipped_count: 1, status: :partial_success}
+
+      assert BulkActionHandler.unarchive_skip_summary(summary) ==
+               "3 unarchived, 1 skipped — a record with the same name already exists. " <>
+                 "Some operations failed; check logs."
+
+      assert BulkActionHandler.unarchive_skip_summary(%{summary | status: :success}) ==
+               "3 unarchived, 1 skipped — a record with the same name already exists."
+    end
+
+    test "the counts read in Persian" do
+      Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
+      summary = %BulkActionResult{succeeded_count: 2, failed_count: 1, skipped_count: 1}
+
+      assert BulkActionHandler.partial_summary(summary) ==
+               "2 مورد انجام شد، 1 مورد انجام نشد."
+
+      assert BulkActionHandler.unarchive_skip_summary(summary) ==
+               "2 مورد بازگردانده شد، 1 مورد کنار گذاشته شد — رکوردی با همین نام از پیش هست."
+    end
+  end
+
   describe "function-handler path — on_bulk_action_error" do
     test "fires on error with the reason" do
       test_pid = self()

@@ -16,8 +16,6 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
     ArchivableResource
   }
 
-  require Ash.Query
-
   # Test user fixtures
   defp master_user, do: %{id: "master-123", site_id: nil, role: :admin}
   defp tenant_user, do: %{id: "tenant-456", site_id: "site-abc", role: :user}
@@ -1456,6 +1454,93 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
 
     defp assert_flash(true), do: assert_received({:put_flash, :error, _message})
     defp assert_flash(false), do: refute_received({:put_flash, :error, _message})
+  end
+
+  describe "a row action's error flash" do
+    alias MishkaGervaz.Test.Resources.AuthorizedWriteResource
+
+    setup do
+      on_exit(fn -> clear_ets(AuthorizedWriteResource) end)
+      :ok
+    end
+
+    defp refused_socket(row_actions) do
+      AuthorizedWriteResource
+      |> init_loaded_state(%{id: "member-1", site_id: nil, role: :user},
+        master_user?: true,
+        row_actions: row_actions
+      )
+      |> create_socket()
+    end
+
+    defp row_action(name, type, action, label) do
+      %{
+        name: name,
+        type: type,
+        action: action,
+        event: nil,
+        visible: true,
+        restricted: false,
+        ui: label && %{label: label}
+      }
+    end
+
+    defp flash! do
+      assert_received {:put_flash, :error, message}
+      message
+    end
+
+    defp item!, do: Ash.create!(AuthorizedWriteResource, %{title: "Item"}, authorize?: false)
+
+    test "names an update row action by its label" do
+      socket = refused_socket([row_action(:bring_back, :update, :master_unarchive, "Bring back")])
+
+      Events.handle("row_action", %{"event" => "bring_back", "id" => Ash.UUID.generate()}, socket)
+
+      assert flash!() =~ ~r/\ABring back failed: /
+    end
+
+    test "names a destroy row action by its label" do
+      socket = refused_socket([row_action(:trash, :destroy, :master_destroy, "Move to trash")])
+
+      Events.handle("row_action", %{"event" => "trash", "id" => item!().id}, socket)
+
+      assert flash!() =~ ~r/\AMove to trash failed: /
+    end
+
+    test "names the delete event by the label of the table's destroy row action" do
+      socket =
+        refused_socket([
+          row_action(:edit, :edit, nil, "Edit"),
+          row_action(:trash, :destroy, :master_destroy, "Move to trash")
+        ])
+
+      Events.handle("delete", %{"id" => item!().id}, socket)
+
+      assert flash!() =~ ~r/\AMove to trash failed: /
+    end
+
+    test "names the unarchive and permanent_destroy events by their row actions' labels" do
+      socket =
+        refused_socket([
+          row_action(:bring_back, :unarchive, nil, "Bring back"),
+          row_action(:purge, :permanent_destroy, nil, "Delete forever")
+        ])
+
+      Events.handle("unarchive", %{"id" => Ash.UUID.generate()}, socket)
+      assert flash!() =~ ~r/\ABring back failed: /
+
+      Events.handle("permanent_destroy", %{"id" => Ash.UUID.generate()}, socket)
+      assert flash!() =~ ~r/\ADelete forever failed: /
+    end
+
+    test "names a row action with no label by the action it ran" do
+      socket = refused_socket([row_action(:trash, :destroy, :master_destroy, nil)])
+
+      Events.handle("delete", %{"id" => item!().id}, socket)
+
+      assert flash!() =~ ~r/\ADestroy failed: /
+    end
   end
 
   describe "per-action bulk hook — before_bulk_action halt" do

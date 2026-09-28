@@ -60,6 +60,13 @@ All predicates are arity **1** (`state`).
 Put the three default labels on the domain once; declare `submit` on a resource only where it
 genuinely differs.
 
+## A refused save
+
+A refused save shows each error on the field it concerns, and the rest above the submit row. Each
+message is translated in the host's `errors` Gettext domain, its placeholders filled after. One above
+the submit row that is not a whole sentence follows its field's form field or column label. See
+`MishkaGervaz.Form.Web.Events.SubmitHandler.save_errors/2` and `MishkaGervaz.Errors`.
+
 ## Mount-time overrides
 
 A mount can suppress or extend the submit row without touching the DSL — `submit={false}`,

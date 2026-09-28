@@ -12,10 +12,12 @@ defmodule MishkaGervaz.Errors.Action do
 
     - `:resource` - The resource module
     - `:action` - The action name
+    - `:label` - The words the table shows for the action: a string, a zero-arity function, or
+      `nil` to name it by its humanized `:action`
     - `:reason` - The reason for the failure
     - `:record_id` - Optional ID of the record
     """
-    use Splode.Error, fields: [:resource, :action, :reason, :record_id], class: :action
+    use Splode.Error, fields: [:resource, :action, :label, :reason, :record_id], class: :action
 
     @doc false
     def message(%{resource: resource, action: action, reason: reason, record_id: nil}) do

@@ -33,31 +33,32 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   use MishkaGervaz.Messages
 
+  alias MishkaGervaz.Errors
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Form.Web.DataLoader.Helpers, as: DataLoaderHelpers
 
-  @doc false
+  @doc """
+  The errors of `form` by field, each message translated with
+  `MishkaGervaz.Errors.translate_error/2`.
+  """
   @spec format_form_errors(Phoenix.HTML.Form.t()) :: map()
   def format_form_errors(form) do
-    form.errors
-    |> Enum.group_by(fn {field, _} -> field end, fn {_, {msg, opts}} ->
-      Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
+    Enum.group_by(form.errors, fn {field, _} -> field end, fn {_, {msg, opts}} ->
+      Errors.translate_error(msg, opts)
     end)
   end
 
-  @doc false
-  @spec extract_form_level_errors(Phoenix.HTML.Form.t(), MapSet.t()) :: list(String.t())
-  def extract_form_level_errors(form, field_names) do
+  @doc """
+  The errors of `form` on fields not in `field_names`, each as `MishkaGervaz.Errors.field_message/4`
+  words it, its field named by the labels `resource` declares.
+  """
+  @spec extract_form_level_errors(Phoenix.HTML.Form.t(), MapSet.t(), module() | nil) ::
+          list(String.t())
+  def extract_form_level_errors(form, field_names, resource \\ nil) do
     form.errors
     |> Enum.reject(fn {field, _} -> MapSet.member?(field_names, field) end)
-    |> Enum.map(fn {_field, {msg, opts}} ->
-      Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
+    |> Enum.map(fn {field, {msg, opts}} -> Errors.field_message(msg, opts, field, resource) end)
   end
 
   @doc """
@@ -67,24 +68,34 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   shows. An error under a field that has no nested form, such as one id of a relation field's
   `[:tag_ids, 0]`, is shown on that field. When the save failed and none of its errors can be shown,
   `form_errors` holds one message saying the changes were not saved.
+
+  A message is translated with `MishkaGervaz.Errors.translate_error/2`. One in `form_errors` about
+  a field is worded by `MishkaGervaz.Errors.field_message/4`, with the form's resource naming the
+  field.
   """
   @spec save_errors(AshPhoenix.Form.t(), MapSet.t()) :: {map(), list(String.t())}
   def save_errors(ash_form, field_names) do
     form = Phoenix.Component.to_form(ash_form)
 
+    resource = ash_form.resource
+
     {nested_field_errors, nested_form_errors} =
       ash_form
       |> AshPhoenix.Form.raw_errors()
       |> Enum.flat_map(&path_error(&1, ash_form.form_keys))
-      |> Enum.split_with(fn {field, _msg} -> MapSet.member?(field_names, field) end)
+      |> Enum.split_with(fn {field, _msg, _vars} -> MapSet.member?(field_names, field) end)
 
     field_errors =
-      Enum.reduce(nested_field_errors, format_form_errors(form), fn {field, msg}, acc ->
-        Map.update(acc, field, [msg], &(&1 ++ [msg]))
+      Enum.reduce(nested_field_errors, format_form_errors(form), fn {field, msg, vars}, acc ->
+        message = Errors.translate_error(msg, vars)
+        Map.update(acc, field, [message], &(&1 ++ [message]))
       end)
 
     form_errors =
-      extract_form_level_errors(form, field_names) ++ Enum.map(nested_form_errors, &elem(&1, 1))
+      extract_form_level_errors(form, field_names, resource) ++
+        Enum.map(nested_form_errors, fn {field, msg, vars} ->
+          Errors.field_message(msg, vars, field, resource)
+        end)
 
     if field_errors == %{} and form_errors == [] do
       {field_errors, [dgettext("mishka_gervaz", "The changes were not saved.")]}
@@ -100,17 +111,11 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       error
       |> AshPhoenix.FormData.Error.to_form_error()
       |> List.wrap()
-      |> Enum.map(fn {_field, msg, vars} -> {key, interpolate(msg, vars)} end)
+      |> Enum.map(fn {_field, msg, vars} -> {key, msg, vars} end)
     end
   end
 
   defp path_error(_error, _form_keys), do: []
-
-  defp interpolate(msg, vars) do
-    Enum.reduce(vars, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", to_string(value))
-    end)
-  end
 
   @doc false
   @spec cleanup_temp_uploads(map()) :: :ok
