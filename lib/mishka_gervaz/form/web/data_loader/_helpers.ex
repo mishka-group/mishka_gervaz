@@ -181,11 +181,15 @@ defmodule MishkaGervaz.Form.Web.DataLoader.Helpers do
         ) :: Phoenix.LiveView.Socket.t()
   def load_dependent_relations(socket, state, load_fn) when is_function(load_fn, 3) do
     state.static.fields
-    |> Enum.filter(fn field ->
-      field.depends_on != nil and field.type == :relation and
-        (Map.has_key?(state.field_values, field.depends_on) or options_of_state?(field))
-    end)
+    |> Enum.filter(&loadable_dependent?(&1, state))
     |> Enum.reduce(socket, fn field, acc -> load_fn.(acc, state, field.name) end)
+  end
+
+  @doc false
+  @spec loadable_dependent?(map(), State.t()) :: boolean()
+  def loadable_dependent?(field, state) do
+    Map.get(field, :depends_on) != nil and Map.get(field, :type) == :relation and
+      (Map.has_key?(state.field_values, field.depends_on) or options_of_state?(field))
   end
 
   # Its options are the state's to decide, an empty parent included — see the `options` field doc.

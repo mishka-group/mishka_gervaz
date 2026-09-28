@@ -724,11 +724,30 @@ defmodule MishkaGervaz.Helpers do
     end
   end
 
+  @doc """
+  The names of every entry that `depends_on` one of `changed_parents`, directly or down the chain.
+
+  `entries` are filters or form fields: maps with `:name` and `:depends_on`. The parents themselves
+  are left out unless another parent depends on them.
+
+  ## Examples
+
+      iex> fields = [
+      ...>   %{name: :site_id, depends_on: nil},
+      ...>   %{name: :workspace, depends_on: :site_id},
+      ...>   %{name: :version_id, depends_on: :workspace},
+      ...>   %{name: :title, depends_on: nil}
+      ...> ]
+      iex> MishkaGervaz.Helpers.find_all_dependents(MapSet.new([:site_id]), fields)
+      MapSet.new([:workspace, :version_id])
+  """
   @spec find_all_dependents(MapSet.t(), list()) :: MapSet.t()
-  defp find_all_dependents(changed_parents, filters) do
+  def find_all_dependents(changed_parents, filters) do
     direct_children =
       Enum.reduce(filters, MapSet.new(), fn filter, acc ->
-        if filter.depends_on && MapSet.member?(changed_parents, filter.depends_on) do
+        parent = Map.get(filter, :depends_on)
+
+        if parent && MapSet.member?(changed_parents, parent) do
           MapSet.put(acc, filter.name)
         else
           acc

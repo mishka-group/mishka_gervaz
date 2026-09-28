@@ -169,11 +169,11 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
       label = params["label"] || ""
       current_value = Map.get(state.field_values, field_atom)
 
-      {new_field_values, new_selected_options} =
+      {new_field_values, new_selected_options, form_value} =
         if to_string(current_value) == to_string(value) do
-          {Map.delete(state.field_values, field_atom), []}
+          {Map.delete(state.field_values, field_atom), [], nil}
         else
-          {Map.put(state.field_values, field_atom, value), [{label, value}]}
+          {Map.put(state.field_values, field_atom, value), [{label, value}], value}
         end
 
       relation_options =
@@ -192,7 +192,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
           dirty?: true
         )
 
-      state = revalidate_form(state, field_atom, value)
+      state = revalidate_form(state, field_atom, form_value)
       socket = Phoenix.Component.assign(socket, :form_state, state)
       socket = reload_dependent_fields(socket, state, field_atom)
 
@@ -239,6 +239,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
       form_value = if new_list == [], do: "", else: new_list
       state = revalidate_form(state, field_atom, form_value)
       socket = Phoenix.Component.assign(socket, :form_state, state)
+      socket = reload_dependent_fields(socket, state, field_atom)
       {:noreply, socket}
     else
       _ -> {:noreply, socket}
@@ -257,13 +258,16 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         })
 
       state =
-        State.update(state,
+        state
+        |> State.update(
           field_values: Map.delete(state.field_values, field_atom),
           relation_options: relation_options,
           dirty?: true
         )
+        |> revalidate_form(field_atom, nil)
 
       socket = Phoenix.Component.assign(socket, :form_state, state)
+      socket = reload_dependent_fields(socket, state, field_atom)
       {:noreply, socket}
     else
       _ -> {:noreply, socket}
@@ -422,18 +426,20 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
   end
 
   @doc false
-  def revalidate_form(state, field_atom, value) do
+  def revalidate_form(state, field_atom, value),
+    do: revalidate_form(state, %{field_atom => value})
+
+  @doc false
+  def revalidate_form(state, values) when is_map(values) do
     case state.form do
       nil ->
         state
 
       form ->
-        param_value = if value == "__nil__", do: nil, else: value
-
         form_params =
-          form.source
-          |> AshPhoenix.Form.params()
-          |> Map.put(to_string(field_atom), param_value)
+          Enum.reduce(values, AshPhoenix.Form.params(form.source), fn {field_atom, value}, acc ->
+            Map.put(acc, to_string(field_atom), if(value == "__nil__", do: nil, else: value))
+          end)
 
         validated =
           form.source
@@ -492,29 +498,42 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
     Phoenix.Component.assign(socket, :form_state, state)
   end
 
-  @doc false
-  def reload_dependent_fields(socket, state, changed_field_atom) do
-    dependent_fields =
-      Enum.filter(state.static.fields, fn f ->
-        Map.get(f, :depends_on) == changed_field_atom
-      end)
+  @doc """
+  Empties every field that depends on `changed_field_atom`, directly or down the chain, and loads
+  the options each one can offer now.
 
-    case dependent_fields do
+  Each dependent loses its value in `state.field_values` and is set to `nil` in the form's params,
+  so a value picked under the old parent is never saved. A dependent is loaded again when its own
+  parent still has a value, or when its options come from the state.
+  """
+  @spec reload_dependent_fields(socket(), state(), atom()) :: socket()
+  def reload_dependent_fields(socket, state, changed_field_atom) do
+    fields = state.static.fields
+
+    dependents =
+      MishkaGervaz.Helpers.find_all_dependents(MapSet.new([changed_field_atom]), fields)
+
+    case MapSet.to_list(dependents) do
       [] ->
         socket
 
-      deps ->
-        cleared_field_values =
-          Enum.reduce(deps, state.field_values, fn dep, acc ->
-            Map.delete(acc, dep.name)
+      names ->
+        cleared = State.update(state, field_values: Map.drop(state.field_values, names))
+
+        to_load =
+          Enum.filter(fields, fn field ->
+            MapSet.member?(dependents, field.name) and
+              DataLoader.Helpers.loadable_dependent?(field, cleared)
           end)
 
-        cleared_relation_options =
-          Enum.reduce(deps, state.relation_options, fn dep, acc ->
-            Map.put(acc, dep.name, %{
+        load_names = MapSet.new(to_load, & &1.name)
+
+        relation_options =
+          Enum.reduce(names, state.relation_options, fn name, acc ->
+            Map.put(acc, name, %{
               options: [],
               has_more?: false,
-              loading?: true,
+              loading?: MapSet.member?(load_names, name),
               page: 1,
               selected_options: [],
               dropdown_open?: false
@@ -522,15 +541,14 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
           end)
 
         state =
-          State.update(state,
-            field_values: cleared_field_values,
-            relation_options: cleared_relation_options
-          )
+          cleared
+          |> State.update(relation_options: relation_options)
+          |> revalidate_form(Map.new(names, &{&1, nil}))
 
         socket = Phoenix.Component.assign(socket, :form_state, state)
 
-        Enum.reduce(deps, socket, fn dep_field, acc ->
-          DataLoader.load_relation_options(acc, state, dep_field.name)
+        Enum.reduce(to_load, socket, fn field, acc ->
+          DataLoader.load_relation_options(acc, state, field.name)
         end)
     end
   end

@@ -156,6 +156,12 @@ end
 
 A picked `include_nil` parent arrives as `"__nil__"`, not `nil`.
 
+When a parent changes — a new pick, the same pick again to empty it, a clear, or `field_change` —
+every field that depends on it, directly or down the chain, is emptied: it leaves
+`state.field_values` and is set to `nil` in the form's params. A value picked under the old parent
+is never saved; a required dependent left empty is refused on save. Dependents whose parent still
+has a value, or whose `options` read the state, load their options again.
+
 ## Which knob changes a value, and where — compared
 
 Seven options touch "the value". They act at different points, and picking the wrong one is the

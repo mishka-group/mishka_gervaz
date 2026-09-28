@@ -253,7 +253,12 @@ defmodule MishkaGervaz.Form.Web.Events do
           new_field_values = Map.put(state.field_values, field_atom, value)
           state = State.update(state, field_values: new_field_values, dirty?: true)
           state = revalidate_combobox(state, field_atom, value)
-          socket = Phoenix.Component.assign(socket, :form_state, state)
+
+          socket =
+            socket
+            |> Phoenix.Component.assign(:form_state, state)
+            |> RelationHandler.reload_dependent_fields(state, field_atom)
+
           {:noreply, socket}
       end
     else
@@ -486,17 +491,10 @@ defmodule MishkaGervaz.Form.Web.Events do
             Map.put(state.field_values, field_atom, value)
             |> then(&State.update(state, field_values: &1, dirty?: true))
 
-          socket = Phoenix.Component.assign(socket, :form_state, state)
-
-          dependent_fields =
-            Enum.filter(state.static.fields, fn f ->
-              Map.get(f, :depends_on) == field_atom
-            end)
-
           socket =
-            Enum.reduce(dependent_fields, socket, fn dep_field, acc ->
-              DataLoader.load_relation_options(acc, state, dep_field.name)
-            end)
+            socket
+            |> Phoenix.Component.assign(:form_state, state)
+            |> RelationHandler.reload_dependent_fields(state, field_atom)
 
           {:noreply, socket}
       end
