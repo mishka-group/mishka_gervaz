@@ -38,7 +38,9 @@ defmodule MishkaGervaz.Form.Web.Live do
   ## Optional Assigns
 
   - `record_id` - ID of record to edit (nil for create mode)
-  - `defaults` - Map of default field values for create mode (e.g., `%{workspace_id: @workspace_id}`)
+  - `defaults` - Map of default field values for create mode (e.g., `%{workspace_id: @workspace_id}`).
+    A picker's default is saved only while the picker still holds it: once it is cleared, or emptied
+    because a field it depends on changed, the save leaves it out.
 
   ## After a save
 

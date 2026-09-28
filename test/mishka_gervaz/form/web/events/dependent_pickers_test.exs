@@ -4,9 +4,10 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
   saved.
 
   `MishkaGervaz.Test.Resources.PickerEntry` chains three pickers: region, workspace (depends on
-  region) and the required version (depends on workspace). Each case drives the form's own events
-  — `relation_select`, `relation_clear`, `field_change`, `save` — and checks what reaches the
-  record.
+  region) and the required version (depends on workspace). A form mounted with `defaults` opens on
+  them. `MishkaGervaz.Test.Resources.PickerScopedEntry` hangs a picker under a multi-select and one
+  under a combobox. Each case drives the form's own events — `relation_select`, `relation_toggle`,
+  `relation_clear`, `combobox_select`, `field_change`, `save` — and checks what reaches the record.
   """
   use ExUnit.Case, async: false
 
@@ -16,7 +17,14 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
 
   alias MishkaGervaz.Form.Web.{DataLoader, Events, State}
   alias MishkaGervaz.Form.Web.DataLoader.RecordLoader
-  alias MishkaGervaz.Test.Resources.{PickerEntry, PickerRegion, PickerVersion, PickerWorkspace}
+
+  alias MishkaGervaz.Test.Resources.{
+    PickerEntry,
+    PickerRegion,
+    PickerScopedEntry,
+    PickerVersion,
+    PickerWorkspace
+  }
 
   @user %{id: "user-1", role: :admin}
 
@@ -36,8 +44,8 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
     %{north: north, south: south, w1: w1, w2: w2, w3: w3, v1: v1, v2: v2}
   end
 
-  defp create_form do
-    state = State.init("picker-entry", PickerEntry, @user)
+  defp create_form(defaults \\ nil) do
+    state = "picker-entry" |> State.init(PickerEntry, @user) |> State.update(defaults: defaults)
     DataLoader.new_record(build_socket(state), state)
   end
 
@@ -173,6 +181,145 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
 
       refute_received {:form_saved, _mode, _record}
       assert stored() == []
+    end
+  end
+
+  describe "creating with defaults" do
+    setup ctx do
+      %{defaults: %{region_id: ctx.north.id, workspace_id: ctx.w1.id, version_id: ctx.v1.id}}
+    end
+
+    test "the version given as a default is not saved once the workspace changes", ctx do
+      socket =
+        ctx.defaults
+        |> create_form()
+        |> select(:workspace_id, ctx.w2)
+        |> save(%{"title" => "Entry", "version_id" => ""})
+
+      refute_received {:form_saved, _mode, _record}
+      assert stored() == []
+      assert Map.has_key?(socket.assigns.form_state.errors, :version_id)
+    end
+
+    test "the workspace and version given as defaults are not saved once the region changes",
+         ctx do
+      socket =
+        ctx.defaults
+        |> create_form()
+        |> select(:region_id, ctx.south)
+        |> save(%{"title" => "Entry"})
+
+      refute_received {:form_saved, _mode, _record}
+      assert stored() == []
+      assert Map.has_key?(socket.assigns.form_state.errors, :version_id)
+    end
+
+    test "a version given as a default and then cleared is not saved", ctx do
+      socket = create_form(ctx.defaults)
+
+      {:noreply, socket} = Events.handle("relation_clear", %{"filter" => "version_id"}, socket)
+      socket = save(socket, %{"title" => "Entry", "version_id" => ""})
+
+      refute_received {:form_saved, _mode, _record}
+      assert stored() == []
+      assert Map.has_key?(socket.assigns.form_state.errors, :version_id)
+    end
+
+    test "the version picked under the new workspace is saved", ctx do
+      ctx.defaults
+      |> create_form()
+      |> select(:workspace_id, ctx.w2)
+      |> select(:version_id, ctx.v2)
+      |> save(%{"title" => "Entry"})
+
+      assert_received {:form_saved, :create, saved}
+
+      assert {saved.region_id, saved.workspace_id, saved.version_id} ==
+               {ctx.north.id, ctx.w2.id, ctx.v2.id}
+    end
+
+    test "defaults no picker has moved from are saved", ctx do
+      ctx.defaults
+      |> create_form()
+      |> save(%{"title" => "Entry", "version_id" => ""})
+
+      assert_received {:form_saved, :create, saved}
+
+      assert {saved.region_id, saved.workspace_id, saved.version_id} ==
+               {ctx.north.id, ctx.w1.id, ctx.v1.id}
+    end
+
+    test "after a save the next form saves the defaults again", ctx do
+      socket =
+        ctx.defaults
+        |> create_form()
+        |> select(:workspace_id, ctx.w2)
+        |> select(:version_id, ctx.v2)
+        |> save(%{"title" => "First"})
+
+      assert_received {:form_saved, :create, _first}
+
+      save(socket, %{"title" => "Second", "version_id" => ""})
+
+      assert_received {:form_saved, :create, second}
+      assert {second.workspace_id, second.version_id} == {ctx.w1.id, ctx.v1.id}
+    end
+  end
+
+  describe "a multi-select or combobox parent" do
+    setup do
+      PickerScopedEntry |> Ash.read!() |> Enum.each(&Ash.destroy!/1)
+      :ok
+    end
+
+    defp scoped_form do
+      state = State.init("picker-scoped-entry", PickerScopedEntry, @user)
+      DataLoader.new_record(build_socket(state), state)
+    end
+
+    defp toggle(socket, field, record) do
+      params = %{"filter" => to_string(field), "id" => record.id, "label" => record.name}
+      {:noreply, socket} = Events.handle("relation_toggle", params, socket)
+      socket
+    end
+
+    defp combobox(socket, field, value) do
+      params = %{"field" => to_string(field), "value" => value}
+      {:noreply, socket} = Events.handle("combobox_select", params, socket)
+      socket
+    end
+
+    test "a workspace picked under a region is not saved once that region is toggled off", ctx do
+      socket =
+        scoped_form()
+        |> toggle(:region_ids, ctx.north)
+        |> toggle(:region_ids, ctx.south)
+        |> select(:workspace_id, ctx.w1)
+        |> toggle(:region_ids, ctx.north)
+
+      assert socket.assigns.form_state.field_values == %{region_ids: [ctx.south.id]}
+      assert form_param(socket, :workspace_id) == {:ok, nil}
+
+      save(socket, %{"title" => "Entry"})
+
+      assert_received {:form_saved, :create, saved}
+      assert {saved.region_ids, saved.workspace_id} == {[ctx.south.id], nil}
+    end
+
+    test "a version picked under one language is not saved once the language changes", ctx do
+      socket =
+        scoped_form()
+        |> combobox(:language, "en")
+        |> select(:version_id, ctx.v1)
+        |> combobox(:language, "fa")
+
+      assert socket.assigns.form_state.field_values == %{language: "fa"}
+      assert form_param(socket, :version_id) == {:ok, nil}
+
+      save(socket, %{"title" => "Entry", "language" => "fa"})
+
+      assert_received {:form_saved, :create, saved}
+      assert {saved.language, saved.version_id} == {"fa", nil}
     end
   end
 

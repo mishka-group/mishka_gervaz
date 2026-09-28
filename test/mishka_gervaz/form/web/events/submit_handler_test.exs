@@ -65,8 +65,17 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandlerTest do
   end
 
   describe "merge_defaults/2" do
+    defp create_state(defaults, field_values \\ nil) do
+      %{
+        mode: :create,
+        defaults: defaults,
+        field_values: field_values || defaults,
+        static: %{fields: [%{name: :site_id}, %{name: :workspace_id}, %{name: :title}]}
+      }
+    end
+
     test "fills missing keys in :create mode" do
-      state = %{mode: :create, defaults: %{site_id: "uuid", workspace_id: "ws"}}
+      state = create_state(%{site_id: "uuid", workspace_id: "ws"})
       params = %{"title" => "Hi"}
 
       assert SubmitHandler.merge_defaults(state, params) ==
@@ -74,20 +83,27 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandlerTest do
     end
 
     test "doesn't overwrite existing keys" do
-      state = %{mode: :create, defaults: %{site_id: "default"}}
+      state = create_state(%{site_id: "default"})
 
       assert SubmitHandler.merge_defaults(state, %{"site_id" => "user-set"}) ==
                %{"site_id" => "user-set"}
     end
 
     test "treats nil/empty-string as missing and overwrites" do
-      state = %{mode: :create, defaults: %{site_id: "default"}}
+      state = create_state(%{site_id: "default"})
 
       assert SubmitHandler.merge_defaults(state, %{"site_id" => ""}) ==
                %{"site_id" => "default"}
 
       assert SubmitHandler.merge_defaults(state, %{"site_id" => nil}) ==
                %{"site_id" => "default"}
+    end
+
+    test "leaves out a default whose field no longer holds it" do
+      state = create_state(%{site_id: "default", workspace_id: "ws"}, %{site_id: "default"})
+
+      assert SubmitHandler.merge_defaults(state, %{"workspace_id" => ""}) ==
+               %{"workspace_id" => "", "site_id" => "default"}
     end
 
     test "no-op when not in :create mode" do

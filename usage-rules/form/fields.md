@@ -156,11 +156,16 @@ end
 
 A picked `include_nil` parent arrives as `"__nil__"`, not `nil`.
 
-When a parent changes — a new pick, the same pick again to empty it, a clear, or `field_change` —
-every field that depends on it, directly or down the chain, is emptied: it leaves
-`state.field_values` and is set to `nil` in the form's params. A value picked under the old parent
-is never saved; a required dependent left empty is refused on save. Dependents whose parent still
-has a value, or whose `options` read the state, load their options again.
+When a parent changes — a new pick, a toggle in a multi-select, the same pick again to empty it, a
+clear, a combobox choice, or `field_change` — every field that depends on it, directly or down the
+chain, is emptied: it leaves `state.field_values` and is set to `nil` in the form's params. A value
+picked under the old parent is never saved; a required dependent left empty is refused on save.
+Dependents whose parent still has a value, or whose `options` read the state, load their options
+again.
+
+A value the mount passed in `defaults` is saved only while its field still holds it in
+`state.field_values`. A picker that opened on its default and was then cleared, or emptied because a
+field it depends on changed, is saved empty — refused when required — never with the default.
 
 ## Read-only fields
 

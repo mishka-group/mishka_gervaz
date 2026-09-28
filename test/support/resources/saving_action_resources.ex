@@ -157,6 +157,97 @@ defmodule MishkaGervaz.Test.Resources.PickerEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.PickerScopedEntry do
+  @moduledoc """
+  A form whose pickers depend on a multi-select and on a combobox: `:workspace_id` on the
+  `:region_ids` multi-select, and `:version_id` on the `:language` combobox.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.{PickerRegion, PickerVersion, PickerWorkspace}
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :picker_scoped_entry
+        route "/admin/picker-scoped-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :region_ids, :relation do
+          resource PickerRegion
+          display_field :name
+          mode :search_multi
+        end
+
+        field :workspace_id, :relation do
+          resource PickerWorkspace
+          display_field :name
+          mode :search
+          depends_on :region_ids
+
+          load fn query, state ->
+            Ash.Query.filter_input(query, %{
+              region_id: %{in: Map.get(state.field_values, :region_ids, [])}
+            })
+          end
+        end
+
+        field :language, :combobox do
+          options [{"English", "en"}, {"Persian", "fa"}]
+        end
+
+        field :version_id, :relation do
+          resource PickerVersion
+          display_field :name
+          mode :search
+          depends_on :language
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :region_ids, {:array, :uuid}, public?: true, default: []
+    attribute :workspace_id, :uuid, public?: true
+    attribute :language, :string, public?: true
+    attribute :version_id, :uuid, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :region_ids, :workspace_id, :language, :version_id]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :region_ids, :workspace_id, :language, :version_id]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.SavingActionArticle do
   @moduledoc """
   A form whose actions leave some fields out: a site user's `:create` takes no `:region_id`,

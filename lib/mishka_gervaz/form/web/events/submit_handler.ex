@@ -35,6 +35,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
+  alias MishkaGervaz.Form.Web.DataLoader.Helpers, as: DataLoaderHelpers
 
   @doc false
   @spec format_form_errors(Phoenix.HTML.Form.t()) :: map()
@@ -150,23 +151,38 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
     end
   end
 
-  @doc false
+  @doc """
+  Fills each param a create form left `nil` or `""` from `state.defaults`.
+
+  A default is left out when its field no longer holds, in `state.field_values`, the value the form
+  was built with. A picker cleared on screen, or emptied because a picker it depends on changed, is
+  saved empty rather than with its default. Update forms are returned unchanged.
+  """
   @spec merge_defaults(map(), map()) :: map()
-  def merge_defaults(%{mode: :create, defaults: defaults}, params)
+  def merge_defaults(%{mode: :create, defaults: defaults} = state, params)
       when is_map(defaults) and defaults != %{} do
-    defaults
-    |> Enum.reduce(params, fn {key, value}, acc ->
+    moved = moved_fields(state)
+
+    Enum.reduce(defaults, params, fn {key, value}, acc ->
       str_key = to_string(key)
 
-      if Map.has_key?(acc, str_key) and acc[str_key] not in [nil, ""] do
-        acc
-      else
-        Map.put(acc, str_key, value)
+      cond do
+        MapSet.member?(moved, str_key) -> acc
+        Map.has_key?(acc, str_key) and acc[str_key] not in [nil, ""] -> acc
+        true -> Map.put(acc, str_key, value)
       end
     end)
   end
 
   def merge_defaults(_state, params), do: params
+
+  defp moved_fields(%{static: %{fields: fields}, field_values: field_values} = state) do
+    built_with = DataLoaderHelpers.extract_defaults_to_field_values(state)
+
+    fields
+    |> Enum.reject(&(Map.get(field_values, &1.name) == Map.get(built_with, &1.name)))
+    |> MapSet.new(&to_string(&1.name))
+  end
 
   @doc false
   @spec drop_protected_fields(map(), map()) :: map()

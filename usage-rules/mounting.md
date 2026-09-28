@@ -46,7 +46,7 @@ drag back a choice the reader has since changed.
 | `resource` | ✔ | |
 | `current_user` | ✔ | |
 | `record_id` | — | `nil` ⇒ create mode; set ⇒ edit mode |
-| `defaults` | — | `%{site_id: @site_id}` — pre-fills create mode and fills params a hidden field would have carried |
+| `defaults` | — | `%{site_id: @site_id}` — pre-fills create mode and fills params a hidden field would have carried; a picker's default is left out once the picker is cleared or emptied by a change to one it depends on |
 | `hidden_fields` | — | `[:site_id]` — fields **this mount** does not draw |
 | `submit` | — | `false` draws no submit row (the `save` event stays allowed) |
 | `submit_alternatives` | — | other ways to create, offered from a caret beside the submit button |
