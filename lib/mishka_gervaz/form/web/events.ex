@@ -242,7 +242,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def do_handle("combobox_select", %{"field" => field_name, "value" => value}, state, socket) do
-    if MishkaGervaz.Helpers.known_name?(field_name, state) do
+    if settable_field?(field_name, state) do
       field_atom = String.to_existing_atom(field_name)
 
       case run_hook(state, :on_change, [field_atom, value, state]) do
@@ -261,6 +261,15 @@ defmodule MishkaGervaz.Form.Web.Events do
 
           {:noreply, socket}
       end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def do_handle("relation_" <> action, params, state, socket)
+      when action in ["select", "toggle", "clear"] do
+    if settable_field?(params["filter"] || params["field"], state) do
+      relation_handler(state).handle(action, params, state, socket)
     else
       {:noreply, socket}
     end
@@ -479,7 +488,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def do_handle("field_change", %{"field" => field_name, "value" => value}, state, socket) do
-    if MishkaGervaz.Helpers.known_name?(field_name, state) do
+    if settable_field?(field_name, state) do
       field_atom = String.to_existing_atom(field_name)
 
       case run_hook(state, :on_change, [field_atom, value, state]) do
@@ -641,6 +650,15 @@ defmodule MishkaGervaz.Form.Web.Events do
       _refused -> {:noreply, socket}
     end
   end
+
+  defp settable_field?(name, state) when is_binary(name) do
+    case Enum.find(state.static.fields, &(Atom.to_string(&1.name) == name)) do
+      nil -> false
+      field -> not SubmitHandler.field_protected?(field, state)
+    end
+  end
+
+  defp settable_field?(_name, _state), do: false
 
   defp key_list_sub?(field_def, sub) do
     (Map.get(field_def, :nested_fields) || [])

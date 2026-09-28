@@ -157,6 +157,99 @@ defmodule MishkaGervaz.Test.Resources.PickerEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.PickerLockedEntry do
+  @moduledoc """
+  The `MishkaGervaz.Test.Resources.PickerEntry` chain under a `:region_id` that only a master may
+  set, and that is read-only when the mount's `defaults` give it.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.{PickerRegion, PickerVersion, PickerWorkspace}
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :picker_locked_entry
+        route "/admin/picker-locked-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :region_id, :relation do
+          resource PickerRegion
+          display_field :name
+          mode :search
+          restricted true
+          readonly fn state -> Map.has_key?(state.defaults || %{}, :region_id) end
+        end
+
+        field :workspace_id, :relation do
+          resource PickerWorkspace
+          display_field :name
+          mode :search
+          depends_on :region_id
+
+          load fn query, state ->
+            Ash.Query.filter_input(query, %{region_id: Map.get(state.field_values, :region_id)})
+          end
+        end
+
+        field :version_id, :relation do
+          resource PickerVersion
+          display_field :name
+          mode :search
+          required true
+          depends_on :workspace_id
+
+          load fn query, state ->
+            Ash.Query.filter_input(query, %{
+              workspace_id: Map.get(state.field_values, :workspace_id)
+            })
+          end
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :region_id, :uuid, public?: true
+    attribute :workspace_id, :uuid, public?: true
+    attribute :version_id, :uuid, allow_nil?: false, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :region_id, :workspace_id, :version_id]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :region_id, :workspace_id, :version_id]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.PickerScopedEntry do
   @moduledoc """
   A form whose pickers depend on a multi-select and on a combobox: `:workspace_id` on the

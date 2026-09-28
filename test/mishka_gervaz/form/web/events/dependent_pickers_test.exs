@@ -8,6 +8,9 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
   them. `MishkaGervaz.Test.Resources.PickerScopedEntry` hangs a picker under a multi-select and one
   under a combobox. Each case drives the form's own events — `relation_select`, `relation_toggle`,
   `relation_clear`, `combobox_select`, `field_change`, `save` — and checks what reaches the record.
+
+  `MishkaGervaz.Test.Resources.PickerLockedEntry` hangs the same chain under a region only a master
+  may set, read-only when the mount gives it: an event sent for that region changes nothing.
   """
   use ExUnit.Case, async: false
 
@@ -20,6 +23,7 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
 
   alias MishkaGervaz.Test.Resources.{
     PickerEntry,
+    PickerLockedEntry,
     PickerRegion,
     PickerScopedEntry,
     PickerVersion,
@@ -27,6 +31,8 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
   }
 
   @user %{id: "user-1", role: :admin}
+  @master %{id: "master-1", site_id: nil}
+  @site_user %{id: "user-2", site_id: "0c8e5d0e-7c8c-4b8f-9d2a-4a4b1c1f0d11"}
 
   setup do
     for resource <- [PickerEntry, PickerVersion, PickerWorkspace, PickerRegion] do
@@ -360,6 +366,89 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
 
       assert_received {:form_saved, :update, saved}
       assert {saved.workspace_id, saved.version_id} == {ctx.w2.id, ctx.v2.id}
+    end
+  end
+
+  describe "a parent the user may not change" do
+    setup ctx do
+      PickerLockedEntry |> Ash.read!() |> Enum.each(&Ash.destroy!/1)
+
+      region_events = [
+        {"relation_select", %{"filter" => "region_id", "id" => ctx.south.id, "label" => "South"}},
+        {"relation_toggle", %{"filter" => "region_id", "id" => ctx.south.id, "label" => "South"}},
+        {"relation_clear", %{"filter" => "region_id"}},
+        {"combobox_select", %{"field" => "region_id", "value" => ctx.south.id}},
+        {"field_change", %{"field" => "region_id", "value" => ctx.south.id}}
+      ]
+
+      %{
+        region_events: region_events,
+        defaults: %{region_id: ctx.north.id, workspace_id: ctx.w1.id, version_id: ctx.v1.id}
+      }
+    end
+
+    defp locked_form(user, defaults) do
+      state =
+        "picker-locked-entry"
+        |> State.init(PickerLockedEntry, user)
+        |> State.update(defaults: defaults)
+
+      DataLoader.new_record(build_socket(state), state)
+    end
+
+    defp send_event(socket, event, params) do
+      {:noreply, socket} = Events.handle(event, params, socket)
+      socket
+    end
+
+    defp saved_chain do
+      assert_received {:form_saved, :create, saved}
+      {saved.region_id, saved.workspace_id, saved.version_id}
+    end
+
+    test "every event for a region the page gave changes nothing, and the defaults are saved",
+         ctx do
+      for {event, params} <- ctx.region_events do
+        opened = locked_form(@master, ctx.defaults)
+        socket = send_event(opened, event, params)
+
+        assert socket.assigns.form_state.field_values == opened.assigns.form_state.field_values,
+               "#{event} changed the pickers under a read-only region"
+
+        save(socket, %{"title" => event})
+
+        assert saved_chain() == {ctx.north.id, ctx.w1.id, ctx.v1.id},
+               "#{event} kept the defaults out of the save"
+      end
+    end
+
+    test "every event a site user sends for a master-only region changes nothing", ctx do
+      defaults = Map.delete(ctx.defaults, :region_id)
+
+      for {event, params} <- ctx.region_events do
+        opened = locked_form(@site_user, defaults)
+        socket = send_event(opened, event, params)
+
+        assert socket.assigns.form_state.field_values == opened.assigns.form_state.field_values,
+               "#{event} changed the pickers under a master-only region"
+
+        save(socket, %{"title" => event})
+
+        assert saved_chain() == {nil, ctx.w1.id, ctx.v1.id},
+               "#{event} kept the defaults out of the save"
+      end
+    end
+
+    test "the same events for a region a master may change empty the pickers under it", ctx do
+      defaults = Map.delete(ctx.defaults, :region_id)
+
+      for {event, params} <- ctx.region_events do
+        socket = @master |> locked_form(defaults) |> send_event(event, params)
+        field_values = socket.assigns.form_state.field_values
+
+        refute Map.has_key?(field_values, :workspace_id), "#{event} left the workspace"
+        refute Map.has_key?(field_values, :version_id), "#{event} left the version"
+      end
     end
   end
 end

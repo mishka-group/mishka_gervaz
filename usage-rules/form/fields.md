@@ -175,6 +175,10 @@ takes it as an argument. A `virtual` field is exempt. When `state.form` is not a
 only `readonly` decides. Hide such a field with `show_on` or `visible` when it should not be shown
 at all.
 
+A pick, toggle, clear, combobox choice or `field_change` sent for a read-only field, or for a
+`restricted` field the user is not a master for, changes nothing: the field keeps its value, and so
+does every field that depends on it, so what the mount passed in `defaults` for them is still saved.
+
 ## Which knob changes a value, and where — compared
 
 Seven options touch "the value". They act at different points, and picking the wrong one is the

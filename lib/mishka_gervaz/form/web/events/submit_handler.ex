@@ -20,7 +20,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
   `save_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`,
-  `drop_protected_fields/2`, `field_restricted?/2`, `field_readonly?/2`)
+  `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`, `field_readonly?/2`)
   are public so user overrides can reuse them — they live outside the
   `__using__` macro to avoid per-consumer compile cost.
 
@@ -193,16 +193,20 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   @spec drop_protected_fields(map(), map()) :: map()
   def drop_protected_fields(state, params) do
     state.static.fields
-    |> Enum.reduce(params, fn field, acc ->
-      field_key = to_string(field.name)
-
-      cond do
-        field_restricted?(field, state) -> Map.delete(acc, field_key)
-        field_readonly?(field, state) -> Map.delete(acc, field_key)
-        true -> acc
-      end
-    end)
+    |> Enum.filter(&field_protected?(&1, state))
+    |> Enum.reduce(params, &Map.delete(&2, to_string(&1.name)))
   end
+
+  @doc """
+  Whether the current user may not change `field`: it is `restricted` to masters and the user is
+  not one, or `field_readonly?/2` is true.
+
+  A save leaves such a field out, and `MishkaGervaz.Form.Web.Events` ignores a `relation_select`,
+  `relation_toggle`, `relation_clear`, `combobox_select` or `field_change` sent for it.
+  """
+  @spec field_protected?(map(), map()) :: boolean()
+  def field_protected?(field, state),
+    do: field_restricted?(field, state) or field_readonly?(field, state)
 
   @doc false
   @spec field_restricted?(map(), map()) :: boolean()
