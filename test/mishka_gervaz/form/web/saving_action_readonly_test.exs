@@ -125,15 +125,34 @@ defmodule MishkaGervaz.Form.Web.SavingActionReadonlyTest do
       assert input_tag(html, "_search_region_id") =~ ~s(value="North")
     end
 
-    test "a summary sent anyway is left out, and the title is saved", ctx do
-      socket = update_socket(@master, ctx.article)
-      state = socket.assigns.form_state
+    test "a summary sent anyway is left out of what is saved", ctx do
+      state = update_socket(@master, ctx.article).assigns.form_state
 
       assert SubmitHandler.drop_protected_fields(state, %{"title" => "New", "summary" => "X"}) ==
                %{"title" => "New"}
+    end
 
+    test "a refused save still shows the stored summary, not the one sent", ctx do
+      {:noreply, socket} =
+        Events.handle(
+          "save",
+          %{"form" => %{"title" => "", "summary" => "X"}},
+          update_socket(@master, ctx.article)
+        )
+
+      refute_received {:form_saved, _mode, _record}
+
+      html = render_form(socket.assigns.form_state)
+      assert input_tag(html, "form[summary]") =~ ~s(value="Kept")
+    end
+
+    test "the title is saved and the stored summary kept", ctx do
       {:noreply, _socket} =
-        Events.handle("save", %{"form" => %{"title" => "New", "summary" => "X"}}, socket)
+        Events.handle(
+          "save",
+          %{"form" => %{"title" => "New", "summary" => "X"}},
+          update_socket(@master, ctx.article)
+        )
 
       assert_received {:form_saved, :update, saved}
       assert {saved.title, saved.summary} == {"New", "Kept"}

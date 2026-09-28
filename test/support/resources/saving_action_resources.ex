@@ -251,7 +251,7 @@ end
 defmodule MishkaGervaz.Test.Resources.SavingActionArticle do
   @moduledoc """
   A form whose actions leave some fields out: a site user's `:create` takes no `:region_id`,
-  a master's `:master_update` takes neither `:summary` nor `:region_id`.
+  a master's `:master_update` takes neither `:summary` nor `:region_id`. `:title` is required.
   """
   use Ash.Resource,
     domain: MishkaGervaz.Test.Domain,
@@ -302,7 +302,7 @@ defmodule MishkaGervaz.Test.Resources.SavingActionArticle do
 
   attributes do
     uuid_primary_key :id
-    attribute :title, :string, public?: true
+    attribute :title, :string, allow_nil?: false, public?: true
     attribute :summary, :string, public?: true
     attribute :region_id, :uuid, public?: true
     attribute :locked, :string, public?: true
