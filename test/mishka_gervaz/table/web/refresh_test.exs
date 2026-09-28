@@ -13,6 +13,16 @@ defmodule MishkaGervaz.Table.Web.RefreshTest do
     }
   end
 
+  # The call reads the clock itself: with the last refresh `offset_ms` before `started`, the time
+  # left is `interval - offset_ms` at `started`, and at most `took` less by the time it answers.
+  defp assert_remaining(offset_ms, interval, fun) do
+    started = DateTime.utc_now()
+    result = fun.(DateTime.add(started, -offset_ms, :millisecond))
+    took = DateTime.diff(DateTime.utc_now(), started, :millisecond)
+
+    assert result in (interval - offset_ms - took)..(interval - offset_ms)
+  end
+
   describe "default_config/0" do
     test "returns default configuration map" do
       config = Refresh.default_config()
@@ -363,14 +373,9 @@ defmodule MishkaGervaz.Table.Web.RefreshTest do
     end
 
     test "returns remaining time when refresh_last_at is set" do
-      socket = mock_socket(%{refresh_last_at: DateTime.utc_now()})
-      config = %{interval: 30_000}
-
-      result = Refresh.time_until_next(socket, config)
-
-      assert result != nil
-      # Use assert_in_delta for timing-sensitive tests (tolerance of 500ms)
-      assert_in_delta result, 30_000, 500
+      assert_remaining(0, 30_000, fn last_at ->
+        Refresh.time_until_next(mock_socket(%{refresh_last_at: last_at}), %{interval: 30_000})
+      end)
     end
 
     test "returns 0 when interval has passed" do
@@ -384,27 +389,15 @@ defmodule MishkaGervaz.Table.Web.RefreshTest do
     end
 
     test "calculates remaining time proportionally" do
-      # Set last refresh to 10 seconds ago
-      past = DateTime.add(DateTime.utc_now(), -10, :second)
-      socket = mock_socket(%{refresh_last_at: past})
-      config = %{interval: 30_000}
-
-      result = Refresh.time_until_next(socket, config)
-
-      # Should be around 20 seconds (20_000 ms) remaining
-      # Use assert_in_delta with 500ms tolerance for timing variance
-      assert_in_delta result, 20_000, 500
+      assert_remaining(10_000, 30_000, fn last_at ->
+        Refresh.time_until_next(mock_socket(%{refresh_last_at: last_at}), %{interval: 30_000})
+      end)
     end
 
     test "uses default interval when not specified in config" do
-      socket = mock_socket(%{refresh_last_at: DateTime.utc_now()})
-      config = %{}
-
-      result = Refresh.time_until_next(socket, config)
-
-      assert result != nil
-      # Default interval is 30_000, use tolerance for timing
-      assert_in_delta result, 30_000, 500
+      assert_remaining(0, 30_000, fn last_at ->
+        Refresh.time_until_next(mock_socket(%{refresh_last_at: last_at}), %{})
+      end)
     end
   end
 
@@ -483,19 +476,16 @@ defmodule MishkaGervaz.Table.Web.RefreshTest do
     end
 
     test "calculates next_in when refresh_last_at is set" do
-      socket =
-        mock_socket(%{
-          refresh_timer: make_ref(),
-          refresh_paused: false,
-          refresh_last_at: DateTime.utc_now()
-        })
+      assert_remaining(0, 30_000, fn last_at ->
+        socket =
+          mock_socket(%{
+            refresh_timer: make_ref(),
+            refresh_paused: false,
+            refresh_last_at: last_at
+          })
 
-      config = %{interval: 30_000, show_indicator: true}
-
-      result = Refresh.indicator_assigns(socket, config)
-
-      assert result.next_in != nil
-      assert_in_delta result.next_in, 30_000, 500
+        Refresh.indicator_assigns(socket, %{interval: 30_000, show_indicator: true}).next_in
+      end)
     end
   end
 
