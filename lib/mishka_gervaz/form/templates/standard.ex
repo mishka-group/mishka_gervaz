@@ -1078,7 +1078,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns =
         assigns
         |> assign(:wrapper_label, label)
-        |> assign(:wrapper_errors, [])
+        |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
         |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
         |> assign(:disabled_prompt, disabled_prompt)
