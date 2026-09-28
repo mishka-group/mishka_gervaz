@@ -28,6 +28,9 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
      `DataLoader.apply_archive_status/3`, `Phoenix.LiveView.push_navigate/2`,
      `put_flash/3`, etc). Arity 2 is fine for log-only side effects.
 
+     An `on_row_action_error` hook answering `{:halt, socket}` puts no error
+     flash; answering the socket lets the default error flash fire too.
+
      A list of action names is also accepted to share one hook across actions:
      `before_row_action [:unarchive, :restore], fn ... end`.
 

@@ -1343,6 +1343,121 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
     end
   end
 
+  describe "on_row_action_error — a halt replaces the error flash" do
+    alias MishkaGervaz.Test.Resources.AuthorizedWriteResource
+
+    setup do
+      on_exit(fn -> clear_ets(AuthorizedWriteResource) end)
+      :ok
+    end
+
+    defp member, do: %{id: "member-1", site_id: nil, role: :user}
+
+    defp refused_state(hook_key, hook, opts \\ []) do
+      test_pid = self()
+
+      run = fn _reason, _state, socket ->
+        send(test_pid, {:error_hook, hook_key})
+        answer(hook, socket)
+      end
+
+      init_loaded_state(
+        AuthorizedWriteResource,
+        member(),
+        [master_user?: true, hooks: %{{:on_row_action_error, hook_key} => run}] ++ opts
+      )
+    end
+
+    defp answer(:halt, socket), do: {:halt, socket}
+    defp answer(:keep, socket), do: socket
+
+    defp record!, do: Ash.create!(AuthorizedWriteResource, %{title: "Item"}, authorize?: false)
+
+    for {label, hook, flash?} <- [
+          {"a halt replaces it", :halt, false},
+          {"a socket keeps it", :keep, true}
+        ] do
+      @hook hook
+      @flash? flash?
+
+      test "delete: #{label}" do
+        record = record!()
+        socket = create_socket(refused_state(:delete, @hook))
+
+        {:noreply, _} = Events.handle("delete", %{"id" => record.id}, socket)
+
+        assert_received {:error_hook, :delete}
+        assert_flash(@flash?)
+      end
+
+      test "permanent_destroy: #{label}" do
+        socket = create_socket(refused_state(:permanent_destroy, @hook))
+
+        {:noreply, _} =
+          Events.handle("permanent_destroy", %{"id" => Ash.UUID.generate()}, socket)
+
+        assert_received {:error_hook, :permanent_destroy}
+        assert_flash(@flash?)
+      end
+
+      test "unarchive: #{label}" do
+        socket = create_socket(refused_state(:unarchive, @hook))
+
+        {:noreply, _} = Events.handle("unarchive", %{"id" => Ash.UUID.generate()}, socket)
+
+        assert_received {:error_hook, :unarchive}
+        assert_flash(@flash?)
+      end
+
+      test "a destroy row action: #{label}" do
+        record = record!()
+
+        remove = %{
+          name: :remove,
+          type: :destroy,
+          action: :master_destroy,
+          event: nil,
+          visible: true,
+          restricted: false
+        }
+
+        socket = create_socket(refused_state(:master_destroy, @hook, row_actions: [remove]))
+
+        {:noreply, _} =
+          Events.handle("row_action", %{"event" => "remove", "id" => record.id}, socket)
+
+        assert_received {:error_hook, :master_destroy}
+        assert_flash(@flash?)
+      end
+
+      test "an update row action: #{label}" do
+        restore = %{
+          name: :restore,
+          type: :update,
+          action: :master_unarchive,
+          event: nil,
+          visible: true,
+          restricted: false
+        }
+
+        socket = create_socket(refused_state(:master_unarchive, @hook, row_actions: [restore]))
+
+        {:noreply, _} =
+          Events.handle(
+            "row_action",
+            %{"event" => "restore", "id" => Ash.UUID.generate()},
+            socket
+          )
+
+        assert_received {:error_hook, :master_unarchive}
+        assert_flash(@flash?)
+      end
+    end
+
+    defp assert_flash(true), do: assert_received({:put_flash, :error, _message})
+    defp assert_flash(false), do: refute_received({:put_flash, :error, _message})
+  end
+
   describe "per-action bulk hook — before_bulk_action halt" do
     test "before_bulk_action halt stops execution" do
       _records = create_test_data(BasicResource, 2)

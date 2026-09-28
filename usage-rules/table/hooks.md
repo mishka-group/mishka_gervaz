@@ -98,6 +98,18 @@ end
   def handle_info({:put_flash, kind, message}, socket), do: {:noreply, put_flash(socket, kind, message)}
   ```
 
+### Flash control on a failed row action
+
+An arity-3 `on_row_action_error` hook answering `{:halt, socket}` puts no error flash; one answering
+the plain `socket` lets the default error flash fire too:
+
+```elixir
+on_row_action_error :delete, fn reason, _state, socket ->
+  send(self(), {:explain_refusal, reason})
+  {:halt, socket}
+end
+```
+
 ## 3. Full overrides
 
 Replace the built-in handler entirely:

@@ -278,6 +278,22 @@ defmodule MishkaGervaz.Table.Web.Events do
     socket
   end
 
+  @doc """
+  Runs a failed row action's `on_row_action_error` hook, then puts the error flash. A hook answering
+  `{:halt, socket}` puts no flash.
+  """
+  @spec report_row_error(State.t(), atom(), any(), any(), Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def report_row_error(state, action_name, reason, error, socket) do
+    hook_key = {:on_row_action_error, action_name}
+    args = adapt_hook_args(state, hook_key, [reason, state], socket)
+
+    case apply_hook_result(state, hook_key, args, socket) do
+      {:halt, socket} -> socket
+      socket -> put_error_flash(socket, error)
+    end
+  end
+
   @doc false
   @spec do_handle(String.t(), map(), State.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -516,16 +532,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               record_id: id
             )
 
-          socket =
-            apply_action_hook_socket(
-              state,
-              :on_row_action_error,
-              :unarchive,
-              [reason, state],
-              socket
-            )
-
-          socket = put_error_flash(socket, error)
+          socket = report_row_error(state, :unarchive, reason, error, socket)
           {:noreply, socket}
       end
     end
@@ -572,16 +579,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               record_id: id
             )
 
-          socket =
-            apply_action_hook_socket(
-              state,
-              :on_row_action_error,
-              :permanent_destroy,
-              [reason, state],
-              socket
-            )
-
-          socket = put_error_flash(socket, error)
+          socket = report_row_error(state, :permanent_destroy, reason, error, socket)
           {:noreply, socket}
       end
     end
@@ -967,16 +965,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               record_id: id
             )
 
-          socket =
-            apply_action_hook_socket(
-              state,
-              :on_row_action_error,
-              action_name,
-              [reason, state],
-              socket
-            )
-
-          socket = put_error_flash(socket, error)
+          socket = report_row_error(state, action_name, reason, error, socket)
           {:noreply, socket}
       end
     end
@@ -1033,16 +1022,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               record_id: id
             )
 
-          socket =
-            apply_action_hook_socket(
-              state,
-              :on_row_action_error,
-              action_name,
-              [reason, state],
-              socket
-            )
-
-          socket = put_error_flash(socket, error)
+          socket = report_row_error(state, action_name, reason, error, socket)
           {:noreply, socket}
       end
     end
@@ -1128,16 +1108,7 @@ defmodule MishkaGervaz.Table.Web.Events do
             record_id: record.id
           )
 
-        socket =
-          apply_action_hook_socket(
-            state,
-            :on_row_action_error,
-            :delete,
-            [reason, state],
-            socket
-          )
-
-        socket = put_error_flash(socket, error)
+        socket = report_row_error(state, :delete, reason, error, socket)
         {:noreply, socket}
     end
   end
