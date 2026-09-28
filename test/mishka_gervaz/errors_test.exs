@@ -92,9 +92,9 @@ defmodule MishkaGervaz.ErrorsTest do
       assert Errors.format_flash_message(err) == "Validation failed: only"
     end
 
-    test "field-shaped error is rendered as 'field: msg'" do
+    test "field-shaped error names the field in words" do
       err = %Ash.Error.Invalid{errors: [%{field: :email, message: "is invalid"}]}
-      assert Errors.format_flash_message(err) == "Validation failed: email: is invalid"
+      assert Errors.format_flash_message(err) == "Validation failed: Email is invalid"
     end
   end
 
@@ -127,9 +127,33 @@ defmodule MishkaGervaz.ErrorsTest do
       assert Errors.extract_error_message(%{message: "Invalid email"}) == "Invalid email"
     end
 
-    test "map with :field and :message" do
+    test "map with :field and :message names the field in words" do
       assert Errors.extract_error_message(%{field: :email, message: "is invalid"}) ==
-               "email: is invalid"
+               "Email is invalid"
+
+      assert Errors.extract_error_message(%{field: :language_group_id, message: "is invalid"}) ==
+               "Language group is invalid"
+    end
+
+    test "a message written as a sentence is shown without its field" do
+      message = "This is the Persian translation. Restore the original first, then this one."
+
+      assert Errors.extract_error_message(%{field: :language_group_id, message: message}) ==
+               message
+    end
+
+    test "placeholders are filled from the error's vars" do
+      error = %{field: :title, message: "must be at least %{min}", vars: [min: 3]}
+
+      assert Errors.extract_error_message(error) == "Title must be at least 3"
+    end
+
+    test "an Ash error with a field reads the same way" do
+      error =
+        Ash.Error.Changes.InvalidAttribute.exception(field: :parent_id, message: "is invalid")
+
+      assert Errors.format_flash_message(%Ash.Error.Invalid{errors: [error]}) ==
+               "Validation failed: Parent is invalid"
     end
 
     test "binary string passes through" do
