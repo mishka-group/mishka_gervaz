@@ -19,7 +19,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
         end
       end
 
-  `keyword_put_if_set/3` and `resolve_tenant_from_record/2` are public
+  `keyword_put_if_set/3`, `resolve_tenant_from_record/2` and `action_of_type/3` are public
   helpers an override can reuse.
 
   See `MishkaGervaz.Form.Web.DataLoader`,
@@ -48,13 +48,31 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
     end
   end
 
+  @doc false
+  @spec action_of_type(module() | struct(), atom(), :create | :update) :: struct() | nil
+  def action_of_type(%resource{}, action, type), do: action_of_type(resource, action, type)
+
+  def action_of_type(resource, action, type) when is_atom(resource) and is_atom(action) do
+    case Ash.Resource.Info.action(resource, action) do
+      %{type: ^type} = found -> found
+      _ -> nil
+    end
+  end
+
+  def action_of_type(_resource, _action, _type), do: nil
+
   defmacro __using__(_opts) do
     quote do
       alias MishkaGervaz.Form.Web.State
       alias MishkaGervaz.Resource.Info.Form, as: Info
 
       import MishkaGervaz.Form.Web.DataLoader.RecordLoader,
-        only: [keyword_put_if_set: 3, form_id: 1, resolve_tenant_from_record: 2]
+        only: [
+          keyword_put_if_set: 3,
+          form_id: 1,
+          resolve_tenant_from_record: 2,
+          action_of_type: 3
+        ]
 
       @doc """
       Load a record by ID and build an AshPhoenix.Form for editing.
@@ -119,6 +137,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
 
       @doc """
       Build an AshPhoenix.Form from a record (for edit) or resource (for create).
+
+      Returns `{:error, {:no_such_action, action}}` when the resource has no `type` action named
+      `action`. Anything else that fails while the form is built raises.
       """
       @spec build_form(State.t(), module() | struct(), :create | :update, keyword()) ::
               {:ok, Phoenix.HTML.Form.t()} | {:error, term()}
@@ -133,19 +154,21 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
           |> keyword_put_if_set(:actor, actor)
           |> keyword_put_if_set(:tenant, tenant)
 
-        try do
-          form =
-            case type do
-              :create ->
-                AshPhoenix.Form.for_create(resource_or_record, action, form_opts)
+        case {type, action_of_type(resource_or_record, action, type)} do
+          {_type, nil} ->
+            {:error, {:no_such_action, action}}
 
-              :update ->
-                AshPhoenix.Form.for_update(resource_or_record, action, form_opts)
-            end
+          {:create, _action} ->
+            {:ok,
+             resource_or_record
+             |> AshPhoenix.Form.for_create(action, form_opts)
+             |> Phoenix.Component.to_form()}
 
-          {:ok, Phoenix.Component.to_form(form)}
-        rescue
-          e -> {:error, e}
+          {:update, _action} ->
+            {:ok,
+             resource_or_record
+             |> AshPhoenix.Form.for_update(action, form_opts)
+             |> Phoenix.Component.to_form()}
         end
       end
 

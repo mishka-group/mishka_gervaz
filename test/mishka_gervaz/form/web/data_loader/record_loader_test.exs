@@ -63,4 +63,36 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoaderTest do
                "uuid-1"
     end
   end
+
+  describe "build_form/4" do
+    alias MishkaGervaz.Test.Resources.RaisingCreate
+
+    setup do
+      %{state: MishkaGervaz.Test.FormWebHelpers.build_state()}
+    end
+
+    test "an action the resource does not have is an error", %{state: state} do
+      assert RecordLoader.Default.build_form(state, RaisingCreate, :create, action: :nope) ==
+               {:error, {:no_such_action, :nope}}
+    end
+
+    test "an action of another kind is an error", %{state: state} do
+      assert RecordLoader.Default.build_form(state, RaisingCreate, :create, action: :update) ==
+               {:error, {:no_such_action, :update}}
+
+      assert RecordLoader.Default.build_form(state, %RaisingCreate{}, :update, action: :create) ==
+               {:error, {:no_such_action, :create}}
+    end
+
+    test "a change that raises while the form is built raises", %{state: state} do
+      assert_raise Ash.Error.Unknown, ~r/the change failed/, fn ->
+        RecordLoader.Default.build_form(state, RaisingCreate, :create, action: :create)
+      end
+    end
+
+    test "an update form of the record is built", %{state: state} do
+      assert {:ok, %Phoenix.HTML.Form{source: %AshPhoenix.Form{action: :update}}} =
+               RecordLoader.Default.build_form(state, %RaisingCreate{}, :update, action: :update)
+    end
+  end
 end
