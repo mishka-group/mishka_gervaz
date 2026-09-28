@@ -18,6 +18,14 @@ defmodule MishkaGervaz.MessagesTest do
 
   defp locales, do: {Gettext.get_locale(), Gettext.get_locale(@backend)}
 
+  # The task sends its result to the socket's transport before it exits, so once it is down the
+  # result is already in the mailbox.
+  defp await_task(socket, key) do
+    {_ref, pid, _kind} = socket.private.live_async[key]
+    monitor = Process.monitor(pid)
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _reason}, 60_000
+  end
+
   setup do
     Gettext.put_locale("de")
     Gettext.put_locale(@backend, "fa")
@@ -40,15 +48,17 @@ defmodule MishkaGervaz.MessagesTest do
   end
 
   test "start_async runs its function in the caller's locales" do
-    Messages.start_async(socket(), :probe, &locales/0)
+    socket() |> Messages.start_async(:probe, &locales/0) |> await_task(:probe)
 
-    assert_receive {:phoenix, :async_result, {:start, {_ref, _cid, :probe, {:ok, {"de", "fa"}}}}}
+    assert_received {:phoenix, :async_result, {:start, {_ref, _cid, :probe, {:ok, {"de", "fa"}}}}}
   end
 
   test "assign_async runs its function in the caller's locales" do
-    Messages.assign_async(socket(), :probe, fn -> {:ok, %{probe: locales()}} end)
+    socket()
+    |> Messages.assign_async(:probe, fn -> {:ok, %{probe: locales()}} end)
+    |> await_task([:probe])
 
-    assert_receive {:phoenix, :async_result,
-                    {:assign, {_ref, _cid, [:probe], {:ok, {:ok, %{probe: {"de", "fa"}}}}}}}
+    assert_received {:phoenix, :async_result,
+                     {:assign, {_ref, _cid, [:probe], {:ok, {:ok, %{probe: {"de", "fa"}}}}}}}
   end
 end
