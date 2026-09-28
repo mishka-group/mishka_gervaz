@@ -228,12 +228,21 @@ defmodule MishkaGervaz.Form.Web.DataLoader do
 
       @doc """
       Handle async result from record loading.
+
+      A record that finishes loading after the form has returned to create mode is ignored.
       """
       @spec handle_async_result(
               atom() | {atom(), atom()},
               {:ok, any()} | {:exit, any()},
               Phoenix.LiveView.Socket.t()
             ) :: Phoenix.LiveView.Socket.t()
+      def handle_async_result(
+            :load_record,
+            _result,
+            %{assigns: %{form_state: %{mode: :create}}} = socket
+          ),
+          do: socket
+
       def handle_async_result(:load_record, {:ok, {:ok, form}}, socket) do
         state = socket.assigns.form_state
         form = DataLoaderHelpers.run_on_init_hook(state, form)

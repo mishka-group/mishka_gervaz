@@ -295,7 +295,9 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       @doc """
       Handle post-save logic.
 
-      By default, sends a message to the parent LiveView.
+      Sends `{:form_saved, mode, record}` to the parent LiveView and runs the `after_save` JS hook.
+      An update save on a form mounted with a `record_id` assign reloads the saved record for
+      editing; every other save returns the form to an empty create form.
       """
       @spec after_save(State.t(), struct(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
@@ -317,9 +319,16 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             relation_options: %{}
           )
 
-        socket
-        |> Phoenix.Component.assign(:record_id, nil)
-        |> DataLoader.new_record(reset_state)
+        if state.mode == :update and socket.assigns[:record_id_given?] == true and
+             not is_nil(record_id) do
+          socket
+          |> Phoenix.Component.assign(:record_id, record_id)
+          |> DataLoader.load_record(reset_state, record_id)
+        else
+          socket
+          |> Phoenix.Component.assign(:record_id, nil)
+          |> DataLoader.new_record(reset_state)
+        end
       end
 
       @spec consume_and_merge_uploads(State.t(), map(), Phoenix.LiveView.Socket.t()) ::

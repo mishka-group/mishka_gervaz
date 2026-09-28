@@ -40,6 +40,16 @@ defmodule MishkaGervaz.Form.Web.Live do
   - `record_id` - ID of record to edit (nil for create mode)
   - `defaults` - Map of default field values for create mode (e.g., `%{workspace_id: @workspace_id}`)
 
+  ## After a save
+
+  A create save always returns the form to an empty create form. An update save depends on how the
+  form was mounted:
+
+  - mounted with a `record_id` assign (even `nil`) — the form stays on the saved record, reloaded
+    for editing. Pass a different `record_id`, or `nil`, to move it.
+  - mounted without one, and opened for editing with `send_update/2` — the form returns to an
+    empty create form.
+
   ## Parent LiveView Integration
 
   The component sends messages to the parent for certain actions:
@@ -91,6 +101,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:resource, resource)
         |> assign(:id, id)
         |> assign(:record_id, record_id)
+        |> assign(:record_id_given?, Map.has_key?(assigns, :record_id))
         |> assign(:initialized, true)
         |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)

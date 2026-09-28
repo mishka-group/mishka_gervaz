@@ -249,7 +249,7 @@ defmodule MishkaGervaz.Form.Web.DataLoaderTest do
 
   describe "handle_async_result :load_record error" do
     test "sets loading to error on failure" do
-      state = build_state(loading: :loading)
+      state = build_state(loading: :loading, mode: :update)
       socket = build_socket(state)
 
       updated_socket =
@@ -259,7 +259,7 @@ defmodule MishkaGervaz.Form.Web.DataLoaderTest do
     end
 
     test "sets loading to error on exit" do
-      state = build_state(loading: :loading)
+      state = build_state(loading: :loading, mode: :update)
       socket = build_socket(state)
 
       updated_socket =
@@ -269,7 +269,7 @@ defmodule MishkaGervaz.Form.Web.DataLoaderTest do
     end
 
     test "sets loading to error on crash" do
-      state = build_state(loading: :loading)
+      state = build_state(loading: :loading, mode: :update)
       socket = build_socket(state)
 
       updated_socket =
