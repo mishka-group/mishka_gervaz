@@ -34,7 +34,15 @@ end
 ## `actions`
 
 Each value is an atom (same action for both roles) or `{master_action, tenant_action}`, chosen at
-runtime by `master_check`. For a **non-multitenant** resource only the second element is used.
+runtime by `master_check`.
+
+Every action named — both elements of a tuple, on the resource or inherited from the domain — must
+be an action of the resource of the matching kind: `read` and `get` read actions, `destroy` a destroy
+action (checked only when a `:destroy` row or bulk action uses it). When archive applies,
+`read_action` and `get_action` must be read actions, `restore_action` an update action and
+`destroy_action` a destroy action. This is **compile-checked**: compiling prints a
+`Spark.Error.DslError` warning naming the resource, the action and where it was set. Build with
+`mix compile --warnings-as-errors` to have it fail the build.
 
 Which are required is derived from what the table does:
 

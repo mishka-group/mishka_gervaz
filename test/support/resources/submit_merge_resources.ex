@@ -104,6 +104,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergeNoBlock do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -145,6 +149,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergePartialResource do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -185,6 +193,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergeOverrideLabels do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -226,6 +238,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergeActiveFalse do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -267,6 +283,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergeBareButtons do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -308,6 +328,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitMergePartialDomainResource do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 

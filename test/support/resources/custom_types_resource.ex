@@ -80,6 +80,9 @@ defmodule MishkaGervaz.Test.Resources.CustomTypesResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 

@@ -167,6 +167,8 @@ defmodule MishkaGervaz.Test.RelationLoader.ParentResource do
   end
 
   actions do
+    read :master_get
+
     defaults [:destroy, create: :*, update: :*]
 
     read :read do

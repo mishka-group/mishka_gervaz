@@ -2273,7 +2273,7 @@ Access control rule. Per-mode or global gate.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`mode`](#mishka_gervaz-form-source-access-mode){: #mishka_gervaz-form-source-access-mode } | `:create \| :update \| (any, any -> any)` |  | Form mode (:create \| :update) or global gate `fn mode, state -> boolean end`. |
-| [`condition`](#mishka_gervaz-form-source-access-condition){: #mishka_gervaz-form-source-access-condition } | `(any -> any) \| (any, any -> any)` |  | Condition function. `fn state -> boolean end` or `fn mode, state -> boolean end`. |
+| [`condition`](#mishka_gervaz-form-source-access-condition){: #mishka_gervaz-form-source-access-condition } | `boolean \| (any -> any) \| (any, any -> any)` |  | Condition. `fn state -> boolean end`, `fn mode, state -> boolean end`, or a boolean — `false` closes the mode for everyone. |
 ### Options
 
 | Name | Type | Default | Docs |

@@ -110,6 +110,10 @@ defmodule MishkaGervaz.Test.Resources.ChromeForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read

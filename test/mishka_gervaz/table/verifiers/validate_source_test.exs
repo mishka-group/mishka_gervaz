@@ -33,6 +33,7 @@ defmodule MishkaGervaz.Verifiers.ValidateSourceTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -97,6 +98,7 @@ defmodule MishkaGervaz.Verifiers.ValidateSourceTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -146,6 +148,7 @@ defmodule MishkaGervaz.Verifiers.ValidateSourceTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -197,6 +200,7 @@ defmodule MishkaGervaz.Verifiers.ValidateSourceTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -262,6 +266,7 @@ defmodule MishkaGervaz.Verifiers.ValidateSourceTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -336,6 +341,156 @@ defmodule MishkaGervaz.Verifiers.ValidateSourceTest do
         )
 
       refute output =~ "Missing required table source action"
+    end
+  end
+
+  describe "named actions the resource does not have" do
+    defp compile_table(unique_id, extensions, actions, table) do
+      code = """
+      defmodule MishkaGervaz.Test.TableActions#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: #{extensions},
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :name, :string, public?: true
+        end
+
+        actions do
+          #{actions}
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :table_actions_#{unique_id}
+              route "/admin/table-actions-#{unique_id}"
+            end
+
+            #{table}
+
+            columns do
+              column :name
+            end
+          end
+        end
+      end
+      """
+
+      ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(code) end)
+    end
+
+    @reads "defaults [:read, :destroy, create: :*]\n read :master_read"
+
+    defp problems(output, unique_id) do
+      header =
+        "MishkaGervaz.Test.TableActions#{unique_id}'s table names actions the resource " <>
+          "does not have:\n\n"
+
+      case String.split(output, header, parts: 2) do
+        [_before, rest] ->
+          rest
+          |> String.split("\n")
+          |> Enum.take_while(&String.starts_with?(&1, "  * "))
+          |> Enum.map(&String.replace_prefix(&1, "  * ", ""))
+
+        [_no_error] ->
+          []
+      end
+    end
+
+    test "an inherited get the resource does not have names the domain it came from" do
+      unique_id = System.unique_integer([:positive])
+
+      assert unique_id
+             |> compile_table("[MishkaGervaz.Resource]", @reads, "")
+             |> problems(unique_id) == [
+               "get {:master_get, :read}, inherited from MishkaGervaz.Test.Domain: " <>
+                 "there is no read action named :master_get"
+             ]
+    end
+
+    test "is reported as a compile warning, which --warnings-as-errors turns into a failed build" do
+      unique_id = System.unique_integer([:positive])
+
+      {_output, diagnostics} =
+        Code.with_diagnostics(fn ->
+          compile_table(unique_id, "[MishkaGervaz.Resource]", @reads, "")
+        end)
+
+      assert Enum.any?(diagnostics, fn diagnostic ->
+               diagnostic.severity == :warning and
+                 diagnostic.message =~ "table names actions the resource does not have"
+             end)
+    end
+
+    test "a get set on the resource names the resource, though the domain names the same one" do
+      unique_id = System.unique_integer([:positive])
+      table = "source do\n actions do\n get {:master_get, :read}\n end\n end"
+
+      assert unique_id
+             |> compile_table("[MishkaGervaz.Resource]", @reads, table)
+             |> problems(unique_id) == [
+               "get {:master_get, :read}, set on the resource: " <>
+                 "there is no read action named :master_get"
+             ]
+    end
+
+    test "a destroy no row or bulk action uses is not checked" do
+      unique_id = System.unique_integer([:positive])
+      actions = @reads <> "\n read :master_get"
+
+      assert unique_id
+             |> compile_table("[MishkaGervaz.Resource]", actions, "")
+             |> problems(unique_id) == []
+    end
+
+    test "a destroy a row action uses is checked" do
+      unique_id = System.unique_integer([:positive])
+      actions = @reads <> "\n read :master_get"
+
+      row_actions = """
+      row_actions do
+        action :delete do
+          type :destroy
+        end
+      end
+      """
+
+      assert unique_id
+             |> compile_table("[MishkaGervaz.Resource]", actions, row_actions)
+             |> problems(unique_id) == [
+               "destroy {:master_destroy, :destroy}, inherited from MishkaGervaz.Test.Domain: " <>
+                 "there is no destroy action named :master_destroy"
+             ]
+    end
+
+    test "an archive action the resource does not have is named" do
+      unique_id = System.unique_integer([:positive])
+
+      actions = """
+      defaults [:read, :destroy, create: :*, update: :*]
+      read :master_read
+      read :master_get
+      read :master_archived
+      read :archived
+      read :master_get_archived
+      read :get_archived
+      update :unarchive, accept: []
+      destroy :master_permanent_destroy
+      destroy :permanent_destroy
+      """
+
+      table = "source do\n archive do\n restore_action {:master_restore, :unarchive}\n end\n end"
+
+      assert unique_id
+             |> compile_table("[AshArchival.Resource, MishkaGervaz.Resource]", actions, table)
+             |> problems(unique_id) == [
+               "archive restore {:master_restore, :unarchive}, set on the resource: " <>
+                 "there is no update action named :master_restore"
+             ]
     end
   end
 end

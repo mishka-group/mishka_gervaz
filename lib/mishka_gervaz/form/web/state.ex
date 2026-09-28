@@ -405,7 +405,8 @@ defmodule MishkaGervaz.Form.Web.State do
     Whether the current reader may open the form in `mode` (`:create` or `:update`).
 
     Checks, in order: a per-mode `access` rule, a global `access fn mode, state -> … end` gate,
-    then `source do restricted true end`. A form with no `source` at all is allowed.
+    then `source do restricted true end`. A form with no `source` at all is allowed. A per-mode
+    rule written `access :update, false` denies that mode to everyone.
 
         if mode_allowed?(state.static.source, :create, state), do: DataLoader.new_record(socket, state)
     """
@@ -418,6 +419,7 @@ defmodule MishkaGervaz.Form.Web.State do
           cond do
             rule[:restricted] -> state.master_user?
             is_function(rule[:condition], 1) -> rule.condition.(state)
+            is_boolean(rule[:condition]) -> rule.condition
             true -> true
           end
 

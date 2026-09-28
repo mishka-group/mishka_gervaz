@@ -243,6 +243,8 @@ defmodule MishkaGervaz.Test.Resources.Post do
   end
 
   actions do
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do

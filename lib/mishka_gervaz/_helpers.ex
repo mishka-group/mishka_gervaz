@@ -917,6 +917,72 @@ defmodule MishkaGervaz.Helpers do
   def extract_preload_source(source) when is_atom(source), do: source
 
   @doc """
+  The actions `value` names that `resource` does not have as a `type` action.
+
+  `value` is an action name, a `{master_action, tenant_action}` tuple or `nil`. `resource` is a
+  resource module or a resource's DSL state. Each entry is a map with `:key`, `:value`, `:name`,
+  `:type` and `:found` — `nil` when the resource has no action with that name, otherwise the type of
+  the action that has it.
+
+      missing_actions(MyApp.Post, :update, {:master_update, :update}, :update)
+      #=> [%{key: :update, value: {:master_update, :update}, name: :master_update,
+      #      type: :update, found: nil}]
+  """
+  @spec missing_actions(module() | map(), atom(), atom() | {atom(), atom()} | nil, atom()) ::
+          [map()]
+  def missing_actions(resource, key, value, type) do
+    value
+    |> action_names()
+    |> Enum.flat_map(fn name ->
+      case Ash.Resource.Info.action(resource, name) do
+        %{type: ^type} -> []
+        nil -> [%{key: key, value: value, name: name, type: type, found: nil}]
+        %{type: found} -> [%{key: key, value: value, name: name, type: type, found: found}]
+      end
+    end)
+  end
+
+  defp action_names({master, tenant}), do: Enum.uniq([master, tenant])
+  defp action_names(name) when is_atom(name) and not is_nil(name), do: [name]
+  defp action_names(_value), do: []
+
+  @doc """
+  The compile error for the entries `missing_actions/4` returned, each with an `:origin` of
+  `:resource`, `{:domain, domain}` or `:default`.
+
+  `what` names the DSL block (`"form"`, `"table"`) and `fix` is the closing paragraph telling the
+  reader where to name the actions instead.
+  """
+  @spec missing_actions_message(module(), String.t(), [map()], String.t()) :: String.t()
+  def missing_actions_message(resource, what, missing, fix) do
+    lines =
+      Enum.map_join(missing, "\n", fn entry ->
+        "  * #{entry.key} #{inspect(entry.value)}, #{origin_text(entry)}: #{problem_text(entry)}"
+      end)
+
+    """
+    #{inspect(resource)}'s #{what} names actions the resource does not have:
+
+    #{lines}
+
+    #{fix}
+    """
+  end
+
+  defp origin_text(%{origin: {:domain, domain}}), do: "inherited from #{inspect(domain)}"
+  defp origin_text(%{origin: :default}), do: "MishkaGervaz's default"
+  defp origin_text(_entry), do: "set on the resource"
+
+  defp problem_text(%{name: name, type: type, found: nil}),
+    do: "there is no #{type} action named #{inspect(name)}"
+
+  defp problem_text(%{name: name, type: type, found: found}),
+    do: "#{inspect(name)} is #{kind(found)}, not #{kind(type)}"
+
+  defp kind(type) when type in [:update, :action], do: "an #{type} action"
+  defp kind(type), do: "a #{type} action"
+
+  @doc """
   Look up the Ash domain for a resource.
   """
   @spec get_domain(module()) :: {:ok, module()} | :error

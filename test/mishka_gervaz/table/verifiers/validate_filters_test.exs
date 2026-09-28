@@ -61,6 +61,7 @@ defmodule MishkaGervaz.Verifiers.ValidateFiltersTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -118,6 +119,7 @@ defmodule MishkaGervaz.Verifiers.ValidateFiltersTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -184,6 +186,7 @@ defmodule MishkaGervaz.Verifiers.ValidateFiltersTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -244,6 +247,7 @@ defmodule MishkaGervaz.Verifiers.ValidateFiltersTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 

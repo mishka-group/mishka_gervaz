@@ -28,6 +28,8 @@ defmodule MishkaGervaz.Test.Resources.InfiniteScrollResource do
   end
 
   actions do
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
     read :master_read
     read :tenant_read
@@ -71,6 +73,8 @@ defmodule MishkaGervaz.Test.Resources.NumberedScrollResource do
   end
 
   actions do
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
     read :master_read
     read :tenant_read

@@ -22,6 +22,11 @@ defmodule MishkaGervaz.Test.Resources.MultiTenantResource do
   end
 
   actions do
+    read :domain_master_read
+    read :domain_tenant_read
+    read :domain_master_get
+    read :domain_get
+
     defaults [:read, :destroy, create: :*, update: :*]
     read :master_read
     read :tenant_read

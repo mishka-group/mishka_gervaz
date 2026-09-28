@@ -82,6 +82,8 @@ defmodule MishkaGervaz.Test.Resources.ChromeTable do
   end
 
   actions do
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read

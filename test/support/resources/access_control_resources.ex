@@ -43,6 +43,11 @@ defmodule MishkaGervaz.Test.Resources.RestrictedCreateForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -105,6 +110,11 @@ defmodule MishkaGervaz.Test.Resources.AccessPerModeForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -165,6 +175,11 @@ defmodule MishkaGervaz.Test.Resources.RestrictedFnForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -231,6 +246,11 @@ defmodule MishkaGervaz.Test.Resources.AccessGateFnForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -293,6 +313,11 @@ defmodule MishkaGervaz.Test.Resources.AccessBareFnForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -378,6 +403,11 @@ defmodule MishkaGervaz.Test.Resources.ReadonlyFnForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 

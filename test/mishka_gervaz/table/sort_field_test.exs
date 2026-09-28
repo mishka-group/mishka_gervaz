@@ -72,6 +72,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -122,6 +123,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -174,6 +176,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -226,6 +229,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -280,6 +284,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -332,6 +337,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -383,6 +389,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -430,6 +437,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 
@@ -486,6 +494,7 @@ defmodule MishkaGervaz.Table.SortFieldTest do
         actions do
           defaults [:read, :destroy, create: :*, update: :*]
           read :master_read
+          read :master_get
           read :tenant_read
         end
 

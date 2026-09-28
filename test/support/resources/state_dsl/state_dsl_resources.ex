@@ -66,6 +66,9 @@ defmodule MishkaGervaz.Test.StateDsl.ColumnOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -107,6 +110,9 @@ defmodule MishkaGervaz.Test.StateDsl.FilterOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -161,6 +167,9 @@ defmodule MishkaGervaz.Test.StateDsl.ActionOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -202,6 +211,9 @@ defmodule MishkaGervaz.Test.StateDsl.PresentationOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -248,6 +260,9 @@ defmodule MishkaGervaz.Test.StateDsl.UrlSyncOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -289,6 +304,9 @@ defmodule MishkaGervaz.Test.StateDsl.AccessOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -356,6 +374,9 @@ defmodule MishkaGervaz.Test.StateDsl.AllBuildersOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -400,6 +421,9 @@ defmodule MishkaGervaz.Test.StateDsl.WholeStateOverrideResource do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 

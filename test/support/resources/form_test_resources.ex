@@ -104,6 +104,10 @@ defmodule MishkaGervaz.Test.Resources.NestedForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -283,6 +287,10 @@ defmodule MishkaGervaz.Test.Resources.NestedDslForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -540,6 +548,10 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -713,6 +725,10 @@ defmodule MishkaGervaz.Test.Resources.WizardForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -851,6 +867,8 @@ defmodule MishkaGervaz.Test.Resources.TabsForm do
   end
 
   actions do
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -931,6 +949,11 @@ defmodule MishkaGervaz.Test.Resources.MinimalForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -983,6 +1006,11 @@ defmodule MishkaGervaz.Test.Resources.NoMasterCheckForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -1061,6 +1089,11 @@ defmodule MishkaGervaz.Test.Resources.AutoFieldsForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -1184,6 +1217,10 @@ defmodule MishkaGervaz.Test.Resources.StringListForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -1286,6 +1323,11 @@ defmodule MishkaGervaz.Test.Resources.UploadFieldForm do
   end
 
   actions do
+    read :master_read
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -1420,6 +1462,10 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -1671,6 +1717,10 @@ defmodule MishkaGervaz.Test.Resources.AutoNestedFieldsForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
@@ -1768,6 +1818,10 @@ defmodule MishkaGervaz.Test.Resources.SubmitOptionsForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -1816,6 +1870,10 @@ defmodule MishkaGervaz.Test.Resources.NoButtonsForm do
   end
 
   actions do
+    read :master_get
+    create :master_create, accept: :*
+    update :master_update, accept: :*
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 

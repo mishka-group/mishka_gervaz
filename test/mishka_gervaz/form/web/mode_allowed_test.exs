@@ -40,6 +40,28 @@ defmodule MishkaGervaz.Form.Web.ModeAllowedTest do
       assert Helpers.mode_allowed?(source, :update, %{master_user?: false, can_edit?: true})
     end
 
+    test "access :update, false denies the mode to everyone and leaves the other open" do
+      source =
+        MishkaGervaz.Resource.Info.Form.config(MishkaGervaz.Test.Resources.CreateOnlyNote).source
+
+      refute Helpers.mode_allowed?(source, :update, @master_state)
+      refute Helpers.mode_allowed?(source, :update, @tenant_state)
+      assert Helpers.mode_allowed?(source, :create, @master_state)
+      assert Helpers.mode_allowed?(source, :create, @tenant_state)
+    end
+
+    test "a boolean condition opens or closes the mode for everyone" do
+      for {condition, open?} <- [{true, true}, {false, false}],
+          state <- [@master_state, @tenant_state] do
+        source = %{
+          restricted: false,
+          access_rules: %{update: %{restricted: false, condition: condition}}
+        }
+
+        assert Helpers.mode_allowed?(source, :update, state) == open?
+      end
+    end
+
     test "unrestricted rule with no condition allows access" do
       source = %{
         restricted: false,

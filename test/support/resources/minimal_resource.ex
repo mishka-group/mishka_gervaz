@@ -23,6 +23,8 @@ defmodule MishkaGervaz.Test.Resources.MinimalResource do
   end
 
   actions do
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read

@@ -23,6 +23,9 @@ defmodule MishkaGervaz.Test.Resources.ArchiveMergeNoExt do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -62,6 +65,9 @@ defmodule MishkaGervaz.Test.Resources.ArchiveMergeInheritDomain do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
     read :master_archived
     read :archived
@@ -116,6 +122,9 @@ defmodule MishkaGervaz.Test.Resources.ArchiveMergeEnabledFalse do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
@@ -162,6 +171,9 @@ defmodule MishkaGervaz.Test.Resources.ArchiveMergePartial do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
     read :resource_master_archived
     read :resource_archived
@@ -215,6 +227,9 @@ defmodule MishkaGervaz.Test.Resources.ArchiveMergeAtomAction do
   end
 
   actions do
+    read :master_read
+    read :master_get
+
     defaults [:read, :destroy, create: :*, update: :*]
     read :shared_archived
     read :master_get_archived

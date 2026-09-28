@@ -2,6 +2,15 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   @moduledoc """
   Validates the source section of MishkaGervaz DSL.
 
+  Every action the table names — master and tenant alike, set on the resource or inherited from the
+  domain — must be an action of the resource, of the matching kind: `read` and `get` read actions,
+  `destroy` a destroy action. `destroy` is checked only when a `:destroy` row action or bulk action
+  uses it. When archive applies, its `read_action` and `get_action` must be read actions,
+  `restore_action` an update action and `destroy_action` a destroy action.
+
+  Each failure is a `Spark.Error.DslError`, which Spark prints as a compile warning. Compile with
+  `--warnings-as-errors` to fail the build on it.
+
   See `MishkaGervaz.Table.Dsl.Source`,
   `MishkaGervaz.Table.Verifiers.Helpers`, and sibling verifiers.
   """
@@ -10,6 +19,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   alias Spark.Dsl.Verifier
   alias MishkaGervaz.Table.Entities.{BulkAction, Realtime, RowAction, RowActionDropdown}
   import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3, entities_of: 3]
+  import MishkaGervaz.Helpers, only: [missing_actions: 4, missing_actions_message: 4]
 
   @actions_path [:mishka_gervaz, :table, :source, :actions]
   @archive_path [:mishka_gervaz, :table, :source, :archive]
@@ -32,6 +42,21 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
     :destroy_action
   ]
 
+  @action_types [read: :read, get: :read, destroy: :destroy]
+
+  @archive_types [
+    read: {:read_action, :read},
+    get: {:get_action, :read},
+    restore: {:restore_action, :update},
+    destroy: {:destroy_action, :destroy}
+  ]
+
+  @fix """
+  Add each action to the resource, or name one it has under
+  `mishka_gervaz > table > source > actions` (or `mishka_gervaz > table > source > archive` for
+  an archive action).
+  """
+
   @impl true
   def verify(dsl_state) do
     if is_nil(Verifier.get_option(dsl_state, [:mishka_gervaz, :table, :identity], :route)) do
@@ -46,6 +71,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
          :ok <- validate_required_actions(dsl_state, module),
          :ok <- validate_archive_section(dsl_state, module),
          :ok <- validate_archive_inheritance(dsl_state, module),
+         :ok <- validate_actions_exist(dsl_state, module),
          :ok <- validate_realtime_prefix(dsl_state, module),
          do: :ok
   end
@@ -100,6 +126,87 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateSource do
   end
 
   defp bulk_actions(dsl_state), do: entities_of(dsl_state, @bulk_actions_path, BulkAction)
+
+  defp validate_actions_exist(dsl_state, module) do
+    domain_actions = domain_actions(module)
+
+    sources =
+      @action_types
+      |> Enum.reject(fn {key, _type} -> key == :destroy and not needs_destroy?(dsl_state) end)
+      |> Enum.map(fn {key, type} ->
+        set_here = Verifier.get_option(dsl_state, @actions_path, key)
+        {key, set_here || Map.get(domain_actions, key), type, origin(set_here, module)}
+      end)
+
+    (sources ++ archive_sources(dsl_state, module))
+    |> Enum.flat_map(fn {key, value, type, origin} ->
+      dsl_state
+      |> missing_actions(key, value, type)
+      |> Enum.map(&Map.put(&1, :origin, origin))
+    end)
+    |> case do
+      [] ->
+        :ok
+
+      missing ->
+        dsl_error(module, @actions_path, missing_actions_message(module, "table", missing, @fix))
+    end
+  end
+
+  defp archive_sources(dsl_state, module) do
+    if has_ash_archival?(module) do
+      resource_archive =
+        @archive_opts
+        |> Map.new(&{&1, Verifier.get_option(dsl_state, @archive_path, &1)})
+        |> Map.reject(fn {_key, value} -> is_nil(value) end)
+
+      domain_archive = domain_archive(module)
+
+      resource_archive
+      |> then(&if(&1 == %{}, do: nil, else: &1))
+      |> MishkaGervaz.Table.ArchiveMerger.merge(domain_archive, %{}, true)
+      |> archive_actions(resource_archive, domain_archive, module)
+    else
+      []
+    end
+  end
+
+  defp archive_actions(%{actions: actions}, resource_archive, domain_archive, module) do
+    Enum.map(@archive_types, fn {key, {option, type}} ->
+      origin =
+        cond do
+          Map.has_key?(resource_archive, option) -> :resource
+          Map.has_key?(domain_archive || %{}, option) -> domain_origin(module)
+          true -> :default
+        end
+
+      {:"archive #{key}", Map.get(actions, key), type, origin}
+    end)
+  end
+
+  defp archive_actions(_merged, _resource_archive, _domain_archive, _module), do: []
+
+  defp domain_archive(module) do
+    with {:ok, domain} <- safe_domain(module),
+         %{table: %{archive: archive}} when is_map(archive) <-
+           Spark.Dsl.Extension.get_persisted(domain, :mishka_gervaz_domain_config) do
+      archive
+    else
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp origin(nil, module), do: domain_origin(module)
+  defp origin(_set_here, _module), do: :resource
+
+  defp domain_origin(module) do
+    case safe_domain(module) do
+      {:ok, domain} -> {:domain, domain}
+      :error -> :resource
+    end
+  end
 
   defp domain_actions(module) do
     with {:ok, domain} <- safe_domain(module),

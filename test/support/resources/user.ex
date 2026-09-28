@@ -125,6 +125,9 @@ defmodule MishkaGervaz.Test.Resources.User do
   end
 
   actions do
+    read :master_get
+    destroy :master_destroy
+
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do

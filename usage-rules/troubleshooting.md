@@ -1,7 +1,8 @@
 # Troubleshooting
 
-Every message below is raised by a `Spark.Dsl.Verifier` at **compile time** and names the DSL path
-that failed. Runtime symptoms follow.
+Every message below is a `Spark.Error.DslError` from a `Spark.Dsl.Verifier`, naming the DSL path
+that failed. Spark prints it as a **compile warning**: plain `mix compile` goes on, and
+`mix compile --warnings-as-errors` fails. Runtime symptoms follow.
 
 ## Compile errors — table
 
@@ -10,6 +11,7 @@ that failed. Runtime symptoms follow.
 | `identity section is required` | any column/filter/row action/bulk action exists without `identity` | add `identity do name :x; route "/admin/x" end` |
 | `identity.name is required` / `identity.route is required` | one of the two is missing | both are required once the table has entities |
 | `Missing required table source action(s): …` | `read` (always), `get` (interactive rows), `destroy` (a `:destroy` action) | declare them on the resource or the domain — see [table/source.md](table/source.md) |
+| `X's table names actions the resource does not have: …` | a `read`, `get`, `destroy` or archive action named on the resource or inherited from the domain is missing, or of another kind | add the action, or name one the resource has — each line says where the name was set |
 | `No columns defined for the table.` | a `columns` block with nothing in it | add a `column`, or `auto_columns do … end` |
 | `Column \`x\` is not a resource field.` | the name is not an attribute or relationship | add `static true` (and `requires`) — it is computed |
 | `Static column \`x\` with render requires \`requires\` option.` | `static true` + `render` without `requires` | list the fields the render reads |
@@ -34,6 +36,7 @@ that failed. Runtime symptoms follow.
 |---|---|---|
 | `form identity.name is required` | | declare `identity do name :x_form end` |
 | missing `create` / `update` / `read` | a form with any field lacks one | declare all three on the resource or the domain |
+| `X's form names actions the resource does not have: …` | a `create`, `update` or `read` action named on the resource or inherited from the domain is missing, or of another kind | add the action, name one the resource has, or close the mode with `access :update, false` |
 | `Field \`x\` is not a resource attribute.` | the name is not an attribute/relationship/calculation/aggregate | add `virtual true` (+ `resource` for `:relation`/`:select`) |
 | `Field \`x\` depends_on \`y\` which is not a defined field.` | | declare `y` in the same form |
 | virtual `:relation` / `:select` without `resource` | | add `resource MyApp.Thing` |

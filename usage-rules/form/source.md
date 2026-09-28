@@ -23,14 +23,22 @@ source do
   access :create, restricted: true                      # A — per mode, keyword form
   access :update, fn state -> state.master_user? end     # B — per mode, condition form
   access fn mode, state -> mode == :update end           # C — global gate, arity 2
+  access :update, false                                  # D — per mode, closed for everyone
 end
 ```
 
 ## `actions`
 
-Atom (both roles) or `{master_action, tenant_action}`, chosen by `master_check`. For a
-non-multitenant resource only the second element is used. All three keys are required as soon as
-the form declares a field — on the resource or the domain, resource wins per key.
+Atom (both roles) or `{master_action, tenant_action}`, chosen by `master_check`. All three keys are
+required as soon as the form declares a field — on the resource or the domain, resource wins per
+key.
+
+Every action named — both elements of a tuple — must be an action of the resource of the matching
+kind: `create` a create action, `update` an update action, `read` a read action. This is
+**compile-checked**: compiling prints a `Spark.Error.DslError` warning naming the resource, the
+action, and whether it was set on the resource or inherited from the domain. Build with
+`mix compile --warnings-as-errors` to have it fail the build. A mode closed with style D is not
+checked — `update` and `read` belong to `:update`, `create` to `:create`.
 
 The `read` action is what edit mode fetches the record with; `create` and `update` back the two
 modes.
@@ -48,7 +56,8 @@ relationships under the same alias. `preload_aliases` maps them back, so a field
 
 > A preloaded relationship's read action must not have `pagination required?: true` — preloads
 > pass no limit and it raises `Ash.Error.Invalid.LimitRequired`. This is **compile-checked** on
-> the form side: the build fails with the offending relationship named.
+> the form side: compiling prints a warning naming the offending relationship, and a build with
+> `--warnings-as-errors` fails.
 
 ## `access`
 
@@ -60,11 +69,13 @@ rather than rendering fields. Three calling styles:
 | A | `access :create, restricted: true` | master-only mode |
 | B | `access :create, fn state -> … end` | one mode, custom rule |
 | C | `access fn mode, state -> … end` | one rule covering both modes |
+| D | `access :update, false` | a mode no screen opens — its actions need not exist |
 
 `restricted true` at the top of `source` gates the whole form instead.
 
 ## TODO
-- [ ] `create`, `update`, `read` all reachable from the resource or the domain
+- [ ] `create`, `update`, `read` all reachable from the resource or the domain, each an action of the resource
+- [ ] A mode no screen opens closed with `access :update, false` (or `:create`)
 - [ ] `master_check` declared if `site_id == nil` is not your master test
 - [ ] Preloads split by role when the relationship names differ
 - [ ] Preloaded read actions use `pagination required?: false`

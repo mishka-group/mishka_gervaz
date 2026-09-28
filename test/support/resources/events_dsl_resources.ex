@@ -120,6 +120,9 @@ defmodule MishkaGervaz.Test.EventsDsl do
     end
 
     actions do
+      read :master_read
+      read :master_get
+
       defaults [:destroy, create: :*, update: :*]
 
       read :read do
@@ -165,6 +168,9 @@ defmodule MishkaGervaz.Test.EventsDsl do
     end
 
     actions do
+      read :master_read
+      read :master_get
+
       defaults [:destroy, create: :*, update: :*]
 
       read :read do
@@ -215,6 +221,9 @@ defmodule MishkaGervaz.Test.EventsDsl do
     end
 
     actions do
+      read :master_read
+      read :master_get
+
       defaults [:destroy, create: :*, update: :*]
 
       read :read do
@@ -258,6 +267,9 @@ defmodule MishkaGervaz.Test.EventsDsl do
     end
 
     actions do
+      read :master_read
+      read :master_get
+
       defaults [:destroy, create: :*, update: :*]
 
       read :read do
@@ -299,6 +311,9 @@ defmodule MishkaGervaz.Test.EventsDsl do
     end
 
     actions do
+      read :master_read
+      read :master_get
+
       defaults [:destroy, create: :*, update: :*]
 
       read :read do
