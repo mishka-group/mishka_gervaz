@@ -175,13 +175,7 @@ defmodule MishkaGervaz.Table.Web.DynamicOptionsTest do
         options: fn -> [] end
       }
 
-      # Simulate what FilterBuilder does
-      resolved =
-        if is_function(filter.options, 0) do
-          Map.put(filter, :options, filter.options.())
-        else
-          filter
-        end
+      resolved = MishkaGervaz.Table.Web.State.FilterBuilder.maybe_resolve_options(filter)
 
       assert resolved.options == []
     end
@@ -195,12 +189,7 @@ defmodule MishkaGervaz.Table.Web.DynamicOptionsTest do
         end
       }
 
-      resolved =
-        if is_function(filter.options, 0) do
-          Map.put(filter, :options, filter.options.())
-        else
-          filter
-        end
+      resolved = MishkaGervaz.Table.Web.State.FilterBuilder.maybe_resolve_options(filter)
 
       assert length(resolved.options) == 2
     end

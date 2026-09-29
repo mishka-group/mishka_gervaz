@@ -147,7 +147,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoaderTest do
 
       assert is_list(result)
       assert length(result) == 5
-      refute is_struct(result)
     end
 
     test "resource WITH optional pagination returns Page struct by default" do
@@ -543,5 +542,4 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoaderTest do
 
   defp get_tenant_from_state(%{master_user?: true}), do: nil
   defp get_tenant_from_state(%{current_user: user}), do: Map.get(user, :site_id)
-  defp get_tenant_from_state(_), do: nil
 end

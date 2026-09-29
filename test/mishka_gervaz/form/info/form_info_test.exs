@@ -108,7 +108,6 @@ defmodule MishkaGervaz.Form.Info.FormInfoTest do
       assert submit.create.label == "Save"
       assert submit.update.label == "Save Changes"
       assert submit.cancel.label == "Cancel"
-      assert submit.cancel != nil
       assert submit.position == :bottom
     end
   end

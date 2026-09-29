@@ -186,8 +186,6 @@ defmodule MishkaGervaz.DSL.ColumnsTest do
   defp apply_test_format(format, state, record, value) when is_function(format, 3),
     do: format.(state, record, value)
 
-  defp apply_test_format(_format, _state, _record, value), do: value
-
   describe "User resource columns" do
     test "has expected columns" do
       columns = ResourceInfo.table_columns(User)

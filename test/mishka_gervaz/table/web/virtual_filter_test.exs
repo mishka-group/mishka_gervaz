@@ -24,8 +24,6 @@ defmodule MishkaGervaz.Table.Web.VirtualFilterTest do
     ArticleResource
   }
 
-  require Ash.Query
-
   defp master_user, do: %{id: "master-123", site_id: nil, role: :admin}
 
   defp clear_ets(resource) do
