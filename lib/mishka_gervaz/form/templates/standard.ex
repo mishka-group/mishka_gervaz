@@ -744,9 +744,21 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   # Renders one key's control through the adapter, from an assigns map built here.
   defp key_map_input(ui, key, name, id, value) do
-    %{__changed__: nil, module: ui, name: name, id: id, value: value}
-    |> Map.merge(key_map_control(key, value))
-    |> dynamic_component()
+    control =
+      %{__changed__: nil, module: ui, name: name, id: id, value: value}
+      |> Map.merge(key_map_control(key, value))
+      |> dynamic_component()
+
+    if Map.get(key, :type) in [:checkbox, :toggle], do: boolean_box(control), else: control
+  end
+
+  # A checkbox or toggle, centred in the 44px height of the inputs beside it.
+  defp boolean_box(control) do
+    assigns = %{control: control}
+
+    ~H"""
+    <div data-role="gervaz-boolean-control" class="flex h-11 items-center">{@control}</div>
+    """
   end
 
   # The adapter assigns a key's type asks for: which component draws it, and its options.
@@ -1262,6 +1274,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:hidden_input, true)
         |> assign(:function, :checkbox)
         |> dynamic_component()
+        |> boolean_box()
 
       :toggle ->
         form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
@@ -1271,6 +1284,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:checked, form_value in [true, "true"])
         |> assign(:function, :toggle_input)
         |> dynamic_component()
+        |> boolean_box()
 
       :date ->
         base
@@ -1753,6 +1767,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:hidden_input, true)
     |> assign(:label, nil)
     |> dynamic_component()
+    |> boolean_box()
   end
 
   defp sub_field_input(%{sf: %{type: :toggle}} = assigns) do
@@ -1761,6 +1776,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:function, :toggle_input)
     |> assign(:checked, assigns.input_value in [true, "true"])
     |> dynamic_component()
+    |> boolean_box()
   end
 
   defp sub_field_input(%{sf: %{type: :number}} = assigns) do
