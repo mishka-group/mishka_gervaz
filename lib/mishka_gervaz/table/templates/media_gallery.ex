@@ -60,7 +60,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   use MishkaGervaz.Messages
 
   import MishkaGervaz.Helpers,
-    only: [dynamic_component: 1, get_visible_columns: 2, accessible?: 2]
+    only: [dynamic_component: 1, get_visible_columns: 2, accessible?: 2, translate_text: 1]
 
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.JS
@@ -691,7 +691,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   @impl true
   def render_loading(assigns) do
     loading_text =
-      (assigns[:static] && assigns.static.pagination_ui.loading_text) ||
+      translate_text(assigns[:static] && assigns.static.pagination_ui.loading_text) ||
         dgettext("mishka_gervaz", "Loading...")
 
     assigns = assign(assigns, :loading_text, loading_text)
@@ -758,7 +758,8 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
 
   defp render_loading_overlay(assigns) do
     loading_text =
-      assigns.static.pagination_ui.loading_text || dgettext("mishka_gervaz", "Loading...")
+      translate_text(assigns.static.pagination_ui.loading_text) ||
+        dgettext("mishka_gervaz", "Loading...")
 
     assigns = assign(assigns, :loading_text, loading_text)
 

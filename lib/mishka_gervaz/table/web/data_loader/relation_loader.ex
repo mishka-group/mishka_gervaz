@@ -242,7 +242,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoader do
   def prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
 
   def prepend_nil_option(options, label) when is_binary(label) do
-    [{label, "__nil__"} | options]
+    [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
   end
 
   @doc false

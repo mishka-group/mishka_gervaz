@@ -30,7 +30,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       accessible?: 2,
       has_value?: 1,
       find_by_name: 2,
-      resolve_label: 1
+      resolve_label: 1,
+      translate_options: 1,
+      translate_text: 1
     ]
 
   @doc """
@@ -272,7 +274,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       assigns
       |> assign(:group_filters, group_filters)
       |> assign(:group_columns, (group.ui && group.ui.columns) || 3)
-      |> assign(:group_label, resolve_ui_label(group) || Phoenix.Naming.humanize(group.name))
+      |> assign(:group_label, group_label(group))
       |> assign(:group_icon, (group.ui && group.ui.icon) || "hero-adjustments-horizontal")
       |> assign(:group_id, "#{assigns.static.id}-filter-group-#{group.name}")
       |> assign(:toggle_class, @toolbar_toggle)
@@ -353,7 +355,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   defp search_placeholder(filter) do
-    (filter.ui && filter.ui.placeholder) || dgettext("mishka_gervaz", "Search…")
+    resolve_label(filter.ui && filter.ui.placeholder) || dgettext("mishka_gervaz", "Search…")
   end
 
   @doc """
@@ -639,7 +641,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   """
   @spec group_label(map()) :: String.t()
   def group_label(group) do
-    (group.ui && resolve_ui_label(group)) || Phoenix.Naming.humanize(group.name)
+    (group.ui && resolve_ui_label(group)) || translate_text(Phoenix.Naming.humanize(group.name))
   end
 
   @doc """
@@ -724,7 +726,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_binary(prompt),
-    do: prompt
+    do: translate_text(prompt)
 
   defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _) when is_function(prompt, 0),
     do: prompt.()
@@ -736,7 +738,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         parent -> resolve_ui_label(parent)
       end
 
-    field_name = parent_label || Phoenix.Naming.humanize(depends_on)
+    field_name = parent_label || translate_text(Phoenix.Naming.humanize(depends_on))
     dgettext("mishka_gervaz", "Select %{field} first", field: field_name)
   end
 
@@ -771,7 +773,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           resolve_label(filter.ui && filter.ui.placeholder) ||
             dgettext("mishka_gervaz", "Search...")
 
-        resolved_label = resolve_ui_label(filter) || Phoenix.Naming.humanize(filter.name)
+        resolved_label = filter_label(filter)
 
         assigns =
           assigns
@@ -792,15 +794,16 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         """
 
       :select ->
-        resolved_label = resolve_ui_label(filter) || Phoenix.Naming.humanize(filter.name)
+        resolved_label = filter_label(filter)
 
         assigns =
           assigns
           |> assign(:name, filter.name)
-          |> assign(:options, filter.options || [])
+          |> assign(:options, translate_options(filter.options || []))
           |> assign(
             :prompt,
-            (filter.ui && filter.ui.prompt) || dgettext("mishka_gervaz", "Select...")
+            translate_text(filter.ui && filter.ui.prompt) ||
+              dgettext("mishka_gervaz", "Select...")
           )
           |> assign(:icon, filter.ui && filter.ui.icon)
           |> assign(:search, true)
@@ -821,10 +824,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           |> assign(:name, filter.name)
           |> assign(:value, "true")
           |> assign(:checked, to_boolean(assigns.value) == true)
-          |> assign(
-            :label,
-            (filter.ui && filter.ui.label) || Phoenix.Naming.humanize(filter.name)
-          )
+          |> assign(:label, filter_label(filter))
           |> assign(:icon, filter.ui && filter.ui.icon)
 
         ~H"""
@@ -896,6 +896,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         """
     end
   end
+
+  defp filter_label(filter),
+    do: resolve_ui_label(filter) || translate_text(Phoenix.Naming.humanize(filter.name))
 
   @doc """
   Merges dynamic relation filter state (options, loading, etc.) into filter configs.
@@ -1197,14 +1200,17 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:loading, state.loading)
       |> assign(:loading_type, state.loading_type)
       |> assign(:ui_adapter, static.ui_adapter)
-      |> assign(:loading_text, pagination_ui.loading_text || "Loading...")
-      |> assign(:load_more_label, pagination_ui.load_more_label || "Load More")
+      |> assign(:loading_text, translate_text(pagination_ui.loading_text || "Loading..."))
+      |> assign(:load_more_label, translate_text(pagination_ui.load_more_label || "Load More"))
       |> assign(:show_total, pagination_ui.show_total)
-      |> assign(:prev_label, pagination_ui.prev_label || "Previous")
-      |> assign(:next_label, pagination_ui.next_label || "Next")
-      |> assign(:first_label, pagination_ui.first_label || "First")
-      |> assign(:last_label, pagination_ui.last_label || "Last")
-      |> assign(:page_info_format, pagination_ui.page_info_format || "Page {page} of {total}")
+      |> assign(:prev_label, translate_text(pagination_ui.prev_label || "Previous"))
+      |> assign(:next_label, translate_text(pagination_ui.next_label || "Next"))
+      |> assign(:first_label, translate_text(pagination_ui.first_label || "First"))
+      |> assign(:last_label, translate_text(pagination_ui.last_label || "Last"))
+      |> assign(
+        :page_info_format,
+        translate_text(pagination_ui.page_info_format || "Page {page} of {total}")
+      )
 
     ~H"""
     <div
@@ -1577,13 +1583,15 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   defp render_dropdown_item(%{item: %{type: :separator}} = assigns) do
+    assigns = assign(assigns, :separator_label, resolve_label(assigns.item[:label]))
+
     ~H"""
     <div class="my-1 border-t border-[#f0efea] pt-1">
       <div
-        :if={@item[:label]}
+        :if={@separator_label}
         class="px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.06em] text-[#a8a5a0]"
       >
-        {@item[:label]}
+        {@separator_label}
       </div>
     </div>
     """
@@ -1702,10 +1710,12 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       assigns
       |> assign(
         :message,
-        Map.get(empty_state, :message, dgettext("mishka_gervaz", "No records found"))
+        translate_text(
+          Map.get(empty_state, :message, dgettext("mishka_gervaz", "No records found"))
+        )
       )
       |> assign(:icon, Map.get(empty_state, :icon, "hero-inbox"))
-      |> assign(:action_label, get_in(empty_state, [:action, :label]))
+      |> assign(:action_label, translate_text(get_in(empty_state, [:action, :label])))
       |> assign(:action_path, get_in(empty_state, [:action, :path]))
       |> assign(:action_icon, get_in(empty_state, [:action, :icon]))
       |> assign(:ui_adapter, ui_adapter)
@@ -1735,12 +1745,14 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       assigns
       |> assign(
         :message,
-        Map.get(error_state, :message, dgettext("mishka_gervaz", "Error loading data"))
+        translate_text(
+          Map.get(error_state, :message, dgettext("mishka_gervaz", "Error loading data"))
+        )
       )
       |> assign(:icon, Map.get(error_state, :icon))
       |> assign(
         :retry_label,
-        Map.get(error_state, :retry_label, dgettext("mishka_gervaz", "Retry"))
+        translate_text(Map.get(error_state, :retry_label, dgettext("mishka_gervaz", "Retry")))
       )
       |> assign(:ui_adapter, ui_adapter)
 
@@ -1778,7 +1790,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   """
   @spec render_loading(map()) :: Phoenix.LiveView.Rendered.t()
   def render_loading(assigns) do
-    loading_text = assigns[:loading_text] || dgettext("mishka_gervaz", "Loading...")
+    loading_text =
+      translate_text(assigns[:loading_text]) || dgettext("mishka_gervaz", "Loading...")
+
     ui_adapter = assigns[:ui_adapter] || MishkaGervaz.UIAdapters.Tailwind
     loading_style = assigns[:loading_style] || :spinner
 
@@ -1882,8 +1896,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
         label =
           if filter,
-            do: resolve_ui_label(filter) || Phoenix.Naming.humanize(name),
-            else: Phoenix.Naming.humanize(name)
+            do: resolve_ui_label(filter) || translate_text(Phoenix.Naming.humanize(name)),
+            else: translate_text(Phoenix.Naming.humanize(name))
 
         display_value = resolve_chip_value(name, value, state)
         %{name: name, value: value, label: label, display_value: display_value}
@@ -1929,7 +1943,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc "Format a filter value for display in a chip."
   @spec format_chip_value(term()) :: String.t()
   def format_chip_value(value) when is_boolean(value), do: to_string(value)
-  def format_chip_value(value) when is_atom(value), do: Phoenix.Naming.humanize(value)
+
+  def format_chip_value(value) when is_atom(value),
+    do: translate_text(Phoenix.Naming.humanize(value))
+
   def format_chip_value(value) when is_binary(value), do: value
   def format_chip_value(value) when is_list(value), do: Enum.join(value, ", ")
   def format_chip_value(%{} = value), do: inspect(value)

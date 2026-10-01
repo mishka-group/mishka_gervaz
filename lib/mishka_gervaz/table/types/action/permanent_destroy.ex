@@ -20,7 +20,9 @@ defmodule MishkaGervaz.Table.Types.Action.PermanentDestroy do
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
   use Phoenix.Component
   use MishkaGervaz.Messages
-  import MishkaGervaz.Helpers, only: [dynamic_component: 1, maybe_assign: 3, resolve_label: 1]
+
+  import MishkaGervaz.Helpers,
+    only: [dynamic_component: 1, maybe_assign: 3, resolve_label: 1, resolve_confirm: 2]
 
   @impl true
   def render(_assigns, action, record, ui, target) do
@@ -42,7 +44,7 @@ defmodule MishkaGervaz.Table.Types.Action.PermanentDestroy do
       |> assign(:phx_target, target)
       |> assign(
         :data_confirm,
-        action[:confirm] ||
+        resolve_confirm(action[:confirm], record) ||
           dgettext("mishka_gervaz", "Permanently delete this record? This cannot be undone.")
       )
 

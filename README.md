@@ -125,7 +125,7 @@ That's the whole admin surface for a resource. Add a route, render the LiveCompo
 
 - 🎨 **UI adapter** — pluggable component layer. Tailwind adapter ships in; swap in your own to render against any design system.
 - 🔧 **Override surface** — every state builder, event handler, data loader, template, and adapter is `defoverridable`. Replace just one piece, all of them, or wire it via the DSL (`state do field MyMod end`).
-- 🌐 **i18n** — Gettext baked in; every label resolves through `Gettext` so translations land in the right places.
+- 🌐 **i18n** — Gettext baked in; a label is a function (`fn -> dgettext(...) end`) or a plain string. Every plain string the DSL holds — labels, placeholders, prompts, `{label, value}` option labels, confirm messages, empty and error states, notices, headers and footers — is translated when it is drawn, in the caller's locale, through the `:gettext_backend` and its `mishka_gervaz` domain. Mark one with `dgettext_noop("mishka_gervaz", "Archive")` so `mix gettext.extract` finds it.
 - 🧪 **Fully tested core** — verifiers, transformers, sub-handlers, and helpers each have direct unit tests on top of integration tests; over **3,600** tests on the suite at the time of writing.
 
 ---

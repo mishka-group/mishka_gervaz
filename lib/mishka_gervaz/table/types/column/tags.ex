@@ -44,6 +44,7 @@ defmodule MishkaGervaz.Table.Types.Column.Tags do
   `MishkaGervaz.UIAdapters.Tailwind` (`cell_tags/1`).
   """
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType
+  import MishkaGervaz.Helpers, only: [translate_text: 1]
 
   @impl true
   def render(_value, column, record, ui) do
@@ -64,7 +65,7 @@ defmodule MishkaGervaz.Table.Types.Column.Tags do
       rest: Enum.drop(items, max_items),
       more: max(0, length(items) - max_items),
       badge_class: extra[:badge_class],
-      empty: extra[:empty]
+      empty: translate_text(extra[:empty])
     })
   end
 

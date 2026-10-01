@@ -34,13 +34,7 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
   alias Phoenix.LiveView.JS
 
   import MishkaGervaz.Helpers,
-    only: [
-      humanize: 1,
-      dynamic_component: 1,
-      maybe_assign: 3,
-      resolve_label: 1,
-      resolve_confirm: 2
-    ]
+    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3, resolve_confirm: 2]
 
   @impl true
   def render(_assigns, action, record, ui, target) do
@@ -61,7 +55,7 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
       |> assign(:module, ui)
       |> assign(:function, :button)
       |> assign(:variant, :default)
-      |> assign(:label, resolve_label(action[:ui][:label]) || humanize(action[:name]))
+      |> assign(:label, action_label(action))
       |> assign(:icon, action[:ui][:icon] || "hero-pencil-square")
       |> maybe_assign(:class, action[:ui][:class])
       |> assign(:phx_click, click_js)

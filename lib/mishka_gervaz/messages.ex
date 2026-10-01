@@ -39,6 +39,14 @@ defmodule MishkaGervaz.Messages do
       priv/gettext/LOCALE/LC_MESSAGES/mishka_gervaz.po
       priv/gettext/LOCALE/LC_MESSAGES/errors.po
 
+  ## Strings from the DSL
+
+  Every string a resource's `mishka_gervaz` DSL holds is translated when it is drawn, through
+  `translate_text/1`: labels, placeholders, prompts, `{label, value}` option labels, confirm
+  messages, empty and error states, notices, headers and footers. A function value is called as
+  it is and is not translated again. Mark a string with `dgettext_noop("mishka_gervaz", "...")` so
+  `mix gettext.extract` finds it.
+
   ## Work in another process
 
   A new process has no Gettext locale of its own. Run work whose result holds words through
@@ -84,6 +92,43 @@ defmodule MishkaGervaz.Messages do
   def gettext_backend do
     Application.get_env(:mishka_gervaz, :gettext_backend, MishkaGervaz.Gettext)
   end
+
+  @doc """
+  Translates a string a resource declared in its `mishka_gervaz` DSL, in the locale of the process
+  that draws it.
+
+  A binary is looked up in the `mishka_gervaz` domain of `gettext_backend/0`: the translation when
+  the current locale has one, the string itself otherwise. `nil` and every other value are
+  returned unchanged, so a function or a number a DSL option held passes through. A string holding
+  `%{...}` is returned as it is.
+
+  A resource marks a string only its DSL holds with `dgettext_noop("mishka_gervaz", "...")`, which
+  returns the English string; MishkaGervaz translates it each time it is drawn.
+
+      label dgettext_noop("mishka_gervaz", "Heading")
+
+  ## Examples
+
+      iex> MishkaGervaz.Messages.translate_text("No translation for this")
+      "No translation for this"
+
+      iex> MishkaGervaz.Messages.translate_text(nil)
+      nil
+  """
+  @spec translate_text(term()) :: term()
+  def translate_text(""), do: ""
+
+  def translate_text(text) when is_binary(text) do
+    backend = gettext_backend()
+
+    case backend.lgettext(Gettext.get_locale(backend), "mishka_gervaz", nil, text, %{}) do
+      {:ok, translated} -> translated
+      {:default, default} -> default
+      {:missing_bindings, _incomplete, _missing} -> text
+    end
+  end
+
+  def translate_text(other), do: other
 
   @doc """
   Wraps `fun`, of arity 0 or 1, to run in the Gettext locales of the process that calls this.

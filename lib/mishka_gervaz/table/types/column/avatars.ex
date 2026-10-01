@@ -53,6 +53,7 @@ defmodule MishkaGervaz.Table.Types.Column.Avatars do
   and `MishkaGervaz.UIAdapters.Tailwind` (`cell_avatars/1`).
   """
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType
+  import MishkaGervaz.Helpers, only: [translate_text: 1]
 
   @default_max_items 3
   @default_tints ["bg-[#f4f3ef] text-[#6d6a63]"]
@@ -76,7 +77,7 @@ defmodule MishkaGervaz.Table.Types.Column.Avatars do
       rest: entries(rest, length(shown), extra),
       more: length(rest),
       size: extra[:size],
-      empty: extra[:empty]
+      empty: translate_text(extra[:empty])
     })
   end
 

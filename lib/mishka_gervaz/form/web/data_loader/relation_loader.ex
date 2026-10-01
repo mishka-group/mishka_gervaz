@@ -128,7 +128,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
   def field_options(%{options: options}, state) when is_function(options, 1), do: options.(state)
 
   def field_options(%{options: options}, _state),
-    do: MishkaGervaz.Helpers.resolve_options(options)
+    do: MishkaGervaz.Helpers.resolve_translated_options(options)
 
   def field_options(_field, _state), do: []
 
@@ -138,7 +138,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
   def prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
 
   def prepend_nil_option(options, label) when is_binary(label) do
-    [{label, "__nil__"} | options]
+    [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
   end
 
   def prepend_nil_option(options, label) when is_function(label, 0) do

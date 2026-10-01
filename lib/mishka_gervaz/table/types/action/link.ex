@@ -26,7 +26,7 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
   use Phoenix.Component
 
   import MishkaGervaz.Helpers,
-    only: [humanize: 1, dynamic_component: 1, maybe_assign: 3, resolve_label: 1]
+    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3]
 
   @impl true
   def render(assigns, action, record, ui, _target) do
@@ -38,7 +38,7 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
       |> assign(:function, :nav_link)
       |> assign(:variant, action_variant(action[:name]))
       |> assign(:navigate, path)
-      |> assign(:label, resolve_label(action[:ui][:label]) || humanize(action[:name]))
+      |> assign(:label, action_label(action))
       |> maybe_assign(:icon, action[:ui][:icon])
       |> maybe_assign(:class, action[:ui][:class])
 

@@ -10,7 +10,8 @@ defmodule MishkaGervaz.Table.Behaviours.ActionType do
       defmodule MyApp.ActionTypes.Confirm do
         @behaviour MishkaGervaz.Table.Behaviours.ActionType
         use Phoenix.Component
-        import MishkaGervaz.Helpers, only: [humanize: 1, dynamic_component: 1]
+        import MishkaGervaz.Helpers,
+          only: [action_label: 1, resolve_confirm: 2, dynamic_component: 1]
 
         @impl true
         def render(assigns, action, record, ui, target) do
@@ -20,13 +21,16 @@ defmodule MishkaGervaz.Table.Behaviours.ActionType do
             %{__changed__: %{}}
             |> assign(:module, ui)
             |> assign(:function, :button)
-            |> assign(:label, action[:ui][:label] || humanize(action[:name]))
+            |> assign(:label, action_label(action))
             |> assign(:icon, action[:ui][:icon])
             |> assign(:class, action[:ui][:class] || "text-orange-600 hover:text-orange-800")
             |> assign(:phx_click, action[:event] || "confirm")
             |> assign(:phx_value_id, record.id)
             |> assign(:phx_target, target)
-            |> assign(:data_confirm, (master? && action[:confirm]) || "Are you sure?")
+            |> assign(
+              :data_confirm,
+              (master? && resolve_confirm(action[:confirm], record)) || "Are you sure?"
+            )
 
           ~H\"\"\"
           <.dynamic_component {assigns} />
@@ -61,6 +65,12 @@ defmodule MishkaGervaz.Table.Behaviours.ActionType do
 
   `MishkaGervaz.Helpers.maybe_assign/3` is the way to set a key only when it has a value, so an
   absent option does not become an empty attribute.
+
+  ## Text the resource declared
+
+  Read the label with `MishkaGervaz.Helpers.action_label/1` and the confirm message with
+  `MishkaGervaz.Helpers.resolve_confirm/2`: a string is translated in the caller's locale and a
+  function is called, as every built-in type does.
 
   ## Accessing State
 

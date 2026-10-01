@@ -18,7 +18,7 @@ defmodule MishkaGervaz.Table.Types.Filter.Number do
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType
   use Phoenix.Component
-  import MishkaGervaz.Helpers, only: [get_ui_label: 1]
+  import MishkaGervaz.Helpers, only: [get_ui_label: 1, resolve_label: 1]
 
   @impl true
   @spec render_input(map(), term(), module()) :: Phoenix.LiveView.Rendered.t()
@@ -30,7 +30,7 @@ defmodule MishkaGervaz.Table.Types.Filter.Number do
         __changed__: %{},
         name: filter.name,
         value: value || "",
-        placeholder: filter[:ui][:placeholder],
+        placeholder: resolve_label(filter[:ui][:placeholder]),
         placeholder_label: get_ui_label(filter),
         min: filter[:min],
         max: filter[:max],

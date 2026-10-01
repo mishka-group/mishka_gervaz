@@ -25,12 +25,12 @@ defmodule MishkaGervaz.Table.Types.Filter.Select do
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType
   use Phoenix.Component
-  import MishkaGervaz.Helpers, only: [humanize: 1]
+  import MishkaGervaz.Helpers, only: [humanize: 1, translate_options: 1, translate_text: 1]
 
   @impl true
   @spec render_input(map(), term(), module()) :: Phoenix.LiveView.Rendered.t()
   def render_input(filter, value, ui) do
-    options = normalize_options(filter[:options] || [])
+    options = translate_options(normalize_options(filter[:options] || []))
     extra = filter[:ui][:extra] || %{}
 
     ui.select(
@@ -39,7 +39,7 @@ defmodule MishkaGervaz.Table.Types.Filter.Select do
         name: filter.name,
         value: value || "",
         options: options,
-        prompt: filter[:ui][:prompt],
+        prompt: translate_text(filter[:ui][:prompt]),
         icon: filter[:ui][:icon],
         variant: :filter
       })

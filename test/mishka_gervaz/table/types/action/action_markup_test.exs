@@ -186,7 +186,8 @@ defmodule MishkaGervaz.Table.Types.Action.ActionMarkupTest do
 
     use Phoenix.Component
 
-    import MishkaGervaz.Helpers, only: [dynamic_component: 1, humanize: 1]
+    import MishkaGervaz.Helpers,
+      only: [action_label: 1, resolve_confirm: 2, dynamic_component: 1]
 
     @impl true
     def render(assigns, action, record, ui, target) do
@@ -196,13 +197,16 @@ defmodule MishkaGervaz.Table.Types.Action.ActionMarkupTest do
         %{__changed__: %{}}
         |> assign(:module, ui)
         |> assign(:function, :button)
-        |> assign(:label, action[:ui][:label] || humanize(action[:name]))
+        |> assign(:label, action_label(action))
         |> assign(:icon, action[:ui][:icon])
         |> assign(:class, action[:ui][:class] || "text-orange-600 hover:text-orange-800")
         |> assign(:phx_click, action[:event] || "confirm")
         |> assign(:phx_value_id, record.id)
         |> assign(:phx_target, target)
-        |> assign(:data_confirm, (master? && action[:confirm]) || "Are you sure?")
+        |> assign(
+          :data_confirm,
+          (master? && resolve_confirm(action[:confirm], record)) || "Are you sure?"
+        )
 
       ~H"""
       <.dynamic_component {assigns} />

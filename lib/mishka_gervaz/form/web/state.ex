@@ -525,7 +525,7 @@ defmodule MishkaGervaz.Form.Web.State do
       fields
       |> Enum.filter(fn f -> f.type == :combobox and f.options != nil end)
       |> Enum.reduce(%{}, fn field, acc ->
-        Map.put(acc, field.name, MishkaGervaz.Helpers.resolve_options(field.options))
+        Map.put(acc, field.name, MishkaGervaz.Helpers.resolve_translated_options(field.options))
       end)
     end
 
@@ -536,7 +536,7 @@ defmodule MishkaGervaz.Form.Web.State do
     def prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
 
     def prepend_nil_option(options, label) when is_binary(label) do
-      [{label, "__nil__"} | options]
+      [{MishkaGervaz.Helpers.resolve_label(label), "__nil__"} | options]
     end
 
     def prepend_nil_option(options, label) when is_function(label, 0) do

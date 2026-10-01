@@ -23,6 +23,7 @@ defmodule MishkaGervaz.Table.Types.Filter.Relation do
   """
 
   @behaviour MishkaGervaz.Table.Behaviours.FilterType
+  import MishkaGervaz.Helpers, only: [resolve_label: 1, translate_text: 1]
 
   @impl true
   def render_input(filter, value, ui) do
@@ -89,8 +90,8 @@ defmodule MishkaGervaz.Table.Types.Filter.Relation do
       filter_name: filter.name,
       table_id: filter[:table_id],
       options: prepend_nil_option(filter[:options] || [], filter[:include_nil]),
-      prompt: get_ui(filter, :prompt, "Select..."),
-      placeholder: get_ui(filter, :placeholder),
+      prompt: translate_text(get_ui(filter, :prompt, "Select...")),
+      placeholder: resolve_label(get_ui(filter, :placeholder)),
       icon: get_ui(filter, :icon),
       variant: :filter,
       search: true,
@@ -123,7 +124,7 @@ defmodule MishkaGervaz.Table.Types.Filter.Relation do
   defp prepend_nil_option(options, true), do: [{"(None)", "__nil__"} | options]
 
   defp prepend_nil_option(options, label) when is_binary(label),
-    do: [{label, "__nil__"} | options]
+    do: [{resolve_label(label), "__nil__"} | options]
 
   defp normalize_selected(nil), do: []
   defp normalize_selected(""), do: []

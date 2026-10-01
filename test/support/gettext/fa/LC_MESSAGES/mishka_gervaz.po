@@ -91,3 +91,141 @@ msgstr "این رکورد دیگر اینجا نیست."
 
 msgid "You are not allowed to do this."
 msgstr "شما اجازهٔ این کار را ندارید."
+
+msgid "Slug"
+msgstr "نشانی کوتاه"
+
+msgid "Published"
+msgstr "منتشر شده"
+
+msgid "Draft"
+msgstr "پیش‌نویس"
+
+msgid "Archived"
+msgstr "بایگانی‌شده"
+
+msgid "Featured"
+msgstr "ویژه"
+
+msgid "Ordinary"
+msgstr "معمولی"
+
+msgid "Find posts"
+msgstr "یافتن نوشته‌ها"
+
+msgid "Search posts"
+msgstr "جستجوی نوشته‌ها"
+
+msgid "Status"
+msgstr "وضعیت"
+
+msgid "Pick a status"
+msgstr "یک وضعیت را برگزینید"
+
+msgid "Featured only"
+msgstr "فقط ویژه‌ها"
+
+msgid "Delete this draft?"
+msgstr "این پیش‌نویس حذف شود؟"
+
+msgid "Duplicate"
+msgstr "رونوشت"
+
+msgid "Publish all"
+msgstr "انتشار همه"
+
+msgid "Danger zone"
+msgstr "ناحیهٔ خطر"
+
+msgid "Archive the selected posts?"
+msgstr "نوشته‌های انتخاب‌شده بایگانی شوند؟"
+
+msgid "Archive them"
+msgstr "بایگانی‌شان کن"
+
+msgid "Archive all"
+msgstr "بایگانی همه"
+
+msgid "Earlier"
+msgstr "قبلی"
+
+msgid "Later"
+msgstr "بعدی"
+
+msgid "Page {page} of {total}"
+msgstr "صفحهٔ {page} از {total}"
+
+msgid "Nothing here yet"
+msgstr "هنوز چیزی اینجا نیست"
+
+msgid "Add one"
+msgstr "یکی اضافه کنید"
+
+msgid "Could not load the posts"
+msgstr "نوشته‌ها بارگذاری نشدند"
+
+msgid "Try again"
+msgstr "دوباره تلاش کنید"
+
+msgid "All posts"
+msgstr "همهٔ نوشته‌ها"
+
+msgid "Everything that was ever written."
+msgstr "هرچه تا امروز نوشته شده."
+
+msgid "Sorted by date."
+msgstr "به ترتیب تاریخ."
+
+msgid "Heads up"
+msgstr "توجه"
+
+msgid "Drafts are hidden from visitors."
+msgstr "پیش‌نویس‌ها برای بازدیدکنندگان پنهان‌اند."
+
+msgid "Type a title"
+msgstr "عنوانی بنویسید"
+
+msgid "Shown as the page heading."
+msgstr "به‌عنوان سرتیتر صفحه نمایش داده می‌شود."
+
+msgid "Basic"
+msgstr "پایه"
+
+msgid "Write a post"
+msgstr "نوشته‌ای بنویسید"
+
+msgid "Fill in the details below."
+msgstr "مشخصات را در زیر پر کنید."
+
+msgid "Saved posts are published at once."
+msgstr "نوشته‌های ذخیره‌شده بی‌درنگ منتشر می‌شوند."
+
+msgid "Careful"
+msgstr "احتیاط"
+
+msgid "Changes are visible to everyone."
+msgstr "تغییرها برای همه دیده می‌شوند."
+
+msgid "Save the post"
+msgstr "ذخیرهٔ نوشته"
+
+msgid "Never mind"
+msgstr "بی‌خیال"
+
+msgid "Item name"
+msgstr "نام مورد"
+
+msgid "e.g. Widget"
+msgstr "مثلاً ابزار"
+
+msgid "Small"
+msgstr "کوچک"
+
+msgid "Large"
+msgstr "بزرگ"
+
+msgid "Add entry"
+msgstr "افزودن مورد"
+
+msgid "Remove entry"
+msgstr "حذف مورد"

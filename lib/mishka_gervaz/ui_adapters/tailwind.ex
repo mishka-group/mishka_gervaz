@@ -13,7 +13,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   alias MishkaGervaz.Table.Templates.Shared
 
   import MishkaGervaz.Helpers,
-    only: [normalize_options: 1, normalize_selected_values: 1, resolve_label: 1]
+    only: [
+      normalize_options: 1,
+      normalize_selected_values: 1,
+      resolve_label: 1,
+      resolve_ui_label: 1,
+      translate_text: 1
+    ]
 
   @disabled_class "cursor-not-allowed bg-[#f6f5f2] text-[#8a877f]"
 
@@ -1696,7 +1702,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign(:glyph, glyph)
       |> assign(:hero_icon, action.ui && action.ui.icon)
-      |> assign(:label, (action.ui && action.ui.label) || Phoenix.Naming.humanize(action.name))
+      |> assign(
+        :label,
+        resolve_ui_label(action) || translate_text(Phoenix.Naming.humanize(action.name))
+      )
+      |> assign(:confirm, translate_text(action.confirm))
       |> assign(:btn_class, (action.ui && action.ui.class) || bulk_button_class(variant))
 
     ~H"""
@@ -1706,7 +1716,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-value-action={@action.name}
       phx-target={@myself}
       class={@btn_class}
-      data-confirm={@action.confirm}
+      data-confirm={@confirm}
     >
       <.bulk_glyph :if={@glyph} glyph={@glyph} />
       <.render_icon :if={is_nil(@glyph) and @hero_icon} name={@hero_icon} class="size-[14px]" />

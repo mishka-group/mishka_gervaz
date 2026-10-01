@@ -31,13 +31,7 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
   use Phoenix.Component
 
   import MishkaGervaz.Helpers,
-    only: [
-      humanize: 1,
-      dynamic_component: 1,
-      maybe_assign: 3,
-      resolve_label: 1,
-      resolve_confirm: 2
-    ]
+    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3, resolve_confirm: 2]
 
   @impl true
   def render(_assigns, action, record, ui, target) do
@@ -54,7 +48,7 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
       |> assign(:module, ui)
       |> assign(:function, :button)
       |> assign(:variant, action_variant(action[:name]))
-      |> assign(:label, resolve_label(action[:ui][:label]) || humanize(action[:name]))
+      |> assign(:label, action_label(action))
       |> maybe_assign(:icon, action[:ui][:icon])
       |> maybe_assign(:class, action[:ui][:class])
       |> assign(:phx_click, "custom_event")

@@ -80,6 +80,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       has_value?: 1,
       find_by_name: 2,
       resolve_ui_label: 1,
+      resolve_dynamic: 2,
+      resolve_translated_options: 1,
+      translate_options: 1,
+      translate_text: 1,
       accessible?: 2,
       format_filesize: 1
     ]
@@ -191,7 +195,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
       assigns =
         assigns
-        |> assign(:group_label, Map.get(group, :resolved_label))
+        |> assign(:group_label, translate_text(Map.get(group, :resolved_label)))
         |> assign(:group_fields, group_fields)
         |> assign(:group_columns, get_in(group, [:ui, :columns]))
         |> assign(:ui, assigns.static.ui_adapter)
@@ -236,7 +240,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       Enum.map(steps, fn step ->
         %{
           name: step.name,
-          label: Map.get(step, :resolved_label, to_string(step.name)),
+          label: translate_text(Map.get(step, :resolved_label, to_string(step.name))),
           status: Map.get(assigns.state.step_states, step.name, :pending)
         }
       end)
@@ -595,12 +599,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp has_changeset_errors?(_), do: false
 
-  defp resolve_dynamic(nil, _state), do: nil
-  defp resolve_dynamic(value, _state) when is_binary(value), do: value
-  defp resolve_dynamic(fun, _state) when is_function(fun, 0), do: fun.()
-  defp resolve_dynamic(fun, state) when is_function(fun, 1), do: fun.(state)
-  defp resolve_dynamic(value, _state), do: value
-
   defp render_group_fields(assigns, fields, group_columns) do
     columns = group_columns || assigns.static.layout_columns
     mode = assigns.state.mode
@@ -656,7 +654,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           class="mb-[5px] block text-[10px] font-bold text-[#8a877f]"
           for={"#{@input_id}_#{key.name}"}
         >
-          {key.label || MishkaGervaz.Helpers.humanize(key.name)}
+          {translate_text(key.label || MishkaGervaz.Helpers.humanize(key.name))}
         </label>
         {key_map_input(
           @ui,
@@ -765,16 +763,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     }
 
   defp key_map_control(%{type: :select} = key, _value),
-    do: %{function: :select, options: key.options, prompt: key.placeholder || ""}
+    do: %{
+      function: :select,
+      options: translate_options(key.options),
+      prompt: translate_text(key.placeholder || "")
+    }
 
   defp key_map_control(%{type: :textarea} = key, _value),
-    do: %{function: :textarea, rows: 2, placeholder: key.placeholder}
+    do: %{function: :textarea, rows: 2, placeholder: translate_text(key.placeholder)}
 
   defp key_map_control(%{type: :number} = key, _value),
-    do: %{function: :number_input, placeholder: key.placeholder}
+    do: %{function: :number_input, placeholder: translate_text(key.placeholder)}
 
   defp key_map_control(key, _value),
-    do: %{function: :text_input, placeholder: key.placeholder}
+    do: %{function: :text_input, placeholder: translate_text(key.placeholder)}
 
   defp ticked?(value), do: value in [true, "true", "on"]
 
@@ -788,7 +790,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp busy_label(button, static) do
     cond do
       is_map(button) and is_binary(button[:loading_label]) ->
-        button[:loading_label]
+        translate_text(button[:loading_label])
 
       static.uploads not in [nil, []] ->
         dgettext("mishka_gervaz", "Uploading…")
@@ -1170,7 +1172,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     do: dgettext("mishka_gervaz", "Loading options...")
 
   defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_binary(prompt),
-    do: prompt
+    do: translate_text(prompt)
 
   defp get_disabled_prompt(%{ui: %{disabled_prompt: prompt}}, _, _) when is_function(prompt, 0),
     do: prompt.()
@@ -1183,7 +1185,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         parent -> resolve_ui_label(parent)
       end
 
-    field_name = parent_label || Phoenix.Naming.humanize(depends_on)
+    field_name = parent_label || translate_text(Phoenix.Naming.humanize(depends_on))
     dgettext("mishka_gervaz", "Select %{field} first", field: field_name)
   end
 
@@ -1534,8 +1536,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  defp entry_title(name, :array, index), do: "#{Phoenix.Naming.humanize(name)} #{index + 1}"
-  defp entry_title(name, _mode, _index), do: Phoenix.Naming.humanize(name)
+  defp entry_title(name, :array, index), do: "#{entry_name(name)} #{index + 1}"
+  defp entry_title(name, _mode, _index), do: entry_name(name)
+
+  defp entry_name(name), do: translate_text(Phoenix.Naming.humanize(name))
 
   defp render_embedded_nested(_ui, field, _form_field, assigns) do
     nested_fields = Map.get(field, :nested_fields, [])
@@ -1735,7 +1739,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns
     |> sub_field_base()
     |> assign(:function, :select)
-    |> assign(:options, assigns.sf.options || [])
+    |> assign(:options, translate_options(assigns.sf.options || []))
     |> assign(:prompt, assigns.sf.placeholder)
     |> dynamic_component()
   end
@@ -1950,7 +1954,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     do: extract_sub_field_info(sub_field, false, nil)
 
   defp extract_sub_field_info(sub_field, parent_readonly, _state) when is_atom(sub_field) do
-    label = Phoenix.Naming.humanize(sub_field)
+    label = translate_text(Phoenix.Naming.humanize(sub_field))
 
     %{
       name: sub_field,
@@ -1972,7 +1976,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp extract_sub_field_info(sf, parent_readonly, state) when is_map(sf) do
     name = sub_field_name(sf)
-    label = resolve_callable(Map.get(sf, :label)) || Phoenix.Naming.humanize(name)
+    label = resolve_callable(Map.get(sf, :label)) || translate_text(Phoenix.Naming.humanize(name))
     type = Map.get(sf, :type, :text)
 
     %{
@@ -2003,11 +2007,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp auto_span(_), do: nil
 
   defp resolve_callable(f) when is_function(f, 0), do: f.()
-  defp resolve_callable(v), do: v
+  defp resolve_callable(v), do: translate_text(v)
 
-  defp resolve_field_options(field) do
-    MishkaGervaz.Helpers.resolve_options(Map.get(field, :options))
-  end
+  defp resolve_field_options(field), do: resolve_translated_options(Map.get(field, :options))
 
   defp evaluate_readonly(field, state), do: State.Helpers.field_readonly?(field, state)
 

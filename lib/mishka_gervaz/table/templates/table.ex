@@ -30,7 +30,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
   use MishkaGervaz.Messages
 
   import MishkaGervaz.Helpers,
-    only: [resolve_label: 1, dynamic_component: 1, get_visible_columns: 2, accessible?: 2]
+    only: [
+      resolve_label: 1,
+      resolve_dynamic: 2,
+      translate_text: 1,
+      dynamic_component: 1,
+      get_visible_columns: 2,
+      accessible?: 2
+    ]
 
   alias MishkaGervaz.Table.Templates.Shared
   alias MishkaGervaz.Table.Types
@@ -485,12 +492,6 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
   defp result_empty?(_), do: false
 
-  defp resolve_dynamic(nil, _state), do: nil
-  defp resolve_dynamic(value, _state) when is_binary(value), do: value
-  defp resolve_dynamic(fun, _state) when is_function(fun, 0), do: fun.()
-  defp resolve_dynamic(fun, state) when is_function(fun, 1), do: fun.(state)
-  defp resolve_dynamic(value, _state), do: value
-
   @impl true
   def render_header(assigns) do
     checkbox_assigns =
@@ -553,7 +554,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       >
         <div class="flex min-w-0 items-center gap-1">
           <span class="truncate">
-            {resolve_label(column.label) || Phoenix.Naming.humanize(column.name)}
+            {column_label(column)}
           </span>
           <.sort_indicator
             :if={column.name in @sortable_columns}
@@ -741,7 +742,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           ]}
         >
           <span class="hidden text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground max-[980px]:block">
-            {resolve_label(column.label) || Phoenix.Naming.humanize(column.name)}
+            {column_label(column)}
           </span>
           <Shared.render_cell column={column} record={@record} static={@static} state={@state} />
         </div>
@@ -819,7 +820,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
   @impl true
   def render_loading(assigns) do
     loading_text =
-      (assigns[:static] && assigns.static.pagination_ui.loading_text) ||
+      translate_text(assigns[:static] && assigns.static.pagination_ui.loading_text) ||
         dgettext("mishka_gervaz", "Loading...")
 
     assigns = assign(assigns, :loading_text, loading_text)
@@ -838,7 +839,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
   end
 
   defp render_loading_overlay(assigns) do
-    loading_text = assigns.static.pagination_ui.loading_text
+    loading_text = translate_text(assigns.static.pagination_ui.loading_text)
     assigns = assign(assigns, :loading_text, loading_text)
 
     ~H"""
@@ -958,6 +959,9 @@ defmodule MishkaGervaz.Table.Templates.Table do
       _ -> base <> sortable_extra
     end
   end
+
+  defp column_label(column),
+    do: resolve_label(column.label) || translate_text(Phoenix.Naming.humanize(column.name))
 
   defp row_classes(static, _state, record, selected?) do
     options = static.template_options || default_options()

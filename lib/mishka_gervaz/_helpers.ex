@@ -60,10 +60,26 @@ defmodule MishkaGervaz.Helpers do
   def humanize(string) when is_binary(string), do: string
 
   @doc """
+  Translates a string a resource declared in its DSL, in the caller's locale.
+
+  See `MishkaGervaz.Messages.translate_text/1`.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.translate_text("Static Label")
+      "Static Label"
+
+      iex> MishkaGervaz.Helpers.translate_text(nil)
+      nil
+  """
+  @spec translate_text(term()) :: term()
+  defdelegate translate_text(text), to: MishkaGervaz.Messages
+
+  @doc """
   Resolves a label that may be a string or a zero-arity function.
 
-  This enables i18n support in DSL labels by allowing users to pass
-  `fn -> gettext("...") end` which defers execution to runtime.
+  A string is translated in the caller's locale (`translate_text/1`). A function is called and its
+  result returned as it is, so `fn -> gettext("...") end` defers the lookup to runtime.
 
   ## Examples
 
@@ -78,15 +94,55 @@ defmodule MishkaGervaz.Helpers do
   """
   @spec resolve_label(String.t() | (-> String.t()) | nil) :: String.t() | nil
   def resolve_label(label) when is_function(label, 0), do: label.()
-  def resolve_label(label) when is_binary(label), do: label
+  def resolve_label(label) when is_binary(label), do: translate_text(label)
   def resolve_label(nil), do: nil
+
+  @doc """
+  Resolves a header, footer or notice text: a string (translated), `fn -> text end`, or
+  `fn state -> text end`.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.resolve_dynamic("A heading", %{})
+      "A heading"
+
+      iex> MishkaGervaz.Helpers.resolve_dynamic(fn state -> state.title end, %{title: "From state"})
+      "From state"
+
+      iex> MishkaGervaz.Helpers.resolve_dynamic(nil, %{})
+      nil
+  """
+  @spec resolve_dynamic(term(), map()) :: term()
+  def resolve_dynamic(nil, _state), do: nil
+  def resolve_dynamic(value, _state) when is_binary(value), do: translate_text(value)
+  def resolve_dynamic(fun, _state) when is_function(fun, 0), do: fun.()
+  def resolve_dynamic(fun, state) when is_function(fun, 1), do: fun.(state)
+  def resolve_dynamic(value, _state), do: value
+
+  @doc """
+  A row action's button label: its `ui` label, else its humanized name, translated in the caller's
+  locale.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.action_label(%{name: :mark_done, ui: %{label: "Finish"}})
+      "Finish"
+
+      iex> MishkaGervaz.Helpers.action_label(%{name: :mark_done, ui: nil})
+      "Mark Done"
+  """
+  @spec action_label(map()) :: String.t()
+  def action_label(action) do
+    resolve_label(action[:ui][:label]) || translate_text(humanize(action[:name]))
+  end
 
   @doc """
   Resolves an action's `confirm` — the sibling of `resolve_label/1` for a message that needs the
   record.
 
   `confirm` is declared as `String.t() | (map() -> String.t()) | nil`; the function form lets a
-  prompt name what it is about to act on ("Delete the draft “Autosave”?").
+  prompt name what it is about to act on ("Delete the draft “Autosave”?"). A string is translated
+  in the caller's locale (`translate_text/1`); a function's result is returned as it is.
 
   ## Examples
 
@@ -101,7 +157,7 @@ defmodule MishkaGervaz.Helpers do
   """
   @spec resolve_confirm(String.t() | (map() -> String.t()) | nil, map()) :: String.t() | nil
   def resolve_confirm(confirm, record) when is_function(confirm, 1), do: confirm.(record)
-  def resolve_confirm(confirm, _record), do: confirm
+  def resolve_confirm(confirm, _record), do: translate_text(confirm)
 
   @doc """
   Resolves a display value from a record using either an atom field or a function.
@@ -169,8 +225,8 @@ defmodule MishkaGervaz.Helpers do
   Resolves a label from a nested UI structure.
 
   Extracts the label from entities that have a `ui` field containing a `label`.
-  Supports both map and struct formats, with labels that can be strings or
-  zero-arity functions (for i18n support).
+  Supports both map and struct formats, with labels that can be strings (translated in the
+  caller's locale) or zero-arity functions (called, their result returned as it is).
 
   ## Examples
 
@@ -191,7 +247,7 @@ defmodule MishkaGervaz.Helpers do
   """
   @spec resolve_ui_label(map() | struct() | nil) :: String.t() | nil
   def resolve_ui_label(%{ui: %{label: label}}) when is_function(label, 0), do: label.()
-  def resolve_ui_label(%{ui: %{label: label}}) when is_binary(label), do: label
+  def resolve_ui_label(%{ui: %{label: label}}) when is_binary(label), do: translate_text(label)
   def resolve_ui_label(%{ui: ui}) when is_struct(ui), do: resolve_label(Map.get(ui, :label))
   def resolve_ui_label(_), do: nil
 
@@ -199,7 +255,7 @@ defmodule MishkaGervaz.Helpers do
   Extracts and resolves a label from a UI structure, with fallback to humanized name.
 
   Similar to `resolve_ui_label/1` but falls back to humanizing the `:name` field
-  when no UI label is found.
+  when no UI label is found. The humanized name is translated in the caller's locale.
 
   ## Examples
 
@@ -214,7 +270,7 @@ defmodule MishkaGervaz.Helpers do
   """
   @spec get_ui_label(map() | struct()) :: String.t()
   def get_ui_label(entity) do
-    resolve_ui_label(entity) || humanize(entity[:name] || entity.name)
+    resolve_ui_label(entity) || translate_text(humanize(entity[:name] || entity.name))
   end
 
   @doc """
@@ -238,6 +294,63 @@ defmodule MishkaGervaz.Helpers do
   def resolve_options(opts) when is_function(opts, 0), do: opts.()
   def resolve_options(opts) when is_list(opts), do: opts
   def resolve_options(_), do: []
+
+  @doc """
+  `resolve_options/1` for the options a resource declared: the labels of a list are translated in
+  the caller's locale (`translate_options/1`), the result of a function is returned as it is.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.resolve_translated_options([{"A", "a"}])
+      [{"A", "a"}]
+
+      iex> MishkaGervaz.Helpers.resolve_translated_options(fn -> [{"X", "x"}] end)
+      [{"X", "x"}]
+
+      iex> MishkaGervaz.Helpers.resolve_translated_options(nil)
+      []
+  """
+  @spec resolve_translated_options(list() | (-> list()) | nil) :: list()
+  def resolve_translated_options(opts) when is_list(opts), do: translate_options(opts)
+  def resolve_translated_options(opts), do: resolve_options(opts)
+
+  @doc """
+  Translates the label of every option in the caller's locale (`translate_text/1`).
+
+  Takes the shapes a select accepts: `{label, value}`, `[label: label, value: value]`, a bare
+  value that is its own label, and `{group_label, options}` for a group, whose label and options
+  are translated. A bare value or keyword option becomes `{label, value}`. The value of an option
+  is never translated, and a shape this does not know is returned as it is.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.translate_options([{"Open", :open}, :on_hold, [label: "Gone", value: "gone"]])
+      [{"Open", :open}, {"On Hold", "on_hold"}, {"Gone", "gone"}]
+
+      iex> MishkaGervaz.Helpers.translate_options([{"Group", [{"A", "a"}]}])
+      [{"Group", [{"A", "a"}]}]
+  """
+  @spec translate_options(list()) :: list()
+  def translate_options(options) when is_list(options) do
+    Enum.map(options, fn
+      {group_label, [_ | _] = group} ->
+        {translate_text(group_label), translate_options(group)}
+
+      {label, value} ->
+        {translate_text(label), value}
+
+      option when is_atom(option) or is_binary(option) or is_list(option) ->
+        translate_option(option)
+
+      other ->
+        other
+    end)
+  end
+
+  defp translate_option(option) do
+    [{label, value}] = normalize_options([option])
+    {translate_text(label), value}
+  end
 
   @doc """
   Whether `module` defines `fun/arity`, loading the module first.

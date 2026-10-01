@@ -6,7 +6,7 @@ defmodule MishkaGervaz.Table.Types.Column.Badge do
   ## Options (via `column.ui.extra`)
 
     * `:colors`  - map of value → colour class, e.g. `%{"active" => "bg-[#e6f6ee] text-[#177a53]"}`
-    * `:labels`  - map of value → display label (falls back to a humanized value)
+    * `:labels`  - map of value → display label, translated in the caller's locale (falls back to a humanized value)
     * `:dots`    - map of value → dot colour class for the `:pill` variant, e.g. `%{"active" => "bg-[#1f9d6b]"}`
     * `:variant` - `:tag` (default, square-ish, no dot) or `:pill` (rounded with a leading dot)
     * `:default_color` - colour class when the value is not in `:colors`
@@ -31,7 +31,7 @@ defmodule MishkaGervaz.Table.Types.Column.Badge do
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType
   use Phoenix.Component
-  import MishkaGervaz.Helpers, only: [humanize: 1]
+  import MishkaGervaz.Helpers, only: [humanize: 1, translate_text: 1]
 
   @impl true
   def render(nil, _column, _record, ui), do: ui.cell_empty(%{__changed__: %{}})
@@ -42,7 +42,7 @@ defmodule MishkaGervaz.Table.Types.Column.Badge do
 
     ui.badge(%{
       __changed__: %{},
-      label: lookup(extra[:labels], key, humanize(value)),
+      label: translate_text(lookup(extra[:labels], key, humanize(value))),
       class: lookup(extra[:colors], key, extra[:default_color]),
       dot: lookup(extra[:dots], key, nil),
       variant: extra[:variant] || :tag

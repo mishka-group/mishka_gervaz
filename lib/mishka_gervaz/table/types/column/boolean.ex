@@ -29,6 +29,7 @@ defmodule MishkaGervaz.Table.Types.Column.Boolean do
 
   @behaviour MishkaGervaz.Table.Behaviours.ColumnType
   use Phoenix.Component
+  import MishkaGervaz.Helpers, only: [translate_text: 1]
 
   @impl true
   def render(nil, _column, _record, ui), do: ui.cell_empty(%{__changed__: %{}})
@@ -45,7 +46,7 @@ defmodule MishkaGervaz.Table.Types.Column.Boolean do
 
   @spec render_true(map(), module()) :: Phoenix.LiveView.Rendered.t()
   defp render_true(extra, ui) do
-    label = extra[:true_label]
+    label = translate_text(extra[:true_label])
 
     if label do
       ui.cell_text(%{__changed__: %{}, text: label, class: extra[:true_class]})
@@ -59,7 +60,7 @@ defmodule MishkaGervaz.Table.Types.Column.Boolean do
 
   @spec render_false(map(), module()) :: Phoenix.LiveView.Rendered.t()
   defp render_false(extra, ui) do
-    label = extra[:false_label]
+    label = translate_text(extra[:false_label])
 
     if label do
       ui.cell_text(%{__changed__: %{}, text: label, class: extra[:false_class]})

@@ -41,6 +41,7 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
   """
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  import MishkaGervaz.Helpers, only: [resolve_label: 1]
 
   @impl true
   def render(assigns, _config), do: assigns
@@ -86,7 +87,7 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
       id: input_id(state_assigns, field),
       table_id: state_assigns[:form_id],
       options: option_list,
-      placeholder: get_ui(field, :placeholder, "Select..."),
+      placeholder: resolve_label(get_ui(field, :placeholder, "Select...")),
       icon: get_ui(field, :icon),
       has_more?: Map.get(rel_data, :has_more?, false),
       loading?: Map.get(rel_data, :loading?, false),
