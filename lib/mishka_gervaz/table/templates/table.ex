@@ -173,7 +173,12 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
           <div
             :if={not @empty?}
-            class="relative isolate overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)] max-[980px]:overflow-visible! max-[980px]:rounded-none! max-[980px]:border-0! max-[980px]:bg-transparent! max-[980px]:shadow-none!"
+            data-role="gervaz-table-frame"
+            class={[
+              "relative isolate overflow-x-auto rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)]",
+              scrollbar_class(),
+              "max-[980px]:overflow-visible! max-[980px]:rounded-none! max-[980px]:border-0! max-[980px]:bg-transparent! max-[980px]:shadow-none!"
+            ]}
           >
             <.render_loading_overlay
               :if={
@@ -513,7 +518,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         assigns.show_expand,
         assigns.show_checkboxes,
         visible_columns,
-        assigns.show_actions
+        actions_track(assigns.static, assigns.state, assigns.show_actions)
       )
 
     assigns =
@@ -676,7 +681,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         assigns.show_expand,
         assigns.show_checkboxes,
         assigns.visible_columns,
-        assigns.show_actions
+        actions_track(assigns.static, assigns.state, assigns.show_actions)
       )
 
     assigns =
@@ -912,7 +917,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     |> Enum.filter(& &1)
   end
 
-  defp grid_template_columns(show_expand, show_checkboxes, visible_columns, show_actions) do
+  defp grid_template_columns(show_expand, show_checkboxes, visible_columns, actions_track) do
     column_tracks =
       visible_columns
       |> Enum.with_index()
@@ -924,9 +929,35 @@ defmodule MishkaGervaz.Table.Templates.Table do
     ]
     |> Enum.filter(& &1)
     |> Kernel.++(column_tracks)
-    |> Kernel.++(if show_actions, do: ["120px"], else: [])
+    |> Kernel.++(List.wrap(actions_track))
     |> Enum.join(" ")
   end
+
+  @action_control_px 30
+  @action_gap_px 4
+  @actions_cell_padding_px 32
+  @actions_track_min_px 120
+
+  # The Actions column's track: room for the most row action controls one row can draw (30px each,
+  # 4px apart, 16px of padding on either side), at least 120px, growing to a wider control's content.
+  defp actions_track(static, state, true) do
+    controls = Shared.max_row_action_controls(static, state)
+
+    content =
+      controls * @action_control_px + max(controls - 1, 0) * @action_gap_px +
+        @actions_cell_padding_px
+
+    "minmax(#{max(content, @actions_track_min_px)}px,max-content)"
+  end
+
+  defp actions_track(_static, _state, _show_actions), do: nil
+
+  @scrollbar_class "[scrollbar-width:thin] [scrollbar-color:#d5d3cb_transparent] " <>
+                     "[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent " <>
+                     "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d5d3cb] " <>
+                     "[&::-webkit-scrollbar-thumb:hover]:bg-[#bdbab1]"
+
+  defp scrollbar_class, do: @scrollbar_class
 
   defp column_track(%{ui: %{width: width}}, _index) when is_binary(width), do: width
   defp column_track(column, index), do: type_track(Map.get(column, :type_module), index)

@@ -1699,6 +1699,44 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   @doc """
+  The most row action controls one row can draw for this user and archive view: one per inline
+  action and one per dropdown with an item to show, laid out the way `render_row_actions/1` lays
+  them out.
+
+  An action whose `visible` is a function counts as visible.
+  """
+  @spec max_row_action_controls(map(), map()) :: non_neg_integer()
+  def max_row_action_controls(static, state) do
+    row_actions = static.row_actions || []
+    layout = static.row_actions_layout
+    dropdowns = static.row_action_dropdowns || []
+    inline_names = (layout && layout[:inline]) || []
+
+    if layout != nil and (dropdowns != [] or inline_names != []) do
+      inline = Enum.count(row_actions, &(&1[:name] in inline_names and may_show?(&1, state)))
+
+      menus =
+        Enum.count(dropdowns, fn dropdown ->
+          dropdown.name in (layout[:dropdown] || []) and
+            Enum.any?(Map.get(dropdown, :items, []), &may_show?(&1, state))
+        end)
+
+      inline + menus
+    else
+      Enum.count(row_actions, &may_show?(&1, state))
+    end
+  end
+
+  defp may_show?(%{type: :separator}, _state), do: false
+  defp may_show?(%{type: :accordion}, _state), do: false
+
+  defp may_show?(%{visible: visible} = action, state) when is_function(visible, 2),
+    do: action_authorized?(action, nil, state)
+
+  defp may_show?(action, state),
+    do: action_visible?(action, nil, state) and action_authorized?(action, nil, state)
+
+  @doc """
   Renders the empty state with configurable message, icon, and action.
   """
   @spec render_empty_state(map()) :: Phoenix.LiveView.Rendered.t()
