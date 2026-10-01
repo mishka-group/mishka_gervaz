@@ -104,8 +104,17 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
     viewport_event = if is_infinite_scroll?, do: "load_more", else: nil
 
+    grid_template =
+      grid_template_columns(
+        show_expand,
+        show_checkboxes,
+        get_visible_columns(static.columns, state),
+        show_actions
+      )
+
     assigns =
       assigns
+      |> assign(:grid_template, grid_template)
       |> assign(:show_checkboxes, show_checkboxes)
       |> assign(:show_filters, show_filters)
       |> assign(:show_pagination, show_pagination)
@@ -188,7 +197,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
               static={@static}
               state={@state}
             />
-            <div class={container_classes(@static)}>
+            <div
+              id={"#{@static.stream_name}-grid"}
+              class={container_classes(@static)}
+              style={"grid-template-columns: #{@grid_template};"}
+            >
               <.render_header
                 static={@static}
                 state={@state}
@@ -201,7 +214,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
               <div
                 id={"#{@static.stream_name}"}
                 phx-update="stream"
-                class={row_group_classes(@static)}
+                class={[subgrid_class() | row_group_classes(@static)]}
               >
                 <.render_item
                   :for={{id, record} <- @stream}
@@ -513,21 +526,12 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
     sort_field_map = assigns.static.sort_field_map || %{}
 
-    grid_template =
-      grid_template_columns(
-        assigns.show_expand,
-        assigns.show_checkboxes,
-        visible_columns,
-        actions_track(assigns.static, assigns.state, assigns.show_actions)
-      )
-
     assigns =
       assigns
       |> assign(:checkbox_assigns, checkbox_assigns)
       |> assign(:sortable_columns, sortable_columns)
       |> assign(:visible_columns, visible_columns)
       |> assign(:sort_field_map, sort_field_map)
-      |> assign(:grid_template, grid_template)
 
     ~H"""
     <div
@@ -535,9 +539,9 @@ defmodule MishkaGervaz.Table.Templates.Table do
       class={[
         (@static.theme && @static.theme[:header_class]) ||
           "grid py-[14px] border-b border-[#ecebe6] bg-[#faf9f6]",
+        subgrid_class(),
         "max-[980px]:hidden!"
       ]}
-      style={"grid-template-columns: #{@grid_template};"}
     >
       <div :if={@show_checkboxes} class="pl-[16px]">
         <.dynamic_component
@@ -644,7 +648,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     assigns = assign(assigns, :custom_content, custom_content)
 
     ~H"""
-    <div id={@id}>
+    <div id={@id} class="min-[980px]:col-span-full">
       <div class={[
         "gervaz-row gervaz-row-custom p-4 border-b border-border"
         | row_classes(@static, @state, @record, @is_checked)
@@ -659,7 +663,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     assigns = assign(assigns, :override_component, component)
 
     ~H"""
-    <div id={@id}>
+    <div id={@id} class="min-[980px]:col-span-full">
       <div class={[
         "gervaz-row gervaz-row-component p-4 border-b border-border"
         | row_classes(@static, @state, @record, @is_checked)
@@ -684,32 +688,26 @@ defmodule MishkaGervaz.Table.Templates.Table do
     is_expanded = assigns.show_expand && assigns.state.expanded_id == to_string(assigns.record.id)
     filtered_row_actions = Shared.non_accordion_actions(assigns.static.row_actions)
 
-    grid_template =
-      grid_template_columns(
-        assigns.show_expand,
-        assigns.show_checkboxes,
-        assigns.visible_columns,
-        actions_track(assigns.static, assigns.state, assigns.show_actions)
-      )
-
     assigns =
       assigns
       |> assign(:is_expanded, is_expanded)
       |> assign(:filtered_row_actions, filtered_row_actions)
-      |> assign(:grid_template, grid_template)
 
     ~H"""
     <div
       id={@id}
-      class="gervaz-row-group max-[980px]:mb-3 max-[980px]:overflow-hidden max-[980px]:rounded-[14px] max-[980px]:border max-[980px]:border-[#ecebe6] max-[980px]:bg-white max-[980px]:shadow-[0_1px_3px_rgba(30,28,24,0.06)]"
+      class={[
+        "gervaz-row-group",
+        subgrid_class(),
+        "max-[980px]:mb-3 max-[980px]:overflow-hidden max-[980px]:rounded-[14px] max-[980px]:border max-[980px]:border-[#ecebe6] max-[980px]:bg-white max-[980px]:shadow-[0_1px_3px_rgba(30,28,24,0.06)]"
+      ]}
     >
-      <div
-        class={[
-          "gervaz-row grid py-[14px] items-center transition-colors max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
-          | row_classes(@static, @state, @record, @is_checked)
-        ]}
-        style={"grid-template-columns: #{@grid_template};"}
-      >
+      <div class={[
+        "gervaz-row grid py-[14px] items-center transition-colors",
+        subgrid_class(),
+        "max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
+        | row_classes(@static, @state, @record, @is_checked)
+      ]}>
         <div :if={@show_checkboxes} class="flex items-center pl-[16px] max-[980px]:pl-0!">
           <.dynamic_component
             module={@static.ui_adapter}
@@ -778,7 +776,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       </div>
       <div
         :if={@is_expanded}
-        class="border-b border-[#f0efea] bg-[#fbfbfa] px-6 py-[22px] max-[980px]:border-b-0 max-[980px]:border-t max-[980px]:px-4 max-[980px]:py-[18px]"
+        class="border-b border-[#f0efea] bg-[#fbfbfa] px-6 py-[22px] min-[980px]:col-span-full max-[980px]:border-b-0 max-[980px]:border-t max-[980px]:px-4 max-[980px]:py-[18px]"
       >
         <div class="mb-[18px] flex items-center justify-between">
           <span class="text-[13.5px] font-bold text-[#1b1a18]">
@@ -918,9 +916,16 @@ defmodule MishkaGervaz.Table.Templates.Table do
     end
   end
 
+  # The table's grid from 980px up, which owns the column tracks the header and every row lay their
+  # cells on, never narrower than those tracks need.
   defp container_classes(_static) do
-    "min-[980px]:min-w-min"
+    "min-[980px]:grid min-[980px]:min-w-min"
   end
+
+  @subgrid_class "min-[980px]:col-span-full min-[980px]:grid min-[980px]:grid-cols-subgrid"
+
+  # From 980px up: spans every column of the table's grid and lays its own children on those columns.
+  defp subgrid_class, do: @subgrid_class
 
   # Divides the rows, and with `striped` tints every second row under any hover, selection or
   # `row class` colour of its own.
@@ -937,14 +942,21 @@ defmodule MishkaGervaz.Table.Templates.Table do
   @sticky_actions_class "min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10 " <>
                           "min-[980px]:has-[[aria-expanded=true]]:z-[11] " <>
                           "min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] " <>
-                          "min-[980px]:bg-blend-multiply min-[980px]:shadow-[inset_1px_0_0_#ecebe6]"
+                          "min-[980px]:bg-blend-multiply " <>
+                          "min-[980px]:before:pointer-events-none min-[980px]:before:absolute " <>
+                          "min-[980px]:before:inset-y-0 min-[980px]:before:right-full " <>
+                          "min-[980px]:before:w-4 min-[980px]:before:bg-inherit " <>
+                          "min-[980px]:before:bg-[linear-gradient(#fff,#fff)] " <>
+                          "min-[980px]:before:bg-blend-multiply " <>
+                          "min-[980px]:before:[mask-image:linear-gradient(to_left,#000,transparent)]"
 
   @sticky_actions_bleed "min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px]"
 
   # The Actions cell's classes on a screen 980px or wider while `actions_layout` keeps `sticky` on:
   # pinned to the frame's right edge above the cells that scroll under it, in its row's colour laid
-  # over the frame's white, with a 1px line on its left, one layer higher while a control inside it
-  # has `aria-expanded="true"`, and, with `bleed?`, reaching over the row's 14px of vertical padding.
+  # over the frame's white, with a 16px fade of that colour on its left that the cells scroll out
+  # under, one layer higher while a control inside it has `aria-expanded="true"`, and, with `bleed?`,
+  # reaching over the row's 14px of vertical padding.
   defp sticky_actions_class(static, bleed?) do
     case {sticky_actions?(static), bleed?} do
       {false, _bleed?} -> nil
@@ -957,7 +969,10 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp sticky_actions?(%{row_actions_layout: %{sticky: false}}), do: false
   defp sticky_actions?(_static), do: true
 
-  defp grid_template_columns(show_expand, show_checkboxes, visible_columns, actions_track) do
+  # The table grid's column tracks: 44px for the checkboxes, 34px for the expand caret, each visible
+  # column's track, and with row actions a `max-content` track, as wide as the widest Actions cell
+  # in the header and the rows.
+  defp grid_template_columns(show_expand, show_checkboxes, visible_columns, show_actions) do
     column_tracks =
       visible_columns
       |> Enum.with_index()
@@ -969,28 +984,9 @@ defmodule MishkaGervaz.Table.Templates.Table do
     ]
     |> Enum.filter(& &1)
     |> Kernel.++(column_tracks)
-    |> Kernel.++(List.wrap(actions_track))
+    |> Kernel.++(if show_actions, do: ["max-content"], else: [])
     |> Enum.join(" ")
   end
-
-  @action_control_px 30
-  @action_gap_px 4
-  @actions_cell_padding_px 32
-  @actions_track_min_px 120
-
-  # The Actions column's track: room for the most row action controls one row can draw (30px each,
-  # 4px apart, 16px of padding on either side), at least 120px, growing to a wider control's content.
-  defp actions_track(static, state, true) do
-    controls = Shared.max_row_action_controls(static, state)
-
-    content =
-      controls * @action_control_px + max(controls - 1, 0) * @action_gap_px +
-        @actions_cell_padding_px
-
-    "minmax(#{max(content, @actions_track_min_px)}px,max-content)"
-  end
-
-  defp actions_track(_static, _state, _show_actions), do: nil
 
   @scrollbar_class "[scrollbar-width:thin] [scrollbar-color:#d5d3cb_transparent] " <>
                      "[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent " <>

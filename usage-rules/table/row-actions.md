@@ -90,6 +90,18 @@ divider. `ui` on the dropdown itself styles the trigger.
 Names which actions render inline and which collapse into a dropdown. Every name listed must
 exist. `auto_collapse_after N` folds everything past the Nth.
 
+## The Actions column in the plain table
+
+From 980px up `MishkaGervaz.Table.Templates.Table` is one CSS grid, and the header and every row
+lay their cells on its columns. The Actions column is a `max-content` track: as wide as the widest
+row of controls on the page, header included, with 16px of padding either side. A row streamed in
+later widens it like any other.
+
+With `sticky true` the column is pinned to the frame's right edge and fades the columns scrolling
+under it out over 16px on its left. The cell and its fade take the row's `background-color`, so a
+`row class`, `theme row_class`, selection or hover colour reaches them too. Both are CSS alone: the
+app sets nothing up. Below 980px the rows are cards and none of this applies.
+
 ## Rules the compiler enforces
 
 - `type :link` requires `path`.

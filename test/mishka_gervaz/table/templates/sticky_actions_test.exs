@@ -3,13 +3,16 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
   On a screen 980px or wider the Actions column is pinned to the right edge of the table's frame,
   in the header and in every row, so the row actions stay in view while the columns before it
   scroll under it. Each Actions cell takes its row's colour, or the header's, over the frame's
-  white, and draws a 1px line on its left. Below 980px the rows are cards and nothing is pinned.
+  white, and fades the cells scrolling under it out over 16px on its left, in that same colour, so
+  the fade lies unseen over the last column's padding while nothing scrolls. It needs no line, no
+  script and nothing from the app. Below 980px the rows are cards and nothing is pinned.
   """
   use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest
 
   alias MishkaGervaz.Table.Templates.Table, as: TableTemplate
+  alias MishkaGervaz.Table.Web.DataLoader
   alias MishkaGervaz.Table.Web.State
   alias MishkaGervaz.Test.Resources.TranslatedDsl
 
@@ -24,7 +27,8 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
 
   @pinned ~w(min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10)
   @painted ~w|min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] min-[980px]:bg-blend-multiply|
-  @line "min-[980px]:shadow-[inset_1px_0_0_#ecebe6]"
+  @fade ~w|min-[980px]:before:pointer-events-none min-[980px]:before:absolute min-[980px]:before:inset-y-0 min-[980px]:before:right-full min-[980px]:before:w-4|
+  @fade_painted ~w|min-[980px]:before:bg-inherit min-[980px]:before:bg-[linear-gradient(#fff,#fff)] min-[980px]:before:bg-blend-multiply min-[980px]:before:[mask-image:linear-gradient(to_left,#000,transparent)]|
   @bleed ~w(min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px])
   @raised "min-[980px]:has-[[aria-expanded=true]]:z-[11]"
 
@@ -87,6 +91,11 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
     ~r/style="grid-template-columns: ([^"]*);"/
     |> Regex.scan(html)
     |> Enum.map(fn [_, tracks] -> tracks end)
+  end
+
+  defp cells(html) do
+    {_thead, header_cell} = header(html)
+    [header_cell | Enum.map(rows(html), fn {_id, {_row, cell}} -> cell end)]
   end
 
   describe "on a screen 980px or wider" do
@@ -152,12 +161,33 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
       refute details =~ ~s(data-role="gervaz-row-actions")
     end
 
-    test "each Actions cell draws a 1px line on its left in the table's border colour" do
-      html = table_state() |> with_row_states() |> render_table()
-      {_thead, header_cell} = header(html)
+    test "each Actions cell fades the cells under it out over the 16px on its left" do
+      cells = table_state() |> with_row_states() |> render_table() |> cells()
 
-      assert @line in header_cell
-      for {_id, {_row, cell}} <- rows(html), do: assert(@line in cell)
+      assert length(cells) == length(@records) + 1
+      for cell <- cells, class <- @fade, do: assert(class in cell)
+    end
+
+    test "the fade takes its cell's colour, so it matches the row in every state the row can be in" do
+      html = table_state() |> with_row_states() |> render_table()
+
+      for cell <- cells(html), class <- @painted ++ @fade_painted do
+        assert class in cell
+      end
+
+      archived = table_state(archive_status: :archived) |> render_table()
+      themed = table_state() |> with_static(theme: %{row_class: "hover:bg-[#f7f6f3]"})
+
+      for cell <- cells(archived) ++ cells(render_table(themed)), class <- @fade_painted do
+        assert class in cell
+      end
+    end
+
+    test "no Actions cell draws a line on its left" do
+      html = table_state() |> with_row_states() |> render_table()
+
+      refute html =~ "shadow-[inset_1px"
+      for cell <- cells(html), do: refute(Enum.any?(cell, &(&1 =~ "shadow")))
     end
 
     test "each Actions cell reaches over its row's 14px of vertical padding" do
@@ -188,21 +218,18 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
       for {_id, {_row, cell}} <- rows(html), do: assert(@raised in cell)
     end
 
-    test "the columns keep the tracks they had, in the header and in every row" do
+    test "the columns keep the tracks they had, whether the Actions column is pinned or not" do
       state = table_state() |> with_row_states()
 
       unpinned =
         with_static(state, row_actions_layout: %{state.static.row_actions_layout | sticky: false})
 
-      pinned_tracks = state |> render_table() |> tracks()
-
-      assert length(pinned_tracks) == length(@records) + 1
-      assert pinned_tracks |> Enum.uniq() |> length() == 1
-      assert pinned_tracks == unpinned |> render_table() |> tracks()
+      assert [pinned_tracks] = state |> render_table() |> tracks()
+      assert [pinned_tracks] == unpinned |> render_table() |> tracks()
     end
 
-    test "the rows' container is never narrower than its columns" do
-      assert table_state() |> render_table() =~ ~s(class="min-[980px]:min-w-min")
+    test "the table's grid is never narrower than its columns" do
+      assert table_state() |> render_table() =~ ~s(class="min-[980px]:grid min-[980px]:min-w-min")
     end
   end
 
@@ -242,12 +269,11 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
   end
 
   describe "below 980px" do
-    test "every class that pins, paints or lines the Actions cell applies from 980px up only" do
+    test "every class that pins, paints or fades the Actions cell applies from 980px up only" do
       html = table_state() |> with_row_states() |> render_table()
-      {_thead, header_cell} = header(html)
-      added = @pinned ++ @painted ++ @bleed ++ [@line, @raised]
+      added = @pinned ++ @painted ++ @fade ++ @fade_painted ++ @bleed ++ [@raised]
 
-      for cell <- [header_cell | Enum.map(rows(html), fn {_id, {_row, cell}} -> cell end)] do
+      for cell <- cells(html) do
         refute "sticky" in cell
         refute "z-10" in cell
         refute "bg-inherit" in cell
@@ -274,11 +300,31 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
         with_static(state, row_actions_layout: %{state.static.row_actions_layout | sticky: false})
 
       html = render_table(state)
-      {_thead, header_cell} = header(html)
 
-      for cell <- [header_cell | Enum.map(rows(html), fn {_id, {_row, cell}} -> cell end)] do
+      for cell <- cells(html) do
         refute Enum.any?(cell, &String.starts_with?(&1, "min-[980px]:"))
       end
+    end
+  end
+
+  describe "what the app has to do" do
+    test "nothing: the frame dispatches no event and waits for no attribute" do
+      html = table_state() |> with_row_states() |> render_table()
+
+      [frame] = Regex.run(~r/<div[^>]*data-role="gervaz-table-frame"[^>]*>/, html)
+
+      refute frame =~ "phx-mounted"
+      refute html =~ "gervaz:table-frame-mounted"
+      refute html =~ "data-overflowing"
+      refute html =~ "--gervaz-actions-track"
+    end
+
+    test "nothing: a row it streams in itself sizes the Actions column like any other" do
+      Code.ensure_loaded!(DataLoader)
+
+      refute function_exported?(DataLoader, :insert_row, 3)
+      refute function_exported?(DataLoader, :insert_row, 4)
+      refute Map.has_key?(struct(State), :row_action_controls)
     end
   end
 
