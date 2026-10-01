@@ -37,10 +37,10 @@ msgstr ""
 
 #: lib/mishka_gervaz/table/templates/media_gallery.ex:695
 #: lib/mishka_gervaz/table/templates/media_gallery.ex:762
-#: lib/mishka_gervaz/table/templates/shared.ex:1794
-#: lib/mishka_gervaz/table/templates/table.ex:792
-#: lib/mishka_gervaz/table/templates/table.ex:824
-#: lib/mishka_gervaz/table/templates/table.ex:851
+#: lib/mishka_gervaz/table/templates/shared.ex:1821
+#: lib/mishka_gervaz/table/templates/table.ex:797
+#: lib/mishka_gervaz/table/templates/table.ex:829
+#: lib/mishka_gervaz/table/templates/table.ex:856
 #, elixir-autogen
 msgid "Loading..."
 msgstr ""
@@ -57,7 +57,7 @@ msgstr ""
 msgid "Search..."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1189
+#: lib/mishka_gervaz/form/templates/standard.ex:1212
 #: lib/mishka_gervaz/table/templates/shared.ex:742
 #, elixir-autogen
 msgid "Select %{field} first"
@@ -86,17 +86,17 @@ msgstr[0] ""
 msgstr[1] ""
 
 ## States
-#: lib/mishka_gervaz/table/templates/shared.ex:1714
+#: lib/mishka_gervaz/table/templates/shared.ex:1741
 #, elixir-autogen
 msgid "No records found"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1749
+#: lib/mishka_gervaz/table/templates/shared.ex:1776
 #, elixir-autogen
 msgid "Error loading data"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1755
+#: lib/mishka_gervaz/table/templates/shared.ex:1782
 #, elixir-autogen
 msgid "Retry"
 msgstr ""
@@ -133,12 +133,12 @@ msgid "Cancel"
 msgstr ""
 
 ## Bulk Actions
-#: lib/mishka_gervaz/table/templates/shared.ex:1027
+#: lib/mishka_gervaz/table/templates/shared.ex:1016
 #, elixir-autogen
 msgid "%{count} selected"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1028
+#: lib/mishka_gervaz/table/templates/shared.ex:1017
 #, elixir-autogen
 msgid "Clear selection"
 msgstr ""
@@ -149,12 +149,12 @@ msgid "Select all"
 msgstr ""
 
 ## Table
-#: lib/mishka_gervaz/table/templates/table.ex:568
+#: lib/mishka_gervaz/table/templates/table.ex:573
 #, elixir-autogen
 msgid "Actions"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:802
+#: lib/mishka_gervaz/table/templates/table.ex:807
 #, elixir-autogen
 msgid "No data"
 msgstr ""
@@ -233,7 +233,7 @@ msgstr ""
 msgid "%{unarchived}, %{skipped} — a record with the same name already exists."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:708
+#: lib/mishka_gervaz/form/templates/standard.ex:719
 #, elixir-autogen, elixir-format
 msgid "+ Add"
 msgstr ""
@@ -243,12 +243,12 @@ msgstr ""
 msgid "Action"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1025
+#: lib/mishka_gervaz/table/templates/shared.ex:1014
 #, elixir-autogen, elixir-format
 msgid "All except %{count} selected"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1023
+#: lib/mishka_gervaz/table/templates/shared.ex:1012
 #, elixir-autogen, elixir-format
 msgid "All selected"
 msgstr ""
@@ -267,7 +267,7 @@ msgstr ""
 msgid "Clear filters"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:784
+#: lib/mishka_gervaz/table/templates/table.ex:789
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -277,7 +277,7 @@ msgstr ""
 msgid "Delete Permanently"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1234
+#: lib/mishka_gervaz/table/templates/shared.ex:1223
 #, elixir-autogen, elixir-format
 msgid "End of results"
 msgstr ""
@@ -287,7 +287,7 @@ msgstr ""
 msgid "Expand"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:796
+#: lib/mishka_gervaz/table/templates/table.ex:801
 #, elixir-autogen, elixir-format
 msgid "Failed to load data"
 msgstr ""
@@ -302,12 +302,12 @@ msgstr ""
 msgid "Filters"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:866
+#: lib/mishka_gervaz/table/types/filter/date_range.ex:39
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1172
+#: lib/mishka_gervaz/form/templates/standard.ex:1195
 #, elixir-autogen, elixir-format
 msgid "Loading options..."
 msgstr ""
@@ -317,12 +317,12 @@ msgstr ""
 msgid "Permanently delete this record? This cannot be undone."
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:765
+#: lib/mishka_gervaz/table/templates/table.ex:770
 #, elixir-autogen, elixir-format
 msgid "Record Details"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:687
+#: lib/mishka_gervaz/form/templates/standard.ex:698
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
@@ -332,12 +332,12 @@ msgstr ""
 msgid "Restore this record?"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:799
+#: lib/mishka_gervaz/form/templates/standard.ex:822
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:224
+#: lib/mishka_gervaz/table/templates/table.ex:229
 #, elixir-autogen, elixir-format
 msgid "Scroll for more"
 msgstr ""
@@ -347,7 +347,7 @@ msgstr ""
 msgid "Search…"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1374
+#: lib/mishka_gervaz/table/templates/shared.ex:1363
 #, elixir-autogen, elixir-format
 msgid "Show"
 msgstr ""
@@ -367,12 +367,12 @@ msgstr ""
 msgid "The changes were not saved."
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:867
+#: lib/mishka_gervaz/table/types/filter/date_range.ex:40
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:796
+#: lib/mishka_gervaz/form/templates/standard.ex:819
 #, elixir-autogen, elixir-format
 msgid "Uploading…"
 msgstr ""
@@ -382,7 +382,7 @@ msgstr ""
 msgid "Validation failed: %{errors}"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1399
+#: lib/mishka_gervaz/table/templates/shared.ex:1388
 #, elixir-autogen, elixir-format
 msgid "per page"
 msgstr ""
@@ -402,4 +402,9 @@ msgstr ""
 #: lib/mishka_gervaz/errors.ex:173
 #, elixir-autogen, elixir-format
 msgid "You are not allowed to do this."
+msgstr ""
+
+#: lib/mishka_gervaz/form/templates/standard.ex:169
+#, elixir-autogen, elixir-format
+msgid "Loading…"
 msgstr ""

@@ -1,7 +1,8 @@
 defmodule MishkaGervaz.UIAdapters.TailwindTest do
   @moduledoc """
   Tests for `MishkaGervaz.UIAdapters.Tailwind.select/1` — flat options stay flat
-  `<option>`s; a `{group_label, [opts]}` entry becomes an `<optgroup>`.
+  `<option>`s; a `{group_label, [opts]}` entry becomes an `<optgroup>` — and for the row action
+  buttons, which dim while their click is pending.
   """
   use ExUnit.Case, async: true
 
@@ -65,6 +66,35 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
         })
 
       assert grouped =~ ~r/value="Elixir.MishkaBlog.BlogPost"[^>]*selected/
+    end
+  end
+
+  describe "a row action" do
+    test "dims and stops taking clicks while its click is pending, in every variant" do
+      for variant <- [:default, :danger, :destroy, :permanent_destroy, :unarchive] do
+        html =
+          render_component(&Tailwind.button/1, %{
+            label: "Edit",
+            icon: "hero-pencil",
+            variant: variant
+          })
+
+        assert html =~ "phx-click-loading:opacity-70", inspect(variant)
+        assert html =~ "phx-click-loading:pointer-events-none", inspect(variant)
+      end
+    end
+
+    test "dims as a link too" do
+      for variant <- [:edit, :show, :external] do
+        html =
+          render_component(&Tailwind.nav_link/1, %{
+            label: "View",
+            navigate: "/x",
+            variant: variant
+          })
+
+        assert html =~ "phx-click-loading:opacity-70", inspect(variant)
+      end
     end
   end
 end

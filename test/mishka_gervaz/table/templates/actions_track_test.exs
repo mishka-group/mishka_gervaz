@@ -4,7 +4,7 @@ defmodule MishkaGervaz.Table.Templates.ActionsTrackTest do
   share that track, and a table wider than its frame shows a scrollbar to reach the rest.
 
   Each control is a 30px square, 4px from the next, inside 16px of padding on either side: three
-  of them need 130px, which a fixed 120px track cut off.
+  of them need 130px, which a fixed 120px track cut off. Each one dims while its click is pending.
   """
   use ExUnit.Case, async: true
 
@@ -216,6 +216,21 @@ defmodule MishkaGervaz.Table.Templates.ActionsTrackTest do
 
       assert class =~ "max-[980px]:overflow-visible!"
       assert class =~ "max-[980px]:border-0!"
+    end
+  end
+
+  describe "a row action button" do
+    test "dims and stops taking clicks while its click is pending" do
+      html = render_table(three_buttons(table_state()))
+
+      buttons = Regex.scan(~r/<button[^>]*class="grid size-\[30px\][^"]*"[^>]*>/, html)
+
+      assert length(buttons) == 3
+
+      for [button] <- buttons do
+        assert button =~ "phx-click-loading:opacity-70"
+        assert button =~ "phx-click-loading:pointer-events-none"
+      end
     end
   end
 end

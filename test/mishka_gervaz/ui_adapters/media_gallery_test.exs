@@ -55,6 +55,15 @@ defmodule MishkaGervaz.UIAdapters.MediaGalleryTest do
     refute html =~ "size-[30px]"
   end
 
+  test "every square dims and stops taking clicks while its click is pending" do
+    for variant <- [:default, :destroy] do
+      html = button(%{label: "Edit", icon: "hero-pencil", variant: variant})
+
+      assert html =~ "phx-click-loading:opacity-70", inspect(variant)
+      assert html =~ "phx-click-loading:pointer-events-none", inspect(variant)
+    end
+  end
+
   test "an iconless button is still a button" do
     html = button(%{label: "Restore"})
 

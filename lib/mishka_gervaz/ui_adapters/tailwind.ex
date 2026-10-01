@@ -4,6 +4,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Provides plain Tailwind-styled components for tables and forms.
   This is the default adapter used when no other is specified.
+
+  ## Loading variants
+
+  A row action button dims and stops taking clicks while its click is pending, through the
+  `phx-click-loading:` variant. The host's stylesheet declares it, as a new Phoenix app's does:
+
+      @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
   """
 
   @behaviour MishkaGervaz.Behaviours.UIAdapter
@@ -2889,11 +2896,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     selected ++ unselected
   end
 
-  @row_action_btn "grid size-[30px] place-items-center rounded-[8px] border border-[#ecebe6] bg-[#faf9f6] text-[#5c5a54] transition-colors hover:bg-[#f2f1fc] hover:text-[#4f4bcc] [&>span:not(.lbl)]:size-[15px]! [&_.lbl]:hidden"
+  @row_action_btn "grid size-[30px] place-items-center rounded-[8px] border border-[#ecebe6] bg-[#faf9f6] text-[#5c5a54] transition-colors hover:bg-[#f2f1fc] hover:text-[#4f4bcc] [&>span:not(.lbl)]:size-[15px]! [&_.lbl]:hidden phx-click-loading:pointer-events-none phx-click-loading:opacity-70"
 
-  @row_action_danger "grid size-[30px] place-items-center rounded-[8px] border border-[#f0dcd8] bg-[#fdf3f1] text-[#c0473d] transition-colors hover:bg-[#fbe9e7] [&>span:not(.lbl)]:size-[15px]! [&_.lbl]:hidden"
+  @row_action_danger "grid size-[30px] place-items-center rounded-[8px] border border-[#f0dcd8] bg-[#fdf3f1] text-[#c0473d] transition-colors hover:bg-[#fbe9e7] [&>span:not(.lbl)]:size-[15px]! [&_.lbl]:hidden phx-click-loading:pointer-events-none phx-click-loading:opacity-70"
 
-  @row_action_success "grid size-[30px] place-items-center rounded-[8px] border border-[#cfe8dd] bg-[#eaf6ee] text-[#177a53] transition-colors hover:bg-[#dcefe4] [&>span:not(.lbl)]:size-[15px]! [&_.lbl]:hidden"
+  @row_action_success "grid size-[30px] place-items-center rounded-[8px] border border-[#cfe8dd] bg-[#eaf6ee] text-[#177a53] transition-colors hover:bg-[#dcefe4] [&>span:not(.lbl)]:size-[15px]! [&_.lbl]:hidden phx-click-loading:pointer-events-none phx-click-loading:opacity-70"
 
   defp button_class(:primary),
     do:

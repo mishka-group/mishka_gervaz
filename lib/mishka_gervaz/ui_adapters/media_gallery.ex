@@ -21,7 +21,8 @@ defmodule MishkaGervaz.UIAdapters.MediaGallery do
   use MishkaGervaz.Behaviours.UIAdapter,
     fallback: MishkaGervaz.UIAdapters.Tailwind
 
-  @square "grid size-[30px] flex-none place-items-center rounded-[9px] border transition-colors"
+  @square "grid size-[30px] flex-none place-items-center rounded-[9px] border transition-colors " <>
+            "phx-click-loading:pointer-events-none phx-click-loading:opacity-70"
 
   attr :label, :string, default: nil
   attr :class, :string, default: nil
@@ -32,7 +33,8 @@ defmodule MishkaGervaz.UIAdapters.MediaGallery do
     include: ~w(phx-click phx-target phx-value-id phx-value-event phx-value-values data-confirm)
 
   @doc """
-  A card action, drawn as a bordered square around a 15px glyph.
+  A card action, drawn as a bordered square around a 15px glyph, dimmed while its click is pending
+  (`phx-click-loading:`, see `MishkaGervaz.UIAdapters.Tailwind`).
 
   A `:destroy` variant is tinted red — an archive or a permanent delete should not look like the
   three buttons next to it. An action that declares its own `ui do class … end` keeps it; that is

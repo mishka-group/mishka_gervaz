@@ -150,13 +150,24 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
+  @doc """
+  The form while its record loads: the UI adapter's spinner over a "Loading…" label, in a box at
+  least 280px tall, marked `data-role="gervaz-form-loading"`.
+  """
   @impl true
   def render_loading(assigns) do
     assigns = assign(assigns, :ui, assigns.static.ui_adapter)
 
     ~H"""
-    <div class="flex items-center justify-center p-8">
+    <div
+      data-role="gervaz-form-loading"
+      role="status"
+      class="flex min-h-[280px] flex-col items-center justify-center p-8 text-center"
+    >
       <.dynamic_component module={@ui} function={:spinner} size={:lg} />
+      <p class="mt-2 text-[12.5px] font-medium text-[#8a877f]">
+        {dgettext("mishka_gervaz", "Loading…")}
+      </p>
     </div>
     """
   end
