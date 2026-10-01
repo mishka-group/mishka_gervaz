@@ -16,6 +16,9 @@ defmodule MishkaGervaz.ErrorsTest do
 
   use Gettext, backend: MishkaGervaz.Test.Gettext
 
+  defp fa(text), do: "[fa:mishka_gervaz] " <> text
+  defp err(text), do: "[fa:errors] " <> text
+
   describe "format_flash_message/1 — Action.Failed" do
     test "humanizes a snake_case action and includes the reason" do
       err = Failed.exception(action: :permanent_destroy, reason: "forbidden")
@@ -237,13 +240,10 @@ defmodule MishkaGervaz.ErrorsTest do
       :ok
     end
 
-    test "a Persian sentence is shown as written, with no field in front" do
-      for message <- [
-            "این برچسب را این سایت نمی‌تواند به کار ببرد.",
-            "آیا این برچسب بایگانی شده است؟"
-          ] do
+    test "a sentence ending in a Persian mark is shown as translated, with no field in front" do
+      for message <- ["Is this tag archived\u061F", "That tag is archived\u06D4"] do
         assert Errors.extract_error_message(%{field: :tag_id, message: message}, TranslatedLabels) ==
-                 message
+                 err(message)
       end
     end
 
@@ -251,25 +251,28 @@ defmodule MishkaGervaz.ErrorsTest do
       error = %{field: :label_id, message: "That label is not one this site can use."}
 
       assert Errors.extract_error_message(error) ==
-               "این برچسب را این سایت نمی‌تواند به کار ببرد."
+               err("That label is not one this site can use.")
     end
 
     test "a fragment is joined to the translated label through the translated template" do
       error = %{field: :title, message: "is required"}
 
-      assert Errors.extract_error_message(error, TranslatedLabels) == "«عنوان نوشته» الزامی است"
+      assert Errors.extract_error_message(error, TranslatedLabels) ==
+               fa(fa("Post title") <> " " <> err("is required"))
     end
 
     test "a field with no label is named by its humanized name, translated" do
       error = %{field: :category_id, message: "is invalid"}
 
-      assert Errors.extract_error_message(error, TranslatedLabels) == "«دسته» نامعتبر است"
+      assert Errors.extract_error_message(error, TranslatedLabels) ==
+               fa(fa("Category") <> " " <> err("is invalid"))
     end
 
     test "a column's label names the field when the form has none" do
       error = %{field: :slug, message: "is invalid"}
 
-      assert Errors.extract_error_message(error, TranslatedLabels) == "«نشانی وب» نامعتبر است"
+      assert Errors.extract_error_message(error, TranslatedLabels) ==
+               fa(fa("Web address") <> " " <> err("is invalid"))
     end
 
     test "placeholders are filled after the message is translated" do
@@ -280,7 +283,7 @@ defmodule MishkaGervaz.ErrorsTest do
       }
 
       assert Errors.extract_error_message(error, TranslatedLabels) ==
-               "«عنوان نوشته» باید دست‌کم 3 نویسه باشد"
+               fa(fa("Post title") <> " " <> err("length must be greater than or equal to 3"))
     end
 
     test "a message with a count is translated as a plural" do
@@ -291,7 +294,7 @@ defmodule MishkaGervaz.ErrorsTest do
       }
 
       assert Errors.extract_error_message(error, TranslatedLabels) ==
-               "«عنوان نوشته» باید دست‌کم 3 نویسه باشد"
+               fa(fa("Post title") <> " " <> err("should be at least 3 character(s)"))
     end
 
     test "an action's flash reads in Persian, its action named by its label" do
@@ -310,31 +313,37 @@ defmodule MishkaGervaz.ErrorsTest do
           reason: reason
         )
 
+      reason_text =
+        fa(fa("Post title") <> " " <> err("is required")) <>
+          fa(", ") <> fa(fa("Category") <> " " <> err("is invalid"))
+
       assert Errors.format_flash_message(error) ==
-               "انتشار انجام نشد: «عنوان نوشته» الزامی است، «دسته» نامعتبر است"
+               fa(fa("Publish") <> " failed: " <> reason_text)
     end
 
     test "an action with no label is named by its humanized name, translated" do
       error = Failed.exception(action: :permanent_destroy, reason: "forbidden")
 
-      assert Errors.format_flash_message(error) == "حذف همیشگی انجام نشد: forbidden"
+      assert Errors.format_flash_message(error) ==
+               fa(fa("Permanent destroy") <> " failed: forbidden")
     end
 
     test "several failed records are counted in Persian" do
       reason = {:bulk_action_failed, :error, [%{message: "a"}, %{message: "b"}]}
       error = Failed.exception(action: :permanent_destroy, reason: reason)
 
-      assert Errors.format_flash_message(error) == "حذف همیشگی انجام نشد: 2 خطا رخ داد"
+      assert Errors.format_flash_message(error) ==
+               fa(fa("Permanent destroy") <> " failed: " <> fa("2 errors occurred"))
     end
 
     test "a failed load and a validation failure read in Persian" do
       invalid = %Ash.Error.Invalid{errors: [%{field: :title, message: "is required"}]}
 
       assert Errors.format_flash_message(invalid, TranslatedLabels) ==
-               "داده‌ها پذیرفته نشد: «عنوان نوشته» الزامی است"
+               fa("Validation failed: " <> fa(fa("Post title") <> " " <> err("is required")))
 
       assert Errors.format_flash_message(LoadFailed.exception(resource: nil, reason: "timeout")) ==
-               "داده‌ها بار نشد: timeout"
+               fa("Failed to load data: timeout")
     end
   end
 
@@ -379,7 +388,7 @@ defmodule MishkaGervaz.ErrorsTest do
 
       assert Errors.format_flash_message(
                Failed.exception(action: :permanent_destroy, reason: error)
-             ) == "حذف همیشگی انجام نشد: این برچسب بایگانی شده است."
+             ) == fa(fa("Permanent destroy") <> " failed: " <> err("That tag is archived."))
     end
   end
 
@@ -426,13 +435,13 @@ defmodule MishkaGervaz.ErrorsTest do
       Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
 
       assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: :not_found)) ==
-               "حذف انجام نشد: این رکورد دیگر اینجا نیست."
+               fa(fa("Destroy") <> " failed: " <> fa("This record is no longer here."))
 
       forbidden =
         Ash.Error.to_error_class(Ash.Error.Forbidden.Policy.exception(resource: TranslatedLabels))
 
       assert Errors.format_flash_message(Failed.exception(action: :destroy, reason: forbidden)) ==
-               "حذف انجام نشد: شما اجازهٔ این کار را ندارید."
+               fa(fa("Destroy") <> " failed: " <> fa("You are not allowed to do this."))
     end
   end
 
@@ -459,7 +468,7 @@ defmodule MishkaGervaz.ErrorsTest do
       Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
 
       assert Errors.translate_error("length must be greater than or equal to %{min}", min: 3) ==
-               "باید دست‌کم 3 نویسه باشد"
+               err("length must be greater than or equal to 3")
     end
   end
 

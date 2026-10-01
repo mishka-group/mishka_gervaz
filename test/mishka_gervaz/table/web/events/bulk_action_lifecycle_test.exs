@@ -265,11 +265,13 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionLifecycleTest do
       Gettext.put_locale(MishkaGervaz.Test.Gettext, "fa")
       summary = %BulkActionResult{succeeded_count: 2, failed_count: 1, skipped_count: 1}
 
+      fa = "[fa:mishka_gervaz] "
+
       assert BulkActionHandler.partial_summary(summary) ==
-               "2 مورد انجام شد، 1 مورد انجام نشد."
+               "#{fa}#{fa}2 succeeded, #{fa}1 failed."
 
       assert BulkActionHandler.unarchive_skip_summary(summary) ==
-               "2 مورد بازگردانده شد، 1 مورد کنار گذاشته شد — رکوردی با همین نام از پیش هست."
+               "#{fa}#{fa}2 unarchived, #{fa}1 skipped — a record with the same name already exists."
     end
   end
 

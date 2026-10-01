@@ -63,7 +63,12 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandlerTest do
       }
 
       assert ValidationHandler.build_errors(form) ==
-               %{title: ["الزامی است", "باید دست‌کم 3 نویسه باشد"]}
+               %{
+                 title: [
+                   "[fa:errors] is required",
+                   "[fa:errors] length must be greater than or equal to 3"
+                 ]
+               }
     end
   end
 

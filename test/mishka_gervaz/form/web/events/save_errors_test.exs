@@ -23,6 +23,9 @@ defmodule MishkaGervaz.Form.Web.Events.SaveErrorsTest do
     RelationErrorLabel
   }
 
+  defp fa(text), do: "[fa:mishka_gervaz] " <> text
+  defp err(text), do: "[fa:errors] " <> text
+
   @title %{
     name: :title,
     type: :text,
@@ -135,31 +138,31 @@ defmodule MishkaGervaz.Form.Web.Events.SaveErrorsTest do
     test "an error on a field is said in Persian" do
       state = save([Ash.UUID.generate()])
 
-      assert state.errors[:label_ids] == ["پیدا نشد"]
+      assert state.errors[:label_ids] == [err("could not be found")]
     end
 
     test "an error on the form names its field in Persian" do
       state = save([Ash.UUID.generate()], fields: [@title, %{@labels | name: :other_ids}])
 
-      assert state.form_errors == ["«برچسب‌ها» پیدا نشد"]
+      assert state.form_errors == [fa(fa("Label ids") <> " " <> err("could not be found"))]
     end
 
     test "a sentence on the form is said alone, in Persian" do
       state = save([label!("foreign").id], fields: [@title, %{@labels | name: :other_ids}])
 
-      assert state.form_errors == ["این برچسب را این سایت نمی‌تواند به کار ببرد."]
+      assert state.form_errors == [err("That label is not one this site can use.")]
     end
 
     test "an error on an attribute the form does not show names it in Persian" do
       state = save([], fields: [@labels], title: nil)
 
-      assert state.form_errors == ["«عنوان» الزامی است"]
+      assert state.form_errors == [fa(fa("Title") <> " " <> err("is required"))]
     end
 
     test "a save no error of which can be shown says so in Persian" do
       state = save([], action: :locked_create)
 
-      assert state.form_errors == ["تغییرها ذخیره نشد."]
+      assert state.form_errors == [fa("The changes were not saved.")]
     end
   end
 

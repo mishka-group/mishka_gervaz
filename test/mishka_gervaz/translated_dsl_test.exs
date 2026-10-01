@@ -4,8 +4,10 @@ defmodule MishkaGervaz.TranslatedDslTest do
   that draws it, and in English, byte for byte, when no message translates it.
 
   `MishkaGervaz.Test.Resources.TranslatedDsl` declares each of them as a plain string marked with
-  `dgettext_noop`. Each test below draws one in Persian (`test/support/gettext/fa`) and in English,
-  and a string the Persian messages do not have is drawn in English in both.
+  `dgettext_noop`. Each test below draws one in the locale `fa`, in which
+  `MishkaGervaz.Test.Gettext` prefixes every string it translates with `"[fa:mishka_gervaz] "`, and
+  in English, where it is the string itself. A locale the backend does not translate draws a string
+  as written.
   """
   use ExUnit.Case, async: true
 
@@ -34,6 +36,7 @@ defmodule MishkaGervaz.TranslatedDslTest do
   alias MishkaGervaz.UIAdapters.Tailwind
 
   @backend MishkaGervaz.Test.Gettext
+  @fa "[fa:mishka_gervaz] "
   @admin %{id: "user-1", role: :admin}
   @record %{id: "5d8431b3-1a65-482e-8bdb-962f6e35841b", title: "Cat"}
 
@@ -41,7 +44,12 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
   defp html(rendered), do: rendered |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
 
-  # What a string is drawn as in English and in Persian: a pair, from one function.
+  # Whether `text` is in `html` anywhere the `fa` prefix is not in front of it.
+  defp unprefixed?(html, text) do
+    ~r/(?<!#{Regex.escape(@fa)})#{Regex.escape(text)}/ |> Regex.match?(html)
+  end
+
+  # What a string is drawn as in English and in Persian (`fa`): a pair, from one function.
   defp both(fun) do
     locale("en")
     english = fun.()
@@ -62,7 +70,7 @@ defmodule MishkaGervaz.TranslatedDslTest do
         {english, persian} = both(fn -> row_action(module, action) end)
 
         assert english =~ ~s(data-confirm="Delete this draft?"), inspect(module)
-        assert persian =~ ~s(data-confirm="این پیش‌نویس حذف شود؟"), inspect(module)
+        assert persian =~ ~s(data-confirm="#{@fa}Delete this draft?"), inspect(module)
 
         function = %{action | confirm: fn record -> "Wipe #{record.title} for good?" end}
 
@@ -95,11 +103,11 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
         {english, persian} = both(fn -> row_action(module, labelled) end)
         assert english =~ ~s(title="Heading"), inspect(module)
-        assert persian =~ ~s(title="سرتیتر"), inspect(module)
+        assert persian =~ ~s(title="#{@fa}Heading"), inspect(module)
 
         {english, persian} = both(fn -> row_action(module, bare) end)
         assert english =~ ~s(title="Publish"), inspect(module)
-        assert persian =~ ~s(title="انتشار"), inspect(module)
+        assert persian =~ ~s(title="#{@fa}Publish"), inspect(module)
       end
     end
   end
@@ -121,12 +129,12 @@ defmodule MishkaGervaz.TranslatedDslTest do
       {english, persian} = both(fn -> bulk_button(labelled) end)
       assert english =~ ~s(data-confirm="Archive the selected posts?")
       assert english =~ "Archive them"
-      assert persian =~ ~s(data-confirm="نوشته‌های انتخاب‌شده بایگانی شوند؟")
-      assert persian =~ "بایگانی‌شان کن"
+      assert persian =~ ~s(data-confirm="#{@fa}Archive the selected posts?")
+      assert persian =~ "#{@fa}Archive them"
 
       {english, persian} = both(fn -> bulk_button(bare) end)
       assert english =~ "Publish all"
-      assert persian =~ "انتشار همه"
+      assert persian =~ "#{@fa}Publish all"
       refute persian =~ "data-confirm"
     end
 
@@ -149,11 +157,11 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       {english, persian} = both(fn -> badge("published", extra) end)
       assert english =~ "Published"
-      assert persian =~ "منتشر شده"
+      assert persian =~ "#{@fa}Published"
 
       {english, persian} = both(fn -> badge(:archived, extra) end)
       assert english =~ "Archived"
-      assert persian =~ "بایگانی‌شده"
+      assert persian =~ "#{@fa}Archived"
     end
 
     test "a boolean translates the text it declares for each value" do
@@ -161,11 +169,11 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       {english, persian} = both(fn -> html(Boolean.render(true, column, %{}, Tailwind)) end)
       assert english =~ "Featured"
-      assert persian =~ "ویژه"
+      assert persian =~ "#{@fa}Featured"
 
       {english, persian} = both(fn -> html(Boolean.render(false, column, %{}, Tailwind)) end)
       assert english =~ "Ordinary"
-      assert persian =~ "معمولی"
+      assert persian =~ "#{@fa}Ordinary"
     end
 
     test "tags and avatars translate the text they show when empty" do
@@ -173,13 +181,13 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       {english, persian} = both(fn -> html(Tags.render(nil, column, %{tags: []}, Tailwind)) end)
       assert english =~ "Nothing here yet"
-      assert persian =~ "هنوز چیزی اینجا نیست"
+      assert persian =~ "#{@fa}Nothing here yet"
 
       {english, persian} =
         both(fn -> html(Avatars.render(nil, column, %{tags: []}, Tailwind)) end)
 
       assert english =~ "Nothing here yet"
-      assert persian =~ "هنوز چیزی اینجا نیست"
+      assert persian =~ "#{@fa}Nothing here yet"
     end
   end
 
@@ -202,19 +210,19 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert english =~ ~s(<option value="draft">Draft</option>)
       assert english =~ ~s(<option value="published">Published</option>)
 
-      assert persian =~ "یک وضعیت را برگزینید"
-      assert persian =~ ~s(<option value="draft">پیش‌نویس</option>)
-      assert persian =~ ~s(<option value="published">منتشر شده</option>)
+      assert persian =~ "#{@fa}Pick a status"
+      assert persian =~ ~s(<option value="draft">#{@fa}Draft</option>)
+      assert persian =~ ~s(<option value="published">#{@fa}Published</option>)
     end
 
     test "a text filter translates its placeholder, and a boolean filter its label" do
       {english, persian} = both(fn -> draw_filter(:search) end)
       assert english =~ ~s(placeholder="Search posts")
-      assert persian =~ ~s(placeholder="جستجوی نوشته‌ها")
+      assert persian =~ ~s(placeholder="#{@fa}Search posts")
 
       {english, persian} = both(fn -> draw_filter(:featured) end)
       assert english =~ "Featured only"
-      assert persian =~ "فقط ویژه‌ها"
+      assert persian =~ "#{@fa}Featured only"
     end
   end
 
@@ -271,20 +279,20 @@ defmodule MishkaGervaz.TranslatedDslTest do
       end
 
       for text <- [
-            "همهٔ نوشته‌ها",
-            "هرچه تا امروز نوشته شده.",
-            "به ترتیب تاریخ.",
-            "توجه",
-            "پیش‌نویس‌ها برای بازدیدکنندگان پنهان‌اند.",
-            "سرتیتر",
-            "نشانی کوتاه",
-            "منتشر شده",
-            "ویژه"
+            "#{@fa}All posts",
+            "#{@fa}Everything that was ever written.",
+            "#{@fa}Sorted by date.",
+            "#{@fa}Heads up",
+            "#{@fa}Drafts are hidden from visitors.",
+            "#{@fa}Heading",
+            "#{@fa}Slug",
+            "#{@fa}Published",
+            "#{@fa}Featured"
           ] do
         assert persian =~ text, "Persian lost #{text}"
       end
 
-      refute persian =~ "Everything that was ever written."
+      refute unprefixed?(persian, "Everything that was ever written.")
     end
 
     test "draws its filters, its row actions and its dropdown in the caller's locale" do
@@ -295,12 +303,12 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert english =~ ~s(data-confirm="Delete this draft?")
       assert english =~ ~s(data-confirm="Wipe Cat for good?")
 
-      assert persian =~ "یک وضعیت را برگزینید"
-      assert persian =~ "ناحیهٔ خطر"
-      assert persian =~ ~s(data-confirm="این پیش‌نویس حذف شود؟")
+      assert persian =~ "#{@fa}Pick a status"
+      assert persian =~ "#{@fa}Danger zone"
+      assert persian =~ ~s(data-confirm="#{@fa}Delete this draft?")
       assert persian =~ ~s(data-confirm="Wipe Cat for good?")
-      assert persian =~ "انتشار"
-      assert persian =~ "رونوشت"
+      assert persian =~ "#{@fa}Publish"
+      assert persian =~ "#{@fa}Duplicate"
     end
 
     test "draws its bulk action bar in the caller's locale" do
@@ -311,9 +319,9 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert english =~ "Archive all"
       assert english =~ "Publish all"
       assert english =~ ~s(data-confirm="Archive the selected posts?")
-      assert persian =~ "بایگانی همه"
-      assert persian =~ "انتشار همه"
-      assert persian =~ ~s(data-confirm="نوشته‌های انتخاب‌شده بایگانی شوند؟")
+      assert persian =~ "#{@fa}Archive all"
+      assert persian =~ "#{@fa}Publish all"
+      assert persian =~ ~s(data-confirm="#{@fa}Archive the selected posts?")
     end
 
     test "draws its pagination in the caller's locale" do
@@ -322,9 +330,9 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert english =~ "Earlier"
       assert english =~ "Later"
       assert english =~ "Page 1 of 3"
-      assert persian =~ "قبلی"
-      assert persian =~ "بعدی"
-      assert persian =~ "صفحهٔ 1 از 3"
+      assert persian =~ "#{@fa}Earlier"
+      assert persian =~ "#{@fa}Later"
+      assert persian =~ "#{@fa}Page 1 of 3"
     end
 
     test "draws its empty state in the caller's locale" do
@@ -334,8 +342,8 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       assert english =~ "Nothing here yet"
       assert english =~ "Add one"
-      assert persian =~ "هنوز چیزی اینجا نیست"
-      assert persian =~ "یکی اضافه کنید"
+      assert persian =~ "#{@fa}Nothing here yet"
+      assert persian =~ "#{@fa}Add one"
     end
 
     test "draws its error state in the caller's locale" do
@@ -354,8 +362,8 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       assert english =~ "Could not load the posts"
       assert english =~ "Try again"
-      assert persian =~ "نوشته‌ها بارگذاری نشدند"
-      assert persian =~ "دوباره تلاش کنید"
+      assert persian =~ "#{@fa}Could not load the posts"
+      assert persian =~ "#{@fa}Try again"
     end
 
     test "gives the English a resource wrote, byte for byte, when no message translates it" do
@@ -366,7 +374,7 @@ defmodule MishkaGervaz.TranslatedDslTest do
         | pagination_ui: %{state.static.pagination_ui | next_label: "Onwards"}
       }
 
-      locale("fa")
+      locale("de")
 
       assert render_table(%{state | static: static}) =~ ~r/>\s*Onwards\s*</
     end
@@ -408,16 +416,16 @@ defmodule MishkaGervaz.TranslatedDslTest do
       end
 
       for text <- [
-            "نوشته‌ای بنویسید",
-            "مشخصات را در زیر پر کنید.",
-            "نوشته‌های ذخیره‌شده بی‌درنگ منتشر می‌شوند.",
-            "احتیاط",
-            "تغییرها برای همه دیده می‌شوند.",
-            "پایه",
-            "عنوان نوشته",
-            "عنوانی بنویسید",
-            "به‌عنوان سرتیتر صفحه نمایش داده می‌شود.",
-            "وضعیت"
+            "#{@fa}Write a post",
+            "#{@fa}Fill in the details below.",
+            "#{@fa}Saved posts are published at once.",
+            "#{@fa}Careful",
+            "#{@fa}Changes are visible to everyone.",
+            "#{@fa}Basic",
+            "#{@fa}Post title",
+            "#{@fa}Type a title",
+            "#{@fa}Shown as the page heading.",
+            "#{@fa}Status"
           ] do
         assert persian =~ text, "Persian lost #{text}"
       end
@@ -427,9 +435,9 @@ defmodule MishkaGervaz.TranslatedDslTest do
       {english, persian} = both(fn -> render_form() end)
 
       assert english =~ "Slug"
-      refute english =~ "نشانی کوتاه"
-      assert persian =~ "نشانی کوتاه"
-      refute persian =~ "Slug"
+      refute english =~ "#{@fa}Slug"
+      assert persian =~ "#{@fa}Slug"
+      refute unprefixed?(persian, "Slug")
     end
 
     test "draws the labels of a select's options in the caller's locale, never their values" do
@@ -437,8 +445,8 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       assert english =~ ~s(<option value="draft">Draft</option>)
       assert english =~ ~s(<option value="published">Published</option>)
-      assert persian =~ ~s(<option value="draft">پیش‌نویس</option>)
-      assert persian =~ ~s(<option value="published">منتشر شده</option>)
+      assert persian =~ ~s(<option value="draft">#{@fa}Draft</option>)
+      assert persian =~ ~s(<option value="published">#{@fa}Published</option>)
     end
 
     test "draws the submit and cancel buttons it declared in the caller's locale" do
@@ -448,8 +456,8 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       assert english =~ "Save the post"
       assert english =~ "Never mind"
-      assert persian =~ "ذخیرهٔ نوشته"
-      assert persian =~ "بی‌خیال"
+      assert persian =~ "#{@fa}Save the post"
+      assert persian =~ "#{@fa}Never mind"
     end
 
     test "draws the keys of a key map in the caller's locale" do
@@ -477,12 +485,12 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert english =~ ~s(<option value="">Pick a status</option>)
       assert english =~ ~s(<option value="s">Small</option>)
 
-      assert persian =~ "نام مورد"
-      assert persian =~ "سرتیتر"
-      assert persian =~ ~s(placeholder="جستجوی نوشته‌ها")
-      assert persian =~ ~s(<option value="">یک وضعیت را برگزینید</option>)
-      assert persian =~ ~s(<option value="s">کوچک</option>)
-      assert persian =~ ~s(<option value="l">بزرگ</option>)
+      assert persian =~ "#{@fa}Item name"
+      assert persian =~ "#{@fa}Heading"
+      assert persian =~ ~s(placeholder="#{@fa}Search posts")
+      assert persian =~ ~s(<option value="">#{@fa}Pick a status</option>)
+      assert persian =~ ~s(<option value="s">#{@fa}Small</option>)
+      assert persian =~ ~s(<option value="l">#{@fa}Large</option>)
     end
 
     test "draws the buttons of a key list in the caller's locale" do
@@ -495,8 +503,8 @@ defmodule MishkaGervaz.TranslatedDslTest do
 
       assert english =~ "Add entry"
       assert english =~ "Remove entry"
-      assert persian =~ "افزودن مورد"
-      assert persian =~ "حذف مورد"
+      assert persian =~ "#{@fa}Add entry"
+      assert persian =~ "#{@fa}Remove entry"
     end
 
     defp render_field(field, form \\ to_form(%{}, as: :form)) do
@@ -531,10 +539,10 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert english =~ "Item name"
       assert english =~ ">Small</option>"
       assert english =~ "Add entry"
-      assert persian =~ "نام مورد"
-      assert persian =~ ">کوچک</option>"
-      assert persian =~ ">بزرگ</option>"
-      assert persian =~ "افزودن مورد"
+      assert persian =~ "#{@fa}Item name"
+      assert persian =~ ">#{@fa}Small</option>"
+      assert persian =~ ">#{@fa}Large</option>"
+      assert persian =~ "#{@fa}Add entry"
       assert persian =~ ~s(value="s")
     end
   end

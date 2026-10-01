@@ -27,7 +27,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandlerTest do
         MishkaGervaz.Test.FormWebHelpers.build_state(mode: :update, form: form)
         |> RelationHandler.revalidate_form(%{title: nil})
 
-      assert state.errors[:title] == ["الزامی است"]
+      assert state.errors[:title] == ["[fa:errors] is required"]
     end
   end
 
