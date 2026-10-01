@@ -616,7 +616,7 @@ defmodule MishkaGervaz.Table.Web.Events do
 
       {:ok, :stream_insert, record} ->
         socket =
-          DataLoader.insert_row(socket, state, record, at: 0)
+          Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record, at: 0)
 
         {:noreply, socket}
 
@@ -625,7 +625,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_update, record} ->
-        socket = DataLoader.insert_row(socket, state, record)
+        socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
         {:noreply, socket}
 
       {:error, _reason} ->
@@ -681,7 +681,7 @@ defmodule MishkaGervaz.Table.Web.Events do
 
       {:ok, :stream_insert, record} ->
         socket =
-          DataLoader.insert_row(socket, state, record, at: 0)
+          Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record, at: 0)
 
         {:noreply, socket}
 
@@ -690,7 +690,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_update, record} ->
-        socket = DataLoader.insert_row(socket, state, record)
+        socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
         {:noreply, socket}
 
       {:error, _reason} ->
@@ -990,7 +990,7 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket = DataLoader.insert_row(socket, state, updated)
+          socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, updated)
           {:noreply, socket}
 
         {:error, reason} ->
@@ -1074,7 +1074,7 @@ defmodule MishkaGervaz.Table.Web.Events do
 
   def safe_stream_reinsert(socket, state, record) do
     if Map.has_key?(socket.assigns, :streams) do
-      DataLoader.insert_row(socket, state, record)
+      Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
     else
       socket
     end

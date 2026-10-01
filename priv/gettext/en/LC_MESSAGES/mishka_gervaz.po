@@ -38,10 +38,10 @@ msgstr "Go to page %{page}"
 
 #: lib/mishka_gervaz/table/templates/media_gallery.ex:695
 #: lib/mishka_gervaz/table/templates/media_gallery.ex:762
-#: lib/mishka_gervaz/table/templates/shared.ex:1858
-#: lib/mishka_gervaz/table/templates/table.ex:816
-#: lib/mishka_gervaz/table/templates/table.ex:848
-#: lib/mishka_gervaz/table/templates/table.ex:875
+#: lib/mishka_gervaz/table/templates/shared.ex:1821
+#: lib/mishka_gervaz/table/templates/table.ex:812
+#: lib/mishka_gervaz/table/templates/table.ex:844
+#: lib/mishka_gervaz/table/templates/table.ex:871
 #, elixir-autogen
 msgid "Loading..."
 msgstr "Loading..."
@@ -87,17 +87,17 @@ msgstr[0] "%{count} active"
 msgstr[1] "%{count} active"
 
 ## States
-#: lib/mishka_gervaz/table/templates/shared.ex:1778
+#: lib/mishka_gervaz/table/templates/shared.ex:1741
 #, elixir-autogen
 msgid "No records found"
 msgstr "No records found"
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1813
+#: lib/mishka_gervaz/table/templates/shared.ex:1776
 #, elixir-autogen
 msgid "Error loading data"
 msgstr "Error loading data"
 
-#: lib/mishka_gervaz/table/templates/shared.ex:1819
+#: lib/mishka_gervaz/table/templates/shared.ex:1782
 #, elixir-autogen
 msgid "Retry"
 msgstr "Retry"
@@ -150,12 +150,12 @@ msgid "Select all"
 msgstr "Select all"
 
 ## Table
-#: lib/mishka_gervaz/table/templates/table.ex:585
+#: lib/mishka_gervaz/table/templates/table.ex:581
 #, elixir-autogen
 msgid "Actions"
 msgstr "Actions"
 
-#: lib/mishka_gervaz/table/templates/table.ex:826
+#: lib/mishka_gervaz/table/templates/table.ex:822
 #, elixir-autogen
 msgid "No data"
 msgstr "No data"
@@ -268,7 +268,7 @@ msgstr ""
 msgid "Clear filters"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:808
+#: lib/mishka_gervaz/table/templates/table.ex:804
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -288,7 +288,7 @@ msgstr ""
 msgid "Expand"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:820
+#: lib/mishka_gervaz/table/templates/table.ex:816
 #, elixir-autogen, elixir-format
 msgid "Failed to load data"
 msgstr ""
@@ -318,7 +318,7 @@ msgstr ""
 msgid "Permanently delete this record? This cannot be undone."
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:789
+#: lib/mishka_gervaz/table/templates/table.ex:785
 #, elixir-autogen, elixir-format
 msgid "Record Details"
 msgstr ""
@@ -338,7 +338,7 @@ msgstr ""
 msgid "Saving…"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:233
+#: lib/mishka_gervaz/table/templates/table.ex:229
 #, elixir-autogen, elixir-format
 msgid "Scroll for more"
 msgstr ""
