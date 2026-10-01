@@ -174,6 +174,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           <div
             :if={not @empty?}
             data-role="gervaz-table-frame"
+            phx-mounted={JS.dispatch("gervaz:table-frame-mounted")}
             class={[
               "relative isolate overflow-x-auto rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)]",
               scrollbar_class(),
@@ -188,7 +189,10 @@ defmodule MishkaGervaz.Table.Templates.Table do
               static={@static}
               state={@state}
             />
-            <div class={container_classes(@static)}>
+            <div
+              class={container_classes(@static)}
+              style={actions_track_style(@static, @state, @show_actions)}
+            >
               <.render_header
                 static={@static}
                 state={@state}
@@ -518,7 +522,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         assigns.show_expand,
         assigns.show_checkboxes,
         visible_columns,
-        actions_track(assigns.static, assigns.state, assigns.show_actions)
+        actions_track_ref(assigns.show_actions)
       )
 
     assigns =
@@ -689,7 +693,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         assigns.show_expand,
         assigns.show_checkboxes,
         assigns.visible_columns,
-        actions_track(assigns.static, assigns.state, assigns.show_actions)
+        actions_track_ref(assigns.show_actions)
       )
 
     assigns =
@@ -937,14 +941,16 @@ defmodule MishkaGervaz.Table.Templates.Table do
   @sticky_actions_class "min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10 " <>
                           "min-[980px]:has-[[aria-expanded=true]]:z-[11] " <>
                           "min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] " <>
-                          "min-[980px]:bg-blend-multiply min-[980px]:shadow-[inset_1px_0_0_#ecebe6]"
+                          "min-[980px]:bg-blend-multiply " <>
+                          "min-[980px]:in-data-overflowing:shadow-[inset_1px_0_0_#ecebe6]"
 
   @sticky_actions_bleed "min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px]"
 
   # The Actions cell's classes on a screen 980px or wider while `actions_layout` keeps `sticky` on:
   # pinned to the frame's right edge above the cells that scroll under it, in its row's colour laid
-  # over the frame's white, with a 1px line on its left, one layer higher while a control inside it
-  # has `aria-expanded="true"`, and, with `bleed?`, reaching over the row's 14px of vertical padding.
+  # over the frame's white, with a 1px line on its left while the frame carries `data-overflowing`,
+  # one layer higher while a control inside it has `aria-expanded="true"`, and, with `bleed?`,
+  # reaching over the row's 14px of vertical padding.
   defp sticky_actions_class(static, bleed?) do
     case {sticky_actions?(static), bleed?} do
       {false, _bleed?} -> nil
@@ -976,21 +982,27 @@ defmodule MishkaGervaz.Table.Templates.Table do
   @action_control_px 30
   @action_gap_px 4
   @actions_cell_padding_px 32
-  @actions_track_min_px 120
+  @actions_track_min_px 80
 
-  # The Actions column's track: room for the most row action controls one row can draw (30px each,
-  # 4px apart, 16px of padding on either side), at least 120px, growing to a wider control's content.
-  defp actions_track(static, state, true) do
-    controls = Shared.max_row_action_controls(static, state)
+  # The rows' container's `--gervaz-actions-track`, the Actions column's track in the header and in
+  # every row: room for the most row action controls a row in the stream draws, or before the rows
+  # are counted the most one row can draw (30px each, 4px apart, 16px of padding on either side), at
+  # least the 80px the header's "Actions" needs, growing to a wider control's content.
+  defp actions_track_style(static, state, true) do
+    controls = state.row_action_controls || Shared.max_row_action_controls(static, state)
 
     content =
       controls * @action_control_px + max(controls - 1, 0) * @action_gap_px +
         @actions_cell_padding_px
 
-    "minmax(#{max(content, @actions_track_min_px)}px,max-content)"
+    "--gervaz-actions-track: minmax(#{max(content, @actions_track_min_px)}px,max-content)"
   end
 
-  defp actions_track(_static, _state, _show_actions), do: nil
+  defp actions_track_style(_static, _state, _show_actions), do: nil
+
+  # The Actions column's track in the header's and each row's columns, set on the rows' container.
+  defp actions_track_ref(true), do: "var(--gervaz-actions-track)"
+  defp actions_track_ref(_show_actions), do: nil
 
   @scrollbar_class "[scrollbar-width:thin] [scrollbar-color:#d5d3cb_transparent] " <>
                      "[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent " <>

@@ -90,6 +90,20 @@ divider. `ui` on the dropdown itself styles the trigger.
 Names which actions render inline and which collapse into a dropdown. Every name listed must
 exist. `auto_collapse_after N` folds everything past the Nth.
 
+## The Actions column in the plain table
+
+It is as wide as the most controls a row on the page draws — 30px each, 4px apart, 16px of
+padding either side, at least 80px for its header — with each `visible` rule decided for each
+row. Insert a row yourself with `MishkaGervaz.Table.Web.DataLoader.insert_row/4` rather than
+`stream_insert/4`, so the column widens when that row draws more.
+
+From 980px up it is pinned to the frame's right edge (`sticky true`). It draws a 1px line on
+its left while the frame, `[data-role="gervaz-table-frame"]`, carries `data-overflowing`. Gervaz
+sets no such attribute: the frame dispatches a bubbling `gervaz:table-frame-mounted` event when
+LiveView adds it, and the app sets `data-overflowing` while the frame's `scrollWidth` exceeds its
+`clientWidth`, through `liveSocket.js().setAttribute/3` and `removeAttribute/2` so a patch keeps
+it. An app that does not leaves the column without the line.
+
 ## Rules the compiler enforces
 
 - `type :link` requires `path`.

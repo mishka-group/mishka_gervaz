@@ -200,7 +200,8 @@ defmodule MishkaGervaz.Table.Web.State do
     :saved_archived_state,
     :current_page_size,
     :dismissed_notices,
-    :loaded_records
+    :loaded_records,
+    :row_action_controls
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error
@@ -238,8 +239,11 @@ defmodule MishkaGervaz.Table.Web.State do
           saved_archived_state: map() | nil,
           current_page_size: pos_integer() | nil,
           dismissed_notices: MapSet.t(),
-          loaded_records: list()
+          loaded_records: list(),
+          row_action_controls: non_neg_integer() | nil
         }
+
+  alias MishkaGervaz.Table.Templates.Shared
 
   @spec init(String.t(), module(), map() | nil) :: t()
   defdelegate init(id, resource, current_user), to: __MODULE__.Default
@@ -282,6 +286,27 @@ defmodule MishkaGervaz.Table.Web.State do
 
   @spec get_preloads(t()) :: list(atom())
   defdelegate get_preloads(state), to: __MODULE__.Default
+
+  @doc """
+  Raises `row_action_controls` to the most row action controls any of `records` draws, for rows
+  entering the table's stream, as `MishkaGervaz.Table.Templates.Shared.row_action_controls/3`
+  counts them.
+
+  `row_action_controls` is the most controls a row in the stream draws, which sizes the table
+  template's Actions column. It stays `nil` until the rows of a load are counted, and the template
+  then sizes the column for the most controls any row could draw.
+  """
+  @spec fit_row_actions(t(), [map()]) :: t()
+  def fit_row_actions(%__MODULE__{row_action_controls: nil} = state, _records), do: state
+
+  def fit_row_actions(%__MODULE__{row_action_controls: controls} = state, records) do
+    drawn =
+      Enum.reduce(records, controls, fn record, most ->
+        max(most, Shared.row_action_controls(state.static, record, state))
+      end)
+
+    %{state | row_action_controls: drawn}
+  end
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do

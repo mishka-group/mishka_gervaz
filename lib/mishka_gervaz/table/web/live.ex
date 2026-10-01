@@ -441,7 +441,7 @@ defmodule MishkaGervaz.Table.Web.Live do
     case Ash.get(state.static.resource, record.id, opts) do
       {:ok, loaded_record} ->
         loaded_record = Helpers.inject_preload_aliases(loaded_record, state.preload_aliases)
-        stream_insert(socket, state.static.stream_name, loaded_record, at: 0)
+        DataLoader.insert_row(socket, state, loaded_record, at: 0)
 
       _ ->
         socket
@@ -469,7 +469,7 @@ defmodule MishkaGervaz.Table.Web.Live do
     case Ash.get(state.static.resource, state.expanded_id, opts) do
       {:ok, loaded_record} ->
         loaded_record = Helpers.inject_preload_aliases(loaded_record, state.preload_aliases)
-        stream_insert(socket, state.static.stream_name, loaded_record)
+        DataLoader.insert_row(socket, state, loaded_record)
 
       _ ->
         socket

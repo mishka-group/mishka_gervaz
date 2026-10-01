@@ -3,7 +3,9 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
   On a screen 980px or wider the Actions column is pinned to the right edge of the table's frame,
   in the header and in every row, so the row actions stay in view while the columns before it
   scroll under it. Each Actions cell takes its row's colour, or the header's, over the frame's
-  white, and draws a 1px line on its left. Below 980px the rows are cards and nothing is pinned.
+  white, and draws a 1px line on its left only while the frame carries `data-overflowing`, which
+  the app sets while the table scrolls sideways; the frame tells the app it is on the page with a
+  `gervaz:table-frame-mounted` event. Below 980px the rows are cards and nothing is pinned.
   """
   use ExUnit.Case, async: true
 
@@ -24,7 +26,8 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
 
   @pinned ~w(min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10)
   @painted ~w|min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] min-[980px]:bg-blend-multiply|
-  @line "min-[980px]:shadow-[inset_1px_0_0_#ecebe6]"
+  @line "min-[980px]:in-data-overflowing:shadow-[inset_1px_0_0_#ecebe6]"
+  @unconditional_line "min-[980px]:shadow-[inset_1px_0_0_#ecebe6]"
   @bleed ~w(min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px])
   @raised "min-[980px]:has-[[aria-expanded=true]]:z-[11]"
 
@@ -152,12 +155,27 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
       refute details =~ ~s(data-role="gervaz-row-actions")
     end
 
-    test "each Actions cell draws a 1px line on its left in the table's border colour" do
+    test "each Actions cell draws a 1px line on its left in the table's border colour while the frame overflows" do
       html = table_state() |> with_row_states() |> render_table()
       {_thead, header_cell} = header(html)
 
-      assert @line in header_cell
-      for {_id, {_row, cell}} <- rows(html), do: assert(@line in cell)
+      for cell <- [header_cell | Enum.map(rows(html), fn {_id, {_row, cell}} -> cell end)] do
+        assert @line in cell
+        refute @unconditional_line in cell
+        refute Enum.any?(cell, &(&1 =~ "shadow-" and &1 != @line))
+      end
+    end
+
+    test "the frame tells the app it is on the page, and names no hook the app must register" do
+      html = table_state() |> render_table()
+
+      [_, frame] = Regex.run(~r/<div([^>]*data-role="gervaz-table-frame"[^>]*)>/, html)
+
+      assert frame =~ "phx-mounted="
+      assert frame =~ "dispatch"
+      assert frame =~ "gervaz:table-frame-mounted"
+      refute frame =~ "phx-hook"
+      refute frame =~ "data-overflowing"
     end
 
     test "each Actions cell reaches over its row's 14px of vertical padding" do

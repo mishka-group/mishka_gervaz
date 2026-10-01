@@ -99,6 +99,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec in_view?(State.t(), term()) :: boolean()
   defdelegate in_view?(state, id), to: __MODULE__.Default
 
+  @spec insert_row(Phoenix.LiveView.Socket.t(), State.t(), map(), keyword()) ::
+          Phoenix.LiveView.Socket.t()
+  defdelegate insert_row(socket, state, record, opts \\ []), to: __MODULE__.Default
+
   @spec reload(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate reload(socket, state), to: __MODULE__.Default
 
@@ -296,6 +300,26 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       end
 
       @doc """
+      Inserts `record` into the table's stream, `opts` as `Phoenix.LiveView.stream_insert/4` takes
+      them, and raises the socket's `:table_state` `row_action_controls` to the controls its row
+      draws, so the Actions column fits it.
+      """
+      @spec insert_row(Phoenix.LiveView.Socket.t(), State.t(), map(), keyword()) ::
+              Phoenix.LiveView.Socket.t()
+      def insert_row(socket, state, record, opts \\ []) do
+        socket
+        |> fit_row_actions(record)
+        |> Phoenix.LiveView.stream_insert(state.static.stream_name, record, opts)
+      end
+
+      # Raises the socket's table state's `row_action_controls` to the controls `record`'s row draws.
+      defp fit_row_actions(%{assigns: %{table_state: %State{} = current}} = socket, record) do
+        Phoenix.Component.assign(socket, :table_state, State.fit_row_actions(current, [record]))
+      end
+
+      defp fit_row_actions(socket, _record), do: socket
+
+      @doc """
       Brings the table's total — "Showing N", the page count, the empty state — up to date with
       the data, in the socket's `:table_state`.
 
@@ -446,7 +470,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           end
 
         state =
-          State.update(state,
+          state
+          |> State.update(
             loading: :loaded,
             has_initial_data?: true,
             page: page,
@@ -455,8 +480,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             total_pages: pagination_info[:total_pages],
             records_result:
               AsyncResult.ok(state.records_result, %{page: page, data: page_result}),
-            loaded_records: accumulate_records(state, records, reset)
+            loaded_records: accumulate_records(state, records, reset),
+            row_action_controls: if(reset, do: 0, else: state.row_action_controls)
           )
+          |> State.fit_row_actions(records)
 
         socket
         |> Phoenix.Component.assign(:table_state, state)
@@ -690,6 +717,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_async: 3,
                      load_total: 1,
                      in_view?: 2,
+                     insert_row: 3,
+                     insert_row: 4,
                      refresh_total: 1,
                      handle_async: 3,
                      reload: 2,

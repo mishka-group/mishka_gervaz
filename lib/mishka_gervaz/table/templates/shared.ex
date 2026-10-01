@@ -1457,7 +1457,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     layout = assigns.static.row_actions_layout
     dropdowns = assigns.static.row_action_dropdowns
 
-    has_layout? = layout != nil and (dropdowns != [] or layout[:inline] != [])
+    has_layout? = layout_strip?(layout, dropdowns)
 
     assigns =
       assigns
@@ -1489,9 +1489,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       <% else %>
         <.render_action
           :for={action <- @row_actions}
-          :if={
-            action_visible?(action, @record, @state) and action_authorized?(action, @record, @state)
-          }
+          :if={shown?(action, @record, @state)}
           action={action}
           record={@record}
           state={@state}
@@ -1505,15 +1503,13 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   defp render_inline_actions(assigns) do
-    inline_names = assigns.inline_names
-
     visible_inline =
-      assigns.row_actions
-      |> Enum.filter(fn action ->
-        action[:name] in inline_names and
-          action_visible?(action, assigns.record, assigns.state) and
-          action_authorized?(action, assigns.record, assigns.state)
-      end)
+      visible_inline_actions(
+        assigns.row_actions,
+        assigns.inline_names,
+        assigns.record,
+        assigns.state
+      )
 
     assigns = Phoenix.Component.assign(assigns, :visible_inline, visible_inline)
 
@@ -1531,16 +1527,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   defp render_dropdown_menu(assigns) do
-    visible_items =
-      Enum.filter(assigns.dropdown.items, fn
-        %{type: :separator} ->
-          true
-
-        action ->
-          action_visible?(action, assigns.record, assigns.state) and
-            action_authorized?(action, assigns.record, assigns.state)
-      end)
-
+    visible_items = visible_dropdown_items(assigns.dropdown, assigns.record, assigns.state)
     has_visible? = Enum.any?(visible_items, fn item -> item[:type] != :separator end)
     total = length(visible_items)
 
@@ -1692,20 +1679,21 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   action and one per dropdown with an item to show, laid out the way `render_row_actions/1` lays
   them out.
 
-  An action whose `visible` is a function counts as visible.
+  An action whose `visible` is a function counts as visible. `row_action_controls/3` counts what one
+  record's row draws.
   """
   @spec max_row_action_controls(map(), map()) :: non_neg_integer()
   def max_row_action_controls(static, state) do
     row_actions = static.row_actions || []
     layout = static.row_actions_layout
-    dropdowns = static.row_action_dropdowns || []
-    inline_names = (layout && layout[:inline]) || []
+    dropdowns = static.row_action_dropdowns
 
-    if layout != nil and (dropdowns != [] or inline_names != []) do
+    if layout_strip?(layout, dropdowns) do
+      inline_names = layout[:inline] || []
       inline = Enum.count(row_actions, &(&1[:name] in inline_names and may_show?(&1, state)))
 
       menus =
-        Enum.count(dropdowns, fn dropdown ->
+        Enum.count(dropdowns || [], fn dropdown ->
           dropdown.name in (layout[:dropdown] || []) and
             Enum.any?(Map.get(dropdown, :items, []), &may_show?(&1, state))
         end)
@@ -1724,6 +1712,55 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   defp may_show?(action, state),
     do: action_visible?(action, nil, state) and action_authorized?(action, nil, state)
+
+  @doc """
+  The row action controls `render_row_actions/1` draws for `record`: one per inline action and one
+  per dropdown with an item to show under an `actions_layout`, otherwise one per action. Each
+  action's `visible` rule is decided for `record` and `state`, and an `:accordion` draws none.
+  """
+  @spec row_action_controls(map(), map(), map()) :: non_neg_integer()
+  def row_action_controls(static, record, state) do
+    row_actions = non_accordion_actions(static.row_actions || [])
+    layout = static.row_actions_layout
+    dropdowns = static.row_action_dropdowns
+
+    if layout_strip?(layout, dropdowns) do
+      inline = visible_inline_actions(row_actions, layout[:inline] || [], record, state)
+
+      menus =
+        Enum.count(dropdowns || [], fn dropdown ->
+          dropdown.name in (layout[:dropdown] || []) and
+            Enum.any?(visible_dropdown_items(dropdown, record, state), &(&1[:type] != :separator))
+        end)
+
+      length(inline) + menus
+    else
+      Enum.count(row_actions, &shown?(&1, record, state))
+    end
+  end
+
+  # Whether an `actions_layout` lays the strip out: a layout with inline actions or dropdowns.
+  defp layout_strip?(layout, dropdowns),
+    do: layout != nil and (dropdowns != [] or layout[:inline] != [])
+
+  # The actions named inline that the record's row shows, in their declared order.
+  defp visible_inline_actions(row_actions, inline_names, record, state),
+    do: Enum.filter(row_actions, &(&1[:name] in inline_names and shown?(&1, record, state)))
+
+  # The dropdown's items the record's row shows, its separators kept.
+  defp visible_dropdown_items(dropdown, record, state) do
+    dropdown
+    |> Map.get(:items, [])
+    |> Enum.filter(fn
+      %{type: :separator} -> true
+      action -> shown?(action, record, state)
+    end)
+  end
+
+  # Whether the record's row shows the action: visible for the record and the view, and allowed to
+  # the user.
+  defp shown?(action, record, state),
+    do: action_visible?(action, record, state) and action_authorized?(action, record, state)
 
   @doc """
   Renders the empty state with configurable message, icon, and action.
