@@ -631,6 +631,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A date input.
+
+  ## Assigns
+    * `:name`, `:value`, `:id`, `:min`, `:max` - the input's attributes
+    * `:search` - `true` draws the filter bar's input instead of the form's
+    * `:icon` - an icon inside the input's leading edge
+    * `:aria_label` - the input's accessible name, for an input without a `<label>` of its own
+    * `:disabled`, `:readonly` - switch the input off
+    * `:class` - replaces the input's classes
+  """
   @impl true
   def date_input(assigns) do
     assigns =
@@ -640,6 +651,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:min, fn -> nil end)
       |> assign_new(:max, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:aria_label, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
 
@@ -659,6 +671,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         max={@max}
         disabled={@disabled}
         readonly={@readonly}
+        aria-label={@aria_label}
         class={[@class, @icon && "pl-9", (@disabled || @readonly) && disabled_class()]}
       />
     </div>
@@ -951,11 +964,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
-  Render a date range container with two date inputs and separator.
+  Render a date range: the two date inputs side by side with an arrow between them, each at least
+  140px wide. In a space narrower than both, the second input moves to the next line.
 
   ## Assigns
-    * `:class` - Container CSS class (default: "flex items-center gap-2")
-    * `:separator_class` - Separator text CSS class (default: "text-[#8a877f]")
+    * `:class` - Container CSS class (default: "flex flex-wrap items-center gap-2")
+    * `:separator_class` - The arrow's CSS class (default: "text-[11px] font-semibold text-[#bcb9b2]")
     * `:from_input` - Pre-rendered from date input
     * `:to_input` - Pre-rendered to date input
   """
@@ -963,14 +977,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def date_range_container(assigns) do
     assigns =
       assigns
-      |> assign_new(:class, fn -> "flex items-center gap-2" end)
-      |> assign_new(:separator_class, fn -> "text-[#8a877f]" end)
+      |> assign_new(:class, fn -> "flex flex-wrap items-center gap-2" end)
+      |> assign_new(:separator_class, fn -> "text-[11px] font-semibold text-[#bcb9b2]" end)
 
     ~H"""
     <div class={@class}>
-      {@from_input}
-      <span class={@separator_class}>to</span>
-      {@to_input}
+      <div class="min-w-[140px] flex-1">{@from_input}</div>
+      <span class={@separator_class} aria-hidden="true">&rarr;</span>
+      <div class="min-w-[140px] flex-1">{@to_input}</div>
     </div>
     """
   end

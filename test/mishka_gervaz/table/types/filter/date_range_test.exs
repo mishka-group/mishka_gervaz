@@ -106,6 +106,68 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
     end
   end
 
+  describe "render_input/3" do
+    @filter %{name: :created_at, ui: %{label: "Created at"}}
+
+    defp draw(value, filter \\ @filter) do
+      filter
+      |> DateRange.render_input(value, MishkaGervaz.UIAdapters.Tailwind)
+      |> Phoenix.HTML.Safe.to_iodata()
+      |> IO.iodata_to_binary()
+    end
+
+    test "draws the from input, an arrow, then the to input, keeping their names" do
+      html = draw(%{from: "2026-09-24", to: "2026-09-26"})
+
+      assert html =~
+               ~r/name="created_at_from" value="2026-09-24".*&rarr;.*name="created_at_to" value="2026-09-26"/s
+    end
+
+    test "gives each input at least 140px, enough for a whole date" do
+      html = draw(nil)
+
+      assert length(Regex.scan(~r/<div class="min-w-\[140px\] flex-1">/, html)) == 2
+    end
+
+    test "draws both inputs in the filter style of the inputs beside them" do
+      html = draw(nil)
+
+      assert length(
+               Regex.scan(~r/<input type="date"[^>]*class="[^"]*h-\[42px\][^"]*bg-white/, html)
+             ) ==
+               2
+    end
+
+    test "names each input for assistive technology" do
+      html = draw(nil)
+
+      assert html =~ ~s(name="created_at_from" value="" aria-label="From")
+      assert html =~ ~s(name="created_at_to" value="" aria-label="To")
+    end
+
+    test "draws a Date as its ISO date, and one side alone" do
+      html = draw(%{from: ~D[2026-09-24]})
+
+      assert html =~ ~s(name="created_at_from" value="2026-09-24")
+      assert html =~ ~s(name="created_at_to" value="")
+    end
+
+    test "draws both inputs empty for a value that is not a range" do
+      for value <- [nil, "~", ""] do
+        html = draw(value)
+
+        assert html =~ ~s(name="created_at_from" value="")
+        assert html =~ ~s(name="created_at_to" value="")
+      end
+    end
+
+    test "puts the filter's icon on the first input" do
+      html = draw(nil, %{@filter | ui: %{icon: "hero-calendar"}})
+
+      assert html =~ "hero-calendar"
+    end
+  end
+
   describe "behaviour implementation" do
     test "implements FilterType behaviour" do
       behaviours = DateRange.__info__(:attributes)[:behaviour] || []

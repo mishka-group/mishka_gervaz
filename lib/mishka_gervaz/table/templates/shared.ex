@@ -854,30 +854,19 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         """
 
       :date_range ->
-        base_name = to_string(filter.name)
-        current = assigns.value
-
-        assigns =
-          assigns
-          |> assign(:from_name, base_name <> "_from")
-          |> assign(:to_name, base_name <> "_to")
-          |> assign(:from_val, (is_map(current) && Map.get(current, :from)) || "")
-          |> assign(:to_val, (is_map(current) && Map.get(current, :to)) || "")
-          |> assign(:from_label, dgettext("mishka_gervaz", "From"))
-          |> assign(:to_label, dgettext("mishka_gervaz", "To"))
-          |> assign(
-            :date_class,
-            "h-[42px] w-full rounded-[11px] border border-[#ecebe6] bg-white px-[13px] text-[12.5px] font-medium text-[#3a382f] outline-none transition-shadow focus:border-[#c3c1f0] focus:shadow-[0_0_0_3px_rgba(91,87,214,0.1)]"
-          )
+        assigns = assign(assigns, :resolved_label, filter_label(filter))
 
         ~H"""
-        <div class="min-w-0 flex-1">
-          <label class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">{@from_label}</label>
-          <input type="date" name={@from_name} value={@from_val} class={@date_class} />
-        </div>
-        <div class="min-w-0 flex-1">
-          <label class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">{@to_label}</label>
-          <input type="date" name={@to_name} value={@to_val} class={@date_class} />
+        <div
+          role="group"
+          aria-label={@resolved_label}
+          data-role="gervaz-date-range-filter"
+          class="min-w-[min(100%,310px)] flex-[1.6]"
+        >
+          <label class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">
+            {@resolved_label}
+          </label>
+          {MishkaGervaz.Table.Types.Filter.DateRange.render_input(@filter, @value, @ui_adapter)}
         </div>
         """
 
