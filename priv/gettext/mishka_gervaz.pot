@@ -38,9 +38,9 @@ msgstr ""
 #: lib/mishka_gervaz/table/templates/media_gallery.ex:695
 #: lib/mishka_gervaz/table/templates/media_gallery.ex:762
 #: lib/mishka_gervaz/table/templates/shared.ex:1821
-#: lib/mishka_gervaz/table/templates/table.ex:797
-#: lib/mishka_gervaz/table/templates/table.ex:829
-#: lib/mishka_gervaz/table/templates/table.ex:856
+#: lib/mishka_gervaz/table/templates/table.ex:812
+#: lib/mishka_gervaz/table/templates/table.ex:844
+#: lib/mishka_gervaz/table/templates/table.ex:871
 #, elixir-autogen
 msgid "Loading..."
 msgstr ""
@@ -149,12 +149,12 @@ msgid "Select all"
 msgstr ""
 
 ## Table
-#: lib/mishka_gervaz/table/templates/table.ex:573
+#: lib/mishka_gervaz/table/templates/table.ex:581
 #, elixir-autogen
 msgid "Actions"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:807
+#: lib/mishka_gervaz/table/templates/table.ex:822
 #, elixir-autogen
 msgid "No data"
 msgstr ""
@@ -267,7 +267,7 @@ msgstr ""
 msgid "Clear filters"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:789
+#: lib/mishka_gervaz/table/templates/table.ex:804
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -287,7 +287,7 @@ msgstr ""
 msgid "Expand"
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:801
+#: lib/mishka_gervaz/table/templates/table.ex:816
 #, elixir-autogen, elixir-format
 msgid "Failed to load data"
 msgstr ""
@@ -317,7 +317,7 @@ msgstr ""
 msgid "Permanently delete this record? This cannot be undone."
 msgstr ""
 
-#: lib/mishka_gervaz/table/templates/table.ex:770
+#: lib/mishka_gervaz/table/templates/table.ex:785
 #, elixir-autogen, elixir-format
 msgid "Record Details"
 msgstr ""

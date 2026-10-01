@@ -569,7 +569,15 @@ defmodule MishkaGervaz.Table.Templates.Table do
           />
         </div>
       </div>
-      <div :if={@show_actions} class={["text-right", header_type()]}>
+      <div
+        :if={@show_actions}
+        data-role="gervaz-actions-header"
+        class={[
+          "text-right",
+          header_type(),
+          sticky_actions_class(@static, is_nil(@static.theme && @static.theme[:header_class]))
+        ]}
+      >
         {dgettext("mishka_gervaz", "Actions")}
       </div>
     </div>
@@ -751,7 +759,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
           </span>
           <Shared.render_cell column={column} record={@record} static={@static} state={@state} />
         </div>
-        <div :if={@show_actions} class="flex items-center justify-end px-[16px] max-[980px]:px-0!">
+        <div
+          :if={@show_actions}
+          data-role="gervaz-row-actions"
+          class={[
+            "flex items-center justify-end px-[16px] max-[980px]:px-0!",
+            sticky_actions_class(@static, true)
+          ]}
+        >
           <Shared.render_row_actions
             row_actions={@filtered_row_actions}
             record={@record}
@@ -904,18 +919,43 @@ defmodule MishkaGervaz.Table.Templates.Table do
   end
 
   defp container_classes(_static) do
-    "min-[981px]:min-w-min"
+    "min-[980px]:min-w-min"
   end
 
+  # Divides the rows, and with `striped` tints every second row under any hover, selection or
+  # `row class` colour of its own.
   defp row_group_classes(static) do
     options = static.template_options || default_options()
 
     [
       "divide-y divide-[#f4f3ee]",
-      options[:striped] && "[&>div:nth-child(even)]:bg-muted/20"
+      options[:striped] && "[:where(&>div:nth-child(even)>.gervaz-row)]:bg-muted/20"
     ]
     |> Enum.filter(& &1)
   end
+
+  @sticky_actions_class "min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10 " <>
+                          "min-[980px]:has-[[aria-expanded=true]]:z-[11] " <>
+                          "min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] " <>
+                          "min-[980px]:bg-blend-multiply min-[980px]:shadow-[inset_1px_0_0_#ecebe6]"
+
+  @sticky_actions_bleed "min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px]"
+
+  # The Actions cell's classes on a screen 980px or wider while `actions_layout` keeps `sticky` on:
+  # pinned to the frame's right edge above the cells that scroll under it, in its row's colour laid
+  # over the frame's white, with a 1px line on its left, one layer higher while a control inside it
+  # has `aria-expanded="true"`, and, with `bleed?`, reaching over the row's 14px of vertical padding.
+  defp sticky_actions_class(static, bleed?) do
+    case {sticky_actions?(static), bleed?} do
+      {false, _bleed?} -> nil
+      {true, true} -> @sticky_actions_class <> " " <> @sticky_actions_bleed
+      {true, false} -> @sticky_actions_class
+    end
+  end
+
+  # Whether the Actions column is pinned: always, unless `actions_layout` sets `sticky false`.
+  defp sticky_actions?(%{row_actions_layout: %{sticky: false}}), do: false
+  defp sticky_actions?(_static), do: true
 
   defp grid_template_columns(show_expand, show_checkboxes, visible_columns, actions_track) do
     column_tracks =

@@ -40,7 +40,7 @@ defmodule MishkaGervaz.Table.Templates.HeaderTest do
   test "the Actions cell wears the same type as every column header" do
     thead = header()
 
-    assert thead =~ ~s(<div class="text-right #{@type_classes}">)
+    assert thead =~ ~s(data-role="gervaz-actions-header" class="text-right #{@type_classes} )
     refute thead =~ "text-sm font-medium"
   end
 

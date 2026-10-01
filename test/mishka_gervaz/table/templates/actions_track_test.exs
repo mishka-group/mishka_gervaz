@@ -135,7 +135,8 @@ defmodule MishkaGervaz.Table.Templates.ActionsTrackTest do
       html = render_table(state)
 
       refute header_tracks(html, state) =~ "max-content"
-      refute html =~ ~s(<div class="text-right px-[16px])
+      refute html =~ ~s(data-role="gervaz-actions-header")
+      refute html =~ ~s(data-role="gervaz-row-actions")
     end
   end
 

@@ -1094,6 +1094,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  Render a dropdown menu: a 30px trigger that shows and hides the menu below it, and a click
+  anywhere else that hides it.
+
+  The trigger carries `aria-expanded`, `"true"` while the menu is shown. A table's sticky Actions
+  cell is drawn above the rows after it while a control inside it has `aria-expanded="true"`, so a
+  custom adapter's `dropdown/1` sets it too for its menu to open over those rows.
+
+  ## Assigns
+    * `:icon` - The trigger's icon (default: "hero-ellipsis-vertical")
+    * `:inner_block` - The menu's items
+  """
   @impl true
   def dropdown(assigns) do
     assigns =
@@ -1102,9 +1114,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign(:menu_id, "dropdown-#{System.unique_integer([:positive])}")
 
     ~H"""
-    <div class="relative inline-block text-left">
+    <div
+      class="relative inline-block text-left"
+      phx-click-away={
+        JS.hide(
+          to: "##{@menu_id}",
+          transition: {"ease-in duration-75", "opacity-100 scale-100", "opacity-0 scale-95"}
+        )
+        |> JS.set_attribute({"aria-expanded", "false"}, to: "##{@menu_id}-trigger")
+      }
+    >
       <button
+        id={"#{@menu_id}-trigger"}
         type="button"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls={@menu_id}
         class="grid size-[30px] place-items-center rounded-[8px] text-[#8a877f] transition-colors hover:text-[#3a382f]"
         phx-click={
           JS.toggle(
@@ -1112,6 +1137,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             in: {"ease-out duration-100", "opacity-0 scale-95", "opacity-100 scale-100"},
             out: {"ease-in duration-75", "opacity-100 scale-100", "opacity-0 scale-95"}
           )
+          |> JS.toggle_attribute({"aria-expanded", "true", "false"})
         }
       >
         <.render_icon name={@icon} class="size-4" />
@@ -1119,12 +1145,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <div
         id={@menu_id}
         class="absolute right-0 z-[60] mt-2 hidden w-[210px] overflow-hidden rounded-[14px] border border-[#ecebe6] bg-white p-1.5 shadow-[0_18px_44px_rgba(30,28,24,0.16)]"
-        phx-click-away={
-          JS.hide(
-            to: "##{@menu_id}",
-            transition: {"ease-in duration-75", "opacity-100 scale-100", "opacity-0 scale-95"}
-          )
-        }
       >
         <div class="flex flex-col gap-0.5">
           {render_slot(@inner_block)}
