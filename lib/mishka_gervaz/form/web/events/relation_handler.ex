@@ -236,8 +236,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
           dirty?: true
         )
 
-      form_value = if new_list == [], do: "", else: new_list
-      state = revalidate_form(state, field_atom, form_value)
+      state = revalidate_form(state, field_atom, new_list)
       socket = Phoenix.Component.assign(socket, :form_state, state)
       socket = reload_dependent_fields(socket, state, field_atom)
       {:noreply, socket}

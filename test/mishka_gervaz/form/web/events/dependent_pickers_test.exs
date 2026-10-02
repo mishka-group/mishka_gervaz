@@ -312,6 +312,20 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
       assert {saved.region_ids, saved.workspace_id} == {[ctx.south.id], nil}
     end
 
+    test "a multi-select toggled down to nothing saves an empty list", ctx do
+      socket =
+        scoped_form()
+        |> toggle(:region_ids, ctx.north)
+        |> toggle(:region_ids, ctx.north)
+
+      assert form_param(socket, :region_ids) == {:ok, []}
+
+      save(socket, %{"title" => "Entry"})
+
+      assert_received {:form_saved, :create, saved}
+      assert saved.region_ids == []
+    end
+
     test "a version picked under one language is not saved once the language changes", ctx do
       socket =
         scoped_form()
