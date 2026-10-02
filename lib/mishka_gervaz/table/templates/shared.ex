@@ -1189,16 +1189,35 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:loading, state.loading)
       |> assign(:loading_type, state.loading_type)
       |> assign(:ui_adapter, static.ui_adapter)
-      |> assign(:loading_text, translate_text(pagination_ui.loading_text || "Loading..."))
-      |> assign(:load_more_label, translate_text(pagination_ui.load_more_label || "Load More"))
+      |> assign(
+        :loading_text,
+        translate_text(pagination_ui.loading_text) || dgettext("mishka_gervaz", "Loading...")
+      )
+      |> assign(
+        :load_more_label,
+        translate_text(pagination_ui.load_more_label) || dgettext("mishka_gervaz", "Load More")
+      )
       |> assign(:show_total, pagination_ui.show_total)
-      |> assign(:prev_label, translate_text(pagination_ui.prev_label || "Previous"))
-      |> assign(:next_label, translate_text(pagination_ui.next_label || "Next"))
-      |> assign(:first_label, translate_text(pagination_ui.first_label || "First"))
-      |> assign(:last_label, translate_text(pagination_ui.last_label || "Last"))
+      |> assign(
+        :prev_label,
+        translate_text(pagination_ui.prev_label) || dgettext("mishka_gervaz", "Previous")
+      )
+      |> assign(
+        :next_label,
+        translate_text(pagination_ui.next_label) || dgettext("mishka_gervaz", "Next")
+      )
+      |> assign(
+        :first_label,
+        translate_text(pagination_ui.first_label) || dgettext("mishka_gervaz", "First")
+      )
+      |> assign(
+        :last_label,
+        translate_text(pagination_ui.last_label) || dgettext("mishka_gervaz", "Last")
+      )
       |> assign(
         :page_info_format,
-        translate_text(pagination_ui.page_info_format || "Page {page} of {total}")
+        translate_text(pagination_ui.page_info_format) ||
+          dgettext("mishka_gervaz", "Page {page} of {total}")
       )
 
     ~H"""

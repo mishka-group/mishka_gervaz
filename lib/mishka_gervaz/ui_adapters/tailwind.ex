@@ -15,6 +15,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @behaviour MishkaGervaz.Behaviours.UIAdapter
   use Phoenix.Component
+  use MishkaGervaz.Messages
 
   alias Phoenix.LiveView.JS
   alias MishkaGervaz.Table.Templates.Shared
@@ -42,7 +43,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def text_input(assigns) do
     placeholder =
       assigns[:placeholder] ||
-        if assigns[:placeholder_label], do: "Search #{assigns[:placeholder_label]}..."
+        if assigns[:placeholder_label],
+          do: dgettext("mishka_gervaz", "Search %{label}...", label: assigns[:placeholder_label])
 
     search? = assigns[:search] == true
 
@@ -162,7 +164,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign(:options, normalized)
       |> assign_new(:class, fn -> input_class(assigns[:search] == true) end)
-      |> assign_new(:prompt, fn -> "All" end)
+      |> assign_new(:prompt, fn -> dgettext("mishka_gervaz", "All") end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
 
@@ -275,7 +277,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign(:disabled, disabled)
       |> assign(:display_label, display_label)
       |> assign_new(:class, fn -> input_class(assigns[:search] == true) end)
-      |> assign_new(:placeholder, fn -> "Search..." end)
+      |> assign_new(:placeholder, fn -> dgettext("mishka_gervaz", "Search...") end)
       |> assign_new(:has_more?, fn -> false end)
       |> assign_new(:loading?, fn -> false end)
       |> assign_new(:dropdown_open?, fn -> false end)
@@ -334,7 +336,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
-          No records found
+          {dgettext("mishka_gervaz", "No records found")}
         </div>
         <button
           :for={{opt_label, opt_value} <- @display_options}
@@ -360,7 +362,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           phx-value-filter={@filter_name}
           class="w-full border-t border-[#f0efea] px-3 py-2 text-left text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
         >
-          Load more...
+          {dgettext("mishka_gervaz", "Load more...")}
         </button>
       </div>
     </div>
@@ -410,7 +412,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn ->
         "rounded-[10px] border border-[#ecebe6] bg-[#faf9f6] px-3 py-2 text-[12.5px] outline-none focus:border-[#c3c1f0] focus:bg-white focus:shadow-[0_0_0_3px_rgba(91,87,214,0.1)]"
       end)
-      |> assign_new(:placeholder, fn -> "Select..." end)
+      |> assign_new(:placeholder, fn -> dgettext("mishka_gervaz", "Select...") end)
       |> assign_new(:has_more?, fn -> false end)
       |> assign_new(:loading?, fn -> false end)
       |> assign_new(:dropdown_open?, fn -> false end)
@@ -452,7 +454,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
-          No records found
+          {dgettext("mishka_gervaz", "No records found")}
         </div>
         <button
           :for={{opt_label, opt_value} <- @display_options}
@@ -478,7 +480,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           phx-value-filter={@filter_name}
           class="w-full border-t border-[#f0efea] px-3 py-2 text-left text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
         >
-          Load more...
+          {dgettext("mishka_gervaz", "Load more...")}
         </button>
       </div>
 
@@ -513,7 +515,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign(:selected, selected)
       |> assign(:selected_set, selected_set)
       |> assign_new(:class, fn -> input_class(assigns[:search] == true) end)
-      |> assign_new(:placeholder, fn -> "Search..." end)
+      |> assign_new(:placeholder, fn -> dgettext("mishka_gervaz", "Search...") end)
       |> assign_new(:has_more?, fn -> false end)
       |> assign_new(:loading?, fn -> false end)
       |> assign_new(:dropdown_open?, fn -> false end)
@@ -575,7 +577,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           {Map.get(@selected_labels, to_string(val), val)}
           <button
             type="button"
-            aria-label={"Remove #{Map.get(@selected_labels, to_string(val), val)}"}
+            aria-label={
+              dgettext("mishka_gervaz", "Remove %{label}",
+                label: Map.get(@selected_labels, to_string(val), val)
+              )
+            }
             class="grid size-4 place-items-center rounded-[5px] text-[#8a87d8] hover:bg-[#e4e2f7] hover:text-[#4f4bcc]"
             phx-click="relation_toggle"
             phx-target={@myself}
@@ -593,7 +599,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
-          No records found
+          {dgettext("mishka_gervaz", "No records found")}
         </div>
         <button
           :for={{label, value} <- @display_options}
@@ -622,7 +628,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           phx-value-filter={@filter_name}
           class="w-full border-t border-[#f0efea] px-3 py-2 text-left text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
         >
-          Load more...
+          {dgettext("mishka_gervaz", "Load more...")}
         </button>
       </div>
     </div>
@@ -857,7 +863,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   """
   @impl true
   def copy_button(assigns) do
-    assigns = assign_new(assigns, :label, fn -> "Copy" end)
+    assigns = assign_new(assigns, :label, fn -> dgettext("mishka_gervaz", "Copy") end)
 
     ~H"""
     <button
@@ -945,7 +951,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def empty_state(assigns) do
     assigns =
       assigns
-      |> assign_new(:message, fn -> "No records found" end)
+      |> assign_new(:message, fn -> dgettext("mishka_gervaz", "No records found") end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:action_label, fn -> nil end)
       |> assign_new(:action_path, fn -> nil end)
@@ -976,7 +982,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def error_state(assigns) do
     assigns =
       assigns
-      |> assign_new(:message, fn -> "Error loading data" end)
+      |> assign_new(:message, fn -> dgettext("mishka_gervaz", "Error loading data") end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:retry_label, fn -> nil end)
       |> assign_new(:target, fn -> nil end)
@@ -1402,7 +1408,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </span>
       <button :if={@more > 0} type="button" class={@toggle_class} phx-click={tags_toggle(@id)}>
         <span id={@id <> "-more"}>+{@more}</span>
-        <span id={@id <> "-less"} class="hidden">- less</span>
+        <span id={@id <> "-less"} class="hidden">{dgettext("mishka_gervaz", "- less")}</span>
       </button>
     </div>
     <span
@@ -1659,7 +1665,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def filter_reset_button(assigns) do
     assigns =
       assigns
-      |> assign_new(:label, fn -> "Clear filters" end)
+      |> assign_new(:label, fn -> dgettext("mishka_gervaz", "Clear filters") end)
       |> assign_new(:class, fn -> "text-sm text-[#8a877f] hover:text-[#3a382f] underline" end)
 
     ~H"""
@@ -1684,8 +1690,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign_new(:table_id, fn -> "archive" end)
-      |> assign_new(:active_label, fn -> "Active" end)
-      |> assign_new(:archived_label, fn -> "Archived" end)
+      |> assign_new(:active_label, fn -> dgettext("mishka_gervaz", "Active") end)
+      |> assign_new(:archived_label, fn -> dgettext("mishka_gervaz", "Archived") end)
 
     ~H"""
     <div class="flex rounded-[10px] border border-[#ecebe6] bg-[#f6f5f2] p-[3px]">
@@ -1722,10 +1728,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign_new(:id, fn -> nil end)
-      |> assign_new(:all_selected_label, fn -> "All selected" end)
-      |> assign_new(:all_except_label, fn -> "All except %{count} selected" end)
-      |> assign_new(:selected_label, fn -> "%{count} selected" end)
-      |> assign_new(:clear_label, fn -> "Clear selection" end)
+      |> assign_new(:all_selected_label, fn -> dgettext("mishka_gervaz", "All selected") end)
+      |> assign_new(:all_except_label, fn ->
+        dgettext("mishka_gervaz", "All except %{count} selected", count: assigns[:excluded_count])
+      end)
+      |> assign_new(:selected_label, fn ->
+        dgettext("mishka_gervaz", "%{count} selected", count: assigns[:selected_count])
+      end)
+      |> assign_new(:clear_label, fn -> dgettext("mishka_gervaz", "Clear selection") end)
       |> assign_new(:class, fn ->
         "mb-[14px] flex flex-wrap items-center gap-[14px] rounded-[14px] border border-[#d9dcf5] bg-[#eef1fc] px-4 py-3"
       end)
@@ -1915,7 +1925,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign_new(:show_total, fn -> true end)
-      |> assign_new(:page_info_format, fn -> "Page {page} of {total}" end)
+      |> assign_new(:page_info_format, fn ->
+        dgettext("mishka_gervaz", "Page {page} of {total}")
+      end)
 
     ~H"""
     <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
@@ -2044,7 +2056,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign_new(:type, fn -> :initial end)
       |> assign_new(:style, fn -> :spinner end)
-      |> assign_new(:text, fn -> "Loading..." end)
+      |> assign_new(:text, fn -> dgettext("mishka_gervaz", "Loading...") end)
       |> assign_new(:class, fn -> nil end)
 
     case assigns.style do
@@ -2255,7 +2267,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> "flex items-center justify-center" end)
 
     ~H"""
-    <nav class={@class} aria-label="Progress">
+    <nav class={@class} aria-label={dgettext("mishka_gervaz", "Progress")}>
       <ol class="flex items-center space-x-2">
         <%= for {step, index} <- Enum.with_index(@steps) do %>
           <li class="flex items-center">
@@ -2301,9 +2313,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:can_go_back, fn -> false end)
       |> assign_new(:can_advance, fn -> true end)
       |> assign_new(:is_last_step, fn -> false end)
-      |> assign_new(:prev_label, fn -> "Back" end)
-      |> assign_new(:next_label, fn -> "Next" end)
-      |> assign_new(:submit_label, fn -> "Submit" end)
+      |> assign_new(:prev_label, fn -> dgettext("mishka_gervaz", "Back") end)
+      |> assign_new(:next_label, fn -> dgettext("mishka_gervaz", "Next") end)
+      |> assign_new(:submit_label, fn -> dgettext("mishka_gervaz", "Submit") end)
       |> assign_new(:phx_target, fn -> nil end)
       |> assign_new(:class, fn ->
         "flex items-center justify-between border-t border-[#ecebe6] pt-6"
@@ -2400,13 +2412,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </svg>
       </span>
       <p class="text-[13.5px] font-semibold text-[#3a382f]">
-        <span class="text-[#4f4bcc]">Click to upload</span> or drag and drop
+        <span class="text-[#4f4bcc]">{dgettext("mishka_gervaz", "Click to upload")}</span>
+        {dgettext("mishka_gervaz", "or drag and drop")}
       </p>
       <p :if={@accept} class="mt-[5px] text-[11px] font-medium text-[#a8a5a0]">
         {format_accept(@accept)}
       </p>
       <p :if={@max_entries > 1} class="mt-1 text-[11px] font-medium text-[#a8a5a0]">
-        Up to {@max_entries} files
+        {dngettext("mishka_gervaz", "Up to %{count} file", "Up to %{count} files", @max_entries)}
       </p>
       {render_slot(@inner_block)}
     </label>
@@ -2599,7 +2612,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:class, fn -> "space-y-4" end)
-      |> assign_new(:add_label, fn -> "Add item" end)
+      |> assign_new(:add_label, fn -> dgettext("mishka_gervaz", "Add item") end)
       |> assign_new(:phx_target, fn -> nil end)
       |> assign_new(:field_path, fn -> nil end)
 
@@ -2631,7 +2644,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:class, fn -> "space-y-3" end)
-      |> assign_new(:add_label, fn -> "Add item" end)
+      |> assign_new(:add_label, fn -> dgettext("mishka_gervaz", "Add item") end)
       |> assign_new(:phx_target, fn -> nil end)
       |> assign_new(:field_path, fn -> nil end)
 
@@ -2663,8 +2676,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign_new(:items, fn -> [] end)
       |> assign_new(:field_name, fn -> "" end)
-      |> assign_new(:add_label, fn -> "+ Add" end)
-      |> assign_new(:remove_label, fn -> "Remove" end)
+      |> assign_new(:add_label, fn -> dgettext("mishka_gervaz", "+ Add") end)
+      |> assign_new(:remove_label, fn -> dgettext("mishka_gervaz", "Remove") end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:target, fn -> nil end)
       |> assign_new(:table_id, fn -> nil end)
@@ -2826,10 +2839,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         {render_slot(@inner_block)}
       </div>
       <p :if={@accept} class="text-[11px] font-medium text-[#a8a5a0]">
-        Accepted: {format_accept(@accept)}
+        {dgettext("mishka_gervaz", "Accepted: %{types}", types: format_accept(@accept))}
       </p>
       <p :if={@max_entries > 1} class="text-[11px] font-medium text-[#a8a5a0]">
-        Up to {@max_entries} files
+        {dngettext("mishka_gervaz", "Up to %{count} file", "Up to %{count} files", @max_entries)}
       </p>
     </div>
     """
@@ -2844,7 +2857,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn ->
         "group flex items-center gap-3 rounded-[12px] border border-[#ecebe6] bg-[#faf9f6] p-3"
       end)
-      |> assign_new(:filename, fn -> file[:filename] || file[:name] || "File" end)
+      |> assign_new(:filename, fn ->
+        file[:filename] || file[:name] || dgettext("mishka_gervaz", "File")
+      end)
       |> assign_new(:url, fn -> file[:url] end)
       |> assign_new(:size, fn -> file[:size] end)
       |> assign_new(:format, fn -> file[:format] end)
@@ -2877,7 +2892,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-value-file-id={@file_id}
         phx-target={@phx_target}
         class="flex-shrink-0 rounded-[8px] p-1.5 text-[#a8a5a0] opacity-0 transition-colors hover:bg-[#fdf4f3] hover:text-[#c0392b] group-hover:opacity-100"
-        title="Remove file"
+        title={dgettext("mishka_gervaz", "Remove file")}
       >
         <.render_icon name="hero-x-mark" class="w-5 h-5" />
       </button>
@@ -3042,7 +3057,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <div class="inline-block size-8 animate-spin rounded-full border-4 border-[#dcdbf5] border-t-[#5b57d6]">
       </div>
       <p :if={@text} class="mt-2 text-[#8a877f]">{@text}</p>
-      <p :if={!@text} class="mt-2 text-[#8a877f]">Loading...</p>
+      <p :if={!@text} class="mt-2 text-[#8a877f]">{dgettext("mishka_gervaz", "Loading...")}</p>
     </div>
     """
   end
@@ -3084,7 +3099,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <div class="size-3 animate-bounce rounded-full bg-[#5b57d6]"></div>
       </div>
       <p :if={@text} class="mt-4 text-[#8a877f]">{@text}</p>
-      <p :if={!@text} class="mt-4 text-[#8a877f]">Loading...</p>
+      <p :if={!@text} class="mt-4 text-[#8a877f]">{dgettext("mishka_gervaz", "Loading...")}</p>
     </div>
     """
   end
@@ -3155,7 +3170,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-value-name={@dismiss_value}
         phx-target={@phx_target}
         class={["shrink-0 rounded p-1 hover:bg-black/5 transition-colors", @tone.icon]}
-        aria-label="Dismiss"
+        aria-label={dgettext("mishka_gervaz", "Dismiss")}
       >
         <span class="hero-x-mark w-4 h-4"></span>
       </button>

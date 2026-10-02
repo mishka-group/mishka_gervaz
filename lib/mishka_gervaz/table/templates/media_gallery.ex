@@ -69,7 +69,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   def name, do: :media_gallery
 
   @impl true
-  def label, do: "Gallery"
+  def label, do: dgettext("mishka_gervaz", "Gallery")
 
   @doc """
   The switcher draws this glyph for the gallery view.
@@ -80,7 +80,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
   def icon, do: "hero-squares-2x2"
 
   @impl true
-  def description, do: "Image and media gallery with thumbnails"
+  def description, do: dgettext("mishka_gervaz", "Image and media gallery with thumbnails")
 
   @impl true
   def features do
@@ -341,7 +341,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
 
         <div
           :if={@star_actions != [] or @featured?}
-          title={@star_actions == [] && "Featured"}
+          title={@star_actions == [] && dgettext("mishka_gervaz", "Featured")}
           class={[
             "absolute bottom-2 right-2 z-20 grid size-7 place-items-center rounded-lg bg-white/85 shadow-[0_1px_2px_rgba(30,28,24,0.08)]",
             "[&>div]:contents [&_.lbl]:hidden [&_button]:size-full [&_button]:rounded-lg [&_button]:border-0 [&_button]:bg-transparent [&_button]:text-inherit [&_button]:hover:text-inherit",
@@ -594,7 +594,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
       do: "#{name}.#{format}"
 
   def media_name(%{name: name}) when is_binary(name), do: name
-  def media_name(_record), do: "Untitled"
+  def media_name(_record), do: dgettext("mishka_gervaz", "Untitled")
 
   @doc """
   A file's size, humanised, or an em dash when the record has none.

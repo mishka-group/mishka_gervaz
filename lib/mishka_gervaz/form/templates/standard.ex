@@ -97,7 +97,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   def name, do: :standard
 
   @impl true
-  def label, do: "Standard Form"
+  def label, do: dgettext("mishka_gervaz", "Standard Form")
 
   @impl true
   def icon, do: "hero-document-text"
@@ -850,10 +850,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         not evaluate_button_restricted(cancel_button, state)
 
     submit_label =
-      if show_submit, do: resolve_label(submit_button[:label]) || "Submit", else: ""
+      if show_submit,
+        do: resolve_label(submit_button[:label]) || dgettext("mishka_gervaz", "Submit"),
+        else: ""
 
     cancel_label =
-      if show_cancel, do: resolve_label(cancel_button[:label]) || "Cancel", else: ""
+      if show_cancel,
+        do: resolve_label(cancel_button[:label]) || dgettext("mishka_gervaz", "Cancel"),
+        else: ""
 
     submit_disabled = show_submit and evaluate_button_disabled(submit_button, state)
     cancel_disabled = show_cancel and evaluate_button_disabled(cancel_button, state)
@@ -941,7 +945,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             type="button"
             id={@alt_menu_id <> "-toggle"}
             phx-click={JS.toggle(to: "#" <> @alt_menu_id)}
-            title="Other ways to create this"
+            title={dgettext("mishka_gervaz", "Other ways to create this")}
             class="grid h-[42px] w-8 flex-none place-items-center rounded-r-[11px] border-l border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95"
           >
             <svg
@@ -1449,8 +1453,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:table_id, assigns.static.id)
     |> assign(:field_name, to_string(field.name))
     |> assign(:disabled, evaluate_readonly(field, assigns.state))
-    |> assign(:add_label, resolve_label(field.add_label) || "+ Add")
-    |> assign(:remove_label, resolve_label(field.remove_label) || "Remove")
+    |> assign(:add_label, resolve_label(field.add_label) || dgettext("mishka_gervaz", "+ Add"))
+    |> assign(
+      :remove_label,
+      resolve_label(field.remove_label) || dgettext("mishka_gervaz", "Remove")
+    )
     |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
     |> assign(:target, assigns[:myself])
     |> dynamic_component()
@@ -1578,8 +1585,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:form_path, assigns.state.form.name <> "[#{field.name}]")
       |> assign(:nested_mode, nested_mode)
       |> assign(:removable?, nested_mode == :array and not parent_readonly)
-      |> assign(:add_label, resolve_nested_label(field, :add_label, "+ Add"))
-      |> assign(:remove_label, resolve_nested_label(field, :remove_label, "Remove"))
+      |> assign(
+        :add_label,
+        resolve_nested_label(field, :add_label, dgettext("mishka_gervaz", "+ Add"))
+      )
+      |> assign(
+        :remove_label,
+        resolve_nested_label(field, :remove_label, dgettext("mishka_gervaz", "Remove"))
+      )
       |> assign(:target, assigns[:myself])
 
     ~H"""
@@ -1620,8 +1633,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:entries, judged_entries(field, nested_fields, assigns.state))
       |> assign(:form_name, assigns.state.form.name)
       |> assign(:removable?, nested_mode == :array and not parent_readonly)
-      |> assign(:add_label, resolve_nested_label(field, :add_label, "+ Add"))
-      |> assign(:remove_label, resolve_nested_label(field, :remove_label, "Remove"))
+      |> assign(
+        :add_label,
+        resolve_nested_label(field, :add_label, dgettext("mishka_gervaz", "+ Add"))
+      )
+      |> assign(
+        :remove_label,
+        resolve_nested_label(field, :remove_label, dgettext("mishka_gervaz", "Remove"))
+      )
       |> assign(:target, assigns[:myself])
 
     ~H"""
@@ -1707,11 +1726,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         {sub_field_input(assigns)}
       </div>
       <p :for={err <- @sub_errors} class="mt-[6px] text-[11.5px] font-medium text-[#c0392b]">
-        {err}
+        {sub_error_text(err)}
       </p>
     </div>
     """
   end
+
+  defp sub_error_text(error) when is_binary(error),
+    do: MishkaGervaz.Errors.translate_error(error, [])
+
+  defp sub_error_text(error), do: error
 
   defp sub_field_input(%{sf: %{type: :textarea}} = assigns) do
     assigns
@@ -1890,7 +1914,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp required_error(value, %{required: true}, true) do
     case blank_sub_value?(value) do
-      true -> ["is required"]
+      true -> [dgettext_noop("errors", "is required")]
       false -> []
     end
   end
@@ -2185,7 +2209,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-value-ref={entry.ref}
             phx-target={@myself}
             class="grid size-[30px] flex-none place-items-center rounded-[9px] border border-[#ecebe6] bg-white text-[#8a877f] transition-colors hover:border-[#f3ddd9] hover:bg-[#fdf4f3] hover:text-[#c0392b]"
-            title="Cancel upload"
+            title={dgettext("mishka_gervaz", "Cancel upload")}
           >
             <span class="hero-x-mark size-[15px]"></span>
           </button>
@@ -2222,7 +2246,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:upload_existing_file}
         file={file}
-        filename={file[:filename] || file[:name] || "File"}
+        filename={file[:filename] || file[:name] || dgettext("mishka_gervaz", "File")}
         file_id={file[:id] || file[:filename] || file[:name]}
         upload_name={@upload_config.name}
         phx_target={@myself}

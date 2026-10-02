@@ -52,13 +52,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
   def name, do: :table
 
   @impl true
-  def label, do: "Table"
+  def label, do: dgettext("mishka_gervaz", "Table")
 
   @impl true
   def icon, do: "hero-table-cells"
 
   @impl true
-  def description, do: "Traditional table layout with rows and columns"
+  def description,
+    do: dgettext("mishka_gervaz", "Traditional table layout with rows and columns")
 
   @impl true
   def features do
