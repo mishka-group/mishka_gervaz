@@ -326,6 +326,27 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
       assert saved.region_ids == []
     end
 
+    test "an entry opened for editing knows the labels of what its multi-select holds", ctx do
+      entry = Ash.create!(PickerScopedEntry, %{title: "Kept", region_ids: [ctx.north.id]})
+
+      state =
+        "picker-scoped-entry"
+        |> State.init(PickerScopedEntry, @user)
+        |> State.update(mode: :update)
+
+      {:ok, form} = RecordLoader.Default.load_for_edit(state, entry.id, actor: @user)
+
+      socket =
+        DataLoader.Default.handle_async_result(
+          :load_record,
+          {:ok, {:ok, form}},
+          build_socket(state)
+        )
+
+      assert socket.assigns.form_state.relation_options.region_ids.selected_options ==
+               [{"North", ctx.north.id}]
+    end
+
     test "a version picked under one language is not saved once the language changes", ctx do
       socket =
         scoped_form()

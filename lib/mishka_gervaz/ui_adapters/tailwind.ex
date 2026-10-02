@@ -494,7 +494,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Multi-select dropdown with search support for relation filters.
 
   Shows a searchable dropdown where users can select multiple items.
-  Selected items appear with checkmarks in the dropdown.
+  Selected items appear with checkmarks in the dropdown. With `:show_selected`, they also appear as
+  chips under the input while it is closed, each with a button that removes it; a chip reads its
+  label from `:selected_options`, or the value when its label is not known.
   """
   @impl true
   def multi_select(assigns) do
@@ -522,6 +524,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:table_id, fn -> nil end)
       |> assign_new(:myself, fn -> nil end)
       |> assign_new(:search_term, fn -> nil end)
+      |> assign_new(:show_selected, fn -> false end)
+      |> assign(:selected_labels, Map.new(selected_options, fn {l, v} -> {to_string(v), l} end))
 
     ~H"""
     <div
@@ -558,6 +562,31 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
 
       <input :for={val <- @selected} type="hidden" name={"#{@name}[]"} value={val} />
+
+      <div
+        :if={@show_selected and @selected != []}
+        data-role="gervaz-multi-selected"
+        class="mt-2 flex flex-wrap gap-[6px]"
+      >
+        <span
+          :for={val <- @selected}
+          class="inline-flex items-center gap-1 rounded-[7px] border border-[#e4e2f7] bg-[#f2f1fc] py-[3px] pl-[9px] pr-[4px] text-[11px] font-semibold text-[#4f4bcc]"
+        >
+          {Map.get(@selected_labels, to_string(val), val)}
+          <button
+            type="button"
+            aria-label={"Remove #{Map.get(@selected_labels, to_string(val), val)}"}
+            class="grid size-4 place-items-center rounded-[5px] text-[#8a87d8] hover:bg-[#e4e2f7] hover:text-[#4f4bcc]"
+            phx-click="relation_toggle"
+            phx-target={@myself}
+            phx-value-filter={@filter_name}
+            phx-value-id={val}
+            phx-value-label={Map.get(@selected_labels, to_string(val), val)}
+          >
+            <.render_icon name="hero-x-mark" class="w-3 h-3" />
+          </button>
+        </span>
+      </div>
 
       <div
         :if={@dropdown_open?}

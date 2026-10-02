@@ -204,7 +204,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.Helpers do
     original_state.static.fields
     |> Enum.filter(fn field ->
       field.type == :relation and
-        field_readonly?(field, original_state) and
+        (field_readonly?(field, original_state) or Map.get(field, :mode) == :search_multi) and
         Map.has_key?(original_state.field_values, field.name)
     end)
     |> Enum.reduce(socket, &resolve_readonly_field(&1, &2, original_state, relation_mod))

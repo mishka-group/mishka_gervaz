@@ -192,4 +192,39 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       refute html =~ "focus:ring-blue-500"
     end
   end
+
+  describe "a multi-select in a form" do
+    defp multi(assigns) do
+      %{
+        __changed__: nil,
+        name: :region_ids,
+        filter_name: :region_ids,
+        table_id: "entry",
+        options: [],
+        selected: ["1", "2"],
+        selected_options: [{"North", "1"}],
+        myself: nil
+      }
+      |> Map.merge(assigns)
+      |> Tailwind.multi_select()
+      |> rendered_to_string()
+    end
+
+    test "shows what is picked while it is closed, each with a way to remove it" do
+      html = multi(%{show_selected: true})
+
+      assert html =~ ~s(data-role="gervaz-multi-selected")
+      assert html =~ "North"
+      assert html =~ ~s(aria-label="Remove North")
+
+      assert html =~ ~s(aria-label="Remove 2"),
+             "a value whose label is not known yet is shown as itself"
+
+      assert html =~ ~s(phx-value-id="1")
+    end
+
+    test "and a table filter, which does not ask, shows none" do
+      refute multi(%{}) =~ "gervaz-multi-selected"
+    end
+  end
 end

@@ -86,7 +86,7 @@ defmodule MishkaGervaz.Form.Types.Field.RelationTest do
       state_assigns: st
     } do
       Relation.render_input(Map.put(field, :mode, :search_multi), rel, st, ui)
-      assert_received {:dispatched, :multi_select, _}
+      assert_received {:dispatched, :multi_select, %{show_selected: true}}
     end
 
     test "unknown mode falls back to ui.select", %{
