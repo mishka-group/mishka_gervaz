@@ -402,6 +402,21 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
       assert_received {:form_saved, :update, saved}
       assert {saved.workspace_id, saved.version_id} == {ctx.w2.id, ctx.v2.id}
     end
+
+    test "each search picker knows the label of what it holds, and a click away keeps it", ctx do
+      socket = edit_form(ctx.entry)
+
+      {:noreply, socket} =
+        Events.handle("relation_close_dropdown", %{"filter" => "workspace_id"}, socket)
+
+      options = socket.assigns.form_state.relation_options
+
+      assert {options.region_id.selected_options, options.workspace_id.selected_options,
+              options.version_id.selected_options} ==
+               {[{"North", ctx.north.id}], [{"W1", ctx.w1.id}], [{"V1", ctx.v1.id}]}
+
+      assert options.workspace_id.options == []
+    end
   end
 
   describe "a parent the user may not change" do
