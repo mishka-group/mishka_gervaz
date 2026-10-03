@@ -474,6 +474,16 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoaderTest do
                RelationLoader.resolve_selected(language_field(), picked("site-a"), ["fa"])
     end
 
+    test "include_nil leads its options, on a load and on a search, as it does a resource's" do
+      field = Map.put(language_field(), :include_nil, fn -> "Every language" end)
+
+      assert {:ok, [{"Every language", "__nil__"}, {"EN", "en"}, {"FA", "fa"}], false} =
+               RelationLoader.load_options(field, picked("site-a"))
+
+      assert {:ok, [{"Every language", "__nil__"}, {"FA", "fa"}], false} =
+               RelationLoader.search_options(field, picked("site-a"), "fa")
+    end
+
     test "a zero-arity function still works, and a list is its own options" do
       zero = %{language_field() | options: fn -> [{"EN", "en"}] end}
       assert {:ok, [{"EN", "en"}], false} = RelationLoader.load_options(zero, picked(nil))

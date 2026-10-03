@@ -318,7 +318,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           get_display_value: 2,
           get_record_value: 2,
           resolve_selected_fallback: 7,
-          field_options: 2
+          field_options: 2,
+          prepend_nil_option: 2
         ]
 
       @spec load_options(map(), State.t(), keyword()) ::
@@ -328,7 +329,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case resource do
           nil ->
-            {:ok, field_options(field, state), false}
+            {:ok, prepend_nil_option(field_options(field, state), field[:include_nil]), false}
 
           resource when is_atom(resource) ->
             page = Keyword.get(opts, :page, 1)
@@ -355,7 +356,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
                 String.contains?(String.downcase(label), String.downcase(search_term))
               end)
 
-            {:ok, filtered, false}
+            {:ok, prepend_nil_option(filtered, field[:include_nil]), false}
 
           resource when is_atom(resource) ->
             page = Keyword.get(opts, :page, 1)
