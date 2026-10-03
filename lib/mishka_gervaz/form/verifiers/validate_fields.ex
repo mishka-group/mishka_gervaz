@@ -7,7 +7,8 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
     1. Each field name maps to a resource attribute, relationship,
        calculation, or aggregate — unless the field is marked `virtual`.
     2. `depends_on` references a field declared in the same form.
-    3. Virtual fields of type `:relation` or `:select` declare a `resource`.
+    3. Virtual fields of type `:relation` or `:select` declare a `resource`, `options` or
+       `options_source`.
     4. `nested_field` entries appear only inside `:nested` fields.
 
   See `MishkaGervaz.Form.Dsl.Fields`,
@@ -92,7 +93,10 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
     Enum.find_value(fields, :ok, &check_virtual_field(&1, module))
   end
 
-  defp check_virtual_field(%{virtual: true, type: type, resource: nil} = field, module)
+  defp check_virtual_field(
+         %{virtual: true, type: type, resource: nil, options: nil, options_source: nil} = field,
+         module
+       )
        when type in [:relation, :select] do
     dsl_error(module, @path ++ [field.name], virtual_needs_resource_message(field))
   end
@@ -131,7 +135,8 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFields do
 
   defp virtual_needs_resource_message(field) do
     """
-    Virtual field `#{field.name}` of type `#{field.type}` requires `resource` option.
+    Virtual field `#{field.name}` of type `#{field.type}` requires a `resource`, `options` or
+    `options_source` option.
 
         field :#{field.name}, :#{field.type} do
           virtual true

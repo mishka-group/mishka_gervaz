@@ -234,7 +234,7 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFieldsTest do
           Code.compile_string(code)
         end)
 
-      assert output =~ "requires `resource` option"
+      assert output =~ "requires a `resource`, `options` or"
       assert output =~ "category"
     end
   end
@@ -343,8 +343,60 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFieldsTest do
           Code.compile_string(code)
         end)
 
-      assert output =~ "requires `resource` option"
+      assert output =~ "requires a `resource`, `options` or"
       assert output =~ "tag"
+    end
+
+    test "accepts a virtual :select that declares its own options" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.VirtualSelOptions#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :virt_sel_opts_#{unique_id}
+              route "/admin/virt-sel-opts-#{unique_id}"
+            end
+
+            columns do
+              column :title
+            end
+          end
+
+          form do
+            fields do
+              field :title, :text
+              field :tag, :select do
+                virtual true
+                options fn -> [{"One", "one"}, {"Two", "two"}] end
+              end
+            end
+          end
+        end
+      end
+      """
+
+      output =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string(code)
+        end)
+
+      refute output =~ "requires a `resource`"
     end
   end
 end
