@@ -385,7 +385,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open? && !@disabled}
-        class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -514,7 +514,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -659,7 +659,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -2841,7 +2841,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <div
         id={@dropdown_id}
-        class="absolute z-50 mt-1 hidden max-h-60 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_rgba(23,22,26,0.08)]"
+        class="absolute z-50 mt-1 hidden max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_rgba(23,22,26,0.08)]"
       >
         <%= for {label, value} <- @options do %>
           <button
