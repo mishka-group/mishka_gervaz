@@ -132,6 +132,43 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
   def field_options(_field, _state), do: []
 
+  @doc """
+  The options whose label holds `search_term`. A group `{group_label, [options]}` is kept whole when
+  its own label holds it, else with the options that do, and left out when none does.
+  """
+  @spec matching_options(list(), String.t()) :: list()
+  def matching_options(options, search_term) do
+    term = String.downcase(search_term)
+    holds? = &String.contains?(String.downcase(to_string(&1)), term)
+
+    Enum.flat_map(options, fn
+      {group_label, opts} when is_list(opts) ->
+        kept =
+          if holds?.(group_label),
+            do: opts,
+            else: Enum.filter(opts, fn {label, _} -> holds?.(label) end)
+
+        if kept == [], do: [], else: [{group_label, kept}]
+
+      {label, _value} = option ->
+        if holds?.(label), do: [option], else: []
+    end)
+  end
+
+  @doc """
+  The options flattened, a grouped one labelled `"Group · Label"` as it reads once picked.
+  """
+  @spec flat_options(list()) :: list({String.t(), any()})
+  def flat_options(options) do
+    Enum.flat_map(options, fn
+      {group_label, opts} when is_list(opts) ->
+        for {label, value} <- opts, do: {"#{group_label} · #{label}", value}
+
+      option ->
+        [option]
+    end)
+  end
+
   @doc false
   def prepend_nil_option(options, nil), do: options
   def prepend_nil_option(options, false), do: options
@@ -319,7 +356,9 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           get_record_value: 2,
           resolve_selected_fallback: 7,
           field_options: 2,
-          prepend_nil_option: 2
+          prepend_nil_option: 2,
+          matching_options: 2,
+          flat_options: 1
         ]
 
       @spec load_options(map(), State.t(), keyword()) ::
@@ -349,12 +388,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case resource do
           nil ->
-            static_options = field_options(field, state)
-
-            filtered =
-              Enum.filter(static_options, fn {label, _} ->
-                String.contains?(String.downcase(label), String.downcase(search_term))
-              end)
+            filtered = field |> field_options(state) |> matching_options(search_term)
 
             {:ok, prepend_nil_option(filtered, field[:include_nil]), false}
 
@@ -392,12 +426,11 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
         case resource do
           nil ->
-            static_options = field_options(field, state)
-
             matched =
-              Enum.filter(static_options, fn {_, value} ->
-                to_string(value) in selected_ids
-              end)
+              field
+              |> field_options(state)
+              |> flat_options()
+              |> Enum.filter(fn {_, value} -> to_string(value) in selected_ids end)
 
             {:ok, matched}
 

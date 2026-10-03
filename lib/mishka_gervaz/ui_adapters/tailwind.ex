@@ -219,6 +219,63 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  attr :label, :string, required: true
+  attr :picked_label, :string, required: true
+  attr :value, :string, required: true
+  attr :current_value, :string, required: true
+  attr :filter_name, :any, required: true
+  attr :myself, :any, default: nil
+
+  defp search_select_option(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "w-full px-3 py-2 text-left text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+        @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
+      ]}
+      phx-click="relation_select"
+      phx-target={@myself}
+      phx-value-filter={@filter_name}
+      phx-value-id={@value}
+      phx-value-label={@picked_label}
+    >
+      {@label}
+    </button>
+    """
+  end
+
+  # Every option of a grouped list as it reads once picked: a grouped one as `"Group · Label"`.
+  defp option_choices(options) do
+    Enum.flat_map(options, fn
+      {:group, group_label, opts} ->
+        for {label, value} <- opts, do: {"#{group_label} · #{label}", value}
+
+      {:option, label, value} ->
+        [{label, value}]
+    end)
+  end
+
+  defp picked_option(_choices, ""), do: nil
+  defp picked_option(choices, value), do: Enum.find(choices, fn {_, v} -> v == value end)
+
+  # The list without `value`, and without a group it leaves empty.
+  defp without_option(options, value) do
+    Enum.flat_map(options, fn
+      {:group, group_label, opts} ->
+        case Enum.reject(opts, fn {_, v} -> v == value end) do
+          [] -> []
+          rest -> [{:group, group_label, rest}]
+        end
+
+      {:option, _label, ^value} ->
+        []
+
+      option ->
+        [option]
+    end)
+  end
+
   # `{group_label, [opts]}` → optgroup; anything else → a flat option.
   defp normalize_grouped_options(options) when is_list(options) do
     Enum.map(options, fn
@@ -239,34 +296,29 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   `multi_select` adapted for single selection. Whatever is currently selected is merged in from
   `:selected_options` and sorted to the top of the list, so a value restored from the URL is shown
   even when it is not on the loaded page of options.
+
+  Options may be grouped as `select/1`'s are, `{group_label, [options]}`: each group is drawn under
+  its label, and a grouped option reads `"Group · Label"` once picked.
   """
   @impl true
   def search_select(assigns) do
-    options = normalize_options(assigns[:options] || [])
-    current_value = assigns[:value] || ""
+    options = normalize_grouped_options(assigns[:options] || [])
+    current_value = to_string(assigns[:value] || "")
     selected_options = normalize_options(assigns[:selected_options] || [])
     disabled = assigns[:disabled] || false
+    picked = picked_option(selected_options ++ option_choices(options), current_value)
 
     display_options =
-      if current_value != "" do
-        (selected_options ++ options)
-        |> Enum.uniq_by(fn {_, v} -> to_string(v) end)
-        |> Enum.split_with(fn {_, v} -> to_string(v) == to_string(current_value) end)
-        |> then(fn {selected, rest} -> selected ++ rest end)
-      else
-        options
+      case picked do
+        {label, value} -> [{:option, label, value} | without_option(options, value)]
+        nil -> options
       end
 
     display_label =
-      if current_value != "" do
-        (selected_options ++ options)
-        |> Enum.find(fn {_l, v} -> to_string(v) == to_string(current_value) end)
-        |> case do
-          {label, _} -> label
-          nil -> current_value
-        end
-      else
-        nil
+      case picked do
+        {label, _value} -> label
+        nil when current_value != "" -> current_value
+        nil -> nil
       end
 
     assigns =
@@ -338,21 +390,32 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
         </div>
-        <button
-          :for={{opt_label, opt_value} <- @display_options}
-          type="button"
-          class={[
-            "w-full px-3 py-2 text-left text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
-            to_string(@current_value) == to_string(opt_value) && "bg-[#f2f1fc] text-[#4f4bcc]"
-          ]}
-          phx-click="relation_select"
-          phx-target={@myself}
-          phx-value-filter={@filter_name}
-          phx-value-id={opt_value}
-          phx-value-label={opt_label}
-        >
-          {opt_label}
-        </button>
+        <%= for entry <- @display_options do %>
+          <%= case entry do %>
+            <% {:group, group_label, opts} -> %>
+              <div class="px-3 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a8a5a0]">
+                {group_label}
+              </div>
+              <.search_select_option
+                :for={{opt_label, opt_value} <- opts}
+                label={opt_label}
+                picked_label={"#{group_label} · #{opt_label}"}
+                value={opt_value}
+                current_value={@current_value}
+                filter_name={@filter_name}
+                myself={@myself}
+              />
+            <% {:option, opt_label, opt_value} -> %>
+              <.search_select_option
+                label={opt_label}
+                picked_label={opt_label}
+                value={opt_value}
+                current_value={@current_value}
+                filter_name={@filter_name}
+                myself={@myself}
+              />
+          <% end %>
+        <% end %>
 
         <button
           :if={@has_more?}

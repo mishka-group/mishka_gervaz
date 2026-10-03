@@ -405,7 +405,18 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
   def reject_selected(selected, options) do
     selected_values = MapSet.new(selected, fn {_, v} -> to_string(v) end)
-    Enum.reject(options, fn {_, v} -> MapSet.member?(selected_values, to_string(v)) end)
+    selected? = fn {_, v} -> MapSet.member?(selected_values, to_string(v)) end
+
+    Enum.flat_map(options, fn
+      {group_label, opts} when is_list(opts) ->
+        case Enum.reject(opts, selected?) do
+          [] -> []
+          rest -> [{group_label, rest}]
+        end
+
+      option ->
+        if selected?.(option), do: [], else: [option]
+    end)
   end
 
   @doc false

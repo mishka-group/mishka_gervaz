@@ -119,6 +119,45 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
   # TWO STAND-INS, because the field is waiting for two different things. Waiting for a CHOICE is
   # switched off and says so; waiting for OPTIONS is a control on its way and is drawn as a
   # skeleton, the same as every list in this admin.
+  # GROUPED AS `select/1`'s ARE: each group under its label, and a grouped option says which group it
+  # came from once picked.
+  describe "a search select with grouped options" do
+    defp grouped_select(value) do
+      %{
+        __changed__: nil,
+        name: :record,
+        field: nil,
+        options: [
+          {"Nothing", "__nil__"},
+          {"Blog", [{"Post", "blog:post"}, {"Tag", "blog:tag"}]},
+          {"Docs", [{"Page", "docs:page"}]}
+        ],
+        value: value,
+        disabled: false,
+        dropdown_open?: true
+      }
+      |> Tailwind.search_select()
+      |> rendered_to_string()
+    end
+
+    test "draws each group under its label, its options by their own label" do
+      html = grouped_select("")
+
+      assert html =~ ~r/uppercase[^"]*">\s*Blog\s*</
+      assert html =~ ~r/uppercase[^"]*">\s*Docs\s*</
+      assert html =~ ~r/phx-value-id="blog:post" phx-value-label="Blog · Post">\s*Post\s*</
+    end
+
+    test "a picked grouped option reads with its group, first, and not again in its group" do
+      html = grouped_select("blog:post")
+
+      assert html =~ ~s(name="_search_record" value="Blog · Post")
+      assert html =~ ~r/phx-value-id="blog:post" phx-value-label="Blog · Post">\s*Blog · Post\s*</
+      refute html =~ ~r/phx-value-id="blog:post" phx-value-label="Blog · Post">\s*Post\s*</
+      assert html =~ ~r/phx-value-id="blog:tag" phx-value-label="Blog · Tag">\s*Tag\s*</
+    end
+  end
+
   describe "the stand-in for a field that is waiting" do
     @template File.read!("lib/mishka_gervaz/form/templates/standard.ex")
 

@@ -484,6 +484,26 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoaderTest do
                RelationLoader.search_options(field, picked("site-a"), "fa")
     end
 
+    test "grouped options are searched by group and by option, and read back with their group" do
+      grouped = [
+        {"Blog", [{"Post", "blog:post"}, {"Tag", "blog:tag"}]},
+        {"Docs", [{"Page", "docs:page"}]}
+      ]
+
+      field = %{language_field() | options: fn _state -> grouped end}
+
+      assert {:ok, ^grouped, false} = RelationLoader.load_options(field, picked(nil))
+
+      assert {:ok, [{"Blog", [{"Tag", "blog:tag"}]}], false} =
+               RelationLoader.search_options(field, picked(nil), "tag")
+
+      assert {:ok, [{"Docs", [{"Page", "docs:page"}]}], false} =
+               RelationLoader.search_options(field, picked(nil), "doc")
+
+      assert {:ok, [{"Blog · Post", "blog:post"}]} =
+               RelationLoader.resolve_selected(field, picked(nil), ["blog:post"])
+    end
+
     test "a zero-arity function still works, and a list is its own options" do
       zero = %{language_field() | options: fn -> [{"EN", "en"}] end}
       assert {:ok, [{"EN", "en"}], false} = RelationLoader.load_options(zero, picked(nil))

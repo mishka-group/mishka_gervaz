@@ -134,6 +134,16 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandlerTest do
     test "reject is no-op for empty selected" do
       assert RelationHandler.reject_selected([], [{"O", "2"}]) == [{"O", "2"}]
     end
+
+    test "reject takes a selected option out of its group, and drops a group it empties" do
+      options = [{"Blog", [{"Post", "1"}, {"Tag", "2"}]}, {"Docs", [{"Page", "3"}]}, {"O", "4"}]
+
+      assert RelationHandler.reject_selected(
+               [{"Blog · Post", "1"}, {"Docs · Page", "3"}],
+               options
+             ) ==
+               [{"Blog", [{"Tag", "2"}]}, {"O", "4"}]
+    end
   end
 
   describe "toggle_value/3" do
