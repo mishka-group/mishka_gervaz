@@ -103,18 +103,18 @@ defmodule MishkaGervaz.Table.Templates.MediaGalleryCardTest do
     # A CHECKBOX IS ALWAYS TOP-LEFT and a reader's hand goes there. Anything else in that corner is
     # something they have to move past to select.
     test "selection is top-left" do
-      assert @source =~ ~s(class="absolute left-[10px] top-[10px] z-20")
+      assert @source =~ ~s(class="absolute start-[10px] top-[10px] z-20")
     end
 
     test "the format badge is top-right" do
-      assert @source =~ ~s(class="absolute right-[10px] top-[10px] rounded-md bg-white/85)
+      assert @source =~ ~s(class="absolute end-[10px] top-[10px] rounded-md bg-white/85)
     end
 
     # The star used to share the top-right with nothing; now the badge owns that corner and the star
     # takes the one that is still free.
     test "the featured star is out of the badge's corner" do
-      assert @source =~ ~s("absolute bottom-2 right-2 z-20 grid size-7)
-      refute @source =~ ~s("absolute right-2 top-2 z-20 grid size-7)
+      assert @source =~ ~s("absolute bottom-2 end-2 z-20 grid size-7)
+      refute @source =~ ~s("absolute end-2 top-2 z-20 grid size-7)
     end
   end
 

@@ -40,12 +40,12 @@ defmodule MishkaGervaz.Table.Templates.HeaderTest do
   test "the Actions cell wears the same type as every column header" do
     thead = header()
 
-    assert thead =~ ~s(data-role="gervaz-actions-header" class="text-right #{@type_classes} )
+    assert thead =~ ~s(data-role="gervaz-actions-header" class="text-end #{@type_classes} )
     refute thead =~ "text-sm font-medium"
   end
 
   test "a sortable header cell can shrink below its label's width" do
-    assert header() =~ ~s(class="min-w-0 text-left #{@type_classes} cursor-pointer")
+    assert header() =~ ~s(class="min-w-0 text-start #{@type_classes} cursor-pointer")
   end
 
   test "a label is cut short inside its column, and its sort badge never is" do
@@ -53,6 +53,6 @@ defmodule MishkaGervaz.Table.Templates.HeaderTest do
 
     assert thead =~ ~s(<div class="flex min-w-0 items-center gap-1">)
     assert thead =~ ~s(<span class="truncate">)
-    assert thead =~ ~s(<span class="ml-1 inline-flex shrink-0 items-center">)
+    assert thead =~ ~s(<span class="ms-1 inline-flex shrink-0 items-center">)
   end
 end

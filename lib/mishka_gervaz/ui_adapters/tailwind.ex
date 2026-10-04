@@ -69,7 +69,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div class="relative">
       <svg
         :if={@search}
-        class="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-[#a8a5a0]"
+        class="pointer-events-none absolute start-[13px] top-1/2 size-[15px] -translate-y-1/2 text-[#a8a5a0]"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -91,7 +91,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         class={[
           @class,
           "placeholder:text-[#a8a5a0]",
-          @search && "pl-[38px]!",
+          @search && "ps-[38px]!",
           (@disabled || @readonly) && disabled_class()
         ]}
         phx-debounce={@phx_debounce}
@@ -173,15 +173,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <.render_icon
         :if={@icon}
         name={@icon}
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none"
+        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none"
       />
       <select
         name={@name}
         disabled={@disabled}
         class={[
           @class,
-          "cursor-pointer appearance-none pr-[32px]!",
-          @icon && "pl-9",
+          "cursor-pointer appearance-none pe-[32px]!",
+          @icon && "ps-9",
           @disabled && disabled_class()
         ]}
       >
@@ -204,7 +204,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <% end %>
       </select>
       <svg
-        class="pointer-events-none absolute right-[11px] top-1/2 size-[13px] -translate-y-1/2 text-[#a8a5a0]"
+        class="pointer-events-none absolute end-[11px] top-1/2 size-[13px] -translate-y-1/2 text-[#a8a5a0]"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -231,7 +231,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <button
       type="button"
       class={[
-        "w-full px-3 py-2 text-left text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+        "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
         @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
       ]}
       phx-click="relation_select"
@@ -353,7 +353,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <.render_icon
           :if={@icon}
           name={@icon}
-          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none z-10"
+          class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none z-10"
         />
         <input
           type="text"
@@ -362,7 +362,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           placeholder={@placeholder}
           class={[
             @class,
-            @icon && "pl-9",
+            @icon && "ps-9",
             "w-full",
             @disabled && disabled_class()
           ]}
@@ -377,7 +377,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
         <span
           :if={@loading? && !@disabled}
-          class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
+          class="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
         />
       </div>
 
@@ -423,7 +423,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           phx-click="relation_load_more"
           phx-target={@myself}
           phx-value-filter={@filter_name}
-          class="w-full border-t border-[#f0efea] px-3 py-2 text-left text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
+          class="w-full border-t border-[#f0efea] px-3 py-2 text-start text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
         >
           {dgettext("mishka_gervaz", "Load more...")}
         </button>
@@ -494,7 +494,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     >
       <button
         type="button"
-        class={[@class, "w-full text-left flex items-center justify-between cursor-pointer bg-white"]}
+        class={[@class, "w-full text-start flex items-center justify-between cursor-pointer bg-white"]}
         phx-click="relation_focus"
         phx-target={@myself}
         phx-value-filter={@filter_name}
@@ -502,7 +502,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <span class={[!@selected_label && "text-[#a8a5a0]"]}>
           {@selected_label || @placeholder}
         </span>
-        <span class="ml-2 text-[#a8a5a0]">
+        <span class="ms-2 text-[#a8a5a0]">
           <.render_icon
             name="hero-chevron-down"
             class={["w-4 h-4 transition-transform", @dropdown_open? && "rotate-180"]}
@@ -523,7 +523,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           :for={{opt_label, opt_value} <- @display_options}
           type="button"
           class={[
-            "w-full px-3 py-2 text-left text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+            "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
             to_string(@current_value) == to_string(opt_value) && "bg-[#f2f1fc] text-[#4f4bcc]"
           ]}
           phx-click="relation_select"
@@ -541,7 +541,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           phx-click="relation_load_more"
           phx-target={@myself}
           phx-value-filter={@filter_name}
-          class="w-full border-t border-[#f0efea] px-3 py-2 text-left text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
+          class="w-full border-t border-[#f0efea] px-3 py-2 text-start text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
         >
           {dgettext("mishka_gervaz", "Load more...")}
         </button>
@@ -549,7 +549,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <span
         :if={@loading?}
-        class="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
+        class="absolute end-8 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
       />
     </div>
     """
@@ -604,14 +604,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <.render_icon
           :if={@icon}
           name={@icon}
-          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none z-10"
+          class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none z-10"
         />
         <input
           type="text"
           name={"_search_#{@filter_name}"}
           value={@search_term || ""}
           placeholder={@placeholder}
-          class={[@class, @icon && "pl-9", "w-full"]}
+          class={[@class, @icon && "ps-9", "w-full"]}
           phx-debounce={@debounce}
           phx-keyup="relation_search"
           phx-focus="relation_focus"
@@ -622,7 +622,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
         <span
           :if={@loading?}
-          class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
+          class="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#ecebe6] border-t-[#5b57d6] rounded-full animate-spin"
         />
       </div>
 
@@ -635,7 +635,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       >
         <span
           :for={val <- @selected}
-          class="inline-flex items-center gap-1 rounded-[7px] border border-[#e4e2f7] bg-[#f2f1fc] py-[3px] pl-[9px] pr-[4px] text-[11px] font-semibold text-[#4f4bcc]"
+          class="inline-flex items-center gap-1 rounded-[7px] border border-[#e4e2f7] bg-[#f2f1fc] py-[3px] ps-[9px] pe-[4px] text-[11px] font-semibold text-[#4f4bcc]"
         >
           {Map.get(@selected_labels, to_string(val), val)}
           <button
@@ -668,7 +668,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           :for={{label, value} <- @display_options}
           type="button"
           class={[
-            "flex w-full items-center gap-2 px-3 py-2 text-left text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+            "flex w-full items-center gap-2 px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
             selected?(value, @selected_set) && "bg-[#f2f1fc]"
           ]}
           phx-click="relation_toggle"
@@ -689,7 +689,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           phx-click="relation_load_more"
           phx-target={@myself}
           phx-value-filter={@filter_name}
-          class="w-full border-t border-[#f0efea] px-3 py-2 text-left text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
+          class="w-full border-t border-[#f0efea] px-3 py-2 text-start text-[12.5px] font-semibold text-[#4f4bcc] hover:bg-[#f7f6f3]"
         >
           {dgettext("mishka_gervaz", "Load more...")}
         </button>
@@ -765,7 +765,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <.render_icon
         :if={@icon}
         name={@icon}
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
+        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
       />
       <input
         type="date"
@@ -777,7 +777,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         disabled={@disabled}
         readonly={@readonly}
         aria-label={@aria_label}
-        class={[@class, @icon && "pl-9", (@disabled || @readonly) && disabled_class()]}
+        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
       />
     </div>
     """
@@ -797,7 +797,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <.render_icon
         :if={@icon}
         name={@icon}
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
+        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
       />
       <input
         type="datetime-local"
@@ -805,7 +805,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         disabled={@disabled}
         readonly={@readonly}
-        class={[@class, @icon && "pl-9", (@disabled || @readonly) && disabled_class()]}
+        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
       />
     </div>
     """
@@ -831,7 +831,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <.render_icon
         :if={@icon}
         name={@icon}
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
+        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
       />
       <input
         type="number"
@@ -843,7 +843,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         step={@step}
         disabled={@disabled}
         readonly={@readonly}
-        class={[@class, @icon && "pl-9", (@disabled || @readonly) && disabled_class()]}
+        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
       />
     </div>
     """
@@ -1083,7 +1083,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign_new(:class, fn -> "flex flex-wrap items-center gap-2" end)
-      |> assign_new(:separator_class, fn -> "text-[11px] font-semibold text-[#bcb9b2]" end)
+      |> assign_new(:separator_class, fn ->
+        "text-[11px] font-semibold text-[#bcb9b2] rtl:rotate-180"
+      end)
 
     ~H"""
     <div class={@class}>
@@ -1129,7 +1131,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   def table(assigns) do
     ~H"""
     <div class="overflow-x-auto">
-      <table class="w-full text-sm text-left">
+      <table class="w-full text-sm text-start">
         {render_slot(@inner_block)}
       </table>
     </div>
@@ -1213,7 +1215,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     ~H"""
     <div
-      class="relative inline-block text-left"
+      class="relative inline-block text-start"
       phx-click-away={
         JS.hide(
           to: "##{@menu_id}",
@@ -1242,7 +1244,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </button>
       <div
         id={@menu_id}
-        class="absolute right-0 z-[60] mt-2 hidden w-[210px] overflow-hidden rounded-[14px] border border-[#ecebe6] bg-white p-1.5 shadow-[0_18px_44px_rgba(30,28,24,0.16)]"
+        class="absolute end-0 z-[60] mt-2 hidden w-[210px] overflow-hidden rounded-[14px] border border-[#ecebe6] bg-white p-1.5 shadow-[0_18px_44px_rgba(30,28,24,0.16)]"
       >
         <div class="flex flex-col gap-0.5">
           {render_slot(@inner_block)}
@@ -1628,7 +1630,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@secondary?}
-        class={["mt-[2px] flex min-w-0 items-center gap-[5px]", @icon && "pl-[21px]"]}
+        class={["mt-[2px] flex min-w-0 items-center gap-[5px]", @icon && "ps-[21px]"]}
       >
         <span class={@secondary_class}>{@secondary}</span>
         <.copy_button :if={@copy} id={@copy.id} value={@copy.value} label={@copy[:label]} />
@@ -1821,7 +1823,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <button
         type="button"
         phx-click={clear_selection_js(@myself, @id)}
-        class="ml-auto text-[12px] font-semibold text-[#6d6a99] transition-colors hover:text-[#3a3f8f]"
+        class="ms-auto text-[12px] font-semibold text-[#6d6a99] transition-colors hover:text-[#3a3f8f]"
       >
         {@clear_label}
       </button>
@@ -2263,7 +2265,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div class={@class}>
       <label :if={@label} class="block text-[10.5px] font-bold text-[#8a877f]" for={@field_name}>
         {@label}
-        <span :if={@required} class="ml-0.5 text-[#e5484d]">*</span>
+        <span :if={@required} class="ms-0.5 text-[#e5484d]">*</span>
       </label>
       <div class={[@has_errors && "rounded-[11px] ring-1 ring-[#f0dcd8]"]}>
         {render_slot(@inner_block)}
@@ -2393,7 +2395,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-target={@phx_target}
         class={secondary_button_class()}
       >
-        <.render_icon name="hero-arrow-left" class="size-4" />
+        <.render_icon name="hero-arrow-left" class="size-4 rtl:rotate-180" />
         {@prev_label}
       </button>
       <div :if={!@can_go_back} />
@@ -2412,7 +2414,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           class={primary_button_class(@can_advance)}
         >
           {@next_label}
-          <.render_icon name="hero-arrow-right" class="size-4" />
+          <.render_icon name="hero-arrow-right" class="size-4 rtl:rotate-180" />
         </button>
       <% end %>
     </div>
@@ -2613,7 +2615,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <span
         :if={@show_value}
-        class="text-sm font-medium text-[#3a382f] tabular-nums min-w-[3ch] text-right"
+        class="text-sm font-medium text-[#3a382f] tabular-nums min-w-[3ch] text-end"
       >
         {@value}
       </span>
@@ -2824,7 +2826,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       <.render_icon
         :if={@icon}
         name={@icon}
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
+        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
       />
       <input
         type="text"
@@ -2832,7 +2834,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
-        class={[@class, @icon && "pl-9", @disabled && disabled_class()]}
+        class={[@class, @icon && "ps-9", @disabled && disabled_class()]}
         phx-debounce={@phx_debounce}
         phx-click={JS.show(to: "##{@dropdown_id}")}
         phx-focus={JS.show(to: "##{@dropdown_id}")}
@@ -2853,7 +2855,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
               )
               |> JS.hide(to: "##{@dropdown_id}")
             }
-            class="block w-full px-3 py-2 text-left text-[12.5px] font-medium text-[#3a382f] transition-colors hover:bg-[#f2f1fc] hover:text-[#4f4bcc]"
+            class="block w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] transition-colors hover:bg-[#f2f1fc] hover:text-[#4f4bcc]"
           >
             {label}
           </button>
@@ -2891,7 +2893,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:max_entries, fn -> 1 end)
       |> assign_new(:class, fn ->
         "block w-full text-[12.5px] font-medium text-[#8a877f] " <>
-          "file:mr-4 file:rounded-[10px] file:border file:border-[#dcdbf5] file:bg-[#f2f1fc] " <>
+          "file:me-4 file:rounded-[10px] file:border file:border-[#dcdbf5] file:bg-[#f2f1fc] " <>
           "file:px-[13px] file:py-[9px] file:text-[12px] file:font-semibold file:text-[#4f4bcc] " <>
           "hover:file:bg-[#e9e7fb]"
       end)

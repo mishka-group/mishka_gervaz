@@ -25,10 +25,10 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
     %{id: "row-4", title: "Expanded", slug: "expanded", status: :draft, featured: false}
   ]
 
-  @pinned ~w(min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10)
+  @pinned ~w(min-[980px]:sticky min-[980px]:end-0 min-[980px]:z-10)
   @painted ~w|min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] min-[980px]:bg-blend-multiply|
-  @fade ~w|min-[980px]:before:pointer-events-none min-[980px]:before:absolute min-[980px]:before:inset-y-0 min-[980px]:before:right-full min-[980px]:before:w-4|
-  @fade_painted ~w|min-[980px]:before:bg-inherit min-[980px]:before:bg-[linear-gradient(#fff,#fff)] min-[980px]:before:bg-blend-multiply min-[980px]:before:[mask-image:linear-gradient(to_left,#000,transparent)]|
+  @fade ~w|min-[980px]:before:pointer-events-none min-[980px]:before:absolute min-[980px]:before:inset-y-0 min-[980px]:before:end-full min-[980px]:before:w-4|
+  @fade_painted ~w|min-[980px]:before:bg-inherit min-[980px]:before:bg-[linear-gradient(#fff,#fff)] min-[980px]:before:bg-blend-multiply min-[980px]:before:[mask-image:linear-gradient(to_left,#000,transparent)] min-[980px]:rtl:before:[mask-image:linear-gradient(to_right,#000,transparent)]|
   @bleed ~w(min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px])
   @raised "min-[980px]:has-[[aria-expanded=true]]:z-[11]"
 
@@ -237,7 +237,7 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
     defp dropdown(html) do
       [_, wrapper, trigger] =
         Regex.run(
-          ~r/<div class="relative inline-block text-left"([^>]*)>\s*<button([^>]*)>/s,
+          ~r/<div class="relative inline-block text-start"([^>]*)>\s*<button([^>]*)>/s,
           html
         )
 

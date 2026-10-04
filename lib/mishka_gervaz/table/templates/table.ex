@@ -544,7 +544,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         "max-[980px]:hidden!"
       ]}
     >
-      <div :if={@show_checkboxes} class="pl-[16px]">
+      <div :if={@show_checkboxes} class="ps-[16px]">
         <.dynamic_component
           module={@static.ui_adapter}
           function={:checkbox}
@@ -578,7 +578,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         :if={@show_actions}
         data-role="gervaz-actions-header"
         class={[
-          "text-right",
+          "text-end",
           header_type(),
           sticky_actions_class(@static, is_nil(@static.theme && @static.theme[:header_class]))
         ]}
@@ -709,7 +709,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         "max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
         | row_classes(@static, @state, @record, @is_checked)
       ]}>
-        <div :if={@show_checkboxes} class="flex items-center pl-[16px] max-[980px]:pl-0!">
+        <div :if={@show_checkboxes} class="flex items-center ps-[16px] max-[980px]:ps-0!">
           <.dynamic_component
             module={@static.ui_adapter}
             function={:checkbox}
@@ -721,7 +721,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         </div>
         <div
           :if={@show_expand}
-          class="flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:right-[12px]"
+          class="flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:end-[12px]"
         >
           <button
             phx-click="expand_row"
@@ -885,7 +885,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     assigns = assigns |> assign(:direction, direction) |> assign(:position, position)
 
     ~H"""
-    <span class="ml-1 inline-flex shrink-0 items-center">
+    <span class="ms-1 inline-flex shrink-0 items-center">
       <%= cond do %>
         <% @direction == :asc -> %>
           <span class="text-[#5b57d6]">&#9650;</span>
@@ -894,7 +894,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         <% true -> %>
           <span class="text-[#c3c0b8]">&#9650;</span>
       <% end %>
-      <span :if={@position} class="ml-0.5 text-[11px] text-[#5b57d6]">{@position}</span>
+      <span :if={@position} class="ms-0.5 text-[11px] text-[#5b57d6]">{@position}</span>
     </span>
     """
   end
@@ -940,16 +940,17 @@ defmodule MishkaGervaz.Table.Templates.Table do
     |> Enum.filter(& &1)
   end
 
-  @sticky_actions_class "min-[980px]:sticky min-[980px]:right-0 min-[980px]:z-10 " <>
+  @sticky_actions_class "min-[980px]:sticky min-[980px]:end-0 min-[980px]:z-10 " <>
                           "min-[980px]:has-[[aria-expanded=true]]:z-[11] " <>
                           "min-[980px]:bg-inherit min-[980px]:bg-[linear-gradient(#fff,#fff)] " <>
                           "min-[980px]:bg-blend-multiply " <>
                           "min-[980px]:before:pointer-events-none min-[980px]:before:absolute " <>
-                          "min-[980px]:before:inset-y-0 min-[980px]:before:right-full " <>
+                          "min-[980px]:before:inset-y-0 min-[980px]:before:end-full " <>
                           "min-[980px]:before:w-4 min-[980px]:before:bg-inherit " <>
                           "min-[980px]:before:bg-[linear-gradient(#fff,#fff)] " <>
                           "min-[980px]:before:bg-blend-multiply " <>
-                          "min-[980px]:before:[mask-image:linear-gradient(to_left,#000,transparent)]"
+                          "min-[980px]:before:[mask-image:linear-gradient(to_left,#000,transparent)] " <>
+                          "min-[980px]:rtl:before:[mask-image:linear-gradient(to_right,#000,transparent)]"
 
   @sticky_actions_bleed "min-[980px]:-my-[14px] min-[980px]:self-stretch min-[980px]:py-[14px]"
 
@@ -1017,7 +1018,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp header_type, do: @header_type
 
   defp header_cell_classes(column, sortable_columns) do
-    base = "min-w-0 text-left " <> @header_type
+    base = "min-w-0 text-start " <> @header_type
 
     sortable_extra =
       if column.name in sortable_columns, do: " cursor-pointer", else: ""

@@ -323,12 +323,12 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
 
         <span
           :if={@ext}
-          class="absolute right-[10px] top-[10px] rounded-md bg-white/85 px-[7px] py-[3px] text-[9px] font-bold uppercase tracking-[0.05em] text-[#5c5a54] shadow-[0_1px_2px_rgba(30,28,24,0.08)]"
+          class="absolute end-[10px] top-[10px] rounded-md bg-white/85 px-[7px] py-[3px] text-[9px] font-bold uppercase tracking-[0.05em] text-[#5c5a54] shadow-[0_1px_2px_rgba(30,28,24,0.08)]"
         >
           {@ext}
         </span>
 
-        <span :if={@show_checkboxes} class="absolute left-[10px] top-[10px] z-20">
+        <span :if={@show_checkboxes} class="absolute start-[10px] top-[10px] z-20">
           <.dynamic_component
             module={@static.ui_adapter}
             function={:checkbox}
@@ -343,7 +343,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
           :if={@star_actions != [] or @featured?}
           title={@star_actions == [] && dgettext("mishka_gervaz", "Featured")}
           class={[
-            "absolute bottom-2 right-2 z-20 grid size-7 place-items-center rounded-lg bg-white/85 shadow-[0_1px_2px_rgba(30,28,24,0.08)]",
+            "absolute bottom-2 end-2 z-20 grid size-7 place-items-center rounded-lg bg-white/85 shadow-[0_1px_2px_rgba(30,28,24,0.08)]",
             "[&>div]:contents [&_.lbl]:hidden [&_button]:size-full [&_button]:rounded-lg [&_button]:border-0 [&_button]:bg-transparent [&_button]:text-inherit [&_button]:hover:text-inherit",
             (@featured? && "text-[#e6b422]") || "text-[#c3c0b8] hover:text-[#e6b422]"
           ]}

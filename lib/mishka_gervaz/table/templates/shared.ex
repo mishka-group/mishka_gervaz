@@ -142,7 +142,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     """
   end
 
-  @toolbar_field "h-[42px] w-full rounded-xl border border-[#ecebe6] bg-white pl-10 pr-3.5 " <>
+  @toolbar_field "h-[42px] w-full rounded-xl border border-[#ecebe6] bg-white ps-10 pe-3.5 " <>
                    "text-[13px] font-medium text-[#1b1a18] outline-none transition-colors " <>
                    "focus:border-[#c3c1f0]"
 
@@ -238,7 +238,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         module={@static.ui_adapter}
         function={:icon}
         name="hero-magnifying-glass"
-        class="pointer-events-none absolute left-[14px] top-1/2 size-4 -translate-y-1/2 text-[#a8a5a0]"
+        class="pointer-events-none absolute start-[14px] top-1/2 size-4 -translate-y-1/2 text-[#a8a5a0]"
       />
       <input
         type="text"
@@ -477,7 +477,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   defp render_filters_by_mode(%{mode: :sidebar} = assigns) do
     ~H"""
     <div class="flex gap-4">
-      <aside class="w-64 shrink-0 border-r pr-4">
+      <aside class="w-64 shrink-0 border-e pe-4">
         <.dynamic_component
           :if={@state.supports_archive}
           module={@static.ui_adapter}
@@ -1363,7 +1363,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         <% end %>
       </div>
 
-      <span :if={@show_total} class="text-right text-[12px] font-semibold text-[#a8a5a0]">
+      <span :if={@show_total} class="text-end text-[12px] font-semibold text-[#a8a5a0]">
         {format_page_info(@page_info_format, @page, @total_pages, @total_count)}
       </span>
       <span :if={!@show_total}></span>
@@ -1383,14 +1383,14 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       <div class="relative">
         <select
           name="size"
-          class="h-[36px] cursor-pointer appearance-none rounded-[9px] border border-[#ecebe6] bg-white pl-[12px] pr-[30px] text-[12.5px] font-semibold text-[#3a382f] outline-none"
+          class="h-[36px] cursor-pointer appearance-none rounded-[9px] border border-[#ecebe6] bg-white ps-[12px] pe-[30px] text-[12.5px] font-semibold text-[#3a382f] outline-none"
         >
           <option :for={opt <- @page_size_options} value={opt} selected={opt == @current_page_size}>
             {opt}
           </option>
         </select>
         <svg
-          class="pointer-events-none absolute right-[10px] top-1/2 -translate-y-1/2"
+          class="pointer-events-none absolute end-[10px] top-1/2 -translate-y-1/2"
           width="12"
           height="12"
           viewBox="0 0 24 24"

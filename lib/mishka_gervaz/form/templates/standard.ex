@@ -916,7 +916,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-disable-with={@submit_busy_label}
             class={[
               "inline-flex h-[42px] items-center gap-2 px-[18px] text-[12.5px] font-bold text-white transition-opacity",
-              (@alternatives == [] && "rounded-[11px]") || "rounded-l-[11px]",
+              (@alternatives == [] && "rounded-[11px]") || "rounded-s-[11px]",
               "disabled:cursor-wait disabled:opacity-70",
               if(@submit_disabled,
                 do: "cursor-not-allowed bg-[#c3c0b8]",
@@ -946,7 +946,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             id={@alt_menu_id <> "-toggle"}
             phx-click={JS.toggle(to: "#" <> @alt_menu_id)}
             title={dgettext("mishka_gervaz", "Other ways to create this")}
-            class="grid h-[42px] w-8 flex-none place-items-center rounded-r-[11px] border-l border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95"
+            class="grid h-[42px] w-8 flex-none place-items-center rounded-e-[11px] border-s border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95"
           >
             <svg
               width="12"
@@ -968,7 +968,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-click-away={JS.hide(to: "#" <> @alt_menu_id)}
             phx-window-keydown={JS.hide(to: "#" <> @alt_menu_id)}
             phx-key="escape"
-            class="absolute bottom-[50px] right-0 z-50 hidden w-[268px] rounded-[13px] border border-[#ecebe6] bg-white p-1.5 shadow-[0_18px_46px_rgba(20,18,26,.22)]"
+            class="absolute bottom-[50px] end-0 z-50 hidden w-[268px] rounded-[13px] border border-[#ecebe6] bg-white p-1.5 shadow-[0_18px_46px_rgba(20,18,26,.22)]"
           >
             <.alternative :for={alt <- @alternatives} alt={alt} />
           </div>
@@ -997,7 +997,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <.link
       id={@alt.id}
       navigate={@path}
-      class="flex w-full items-start gap-2.5 rounded-[9px] p-[9px] text-left hover:bg-[#f6f5f2]"
+      class="flex w-full items-start gap-2.5 rounded-[9px] p-[9px] text-start hover:bg-[#f6f5f2]"
     >
       <.alternative_text alt={@alt} />
     </.link>
@@ -1011,7 +1011,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       id={@alt.id}
       name={@alt.name}
       value={@alt.value}
-      class="flex w-full items-start gap-2.5 rounded-[9px] p-[9px] text-left hover:bg-[#f6f5f2]"
+      class="flex w-full items-start gap-2.5 rounded-[9px] p-[9px] text-start hover:bg-[#f6f5f2]"
     >
       <.alternative_text alt={@alt} />
     </button>
@@ -1720,7 +1720,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     ~H"""
     <div class={nested_span_class(@sf.span)}>
       <label class="mb-[7px] block text-[10.5px] font-bold text-[#8a877f]" for={@input_id}>
-        {@sf.label}<span :if={@sf.required} class="ml-0.5 text-[#e5484d]">*</span>
+        {@sf.label}<span :if={@sf.required} class="ms-0.5 text-[#e5484d]">*</span>
       </label>
       <div class={@sub_errors != [] && "rounded-[11px] ring-1 ring-[#f0dcd8]"}>
         {sub_field_input(assigns)}
