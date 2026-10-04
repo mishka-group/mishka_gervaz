@@ -1236,6 +1236,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:phx_debounce, debounce)
       |> assign(:extra, get_in_map(field, [:ui, :extra]) || %{})
       |> put_present(:rows, get_in_map(field, [:ui, :rows]))
+      |> put_present(:dir, get_in_map(field, [:ui, :extra, :dir]))
 
     case type do
       :password ->
@@ -2184,7 +2185,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           </div>
 
           <div class="min-w-0 flex-1">
-            <p class="truncate text-[12.5px] font-semibold text-[#1b1a18]">{entry.client_name}</p>
+            <p class="truncate text-[12.5px] font-semibold text-[#1b1a18]" dir="auto">
+              {entry.client_name}
+            </p>
             <%= if entry.progress < 100 do %>
               <div class="mt-[7px] h-[5px] w-full overflow-hidden rounded-full bg-[#efeee9]">
                 <div

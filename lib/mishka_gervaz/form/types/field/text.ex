@@ -13,6 +13,11 @@ defmodule MishkaGervaz.Form.Types.Field.Text do
         end
       end
 
+  ## Text direction
+
+  The input follows what is typed (`dir="auto"`). A field whose value is always written left to
+  right, such as a slug, host, token or hex colour, says so with `ui do extra %{dir: "ltr"} end`.
+
   See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
   """
 

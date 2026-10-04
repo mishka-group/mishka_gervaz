@@ -8,6 +8,8 @@ defmodule MishkaGervaz.Table.Types.Column.Text do
 
   - `:max_length` - Truncate text after this many characters (default: nil)
   - `:truncate_suffix` - Suffix for truncated text (default: "...")
+  - `:dir` - `"ltr"`, `"rtl"` or `"auto"` (default: a value of printable ASCII with no space, such
+    as an email, URL or ID, reads left to right and any other value follows the page)
 
   ## Example
 
@@ -47,7 +49,8 @@ defmodule MishkaGervaz.Table.Types.Column.Text do
       __changed__: %{},
       text: display_text,
       title: if(truncated, do: text),
-      class: extra[:class]
+      class: extra[:class],
+      dir: extra[:dir]
     })
   end
 

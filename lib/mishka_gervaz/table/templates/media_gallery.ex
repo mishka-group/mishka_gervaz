@@ -367,7 +367,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
       </div>
 
       <div class="px-[13px] py-3">
-        <div class="truncate text-[12.5px] font-semibold text-[#1b1a18]" title={@filename}>
+        <div class="truncate text-[12.5px] font-semibold text-[#1b1a18]" title={@filename} dir="auto">
           {@filename}
         </div>
 

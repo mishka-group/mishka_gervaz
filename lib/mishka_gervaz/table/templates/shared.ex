@@ -246,7 +246,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         value={Map.get(@state.filter_values, @filter.name) || ""}
         placeholder={search_placeholder(@filter)}
         phx-debounce="300"
-        class={@field_class}
+        class={[@field_class, "[unicode-bidi:plaintext]"]}
       />
     </div>
     """

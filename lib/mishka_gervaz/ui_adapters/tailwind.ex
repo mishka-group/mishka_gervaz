@@ -64,6 +64,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:autocomplete, fn -> nil end)
       |> assign(:placeholder, placeholder)
+      |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
     <div class="relative">
@@ -88,10 +89,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         disabled={@disabled}
         readonly={@readonly}
         autocomplete={@autocomplete}
+        dir={icon_dir(@search, @dir)}
         class={[
           @class,
           "placeholder:text-[#a8a5a0]",
-          @search && "ps-[38px]!",
+          @search && "ps-[38px]! [unicode-bidi:plaintext]",
           (@disabled || @readonly) && disabled_class()
         ]}
         phx-debounce={@phx_debounce}
@@ -115,6 +117,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
+      |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
     <input
@@ -125,6 +128,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       disabled={@disabled}
       readonly={@readonly}
       autocomplete={@autocomplete}
+      dir={@dir}
       class={[@class, (@disabled || @readonly) && disabled_class()]}
       phx-debounce={@phx_debounce}
     />
@@ -142,6 +146,34 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       "focus:border-[#c3c1f0] focus:bg-white focus:shadow-[0_0_0_3px_rgba(91,87,214,0.1)] " <>
       base
   end
+
+  @ltr_input_types ~w(email url tel number password)
+  @input_dirs ~w(ltr rtl auto)
+
+  defp input_dir(assigns, fallback) do
+    dir = assigns[:dir] && to_string(assigns[:dir])
+
+    cond do
+      dir in @input_dirs -> dir
+      to_string(assigns[:type]) in @ltr_input_types -> "ltr"
+      true -> fallback
+    end
+  end
+
+  # AN INPUT WITH AN ICON AT ITS START KEEPS THE PAGE'S DIRECTION, so its start padding stays on the
+  # icon's side; `[unicode-bidi:plaintext]` lets what is typed run in its own direction instead.
+  defp icon_dir(icon, _dir) when icon not in [nil, false], do: nil
+  defp icon_dir(_icon, dir), do: dir
+
+  defp token_dir(text) when is_binary(text) and text != "" do
+    if ascii_token?(text), do: "ltr"
+  end
+
+  defp token_dir(_text), do: nil
+
+  defp ascii_token?(<<char, rest::binary>>) when char in 0x21..0x7E, do: ascii_token?(rest)
+  defp ascii_token?(""), do: true
+  defp ascii_token?(_text), do: false
 
   @doc """
   The same field as `input_class/1`, for a control that grows down the page instead of holding one
@@ -357,12 +389,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
         <input
           type="text"
+          dir={icon_dir(@icon, "auto")}
           name={"_search_#{@filter_name}"}
           value={if(@search_term not in [nil, ""], do: @search_term, else: @display_label || "")}
           placeholder={@placeholder}
           class={[
             @class,
-            @icon && "ps-9",
+            @icon && "ps-9 [unicode-bidi:plaintext]",
             "w-full",
             @disabled && disabled_class()
           ]}
@@ -608,10 +641,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
         <input
           type="text"
+          dir={icon_dir(@icon, "auto")}
           name={"_search_#{@filter_name}"}
           value={@search_term || ""}
           placeholder={@placeholder}
-          class={[@class, @icon && "ps-9", "w-full"]}
+          class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", "w-full"]}
           phx-debounce={@debounce}
           phx-keyup="relation_search"
           phx-focus="relation_focus"
@@ -825,6 +859,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
+      |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
     <div class="relative">
@@ -843,6 +878,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         step={@step}
         disabled={@disabled}
         readonly={@readonly}
+        dir={@dir}
         class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
       />
     </div>
@@ -1280,6 +1316,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:text` - The text to display
     * `:title` - Optional tooltip (for truncated text)
     * `:class` - CSS class
+    * `:dir` - `"ltr"`, `"rtl"` or `"auto"`; left out, a text of printable ASCII with no space
+      (an email, a URL, an ID, a slug) reads left to right and anything else follows the page
     * `:suffix` - Optional suffix text (with different styling)
     * `:suffix_class` - CSS class for suffix (default: "text-[#8a877f]")
   """
@@ -1291,9 +1329,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:title, fn -> nil end)
       |> assign_new(:suffix, fn -> nil end)
       |> assign_new(:suffix_class, fn -> "text-[#8a877f]" end)
+      |> assign(:dir, assigns[:dir] || token_dir(assigns[:text]))
 
     ~H"""
-    <span class={@class} title={@title}>
+    <span class={@class} title={@title} dir={@dir}>
       {@text}<span :if={@suffix} class={@suffix_class}>{@suffix}</span>
     </span>
     """
@@ -1361,7 +1400,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
-  Render code/monospace cell value (for UUID, etc.).
+  Render code/monospace cell value (for UUID, etc.). It always reads left to right.
 
   ## Assigns
     * `:value` - The value to display
@@ -1376,7 +1415,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:title, fn -> nil end)
 
     ~H"""
-    <code class={@class} title={@title}>{@value}</code>
+    <code class={@class} title={@title} dir="ltr">{@value}</code>
     """
   end
 
@@ -1625,14 +1664,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div :if={!@blank?} class="min-w-0">
       <div class="flex min-w-0 items-center gap-[7px]">
         <.render_icon :if={@icon} name={@icon} class="size-[14px] shrink-0 text-[#a8a5a0]" />
-        <span class={@primary_class} title={@primary}>{@primary}</span>
+        <span class={@primary_class} title={@primary} dir={token_dir(@primary)}>{@primary}</span>
       </div>
 
       <div
         :if={@secondary?}
         class={["mt-[2px] flex min-w-0 items-center gap-[5px]", @icon && "ps-[21px]"]}
       >
-        <span class={@secondary_class}>{@secondary}</span>
+        <span class={@secondary_class} dir={token_dir(@secondary)}>{@secondary}</span>
         <.copy_button :if={@copy} id={@copy.id} value={@copy.value} label={@copy[:label]} />
       </div>
     </div>
@@ -2503,7 +2542,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div class={@class}>
       <.render_icon name="hero-document" class="size-8 shrink-0 text-[#8a877f]" />
       <div class="min-w-0 flex-1">
-        <p class="truncate text-[12.5px] font-semibold text-[#1b1a18]">{@entry.client_name}</p>
+        <p class="truncate text-[12.5px] font-semibold text-[#1b1a18]" dir="auto">
+          {@entry.client_name}
+        </p>
         <p class="font-['Space_Grotesk'] text-[11px] font-medium text-[#8a877f]">
           {format_filesize(@entry.client_size)}
         </p>
@@ -2532,7 +2573,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     ~H"""
     <div class={@class}>
       <div class="mb-1 flex items-center justify-between">
-        <span class="truncate text-[11.5px] font-semibold text-[#3a382f]">
+        <span class="truncate text-[11.5px] font-semibold text-[#3a382f]" dir="auto">
           {@entry.client_name}
         </span>
         <span class="font-['Space_Grotesk'] text-[10.5px] font-semibold text-[#8a877f]">
@@ -2638,6 +2679,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
+      |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
     <textarea
@@ -2646,6 +2688,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       rows={@rows}
       disabled={@disabled}
       readonly={@readonly}
+      dir={@dir}
       class={[@class, (@disabled || @readonly) && disabled_class()]}
       phx-debounce={@phx_debounce}
     >{@value}</textarea>
@@ -2659,12 +2702,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> multiline_class("font-mono ") end)
       |> assign_new(:rows, fn -> 8 end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
     <textarea
       name={@name}
       rows={@rows}
       disabled={@disabled}
+      dir={@dir}
       class={[@class, @disabled && disabled_class()]}
       spellcheck="false"
     >{@value}</textarea>
@@ -2759,6 +2804,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <div class="flex items-center gap-2" id={"string-list-#{@table_id}-#{@field_name}-#{idx}"}>
           <input
             type="text"
+            dir="auto"
             name={"form[#{@field_name}][]"}
             value={item}
             placeholder={@placeholder}
@@ -2830,11 +2876,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <input
         type="text"
+        dir={icon_dir(@icon, "auto")}
         name={@name}
         value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
-        class={[@class, @icon && "ps-9", @disabled && disabled_class()]}
+        class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", @disabled && disabled_class()]}
         phx-debounce={@phx_debounce}
         phx-click={JS.show(to: "##{@dropdown_id}")}
         phx-focus={JS.show(to: "##{@dropdown_id}")}
@@ -2943,7 +2990,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <% end %>
       </div>
       <div class="min-w-0 flex-1">
-        <p class="truncate text-[13px] font-semibold text-[#17161a]">{@filename}</p>
+        <p class="truncate text-[13px] font-semibold text-[#17161a]" dir="auto">{@filename}</p>
         <p :if={@size || @format} class="text-[11px] font-medium text-[#a8a5a0]">
           <span :if={@format}>{@format}</span>
           <span :if={@size && @format} class="mx-1">&middot;</span>

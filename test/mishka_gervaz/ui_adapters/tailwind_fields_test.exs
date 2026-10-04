@@ -232,6 +232,49 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
+  describe "the reading direction of a value" do
+    test "an input whose value is always left to right says so" do
+      for type <- ~w(email url tel) do
+        assert render(:text_input, %{type: type}) =~ ~s(dir="ltr"), "#{type} follows the page"
+      end
+
+      assert render(:password_input, %{}) =~ ~s(dir="ltr")
+      assert render(:number_input, %{}) =~ ~s(dir="ltr")
+      assert render(:json_editor, %{}) =~ ~s(dir="ltr")
+    end
+
+    test "an input for free text follows what is typed" do
+      assert render(:text_input, %{type: "text"}) =~ ~s(dir="auto")
+      assert render(:textarea, %{}) =~ ~s(dir="auto")
+    end
+
+    test "a search input keeps the page's direction for its icon, and lets the text run its own" do
+      html = render(:text_input, %{search: true})
+
+      refute html =~ ~s(dir=)
+      assert html =~ "[unicode-bidi:plaintext]"
+    end
+
+    test "a field can name its own direction" do
+      assert render(:text_input, %{dir: "ltr"}) =~ ~s(dir="ltr")
+      assert render(:textarea, %{dir: :ltr}) =~ ~s(dir="ltr")
+    end
+
+    test "a cell reads left to right when it holds a code or one ASCII token" do
+      cell = fn fun, assigns ->
+        %{__changed__: nil}
+        |> Map.merge(assigns)
+        |> then(&apply(Tailwind, fun, [&1]))
+        |> rendered_to_string()
+      end
+
+      assert cell.(:cell_code, %{value: "f47ac10b..."}) =~ ~s(dir="ltr")
+      assert cell.(:cell_text, %{text: "ali@example.com"}) =~ ~s(dir="ltr")
+      refute cell.(:cell_text, %{text: "علی رضایی"}) =~ "dir="
+      refute cell.(:cell_text, %{text: "Ali Reza"}) =~ "dir="
+    end
+  end
+
   describe "a multi-select in a form" do
     defp multi(assigns) do
       %{
