@@ -2826,17 +2826,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </div>
       <% end %>
 
-      <button
-        :if={!@disabled}
-        type="button"
-        phx-click="add_list_item"
-        phx-value-field={@field_name}
-        phx-target={@target}
-        class="inline-flex h-9 items-center gap-[7px] rounded-[10px] border border-[#dcdbf5] bg-[#f2f1fc] px-[13px] text-[12px] font-semibold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
-      >
-        <.render_icon name="hero-plus" class="w-4 h-4" />
-        {@add_label}
-      </button>
+      <div :if={!@disabled} data-role="gervaz-list-add" class="flex h-11 items-center">
+        <button
+          type="button"
+          phx-click="add_list_item"
+          phx-value-field={@field_name}
+          phx-target={@target}
+          class="inline-flex h-9 items-center gap-[7px] rounded-[10px] border border-[#dcdbf5] bg-[#f2f1fc] px-[13px] text-[12px] font-semibold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+        >
+          <.render_icon name="hero-plus" class="w-4 h-4" />
+          {@add_label}
+        </button>
+      </div>
     </div>
     """
   end

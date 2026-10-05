@@ -309,4 +309,19 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       refute multi(%{}) =~ "gervaz-multi-selected"
     end
   end
+
+  describe "a string list in a form" do
+    defp list(items, disabled \\ false),
+      do: render(:string_list_input, %{items: items, field_name: "origins", disabled: disabled})
+
+    test "its add button stands in the 44px box, centred on an input beside it" do
+      assert list([]) =~
+               ~r/<div data-role="gervaz-list-add" class="flex h-11 items-center">\s*<button[^>]*phx-click="add_list_item"/
+    end
+
+    test "under the items it holds, and nowhere when the list is switched off" do
+      assert list(["https://a.test"]) =~ ~s(data-role="gervaz-list-add")
+      refute list(["https://a.test"], true) =~ ~s(data-role="gervaz-list-add")
+    end
+  end
 end
