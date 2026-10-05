@@ -62,9 +62,25 @@ defmodule MishkaGervaz.Table.Templates.DateRangeFilterTest do
   test "keeps a whole date in view and wraps as one unit" do
     group = render_filters(%{}) |> date_range_group()
 
-    assert group =~ ~s|class="min-w-[min(100%,310px)] flex-[1.6]"|
+    assert group =~ ~s|class="min-w-[min(100%,310px)] max-w-[420px] flex-[1.6]"|
     assert length(Regex.scan(~r/min-w-\[140px\]/, group)) == 2
     refute group =~ "min-w-0 flex-1"
+  end
+
+  test "stays the width of a filter on a row of its own" do
+    assert render_filters(%{}) |> date_range_group() =~ "max-w-[420px]"
+  end
+
+  test "draws an empty date faint and a chosen one in ink" do
+    group =
+      render_filters(%{date_range: %{from: "2026-09-24"}})
+      |> date_range_group()
+
+    [from] = Regex.run(~r/<input[^>]*name="date_range_from"[^>]*>/, group)
+    [to] = Regex.run(~r/<input[^>]*name="date_range_to"[^>]*>/, group)
+
+    refute from =~ "text-[#a8a5a0]"
+    assert to =~ "text-[#a8a5a0]"
   end
 
   test "sits in the same row as the other filters, labelled the way they are" do

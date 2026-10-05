@@ -811,7 +811,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         disabled={@disabled}
         readonly={@readonly}
         aria-label={@aria_label}
-        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
+        class={[
+          @class,
+          @icon && "ps-9",
+          @value in [nil, ""] && "text-[#a8a5a0]",
+          (@disabled || @readonly) && disabled_class()
+        ]}
       />
     </div>
     """
@@ -839,7 +844,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         disabled={@disabled}
         readonly={@readonly}
-        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
+        class={[
+          @class,
+          @icon && "ps-9",
+          @value in [nil, ""] && "text-[#a8a5a0]",
+          (@disabled || @readonly) && disabled_class()
+        ]}
       />
     </div>
     """

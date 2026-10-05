@@ -861,7 +861,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           role="group"
           aria-label={@resolved_label}
           data-role="gervaz-date-range-filter"
-          class="min-w-[min(100%,310px)] flex-[1.6]"
+          class="min-w-[min(100%,310px)] max-w-[420px] flex-[1.6]"
         >
           <label class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">
             {@resolved_label}
