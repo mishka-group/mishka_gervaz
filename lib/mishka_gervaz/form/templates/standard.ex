@@ -658,8 +658,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   # Draws one control per declared key through the UI adapter, reading each held value under
   # either a string or an atom key.
   defp key_map_inputs(assigns) do
+    assigns = assign_new(assigns, :label_id, fn -> nil end)
+
     ~H"""
-    <div class="grid grid-cols-2 gap-2.5">
+    <div class="grid grid-cols-2 gap-2.5" role={@label_id && "group"} aria-labelledby={@label_id}>
       <div :for={key <- @keys} class={(key.type == :textarea && "col-span-2") || ""}>
         <label
           class="mb-[5px] block text-[10px] font-bold text-[#8a877f]"
@@ -680,8 +682,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp key_list_rows(assigns) do
+    assigns = assign_new(assigns, :label_id, fn -> nil end)
+
     ~H"""
-    <div class="space-y-[9px]">
+    <div class="space-y-[9px]" role={@label_id && "group"} aria-labelledby={@label_id}>
       <div
         :for={{row, index} <- Enum.with_index(@rows)}
         class="rounded-[11px] border border-[#ecebe6] bg-[#fbfbf9] p-3"
@@ -1099,6 +1103,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     form_field = assigns.form_field
     label = assigns.label
     errors = assigns.errors
+    assigns = assign(assigns, :label_id, form_field.id <> "-label")
 
     if field_disabled?(field, assigns.state) do
       is_loading = relation_loading?(field, assigns.state)
@@ -1118,6 +1123,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:field_wrapper}
         label={@wrapper_label}
+        label_id={@label_id}
         description={@wrapper_description}
         errors={@wrapper_errors}
         required={@wrapper_required}
@@ -1147,6 +1153,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
         |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
+        |> assign(:wrapper_for, labelled_control(field, form_field, assigns))
         |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
 
       ~H"""
@@ -1154,6 +1161,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:field_wrapper}
         label={@wrapper_label}
+        field_name={@wrapper_for}
+        label_id={@label_id}
         description={@wrapper_description}
         errors={@wrapper_errors}
         required={@wrapper_required}
@@ -1163,6 +1172,31 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       """
     end
   end
+
+  @grouped_controls [:string_list, :key_map, :key_list, :nested]
+
+  # The id of the one element a field's label names: none for a control that is a group of
+  # elements, named by the label's id instead, nor for a checkbox, which carries its own label.
+  defp labelled_control(%{type: type}, _form_field, _assigns) when type in @grouped_controls,
+    do: nil
+
+  defp labelled_control(%{type: :checkbox}, _form_field, _assigns), do: nil
+
+  defp labelled_control(%{type: type} = field, form_field, assigns)
+       when type in [:file, :upload] do
+    case UploadHelpers.find_upload_for_field(assigns.static, field.name) do
+      %{name: name} ->
+        upload_ref(assigns[:uploads][namespaced_upload_name(name, assigns.static.id)])
+
+      nil ->
+        form_field.id
+    end
+  end
+
+  defp labelled_control(_field, form_field, _assigns), do: form_field.id
+
+  defp upload_ref(%{ref: ref}), do: ref
+  defp upload_ref(_no_upload), do: nil
 
   defp show_on_mode?(%{show_on: nil}, _mode), do: true
   defp show_on_mode?(%{show_on: mode}, mode), do: true
@@ -1595,9 +1629,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         resolve_nested_label(field, :remove_label, dgettext("mishka_gervaz", "Remove"))
       )
       |> assign(:target, assigns[:myself])
+      |> assign_new(:label_id, fn -> nil end)
 
     ~H"""
-    <div class="space-y-[10px]">
+    <div class="space-y-[10px]" role={@label_id && "group"} aria-labelledby={@label_id}>
       <.inputs_for :let={nested_form} field={@state.form[@nested_field.name]}>
         <.nested_card
           title={entry_title(@nested_field.name, @nested_mode, nested_form.index)}
@@ -1643,9 +1678,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         resolve_nested_label(field, :remove_label, dgettext("mishka_gervaz", "Remove"))
       )
       |> assign(:target, assigns[:myself])
+      |> assign_new(:label_id, fn -> nil end)
 
     ~H"""
-    <div class="space-y-[10px]">
+    <div class="space-y-[10px]" role={@label_id && "group"} aria-labelledby={@label_id}>
       <.nested_card
         :for={{idx, entry, errors} <- @entries}
         title={entry_title(@nested_field.name, :array, idx)}
@@ -1720,7 +1756,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp sub_field(assigns) do
     ~H"""
     <div class={nested_span_class(@sf.span)}>
-      <label class="mb-[7px] block text-[10.5px] font-bold text-[#8a877f]" for={@input_id}>
+      <label
+        id={"#{@input_id}-label"}
+        class="mb-[7px] block text-[10.5px] font-bold text-[#8a877f]"
+        for={sub_label_for(@sf, @input_id)}
+      >
         {@sf.label}<span :if={@sf.required} class="ms-0.5 text-[#e5484d]">*</span>
       </label>
       <div class={@sub_errors != [] && "rounded-[11px] ring-1 ring-[#f0dcd8]"}>
@@ -1732,6 +1772,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  defp sub_label_for(%{type: type}, _input_id) when type in [:key_map, :key_list], do: nil
+  defp sub_label_for(_sf, input_id), do: input_id
 
   defp sub_error_text(error) when is_binary(error),
     do: MishkaGervaz.Errors.translate_error(error, [])
@@ -1749,6 +1792,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp sub_field_input(%{sf: %{type: :key_map}} = assigns) do
     assigns
+    |> assign(:label_id, "#{assigns.input_id}-label")
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(assigns.sf))
     |> assign(:held, (is_map(assigns.input_value) && assigns.input_value) || %{})
     |> key_map_inputs()
@@ -1758,6 +1802,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     editable? = is_binary(assigns.owner_field) and not assigns.sf.readonly
 
     assigns
+    |> assign(:label_id, "#{assigns.input_id}-label")
     |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(assigns.sf))
     |> assign(:rows, MishkaGervaz.Form.Types.Field.KeyList.rows(assigns.input_value))
     |> assign(:editable?, editable?)

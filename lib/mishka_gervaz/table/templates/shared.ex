@@ -242,9 +242,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       />
       <input
         type="text"
+        id={filter_input_id(@static, @filter)}
         name={@filter.name}
         value={Map.get(@state.filter_values, @filter.name) || ""}
         placeholder={search_placeholder(@filter)}
+        aria-label={filter_label(@filter)}
         phx-debounce="300"
         class={[@field_class, "[unicode-bidi:plaintext]"]}
       />
@@ -783,10 +785,15 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           |> assign(:icon, filter.ui && filter.ui.icon)
           |> assign(:search, true)
           |> assign(:resolved_label, resolved_label)
+          |> assign(:id, filter_input_id(assigns.static, filter))
 
         ~H"""
         <div class="min-w-[240px] flex-[2]">
-          <label :if={@resolved_label} class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">
+          <label
+            :if={@resolved_label}
+            class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]"
+            for={@id}
+          >
             {@resolved_label}
           </label>
           <.dynamic_component module={@ui_adapter} function={:text_input} {assigns} />
@@ -808,10 +815,15 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           |> assign(:icon, filter.ui && filter.ui.icon)
           |> assign(:search, true)
           |> assign(:resolved_label, resolved_label)
+          |> assign(:id, filter_input_id(assigns.static, filter))
 
         ~H"""
         <div class="min-w-[170px] flex-1">
-          <label :if={@resolved_label} class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">
+          <label
+            :if={@resolved_label}
+            class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]"
+            for={@id}
+          >
             {@resolved_label}
           </label>
           <.dynamic_component module={@ui_adapter} function={:select} {assigns} />
@@ -840,13 +852,18 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           base_map
           |> Map.put(:myself, assigns.myself)
           |> Map.put(:table_id, assigns.static.id)
+          |> Map.put(:input_id, filter_input_id(assigns.static, filter))
 
         label = resolve_ui_label(filter)
         assigns = assign(assigns, :filter_map, filter_map) |> assign(:resolved_label, label)
 
         ~H"""
         <div class="min-w-[170px] flex-1">
-          <label :if={@resolved_label} class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">
+          <label
+            :if={@resolved_label}
+            class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]"
+            for={@filter_map.input_id}
+          >
             {@resolved_label}
           </label>
           {MishkaGervaz.Table.Types.Filter.Relation.render_input(@filter_map, @value, @ui_adapter)}
@@ -877,6 +894,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           |> assign(:value, assigns.value || "")
           |> assign(:placeholder, resolve_label(filter.ui && filter.ui.placeholder) || "")
           |> assign(:icon, filter.ui && filter.ui.icon)
+          |> assign(:id, filter_input_id(assigns.static, filter))
+          |> assign(:aria_label, filter_label(filter))
 
         ~H"""
         <div>
@@ -888,6 +907,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   defp filter_label(filter),
     do: resolve_ui_label(filter) || translate_text(Phoenix.Naming.humanize(filter.name))
+
+  defp filter_input_id(static, filter), do: "#{static.id}-filter-#{filter.name}"
 
   @doc """
   Merges dynamic relation filter state (options, loading, etc.) into filter configs.
@@ -1379,10 +1400,13 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       phx-target={@myself}
       class="flex items-center gap-[9px]"
     >
-      <span class="text-[12px] font-semibold text-[#8a877f]">{dgettext("mishka_gervaz", "Show")}</span>
+      <span id={@static_id <> "-page-size-show"} class="text-[12px] font-semibold text-[#8a877f]">
+        {dgettext("mishka_gervaz", "Show")}
+      </span>
       <div class="relative">
         <select
           name="size"
+          aria-labelledby={"#{@static_id}-page-size-show #{@static_id}-page-size-unit"}
           class="h-[36px] cursor-pointer appearance-none rounded-[9px] border border-[#ecebe6] bg-white ps-[12px] pe-[30px] text-[12.5px] font-semibold text-[#3a382f] outline-none"
         >
           <option :for={opt <- @page_size_options} value={opt} selected={opt == @current_page_size}>
@@ -1403,7 +1427,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           <path d="m6 9 6 6 6-6" />
         </svg>
       </div>
-      <span class="text-[12px] font-semibold text-[#8a877f]">
+      <span id={@static_id <> "-page-size-unit"} class="text-[12px] font-semibold text-[#8a877f]">
         {dgettext("mishka_gervaz", "per page")}
       </span>
     </form>

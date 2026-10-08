@@ -58,6 +58,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           :error -> 300
         end
       end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:aria_label, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:search, fn -> false end)
       |> assign_new(:disabled, fn -> false end)
@@ -83,12 +85,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </svg>
       <input
         type="text"
+        id={@id}
         name={@name}
         value={@value}
         placeholder={@placeholder}
         disabled={@disabled}
         readonly={@readonly}
         autocomplete={@autocomplete}
+        aria-label={@aria_label}
         dir={icon_dir(@search, @dir)}
         class={[
           @class,
@@ -117,11 +121,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
+      |> assign_new(:id, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
     <input
       type="password"
+      id={@id}
       name={@name}
       value={@value}
       placeholder={@placeholder}
@@ -199,6 +205,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:prompt, fn -> dgettext("mishka_gervaz", "All") end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
     <div class="relative">
@@ -208,6 +215,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0] pointer-events-none"
       />
       <select
+        id={@id}
         name={@name}
         disabled={@disabled}
         class={[
@@ -372,6 +380,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:table_id, fn -> nil end)
       |> assign_new(:myself, fn -> nil end)
       |> assign_new(:search_term, fn -> nil end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
     <div
@@ -389,6 +398,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
         <input
           type="text"
+          id={@id}
           dir={icon_dir(@icon, "auto")}
           name={"_search_#{@filter_name}"}
           value={if(@search_term not in [nil, ""], do: @search_term, else: @display_label || "")}
@@ -516,6 +526,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:filter_name, fn -> assigns[:name] end)
       |> assign_new(:table_id, fn -> nil end)
       |> assign_new(:myself, fn -> nil end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
     <div
@@ -527,6 +538,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     >
       <button
         type="button"
+        id={@id}
         class={[@class, "w-full text-start flex items-center justify-between cursor-pointer bg-white"]}
         phx-click="relation_focus"
         phx-target={@myself}
@@ -623,6 +635,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:myself, fn -> nil end)
       |> assign_new(:search_term, fn -> nil end)
       |> assign_new(:show_selected, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
       |> assign(:selected_labels, Map.new(selected_options, fn {l, v} -> {to_string(v), l} end))
 
     ~H"""
@@ -641,6 +654,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         />
         <input
           type="text"
+          id={@id}
           dir={icon_dir(@icon, "auto")}
           name={"_search_#{@filter_name}"}
           value={@search_term || ""}
@@ -830,6 +844,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
     <div class="relative">
@@ -840,6 +855,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <input
         type="datetime-local"
+        id={@id}
         name={@name}
         value={@value}
         disabled={@disabled}
@@ -869,6 +885,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
@@ -880,6 +897,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <input
         type="number"
+        id={@id}
         name={@name}
         value={@value}
         placeholder={@placeholder}
@@ -2291,7 +2309,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   ## Assigns
     * `:label` - label text above the input
     * `:required` - whether to mark the label required
-    * `:field_name` - the input's id, used as the label's `for`
+    * `:field_name` - the input's id, used as the label's `for`; leave it out for a control that is
+      not one labelable element, and name the control with `:label_id` instead
+    * `:label_id` - the label's own id, for a control that names itself with `aria-labelledby`
     * `:errors` - error messages, rendered below the input
     * `:description` - help text, rendered below the errors
     * `:class` - extra wrapper classes
@@ -2302,6 +2322,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:field_name, fn -> nil end)
+      |> assign_new(:label_id, fn -> nil end)
       |> assign_new(:required, fn -> false end)
       |> assign_new(:errors, fn -> [] end)
       |> assign_new(:description, fn -> nil end)
@@ -2312,7 +2333,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     ~H"""
     <div class={@class}>
-      <label :if={@label} class="block text-[10.5px] font-bold text-[#8a877f]" for={@field_name}>
+      <label
+        :if={@label}
+        id={@label_id}
+        class="block text-[10.5px] font-bold text-[#8a877f]"
+        for={@field_name}
+      >
         {@label}
         <span :if={@required} class="ms-0.5 text-[#e5484d]">*</span>
       </label>
@@ -2651,11 +2677,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:show_value, fn -> false end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
 
     ~H"""
     <div class="flex items-center gap-3">
       <input
         type="range"
+        id={@id}
         name={@name}
         value={@value}
         min={@min}
@@ -2689,10 +2717,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
     <textarea
+      id={@id}
       name={@name}
       placeholder={@placeholder}
       rows={@rows}
@@ -2712,10 +2742,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> multiline_class("font-mono ") end)
       |> assign_new(:rows, fn -> 8 end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
     <textarea
+      id={@id}
       name={@name}
       rows={@rows}
       disabled={@disabled}
@@ -2804,10 +2836,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> "space-y-2" end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:input_class, fn -> "flex-1 " <> input_class(false) end)
+      |> assign_new(:label_id, fn -> nil end)
       |> assign(:items_with_index, Enum.with_index(assigns[:items] || []))
 
     ~H"""
-    <div id={"string-list-#{@table_id}-#{@field_name}"} class={@class}>
+    <div
+      id={"string-list-#{@table_id}-#{@field_name}"}
+      class={@class}
+      role={@label_id && "group"}
+      aria-labelledby={@label_id}
+    >
       <input type="hidden" name={"form[#{@field_name}][]"} value="" />
 
       <%= for {item, idx} <- @items_with_index do %>
@@ -2816,6 +2854,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             type="text"
             dir="auto"
             name={"form[#{@field_name}][]"}
+            aria-labelledby={@label_id}
             value={item}
             placeholder={@placeholder}
             disabled={@disabled}
@@ -2873,6 +2912,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:field_name, fn -> nil end)
       |> assign_new(:target, fn -> nil end)
       |> assign_new(:table_id, fn -> nil end)
+      |> assign_new(:id, fn -> nil end)
       |> assign(
         :dropdown_id,
         "combobox-dropdown-#{assigns[:table_id]}-#{assigns[:field_name] || assigns[:name]}"
@@ -2887,6 +2927,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <input
         type="text"
+        id={@id}
         dir={icon_dir(@icon, "auto")}
         name={@name}
         value={@value}
