@@ -856,14 +856,17 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def strip_empty_list_values(params), do: params
 
-  @doc false
-  def clear_list_field_values(state) do
-    cleared = Map.reject(state.field_values, fn {_k, v} -> is_list(v) end)
+  @doc """
+  Run on every `validate`: drops the rows `add_list_item` and `remove_list_item` hold for each
+  `:string_list` field, so the field draws the items the form posted.
 
-    if map_size(cleared) != map_size(state.field_values) do
-      State.update(state, field_values: cleared)
-    else
-      state
+  Every other value in `state.field_values` is kept, a relation's selection among them.
+  """
+  @spec clear_list_field_values(State.t()) :: State.t()
+  def clear_list_field_values(%{static: %{fields: fields}, field_values: field_values} = state) do
+    case for(%{type: :string_list, name: name} <- fields, is_list(field_values[name]), do: name) do
+      [] -> state
+      names -> State.update(state, field_values: Map.drop(field_values, names))
     end
   end
 

@@ -341,6 +341,124 @@ defmodule MishkaGervaz.Test.Resources.PickerScopedEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.PickerCoverage do
+  @moduledoc """
+  The join between a `MishkaGervaz.Test.Resources.PickerCoveredEntry` and a region it covers.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.{PickerCoveredEntry, PickerRegion}
+
+  ets do
+    private? false
+  end
+
+  attributes do
+    uuid_primary_key :id
+  end
+
+  relationships do
+    belongs_to :entry, PickerCoveredEntry, allow_nil?: false, public?: true
+    belongs_to :region, PickerRegion, allow_nil?: false, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy, create: [:entry_id, :region_id]]
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.PickerCoveredEntry do
+  @moduledoc """
+  An entry that covers many regions, picked by id in the `:search_multi` field `:region_ids` and
+  saved through a many-to-many, beside a `:search` picker for one workspace.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.{PickerCoverage, PickerRegion, PickerWorkspace}
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :picker_covered_entry
+        route "/admin/picker-covered-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+
+        preload do
+          always [:regions]
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :region_ids, :relation do
+          virtual true
+          resource PickerRegion
+          display_field :name
+          mode :search_multi
+          derive_value fn record -> Enum.map(record.regions, &to_string(&1.id)) end
+        end
+
+        field :workspace_id, :relation do
+          resource PickerWorkspace
+          display_field :name
+          mode :search
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :workspace_id, :uuid, public?: true
+  end
+
+  relationships do
+    many_to_many :regions, PickerRegion do
+      through PickerCoverage
+      source_attribute_on_join_resource :entry_id
+      destination_attribute_on_join_resource :region_id
+      public? true
+    end
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :workspace_id]
+      argument :region_ids, {:array, :uuid}, allow_nil?: true
+      change manage_relationship(:region_ids, :regions, type: :append_and_remove)
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+      accept [:title, :workspace_id]
+      argument :region_ids, {:array, :uuid}, allow_nil?: true
+      change manage_relationship(:region_ids, :regions, type: :append_and_remove)
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.SavingActionArticle do
   @moduledoc """
   A form whose actions leave some fields out: a site user's `:create` takes no `:region_id`,
