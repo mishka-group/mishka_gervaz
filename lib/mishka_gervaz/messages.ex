@@ -53,6 +53,11 @@ defmodule MishkaGervaz.Messages do
   `start_async/4`, `assign_async/4` or `in_caller_locale/1` so it is translated in the locale of
   the process that started it.
 
+  The same three carry the value of each process dictionary key registered with
+  `carry_process_keys/1`, so work that reads what its caller put in the process dictionary — the
+  tenant a page renders for, say — reads it in the other process too. None is registered by
+  default.
+
   """
 
   @doc """
@@ -74,6 +79,9 @@ defmodule MishkaGervaz.Messages do
   require Phoenix.LiveView
 
   @default_backend Application.compile_env(:mishka_gervaz, :gettext_backend, MishkaGervaz.Gettext)
+
+  @carried {__MODULE__, :carried_process_keys}
+  @unset {__MODULE__, :unset}
 
   defmacro __using__(opts) do
     default = @default_backend
@@ -131,12 +139,48 @@ defmodule MishkaGervaz.Messages do
   def translate_text(other), do: other
 
   @doc """
-  Wraps `fun`, of arity 0 or 1, to run in the Gettext locales of the process that calls this.
+  Registers process dictionary keys whose values `in_caller_locale/1`, `start_async/4` and
+  `assign_async/4` carry into the work they start, beside the Gettext locales.
+
+  Call it when the application starts, with the keys its own functions read with `Process.get/1`.
+  Registering a key again changes nothing. A key the calling process holds no value for is not
+  carried, so the other process reads it as unset too.
+
+  ## Examples
+
+      MishkaGervaz.Messages.carry_process_keys([{MyApp.Tenant, :current}])
+
+      Process.put({MyApp.Tenant, :current}, "acme")
+
+      Task.async(MishkaGervaz.Messages.in_caller_locale(fn -> Process.get({MyApp.Tenant, :current}) end))
+      |> Task.await()
+      #=> "acme"
+  """
+  @spec carry_process_keys([term()]) :: :ok
+  def carry_process_keys(keys) when is_list(keys) do
+    registered = carried_process_keys()
+
+    case Enum.uniq(registered ++ keys) do
+      ^registered -> :ok
+      updated -> :persistent_term.put(@carried, updated)
+    end
+  end
+
+  @doc """
+  The process dictionary keys `carry_process_keys/1` registered, in the order they were first
+  registered.
+  """
+  @spec carried_process_keys() :: [term()]
+  def carried_process_keys, do: :persistent_term.get(@carried, [])
+
+  @doc """
+  Wraps `fun`, of arity 0 or 1, to run in the Gettext locales of the process that calls this, with
+  the values it holds for the keys `carry_process_keys/1` registered.
 
   Give the wrapped function to the work another process runs, such as `Task.async/1` or
   `Task.async_stream/3`: a new process starts with no locale of its own, so words it translates are
   otherwise in the default locale. The locale set with `Gettext.put_locale/1` and each one set with
-  `Gettext.put_locale/2` are carried.
+  `Gettext.put_locale/2` are carried. Both are read when `fun` is wrapped.
 
   ## Examples
 
@@ -150,25 +194,29 @@ defmodule MishkaGervaz.Messages do
         when result: term(), arg: term()
   def in_caller_locale(fun) when is_function(fun, 0) do
     locales = caller_locales()
+    values = caller_values()
 
     fn ->
       put_locales(locales)
+      put_values(values)
       fun.()
     end
   end
 
   def in_caller_locale(fun) when is_function(fun, 1) do
     locales = caller_locales()
+    values = caller_values()
 
     fn arg ->
       put_locales(locales)
+      put_values(values)
       fun.(arg)
     end
   end
 
   @doc """
-  `Phoenix.LiveView.start_async/4`, with `fun` run in the caller's Gettext locales
-  (`in_caller_locale/1`).
+  `Phoenix.LiveView.start_async/4`, with `fun` run in the caller's Gettext locales and with its
+  values for the keys `carry_process_keys/1` registered (`in_caller_locale/1`).
 
   Use it in place of `Phoenix.LiveView.start_async/4` wherever the result holds words a person
   reads.
@@ -180,8 +228,8 @@ defmodule MishkaGervaz.Messages do
   end
 
   @doc """
-  `Phoenix.LiveView.assign_async/4`, with `fun` run in the caller's Gettext locales
-  (`in_caller_locale/1`).
+  `Phoenix.LiveView.assign_async/4`, with `fun` run in the caller's Gettext locales and with its
+  values for the keys `carry_process_keys/1` registered (`in_caller_locale/1`).
   """
   @spec assign_async(
           Phoenix.LiveView.Socket.t(),
@@ -211,4 +259,14 @@ defmodule MishkaGervaz.Messages do
       {backend, locale} -> Gettext.put_locale(backend, locale)
     end)
   end
+
+  # Each registered key the calling process holds a value for, with that value.
+  defp caller_values do
+    for key <- carried_process_keys(),
+        value = Process.get(key, @unset),
+        value != @unset,
+        do: {key, value}
+  end
+
+  defp put_values(values), do: Enum.each(values, fn {key, value} -> Process.put(key, value) end)
 end
