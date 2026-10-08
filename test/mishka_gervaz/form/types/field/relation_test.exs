@@ -132,6 +132,25 @@ defmodule MishkaGervaz.Form.Types.Field.RelationTest do
       assert assigns.selected_options == [{"Existing", "1"}]
     end
 
+    test ":static is named after the form field and shows field_values over the form's value" do
+      ui = stub_ui_module()
+      field = %{name: :site_id, mode: :static}
+      form_field = %{name: "form[site_id]", id: "f_site_id"}
+
+      state_assigns = %{
+        form_field: form_field,
+        field_values: %{site_id: "picked"},
+        current_value: "stale",
+        myself: nil
+      }
+
+      Relation.render_input(field, %{}, state_assigns, ui)
+      assert_received {:dispatched, :select, %{name: "form[site_id]", value: "picked"}}
+
+      Relation.render_input(field, %{}, %{state_assigns | field_values: %{}}, ui)
+      assert_received {:dispatched, :select, %{value: "stale"}}
+    end
+
     test "readonly forces dropdown_open? false even when rel_data says open" do
       ui = stub_ui_module()
       field = %{name: :site_id, mode: :static}

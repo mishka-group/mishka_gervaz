@@ -459,6 +459,158 @@ defmodule MishkaGervaz.Test.Resources.PickerCoveredEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.PickerStaticEntry do
+  @moduledoc """
+  A form of plain select pickers, each in the default `:static` mode: `:region_id`, read-only when
+  the mount's `defaults` give it, and `:workspace_id`, which depends on it and offers a
+  `"No workspace"` choice.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.{PickerRegion, PickerWorkspace}
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :picker_static_entry
+        route "/admin/picker-static-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :region_id, :relation do
+          resource PickerRegion
+          display_field :name
+          readonly fn state -> Map.has_key?(state.defaults || %{}, :region_id) end
+        end
+
+        field :workspace_id, :relation do
+          resource PickerWorkspace
+          display_field :name
+          depends_on :region_id
+          include_nil "No workspace"
+
+          load fn query, state ->
+            Ash.Query.filter_input(query, %{region_id: Map.get(state.field_values, :region_id)})
+          end
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :region_id, :uuid, public?: true
+    attribute :workspace_id, :uuid, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :region_id, :workspace_id]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :region_id, :workspace_id]
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.PickerLoadMoreEntry do
+  @moduledoc """
+  A form of `:load_more` pickers: `:region_id`, and `:workspace_id`, which depends on it.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  alias MishkaGervaz.Test.Resources.{PickerRegion, PickerWorkspace}
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :picker_load_more_entry
+        route "/admin/picker-load-more-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :region_id, :relation do
+          resource PickerRegion
+          display_field :name
+          mode :load_more
+        end
+
+        field :workspace_id, :relation do
+          resource PickerWorkspace
+          display_field :name
+          mode :load_more
+          depends_on :region_id
+
+          load fn query, state ->
+            Ash.Query.filter_input(query, %{region_id: Map.get(state.field_values, :region_id)})
+          end
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :region_id, :uuid, public?: true
+    attribute :workspace_id, :uuid, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :region_id, :workspace_id]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :region_id, :workspace_id]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.SavingActionArticle do
   @moduledoc """
   A form whose actions leave some fields out: a site user's `:create` takes no `:region_id`,

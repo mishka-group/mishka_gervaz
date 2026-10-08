@@ -60,6 +60,9 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
   - `:search` → `ui.search_select/1`
   - `:load_more` → `ui.load_more_select/1`
   - `:search_multi` → `ui.multi_select/1`
+
+  `ui.select/1` is named after the form field, `form[<field>]`, and shows the field's value in
+  `field_values`, or the form's value when `field_values` holds none.
   """
   @spec render_input(map(), map(), map(), module()) :: Phoenix.LiveView.Rendered.t()
   def render_input(field, rel_data, state_assigns, ui) do
@@ -119,11 +122,38 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
 
         _ ->
           Map.merge(base, %{
-            value: state_assigns[:current_value] || ""
+            name: select_name(state_assigns, field),
+            value: select_value(state_assigns, field.name)
           })
       end
 
     Map.put(merged, :__changed__, Map.new(Map.keys(merged), &{&1, true}))
+  end
+
+  @doc """
+  Whether `field` is a relation drawn as a plain select: `:static`, the default, or a mode this
+  type does not know.
+
+  The select posts its pick with the form's own params, as `form[<field>]`, and
+  `MishkaGervaz.Form.Web.Events.put_select_picks/2` writes it into `state.field_values` on every
+  `validate` and `save`.
+  """
+  @spec select_mode?(map()) :: boolean()
+  def select_mode?(%{type: :relation} = field),
+    do: Map.get(field, :mode, :static) not in [:search, :load_more, :search_multi]
+
+  def select_mode?(_field), do: false
+
+  defp select_name(%{form_field: %{name: name}}, _field) when is_binary(name) and name != "",
+    do: name
+
+  defp select_name(_state_assigns, field), do: field.name
+
+  defp select_value(state_assigns, name) do
+    case Map.get(state_assigns[:field_values] || %{}, name) do
+      value when value not in [nil, ""] -> value
+      _ -> state_assigns[:current_value] || ""
+    end
   end
 
   defp input_id(%{form_field: %{id: id}}, _field) when is_binary(id) and id != "", do: id

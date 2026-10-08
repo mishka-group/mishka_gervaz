@@ -68,6 +68,7 @@ defmodule MishkaGervaz.Form.Web.Events do
     HookRunner
   }
 
+  alias MishkaGervaz.Form.Types.Field.Relation, as: RelationType
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
 
@@ -169,9 +170,12 @@ defmodule MishkaGervaz.Form.Web.Events do
       end
 
     state = clear_list_field_values(state)
+    {state, picked} = put_select_picks(state, params)
 
-    socket = validation_handler(state).validate(state, params, socket, forced_errors, target)
-    {:noreply, socket}
+    socket =
+      validation_handler(state).validate(state, params, socket, forced_errors, target)
+
+    {:noreply, reload_dependents_of(socket, picked)}
   end
 
   def do_handle("save", params, state, socket) do
@@ -193,12 +197,10 @@ defmodule MishkaGervaz.Form.Web.Events do
           {:noreply, socket}
 
         {:cont, modified_params} ->
-          socket = submit_handler(state).submit(state, modified_params, socket)
-          {:noreply, socket}
+          {:noreply, submit_with_picks(state, modified_params, socket)}
 
         _ ->
-          socket = submit_handler(state).submit(state, params, socket)
-          {:noreply, socket}
+          {:noreply, submit_with_picks(state, params, socket)}
       end
     else
       {:noreply, socket}
@@ -660,6 +662,17 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   defp settable_field?(_name, _state), do: false
 
+  defp submit_with_picks(state, params, socket) do
+    {state, _picked} = put_select_picks(state, params)
+    submit_handler(state).submit(state, params, socket)
+  end
+
+  defp reload_dependents_of(socket, names) do
+    Enum.reduce(names, socket, fn name, acc ->
+      RelationHandler.reload_dependent_fields(acc, acc.assigns.form_state, name)
+    end)
+  end
+
   defp key_list_sub?(field_def, sub) do
     (Map.get(field_def, :nested_fields) || [])
     |> Enum.any?(&(&1.type == :key_list and to_string(&1.name) == sub))
@@ -869,6 +882,46 @@ defmodule MishkaGervaz.Form.Web.Events do
       names -> State.update(state, field_values: Map.drop(field_values, names))
     end
   end
+
+  @doc """
+  Run on every `validate` and `save`: writes into `state.field_values` the pick each relation field
+  drawn as a plain select (`MishkaGervaz.Form.Types.Field.Relation.select_mode?/1`) posted in
+  `params["form"]`.
+
+  An empty pick takes the field's value out of `state.field_values`. A field the select did not
+  post, or one the user may not change (`MishkaGervaz.Form.Web.Events.SubmitHandler.field_protected?/2`),
+  keeps its value.
+
+  Returns the state and the names of the fields whose value the picks changed. `validate` empties
+  and reloads the fields that depend on them, as `relation_select` does.
+  """
+  @spec put_select_picks(State.t(), map()) :: {State.t(), [atom()]}
+  def put_select_picks(%{static: %{fields: fields}} = state, %{"form" => form_params})
+      when is_map(form_params) do
+    picks =
+      for field <- fields,
+          RelationType.select_mode?(field),
+          {:ok, value} when is_binary(value) <- [Map.fetch(form_params, to_string(field.name))],
+          not SubmitHandler.field_protected?(field, state),
+          to_string(Map.get(state.field_values, field.name) || "") != value,
+          do: {field.name, value}
+
+    case picks do
+      [] ->
+        {state, []}
+
+      picks ->
+        field_values =
+          Enum.reduce(picks, state.field_values, fn
+            {name, ""}, acc -> Map.delete(acc, name)
+            {name, value}, acc -> Map.put(acc, name, value)
+          end)
+
+        {State.update(state, field_values: field_values, dirty?: true), Keyword.keys(picks)}
+    end
+  end
+
+  def put_select_picks(state, _params), do: {state, []}
 
   @doc false
   def decode_constrained_map_params(%{"form" => form_params} = params, fields)
