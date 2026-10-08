@@ -20,6 +20,7 @@ defmodule MishkaGervaz.TranslateTextTest do
   doctest MishkaGervaz.Helpers,
     only: [
       translate_text: 1,
+      strip_tags: 1,
       resolve_label: 1,
       resolve_dynamic: 2,
       resolve_confirm: 2,

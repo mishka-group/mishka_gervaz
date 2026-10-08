@@ -35,7 +35,7 @@ defmodule MishkaGervaz.Form.Types.Field.Combobox do
 
   @impl true
   def sanitize(value, _config) when is_binary(value) do
-    value |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+    value |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
   end
 
   def sanitize(value, _config), do: value

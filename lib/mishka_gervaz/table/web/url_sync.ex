@@ -720,11 +720,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   end
 
   @spec sanitize(any()) :: any()
-  defp sanitize(value) when is_binary(value) do
-    HtmlSanitizeEx.strip_tags(value)
-  rescue
-    _ -> value
-  end
+  defp sanitize(value) when is_binary(value), do: MishkaGervaz.Helpers.strip_tags(value)
 
   defp sanitize(value) when is_list(value), do: Enum.map(value, &sanitize/1)
   defp sanitize(value), do: value

@@ -24,6 +24,15 @@ defmodule MishkaGervaz.Table.Web.Events.SanitizationHandlerTest do
     test "preserves plain strings" do
       assert Sanitizer.sanitize("plain text") == "plain text"
     end
+
+    test "keeps & and quotes as typed, escaping nothing" do
+      assert Sanitizer.sanitize(~s(Tom & Jerry's "cat" <b>x</b>)) == ~s(Tom & Jerry's "cat" x)
+    end
+
+    test "takes out a tag hidden inside a tag" do
+      assert Sanitizer.sanitize("<scr<script>ipt>alert(1)</script>") =~ "alert(1)"
+      refute Sanitizer.sanitize("<scr<script>ipt>alert(1)</script>") =~ "<"
+    end
   end
 
   describe "sanitize_column/1" do

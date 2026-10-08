@@ -264,6 +264,14 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       assert result.search == "hello world"
     end
 
+    test "decodes search with its tags taken out and its & kept" do
+      params = %{"search" => "Tom & Jerry <b>cat</b>"}
+
+      result = UrlSync.decode(params, "", allowed_params: [:search])
+
+      assert result.search == "Tom & Jerry cat"
+    end
+
     test "decodes template without prefix" do
       params = %{"template" => "grid"}
 

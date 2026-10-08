@@ -59,6 +59,41 @@ defmodule MishkaGervaz.Helpers do
 
   def humanize(string) when is_binary(string), do: string
 
+  @escaped %{"&amp;" => "&", "&lt;" => "<", "&gt;" => ">"}
+
+  @doc """
+  `value` with every HTML tag taken out, by `HtmlSanitizeEx.strip_tags/1`, and its text as typed:
+  `&`, `<` and `>` are not escaped, and an entity typed into it, such as `&amp;`, is kept as typed.
+  Tags are taken out until none is left, so a tag hidden inside a tag goes too. Anything but a
+  string is returned as it is.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.strip_tags(~s(Tom & Jerry's <b>"cat"</b>))
+      ~s(Tom & Jerry's "cat")
+
+      iex> MishkaGervaz.Helpers.strip_tags("<<b>b>")
+      ""
+
+      iex> MishkaGervaz.Helpers.strip_tags(42)
+      42
+  """
+  @spec strip_tags(term()) :: term()
+  def strip_tags(value) when is_binary(value) do
+    stripped =
+      value
+      |> String.replace("&", "&amp;")
+      |> HtmlSanitizeEx.strip_tags()
+      |> String.replace(Map.keys(@escaped), &Map.fetch!(@escaped, &1))
+
+    case stripped do
+      ^value -> value
+      _changed -> strip_tags(stripped)
+    end
+  end
+
+  def strip_tags(value), do: value
+
   @doc """
   Translates a string a resource declared in its DSL, in the caller's locale.
 

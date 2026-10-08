@@ -38,13 +38,13 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
   @impl true
   def sanitize(value, _config) when is_list(value) do
     Enum.map(value, fn
-      item when is_binary(item) -> item |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+      item when is_binary(item) -> item |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
       item -> item
     end)
   end
 
   def sanitize(value, _config) when is_binary(value) do
-    value |> String.replace(~r/<[^>]*>/, "") |> String.trim()
+    value |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
   end
 
   def sanitize(value, _config), do: value

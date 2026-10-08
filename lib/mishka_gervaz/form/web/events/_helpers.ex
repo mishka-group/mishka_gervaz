@@ -103,7 +103,7 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
   @spec sanitize_string(any()) :: any()
   def sanitize_string(value) when is_binary(value) do
     value
-    |> String.replace(~r/<[^>]*>/, "")
+    |> MishkaGervaz.Helpers.strip_tags()
     |> String.trim()
   end
 

@@ -6,6 +6,37 @@ defmodule MishkaGervaz.HelpersTest do
 
   alias MishkaGervaz.Helpers
 
+  describe "strip_tags/1" do
+    test "takes every tag out and leaves the text as typed" do
+      assert Helpers.strip_tags(~s(Tom & Jerry's <b>"cat"</b>)) == ~s(Tom & Jerry's "cat")
+      assert Helpers.strip_tags("a < b and c > d") == "a < b and c > d"
+      assert Helpers.strip_tags("&amp; &lt;b&gt;") == "&amp; &lt;b&gt;"
+    end
+
+    test "takes out a tag hidden inside a tag, an unclosed one and a comment" do
+      for value <- [
+            "<<b>b>",
+            "<scr<script>ipt>alert(1)</script>",
+            "<img src=x onerror=alert(1)",
+            "<!-- x -->"
+          ] do
+        refute Helpers.strip_tags(value) =~ ~r/<[a-z!\/]/i, "#{value} kept a tag"
+      end
+    end
+
+    test "is stable" do
+      for value <- ["Tom & Jerry", "<<b>b>", "a &amp; b", "x <i>y</i> z"] do
+        once = Helpers.strip_tags(value)
+        assert Helpers.strip_tags(once) == once
+      end
+    end
+
+    test "returns anything but a string as it is" do
+      assert Helpers.strip_tags(nil) == nil
+      assert Helpers.strip_tags([1]) == [1]
+    end
+  end
+
   describe "humanize/1" do
     test "converts atom with underscores to title case" do
       assert Helpers.humanize(:first_name) == "First Name"

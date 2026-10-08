@@ -70,11 +70,7 @@ defmodule MishkaGervaz.Table.Web.Events.SanitizationHandler do
 
       @impl true
       @spec sanitize(any()) :: any()
-      def sanitize(value) when is_binary(value) do
-        HtmlSanitizeEx.strip_tags(value)
-      rescue
-        _ -> value
-      end
+      def sanitize(value) when is_binary(value), do: MishkaGervaz.Helpers.strip_tags(value)
 
       def sanitize(value), do: value
 
