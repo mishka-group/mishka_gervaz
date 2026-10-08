@@ -9,6 +9,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   - Upload events
   - Relation field search/select
   - Cancel
+  - Reset — starts the form over as an empty create form, see `MishkaGervaz.Form.Web.Live.reset/2`
   - Nested/array field management
 
   ## Sub-builders
@@ -222,6 +223,9 @@ defmodule MishkaGervaz.Form.Web.Events do
       {:noreply, socket}
     end
   end
+
+  def do_handle("reset", _params, _state, socket),
+    do: {:noreply, MishkaGervaz.Form.Web.Live.start_over(socket, nil)}
 
   def do_handle("next_step", _params, state, socket) do
     socket = step_handler(state).advance(state, socket)
@@ -769,21 +773,9 @@ defmodule MishkaGervaz.Form.Web.Events do
   def reset_to_create_mode(state, socket) do
     socket = cancel_pending_uploads(state, socket)
 
-    reset_state =
-      State.update(state,
-        form: nil,
-        loading: :initial,
-        errors: %{},
-        dirty?: false,
-        existing_files: %{},
-        field_values: %{},
-        relation_options: %{},
-        upload_state: %{}
-      )
-
     socket
     |> Phoenix.Component.assign(:record_id, nil)
-    |> DataLoader.new_record(reset_state)
+    |> DataLoader.new_record(MishkaGervaz.Form.Web.Live.fresh_state(state))
   end
 
   @doc false

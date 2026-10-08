@@ -889,7 +889,8 @@ defmodule MishkaGervaz.Table.Web.Events do
     if form_id do
       Phoenix.LiveView.send_update(MishkaGervaz.Form.Web.Live,
         id: form_id,
-        record_id: id
+        record_id: id,
+        reset: true
       )
     end
 

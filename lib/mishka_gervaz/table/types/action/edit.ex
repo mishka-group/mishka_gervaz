@@ -4,7 +4,8 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
 
   Dispatches a `row_action` event with the action name and record ID, which is
   intercepted by the table events handler to send directly to the form component
-  via `send_update`.
+  via `send_update`, with `reset: true`: the form reads the record again even when it is the one
+  already open, and drops what was typed into it.
 
   ## Usage
 

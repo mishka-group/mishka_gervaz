@@ -332,17 +332,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
         socket = push_js_hook(socket, state, :after_save, record_id)
 
-        reset_state =
-          State.update(state,
-            form: nil,
-            loading: :initial,
-            errors: %{},
-            form_errors: [],
-            dirty?: false,
-            existing_files: %{},
-            field_values: %{},
-            relation_options: %{}
-          )
+        reset_state = MishkaGervaz.Form.Web.Live.fresh_state(state)
 
         if state.mode == :update and socket.assigns[:record_id_given?] == true and
              not is_nil(record_id) do
