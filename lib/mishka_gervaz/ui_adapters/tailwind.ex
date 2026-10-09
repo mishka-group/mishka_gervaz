@@ -183,11 +183,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   The same field as `input_class/1`, for a control that grows down the page instead of holding one
-  line. Everything but the height is shared; `rows` decides the height, so `extra` carries it.
+  line. Everything but the height is shared; `rows` decides the height, so `extra` carries it. It
+  is a block, so the ring a field with an error is wrapped in fits it.
   """
   @spec multiline_class(String.t()) :: String.t()
   def multiline_class(extra) do
-    "w-full rounded-[11px] border border-[#ecebe6] bg-[#faf9f6] px-[14px] py-[11px] text-[13px] " <>
+    "block w-full rounded-[11px] border border-[#ecebe6] bg-[#faf9f6] px-[14px] py-[11px] text-[13px] " <>
       extra <>
       "font-medium leading-[1.55] text-[#1b1a18] outline-none transition-shadow " <>
       "placeholder:text-[#a8a5a0] focus:border-[#c3c1f0] focus:bg-white " <>

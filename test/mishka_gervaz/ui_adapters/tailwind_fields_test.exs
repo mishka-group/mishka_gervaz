@@ -230,6 +230,14 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       assert html =~ "rounded-[11px]"
       refute html =~ "focus:ring-blue-500"
     end
+
+    # INLINE, A TEXTAREA SITS ON THE LINE'S BASELINE, and the line runs past its bottom edge: the
+    # ring around a field with an error drew a second line under the box.
+    test "are blocks, so the ring of a field with an error fits them" do
+      for fun <- [:textarea, :json_editor] do
+        assert render(fun, %{}) =~ ~r/class="block /, "#{fun}"
+      end
+    end
   end
 
   describe "the reading direction of a value" do
