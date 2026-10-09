@@ -866,7 +866,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="datetime-local"
         id={@id}
         name={@name}
-        value={@value}
+        value={Phoenix.HTML.Form.normalize_value("datetime-local", @value)}
         disabled={@disabled}
         readonly={@readonly}
         class={[

@@ -18,6 +18,11 @@ defmodule MishkaGervaz.Form.Types.Field.DateTimeTest do
                {:ok, "2025-01-15T10:30:00+02:00"}
     end
 
+    test "accepts the minutes a browser's datetime-local input sends, completing them" do
+      assert DateTimeField.validate("2024-09-09T22:45", %{}) == {:ok, "2024-09-09T22:45:00"}
+      assert DateTimeField.validate("2024-09-09 22:45", %{}) == {:ok, "2024-09-09 22:45:00"}
+    end
+
     test "rejects invalid strings" do
       assert DateTimeField.validate("not-a-datetime", %{}) ==
                {:error, "must be a valid date and time"}
@@ -34,6 +39,11 @@ defmodule MishkaGervaz.Form.Types.Field.DateTimeTest do
   end
 
   describe "sanitize/2" do
+    test "completes a datetime-local value with its seconds" do
+      assert DateTimeField.sanitize(" 2024-09-09T22:45 ", %{}) == "2024-09-09T22:45:00"
+      assert DateTimeField.parse_params("2024-09-09T22:45", %{}) == "2024-09-09T22:45:00"
+    end
+
     test "trims binaries" do
       assert DateTimeField.sanitize("  2025-01-15T10:30:00Z  ", %{}) ==
                "2025-01-15T10:30:00Z"

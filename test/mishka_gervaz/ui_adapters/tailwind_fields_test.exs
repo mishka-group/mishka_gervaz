@@ -310,6 +310,19 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
+  describe "a date and time" do
+    test "a stored one is written as its input reads it" do
+      for stored <- [~U[2024-09-09 22:45:00Z], ~N[2024-09-09 22:45:00]] do
+        assert render(:datetime_input, %{value: stored}) =~ ~s(value="2024-09-09T22:45")
+      end
+    end
+
+    test "one just typed is kept as it was typed" do
+      assert render(:datetime_input, %{value: "2024-09-09T22:45"}) =~
+               ~s(value="2024-09-09T22:45")
+    end
+  end
+
   describe "a list that opens under its control" do
     defp relation(fun, assigns) do
       %{
