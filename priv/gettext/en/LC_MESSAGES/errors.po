@@ -39,7 +39,7 @@ msgstr ""
 msgid "must be a valid date"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/datetime.ex:25
+#: lib/mishka_gervaz/form/types/field/datetime.ex:29
 #, elixir-autogen, elixir-format
 msgid "must be a valid date and time"
 msgstr ""
@@ -55,7 +55,7 @@ msgstr ""
 msgid "must be valid JSON"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1917
+#: lib/mishka_gervaz/form/templates/standard.ex:1969
 #, elixir-autogen, elixir-format
 msgid "is required"
 msgstr ""

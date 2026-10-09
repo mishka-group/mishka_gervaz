@@ -177,7 +177,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :dirty?,
     :defaults,
     :preload_aliases,
-    :dismissed_notices
+    :dismissed_notices,
+    :pickers
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -203,7 +204,8 @@ defmodule MishkaGervaz.Form.Web.State do
           dirty?: boolean(),
           defaults: map() | nil,
           preload_aliases: %{atom() => atom()},
-          dismissed_notices: MapSet.t()
+          dismissed_notices: MapSet.t(),
+          pickers: %{atom() => Date.t()}
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -676,7 +678,8 @@ defmodule MishkaGervaz.Form.Web.State do
           dirty?: false,
           defaults: nil,
           preload_aliases: Info.preload_aliases(resource, master_user?),
-          dismissed_notices: MapSet.new()
+          dismissed_notices: MapSet.new(),
+          pickers: %{}
         }
       end
 

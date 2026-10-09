@@ -1341,6 +1341,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :date_input)
+        |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
+        |> assign(:field_name, field.name)
+        |> assign(:target, assigns[:myself])
         |> dynamic_component()
 
       :datetime ->
@@ -1348,6 +1351,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :datetime_input)
+        |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
+        |> assign(:field_name, field.name)
+        |> assign(:target, assigns[:myself])
         |> dynamic_component()
 
       :range ->

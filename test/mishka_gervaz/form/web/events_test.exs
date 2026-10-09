@@ -388,6 +388,105 @@ defmodule MishkaGervaz.Form.Web.EventsTest do
     end
   end
 
+  describe "the form's calendar" do
+    defp picker_state(values, pickers \\ %{}) do
+      fields =
+        default_fields() ++
+          [
+            %{name: :published_at, type: :datetime, ui: %{label: "Published At"}},
+            %{name: :due_on, type: :date, ui: %{label: "Due"}}
+          ]
+
+      [static_opts: [fields: fields], field_values: values]
+      |> build_state()
+      |> Map.put(:pickers, pickers)
+    end
+
+    defp picker(event, params, state) do
+      {:noreply, socket} = Events.handle(event, params, build_socket(state))
+      socket.assigns.form_state
+    end
+
+    test "opens on the month of the value, and the same button closes it" do
+      state = picker_state(%{published_at: "2024-09-09T22:45:00"})
+
+      opened = picker("picker_open", %{"field" => "published_at"}, state)
+      assert opened.pickers == %{published_at: ~D[2024-09-01]}
+
+      closed = picker("picker_open", %{"field" => "published_at"}, opened)
+      assert closed.pickers == %{}
+    end
+
+    test "with no value, opens on this month" do
+      opened = picker("picker_open", %{"field" => "due_on"}, picker_state(%{}))
+      assert opened.pickers == %{due_on: Date.beginning_of_month(Date.utc_today())}
+    end
+
+    test "steps a month or a year either way, and nothing else" do
+      state = picker_state(%{}, %{published_at: ~D[2024-01-01]})
+
+      assert picker("picker_month", %{"field" => "published_at", "step" => "-1"}, state).pickers ==
+               %{published_at: ~D[2023-12-01]}
+
+      assert picker("picker_month", %{"field" => "published_at", "step" => "12"}, state).pickers ==
+               %{published_at: ~D[2025-01-01]}
+
+      assert picker("picker_month", %{"field" => "published_at", "step" => "5"}, state).pickers ==
+               state.pickers
+    end
+
+    test "a day keeps the time picked, and a date's closes" do
+      at = picker_state(%{published_at: "2024-09-09T22:45:00"}, %{published_at: ~D[2024-10-01]})
+
+      picked = picker("picker_day", %{"field" => "published_at", "date" => "2024-10-03"}, at)
+      assert picked.field_values.published_at == "2024-10-03T22:45:00"
+      assert picked.pickers == %{published_at: ~D[2024-10-01]}
+      assert picked.dirty?
+
+      due = picker_state(%{}, %{due_on: ~D[2024-10-01]})
+      picked = picker("picker_day", %{"field" => "due_on", "date" => "2024-10-03"}, due)
+      assert picked.field_values.due_on == "2024-10-03"
+      assert picked.pickers == %{}
+    end
+
+    test "the hour and the minute change the time and keep the day" do
+      state =
+        picker_state(%{published_at: "2024-09-09T22:45:00"}, %{published_at: ~D[2024-09-01]})
+
+      hour =
+        picker("picker_time", %{"_gvz_picker" => %{"published_at" => %{"hour" => "7"}}}, state)
+
+      assert hour.field_values.published_at == "2024-09-09T07:45:00"
+
+      minute =
+        picker("picker_time", %{"_gvz_picker" => %{"published_at" => %{"minute" => "5"}}}, hour)
+
+      assert minute.field_values.published_at == "2024-09-09T07:05:00"
+
+      wrong =
+        picker("picker_time", %{"_gvz_picker" => %{"published_at" => %{"hour" => "24"}}}, minute)
+
+      assert wrong.field_values.published_at == "2024-09-09T07:05:00"
+    end
+
+    test "Clear empties the field and closes it" do
+      state =
+        picker_state(%{published_at: "2024-09-09T22:45:00"}, %{published_at: ~D[2024-09-01]})
+
+      cleared = picker("picker_clear", %{"field" => "published_at"}, state)
+      assert cleared.field_values.published_at == ""
+      assert cleared.pickers == %{}
+    end
+
+    test "a field that is not a date is left alone" do
+      state = picker_state(%{})
+
+      assert picker("picker_open", %{"field" => "title"}, state).pickers == %{}
+      assert picker("picker_day", %{"field" => "title", "date" => "2024-10-03"}, state) == state
+      assert picker("picker_open", %{"field" => "no_such_field_xyz"}, state).pickers == %{}
+    end
+  end
+
   describe "add_nested event" do
     test "returns noreply when form is nil" do
       state = build_state()

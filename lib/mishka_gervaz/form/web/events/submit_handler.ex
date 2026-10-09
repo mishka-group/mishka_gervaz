@@ -202,7 +202,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   not one, or `field_readonly?/2` is true.
 
   A save leaves such a field out, and `MishkaGervaz.Form.Web.Events` ignores a `relation_select`,
-  `relation_toggle`, `relation_clear`, `combobox_select` or `field_change` sent for it.
+  `relation_toggle`, `relation_clear`, `combobox_select`, `field_change` or calendar `picker_*`
+  event sent for it.
   """
   @spec field_protected?(map(), map()) :: boolean()
   def field_protected?(field, state),

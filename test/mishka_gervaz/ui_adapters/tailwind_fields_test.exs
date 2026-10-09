@@ -331,6 +331,76 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
+  describe "a form's calendar" do
+    defp calendar(fun, value, month) do
+      render(fun, %{
+        id: "f_at",
+        value: value,
+        picker: %{month: month},
+        field_name: :at,
+        target: nil
+      })
+    end
+
+    defp tag(html, pattern),
+      do: Regex.run(~r/<[a-z]+[^>]*#{pattern}[^>]*>/s, html) |> List.first()
+
+    test "closed, it is the value and a button that names it" do
+      html = calendar(:datetime_input, ~U[2024-09-09 22:45:00Z], nil)
+
+      assert tag(html, ~s(type="hidden")) =~ ~s(value="2024-09-09T22:45:00")
+      assert tag(html, ~s(id="f_at")) =~ ~s(aria-expanded="false")
+      assert html =~ "09 Sep 2024, 22:45"
+      refute html =~ ~s(id="f_at-month")
+    end
+
+    test "with no value it asks for one" do
+      html = calendar(:date_input, "", nil)
+
+      assert tag(html, ~s(type="hidden")) =~ ~s(value="")
+      assert html =~ "Pick a date"
+    end
+
+    test "open, it names the month and year shown and draws its days from Monday" do
+      html = calendar(:datetime_input, ~N[2024-09-09 22:45:00], ~D[2024-09-01])
+
+      assert tag(html, ~s(id="f_at")) =~ ~s(aria-expanded="true")
+      assert html =~ ~r/id="f_at-month"[^>]*>\s*September 2024\s*</
+      assert length(Regex.scan(~r/id="f_at-day-2024-09-\d\d"/, html)) == 30
+
+      # 1 September 2024 is a Sunday: six empty cells come before it.
+      [days] =
+        Regex.run(~r/<div class="mt-1 grid grid-cols-7 gap-0.5">(.*?)<\/div>/s, html,
+          capture: :all_but_first
+        )
+
+      assert days
+             |> String.split("<button", parts: 2)
+             |> hd()
+             |> then(&Regex.scan(~r/<span><\/span>/, &1))
+             |> length() == 6
+
+      assert tag(html, ~s(id="f_at-day-2024-09-09")) =~ ~s(aria-pressed="true")
+      assert tag(html, ~s(id="f_at-day-2024-09-10")) =~ ~s(aria-pressed="false")
+      assert tag(html, ~s(id="f_at-hour")) =~ ~s(name="_gvz_picker[at][hour]")
+      assert html =~ ~r/<option value="22" selected>/
+      assert html =~ ~r/<option value="45" selected>/
+    end
+
+    test "a date has no time to pick" do
+      html = calendar(:date_input, "2024-02-29", ~D[2024-02-01])
+
+      assert html =~ ~r/id="f_at-month"[^>]*>\s*February 2024\s*</
+      assert length(Regex.scan(~r/id="f_at-day-2024-02-\d\d"/, html)) == 29
+      refute html =~ ~s(id="f_at-hour")
+    end
+
+    test "a filter, given no picker, keeps the browser's input" do
+      assert render(:datetime_input, %{value: "2024-09-09T22:45"}) =~ ~s(type="datetime-local")
+      assert render(:date_input, %{value: "2024-09-09"}) =~ ~s(type="date")
+    end
+  end
+
   describe "a list that opens under its control" do
     defp relation(fun, assigns) do
       %{
