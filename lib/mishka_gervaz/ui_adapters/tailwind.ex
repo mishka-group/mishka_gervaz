@@ -339,6 +339,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Options may be grouped as `select/1`'s are, `{group_label, [options]}`: each group is drawn under
   its label, and a grouped option reads `"Group · Label"` once picked.
+
+  The input carries `aria-expanded`, `"true"` while the list is open.
   """
   @impl true
   def search_select(assigns) do
@@ -410,6 +412,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             @disabled && disabled_class()
           ]}
           disabled={@disabled}
+          aria-expanded={to_string(@dropdown_open? && !@disabled)}
           phx-debounce={if !@disabled, do: @debounce}
           phx-keyup={if !@disabled, do: "relation_search"}
           phx-focus={if !@disabled, do: "relation_focus"}
@@ -480,6 +483,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Shows a clickable trigger that opens a dropdown with options and a
   "Load more" button for pagination.
+
+  The trigger carries `aria-expanded`, `"true"` while the list is open.
   """
   @impl true
   def load_more_select(assigns) do
@@ -540,6 +545,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="button"
         id={@id}
         class={[@class, "w-full text-start flex items-center justify-between cursor-pointer bg-white"]}
+        aria-expanded={to_string(@dropdown_open?)}
         phx-click="relation_focus"
         phx-target={@myself}
         phx-value-filter={@filter_name}
@@ -607,6 +613,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Selected items appear with checkmarks in the dropdown. With `:show_selected`, they also appear as
   chips under the input while it is closed, each with a button that removes it; a chip reads its
   label from `:selected_options`, or the value when its label is not known.
+
+  The input carries `aria-expanded`, `"true"` while the list is open.
   """
   @impl true
   def multi_select(assigns) do
@@ -660,6 +668,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           value={@search_term || ""}
           placeholder={@placeholder}
           class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", "w-full"]}
+          aria-expanded={to_string(@dropdown_open?)}
           phx-debounce={@debounce}
           phx-keyup="relation_search"
           phx-focus="relation_focus"
@@ -2919,7 +2928,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       )
 
     ~H"""
-    <div class="relative" phx-click-away={JS.hide(to: "##{@dropdown_id}")}>
+    <div class="relative" phx-click-away={combobox_close(@dropdown_id)}>
       <.render_icon
         :if={@icon}
         name={@icon}
@@ -2935,9 +2944,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         disabled={@disabled}
         class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", @disabled && disabled_class()]}
         phx-debounce={@phx_debounce}
-        phx-click={JS.show(to: "##{@dropdown_id}")}
-        phx-focus={JS.show(to: "##{@dropdown_id}")}
-        phx-keyup={JS.show(to: "##{@dropdown_id}")}
+        aria-controls={@dropdown_id}
+        aria-expanded="false"
+        phx-click={combobox_open(@dropdown_id)}
+        phx-focus={combobox_open(@dropdown_id)}
+        phx-keyup={combobox_open(@dropdown_id)}
         autocomplete="off"
       />
       <div
@@ -2952,7 +2963,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 value: %{field: to_string(@field_name), value: value},
                 target: @target
               )
-              |> JS.hide(to: "##{@dropdown_id}")
+              |> combobox_close(@dropdown_id)
             }
             class="block w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] transition-colors hover:bg-[#f2f1fc] hover:text-[#4f4bcc]"
           >
@@ -2962,6 +2973,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
     </div>
     """
+  end
+
+  defp combobox_open(dropdown_id) do
+    JS.show(to: "##{dropdown_id}")
+    |> JS.set_attribute({"aria-expanded", "true"}, to: "[aria-controls='#{dropdown_id}']")
+  end
+
+  defp combobox_close(js \\ %JS{}, dropdown_id) do
+    js
+    |> JS.hide(to: "##{dropdown_id}")
+    |> JS.set_attribute({"aria-expanded", "false"}, to: "[aria-controls='#{dropdown_id}']")
   end
 
   @impl true

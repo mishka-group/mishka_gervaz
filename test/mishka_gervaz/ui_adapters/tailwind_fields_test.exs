@@ -310,6 +310,49 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
+  describe "a list that opens under its control" do
+    defp relation(fun, assigns) do
+      %{
+        __changed__: nil,
+        name: :site_id,
+        filter_name: :site_id,
+        table_id: "entry",
+        options: [{"North", "1"}],
+        value: "",
+        selected: [],
+        placeholder: "Pick",
+        disabled: false,
+        myself: nil
+      }
+      |> Map.merge(assigns)
+      |> then(&apply(Tailwind, fun, [&1]))
+      |> rendered_to_string()
+    end
+
+    test "says on its control whether it is open" do
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        assert relation(fun, %{dropdown_open?: true}) =~ ~s(aria-expanded="true"), "#{fun}"
+        assert relation(fun, %{dropdown_open?: false}) =~ ~s(aria-expanded="false"), "#{fun}"
+      end
+    end
+
+    test "a switched-off search select is never open" do
+      assert relation(:search_select, %{dropdown_open?: true, disabled: true}) =~
+               ~s(aria-expanded="false")
+    end
+
+    test "a combobox opens and closes its list with the attribute" do
+      html =
+        relation(:combobox, %{field_name: :lang, target: nil, phx_debounce: 300, value: "en"})
+
+      assert html =~ ~s(aria-controls="combobox-dropdown-entry-lang")
+      assert html =~ ~s(aria-expanded="false")
+
+      assert html =~ "[&quot;aria-expanded&quot;,&quot;true&quot;]"
+      assert html =~ "[&quot;aria-expanded&quot;,&quot;false&quot;]"
+    end
+  end
+
   describe "a string list in a form" do
     defp list(items, disabled \\ false),
       do: render(:string_list_input, %{items: items, field_name: "origins", disabled: disabled})
