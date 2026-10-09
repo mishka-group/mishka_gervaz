@@ -802,8 +802,14 @@ defmodule MishkaGervaz.Table.Web.Events do
   end
 
   def do_handle("clear_selection", _params, state, socket) do
+    chosen = if state.select_all?, do: [], else: MapSet.to_list(state.selected_ids)
     state = clear_selection(state)
-    socket = Phoenix.Component.assign(socket, :table_state, state)
+
+    socket =
+      Enum.reduce(chosen, Phoenix.Component.assign(socket, :table_state, state), fn id, socket ->
+        safe_stream_reinsert(socket, state, get_record(state, id, state.archive_status))
+      end)
+
     socket = apply_hook_result(state, :on_select, [state.selected_ids, socket], socket)
 
     {:noreply, socket}

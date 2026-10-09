@@ -60,7 +60,7 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
           consumable?: false
         }
 
-        streams = %{stream_name => live_stream}
+        streams = %{stream_name => live_stream, __changed__: MapSet.new()}
         Map.put(base_assigns, :streams, streams)
       else
         base_assigns
@@ -930,6 +930,41 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
       assert updated_state.select_all? == false
       assert updated_state.selected_ids == MapSet.new()
       assert updated_state.excluded_ids == MapSet.new()
+    end
+  end
+
+  describe "clear_selection redraws the rows it unchecks" do
+    test "each row chosen one by one is drawn again, unchecked" do
+      [first, second, third] = create_test_data(BasicResource, 3)
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          selected_ids: MapSet.new([first.id, second.id])
+        )
+
+      socket = create_socket(state, with_stream: true)
+
+      {:noreply, updated_socket} = Events.handle("clear_selection", %{}, socket)
+
+      inserted =
+        updated_socket.assigns.streams[state.static.stream_name].inserts
+        |> Enum.map(fn {_dom_id, _at, record, _limit, _update_only} -> record.id end)
+        |> Enum.sort()
+
+      assert inserted == Enum.sort([first.id, second.id])
+      refute third.id in inserted
+      assert updated_socket.assigns.table_state.selected_ids == MapSet.new()
+    end
+
+    test "rows chosen by select-all are left to the page" do
+      create_test_data(BasicResource, 2)
+      state = init_loaded_state(BasicResource, master_user(), select_all?: true)
+      socket = create_socket(state, with_stream: true)
+
+      {:noreply, updated_socket} = Events.handle("clear_selection", %{}, socket)
+
+      assert updated_socket.assigns.streams[state.static.stream_name].inserts == []
+      refute updated_socket.assigns.table_state.select_all?
     end
   end
 
