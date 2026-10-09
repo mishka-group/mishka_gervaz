@@ -112,6 +112,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec apply_sort(Phoenix.LiveView.Socket.t(), State.t(), atom()) :: Phoenix.LiveView.Socket.t()
   defdelegate apply_sort(socket, state, field), to: __MODULE__.Default
 
+  @spec set_sort(Phoenix.LiveView.Socket.t(), State.t(), atom(), :asc | :desc) ::
+          Phoenix.LiveView.Socket.t()
+  defdelegate set_sort(socket, state, column, order), to: __MODULE__.Default
+
   @spec apply_archive_status(Phoenix.LiveView.Socket.t(), State.t(), :active | :archived) ::
           Phoenix.LiveView.Socket.t()
   defdelegate apply_archive_status(socket, state, status), to: __MODULE__.Default
@@ -569,6 +573,23 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       end
 
       @doc """
+      Sort by one sortable column in one direction, replacing any other sort, and reload. A column
+      that is not sortable leaves the table as it is.
+      """
+      @spec set_sort(Phoenix.LiveView.Socket.t(), State.t(), atom(), :asc | :desc) ::
+              Phoenix.LiveView.Socket.t()
+      def set_sort(socket, state, column, order) when order in [:asc, :desc] do
+        case Map.get(state.static.sort_field_map || %{}, column) do
+          [_ | _] = db_fields ->
+            state = State.update(state, sort_fields: Enum.map(db_fields, &{&1, order}))
+            load_async(socket, state, page: 1, reset: true)
+
+          _not_sortable ->
+            socket
+        end
+      end
+
+      @doc """
       Switch between active and archived records.
       """
       @spec apply_archive_status(Phoenix.LiveView.Socket.t(), State.t(), :active | :archived) ::
@@ -696,6 +717,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_more: 2,
                      apply_filters: 3,
                      apply_sort: 3,
+                     set_sort: 4,
                      apply_archive_status: 3
     end
   end

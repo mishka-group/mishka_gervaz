@@ -308,6 +308,21 @@ defmodule MishkaGervaz.Table.Web.Events do
     {:noreply, socket}
   end
 
+  def do_handle("sort_by", %{"column" => column, "order" => order}, state, socket)
+      when is_binary(column) and order in ["asc", "desc"] do
+    column = Enum.find(Map.keys(state.static.sort_field_map || %{}), &(to_string(&1) == column))
+    socket = DataLoader.set_sort(socket, state, column, String.to_existing_atom(order))
+
+    updated_state = socket.assigns.table_state
+
+    socket =
+      apply_hook_result(state, :on_sort, [List.first(updated_state.sort_fields), socket], socket)
+
+    {:noreply, socket}
+  end
+
+  def do_handle("sort_by", _params, _state, socket), do: {:noreply, socket}
+
   def do_handle("filter", %{"_target" => ["reset"]} = _params, state, socket) do
     socket =
       %{State.update(state, filter_values: %{}) | relation_filter_state: %{}}

@@ -139,6 +139,39 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
     :ok
   end
 
+  describe "sort_by event" do
+    test "sorts by one column in the direction asked, replacing any other sort" do
+      create_test_data(SortableResource, 3)
+      state = init_loaded_state(SortableResource, master_user(), sort_fields: [{:score, :asc}])
+      socket = create_socket(state)
+
+      {:noreply, updated_socket} =
+        Events.handle("sort_by", %{"column" => "name", "order" => "desc"}, socket)
+
+      assert updated_socket.assigns.table_state.sort_fields == [{:name, :desc}]
+
+      {:noreply, updated_socket} =
+        Events.handle("sort_by", %{"column" => "name", "order" => "asc"}, updated_socket)
+
+      assert updated_socket.assigns.table_state.sort_fields == [{:name, :asc}]
+    end
+
+    test "a column that is not sortable, or a direction that is not one, changes nothing" do
+      create_test_data(SortableResource, 3)
+      state = init_loaded_state(SortableResource, master_user(), sort_fields: [{:name, :asc}])
+      socket = create_socket(state)
+
+      for params <- [
+            %{"column" => "no_such_column", "order" => "desc"},
+            %{"column" => "name", "order" => "sideways"},
+            %{"column" => "name"}
+          ] do
+        {:noreply, updated_socket} = Events.handle("sort_by", params, socket)
+        assert updated_socket.assigns.table_state.sort_fields == [{:name, :asc}]
+      end
+    end
+  end
+
   describe "sort event" do
     test "applies sorting on column" do
       create_test_data(SortableResource, 3)
