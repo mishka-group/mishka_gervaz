@@ -1367,6 +1367,37 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
     end
   end
 
+  describe "same_url?/2" do
+    alias MishkaGervaz.Test.Resources.Post
+
+    test "a decoded URL keeps its query, the params by name" do
+      result = UrlSync.decode(%{"sort" => "title:asc"}, "/posts?sort=title%3Aasc", Post)
+
+      assert result.query == %{"sort" => "title:asc"}
+    end
+
+    test "is the same path and the same params, whatever their order" do
+      url = "/posts?sort=title%3Aasc&filter_status=published"
+      url_state = UrlSync.decode(%{}, url, Post)
+
+      assert UrlSync.same_url?(url_state, "/posts?filter_status=published&sort=title%3Aasc")
+      refute UrlSync.same_url?(url_state, "/posts?filter_status=published")
+      refute UrlSync.same_url?(url_state, "/other?filter_status=published&sort=title%3Aasc")
+    end
+
+    test "a bare path is the same only as the bare path" do
+      url_state = UrlSync.decode(%{}, "/posts", Post)
+
+      assert UrlSync.same_url?(url_state, "/posts")
+      refute UrlSync.same_url?(url_state, "/posts?sort=title%3Aasc")
+    end
+
+    test "a url_state with no query is never the same" do
+      refute UrlSync.same_url?(%{path: "/posts"}, "/posts")
+      refute UrlSync.same_url?(nil, "/posts")
+    end
+  end
+
   describe "decode/4 with preserve_params via resource (specific list)" do
     alias MishkaGervaz.Test.Resources.Post
 

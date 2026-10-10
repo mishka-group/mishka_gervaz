@@ -230,6 +230,14 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       assert html =~ "rounded-[11px]"
       refute html =~ "focus:ring-blue-500"
     end
+
+    # INLINE, A TEXTAREA SITS ON THE LINE'S BASELINE, and the line runs past its bottom edge: the
+    # ring around a field with an error drew a second line under the box.
+    test "are blocks, so the ring of a field with an error fits them" do
+      for fun <- [:textarea, :json_editor] do
+        assert render(fun, %{}) =~ ~r/class="block /, "#{fun}"
+      end
+    end
   end
 
   describe "the reading direction of a value" do
@@ -307,6 +315,151 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
 
     test "and a table filter, which does not ask, shows none" do
       refute multi(%{}) =~ "gervaz-multi-selected"
+    end
+  end
+
+  describe "a date and time" do
+    test "a stored one is written as its input reads it" do
+      for stored <- [~U[2024-09-09 22:45:00Z], ~N[2024-09-09 22:45:00]] do
+        assert render(:datetime_input, %{value: stored}) =~ ~s(value="2024-09-09T22:45")
+      end
+    end
+
+    test "one just typed is kept as it was typed" do
+      assert render(:datetime_input, %{value: "2024-09-09T22:45"}) =~
+               ~s(value="2024-09-09T22:45")
+    end
+  end
+
+  describe "a form's calendar" do
+    defp calendar(fun, value, month) do
+      render(fun, %{
+        id: "f_at",
+        value: value,
+        picker: %{month: month},
+        field_name: :at,
+        target: nil
+      })
+    end
+
+    defp tag(html, pattern),
+      do: Regex.run(~r/<[a-z]+[^>]*#{pattern}[^>]*>/s, html) |> List.first()
+
+    test "closed, it is the value and a button that names it" do
+      html = calendar(:datetime_input, ~U[2024-09-09 22:45:00Z], nil)
+
+      assert tag(html, ~s(type="hidden")) =~ ~s(value="2024-09-09T22:45:00")
+      assert tag(html, ~s(id="f_at")) =~ ~s(aria-expanded="false")
+      assert html =~ "09 Sep 2024, 22:45"
+      refute html =~ ~s(id="f_at-month")
+    end
+
+    test "with no value it asks for one" do
+      html = calendar(:date_input, "", nil)
+
+      assert tag(html, ~s(type="hidden")) =~ ~s(value="")
+      assert html =~ "Pick a date"
+    end
+
+    test "open, it names the month and year shown and draws its days from Monday" do
+      html = calendar(:datetime_input, ~N[2024-09-09 22:45:00], ~D[2024-09-01])
+
+      assert tag(html, ~s(id="f_at")) =~ ~s(aria-expanded="true")
+      assert html =~ ~r/id="f_at-month"[^>]*>\s*September 2024\s*</
+      assert length(Regex.scan(~r/id="f_at-day-2024-09-\d\d"/, html)) == 30
+
+      # 1 September 2024 is a Sunday: six empty cells come before it.
+      [days] =
+        Regex.run(~r/<div class="mt-1 grid grid-cols-7 gap-0.5">(.*?)<\/div>/s, html,
+          capture: :all_but_first
+        )
+
+      assert days
+             |> String.split("<button", parts: 2)
+             |> hd()
+             |> then(&Regex.scan(~r/<span><\/span>/, &1))
+             |> length() == 6
+
+      assert tag(html, ~s(id="f_at-day-2024-09-09")) =~ ~s(aria-pressed="true")
+      assert tag(html, ~s(id="f_at-day-2024-09-10")) =~ ~s(aria-pressed="false")
+      assert tag(html, ~s(id="f_at-hour")) =~ ~s(name="_gvz_picker[at][hour]")
+      assert html =~ ~r/<option value="22" selected>/
+      assert html =~ ~r/<option value="45" selected>/
+    end
+
+    test "a date has no time to pick" do
+      html = calendar(:date_input, "2024-02-29", ~D[2024-02-01])
+
+      assert html =~ ~r/id="f_at-month"[^>]*>\s*February 2024\s*</
+      assert length(Regex.scan(~r/id="f_at-day-2024-02-\d\d"/, html)) == 29
+      refute html =~ ~s(id="f_at-hour")
+    end
+
+    test "a filter, given no picker, keeps the browser's input" do
+      assert render(:datetime_input, %{value: "2024-09-09T22:45"}) =~ ~s(type="datetime-local")
+      assert render(:date_input, %{value: "2024-09-09"}) =~ ~s(type="date")
+    end
+  end
+
+  describe "a group of fields" do
+    test "is never wider than its column, whatever its class, however wide what it holds" do
+      for class <- [nil, "my-own-group"] do
+        assigns =
+          %{
+            __changed__: nil,
+            inner_block: [%{inner_block: fn _, _ -> "x" end, __slot__: :inner_block}]
+          }
+
+        assigns = if class, do: Map.put(assigns, :class, class), else: assigns
+
+        html = assigns |> Tailwind.field_group() |> rendered_to_string()
+
+        assert [fieldset] = Regex.run(~r/<fieldset[^>]*>/, html)
+        assert fieldset =~ ~r/class="min-w-0/
+      end
+    end
+  end
+
+  describe "a list that opens under its control" do
+    defp relation(fun, assigns) do
+      %{
+        __changed__: nil,
+        name: :site_id,
+        filter_name: :site_id,
+        table_id: "entry",
+        options: [{"North", "1"}],
+        value: "",
+        selected: [],
+        placeholder: "Pick",
+        disabled: false,
+        myself: nil
+      }
+      |> Map.merge(assigns)
+      |> then(&apply(Tailwind, fun, [&1]))
+      |> rendered_to_string()
+    end
+
+    test "says on its control whether it is open" do
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        assert relation(fun, %{dropdown_open?: true}) =~ ~s(aria-expanded="true"), "#{fun}"
+        assert relation(fun, %{dropdown_open?: false}) =~ ~s(aria-expanded="false"), "#{fun}"
+      end
+    end
+
+    test "a switched-off search select is never open" do
+      assert relation(:search_select, %{dropdown_open?: true, disabled: true}) =~
+               ~s(aria-expanded="false")
+    end
+
+    test "a combobox opens and closes its list with the attribute" do
+      html =
+        relation(:combobox, %{field_name: :lang, target: nil, phx_debounce: 300, value: "en"})
+
+      assert html =~ ~s(aria-controls="combobox-dropdown-entry-lang")
+      assert html =~ ~s(aria-expanded="false")
+
+      assert html =~ "[&quot;aria-expanded&quot;,&quot;true&quot;]"
+      assert html =~ "[&quot;aria-expanded&quot;,&quot;false&quot;]"
     end
   end
 

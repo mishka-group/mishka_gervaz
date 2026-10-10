@@ -210,7 +210,9 @@ defmodule MishkaGervaz.Form.Web.Live do
       existing_files: %{},
       field_values: %{},
       relation_options: static_relation_options(state),
-      upload_state: %{}
+      upload_state: %{},
+      pickers: %{},
+      opened: (state.opened || 0) + 1
     )
   end
 

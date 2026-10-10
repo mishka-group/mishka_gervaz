@@ -6,6 +6,12 @@ defmodule MishkaGervaz.Form.Web.State do
   pipeline — events, the renderer, tests — reads from this struct and
   writes to it through `update/2`.
 
+  ## Starting over
+
+  `opened` counts the times the form has started over: opened again with `reset`, moved to another
+  record, or returned to an empty form by a save. A live component drawn inside the form that keeps
+  state of its own compares it with the count it last saw, and starts over with the form.
+
   ## Performance split
 
   State is partitioned into two halves:
@@ -177,7 +183,9 @@ defmodule MishkaGervaz.Form.Web.State do
     :dirty?,
     :defaults,
     :preload_aliases,
-    :dismissed_notices
+    :dismissed_notices,
+    :pickers,
+    :opened
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -203,7 +211,9 @@ defmodule MishkaGervaz.Form.Web.State do
           dirty?: boolean(),
           defaults: map() | nil,
           preload_aliases: %{atom() => atom()},
-          dismissed_notices: MapSet.t()
+          dismissed_notices: MapSet.t(),
+          pickers: %{atom() => Date.t()},
+          opened: non_neg_integer()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -676,7 +686,9 @@ defmodule MishkaGervaz.Form.Web.State do
           dirty?: false,
           defaults: nil,
           preload_aliases: Info.preload_aliases(resource, master_user?),
-          dismissed_notices: MapSet.new()
+          dismissed_notices: MapSet.new(),
+          pickers: %{},
+          opened: 0
         }
       end
 

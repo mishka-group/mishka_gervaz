@@ -175,7 +175,7 @@ defmodule MishkaGervaz.Table.Web.Live do
     url_state = Map.get(assigns, :url_state)
     existing_state = socket.assigns[:table_state]
 
-    url_sync_pending? = socket.assigns[:url_sync_pending] == true
+    url_sync_pending? = own_url?(socket.assigns[:url_sync_pending], url_state)
 
     {state, should_load?} =
       cond do
@@ -220,8 +220,11 @@ defmodule MishkaGervaz.Table.Web.Live do
       |> assign(:before_table, Map.get(assigns, :before_table))
       |> assign(:rail, Map.get(assigns, :rail))
       |> assign(:filter_actions, Map.get(assigns, :filter_actions))
+      |> assign(:url_sync_pending, false)
       |> then(fn s ->
-        if url_sync_pending?, do: assign(s, :url_sync_pending, false), else: s
+        if is_map(url_state[:query]),
+          do: assign(s, :url_seen, {url_state.path, url_state.query}),
+          else: s
       end)
 
     socket =
@@ -271,6 +274,14 @@ defmodule MishkaGervaz.Table.Web.Live do
 
     {:ok, socket}
   end
+
+  # The URL this table wrote last, coming back: the very one, when the page passes the URL it was
+  # given; any, for a page that passes none.
+  defp own_url?(url, url_state) when is_binary(url) do
+    if is_map(url_state[:query]), do: UrlSync.same_url?(url_state, url), else: true
+  end
+
+  defp own_url?(_url, _url_state), do: false
 
   @spec expanded_result(AsyncResult.t() | nil, term()) :: AsyncResult.t()
   defp expanded_result(%AsyncResult{} = current, html), do: AsyncResult.ok(current, html)

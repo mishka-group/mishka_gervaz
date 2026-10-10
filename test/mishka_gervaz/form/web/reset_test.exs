@@ -10,7 +10,7 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
   by the `send_update/2` that follows, so every control is drawn anew.
 
   A form started over, by a reset or by Cancel, keeps the options a plain `:static` select read when
-  the form was mounted.
+  the form was mounted. Each start over is counted in `opened`, and closes any calendar left open.
   """
   use ExUnit.Case, async: false
 
@@ -304,6 +304,35 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
 
       assert socket.assigns.form_state.dirty? == false
       assert title(socket) == "Saved title"
+    end
+  end
+
+  describe "each start over" do
+    test "is counted: an Edit, the same record again, a create opener and a save",
+         %{entry: entry} do
+      socket = mount()
+      assert socket.assigns.form_state.opened == 0
+
+      socket = open_edit(socket, entry)
+      assert socket.assigns.form_state.opened == 1
+
+      socket = open_edit(socket, entry)
+      assert socket.assigns.form_state.opened == 2
+
+      socket = open_create(socket)
+      assert socket.assigns.form_state.opened == 3
+
+      socket = socket |> open_edit(entry) |> type("title", "Saved again") |> save()
+      assert title(socket) in [nil, ""]
+      assert socket.assigns.form_state.opened == 5
+    end
+
+    test "closes a calendar left open", %{entry: entry} do
+      socket = open_edit(mount(), entry)
+      state = %{socket.assigns.form_state | pickers: %{published_at: ~D[2024-09-01]}}
+      socket = Phoenix.Component.assign(socket, :form_state, state)
+
+      assert open_edit(socket, entry).assigns.form_state.pickers == %{}
     end
   end
 

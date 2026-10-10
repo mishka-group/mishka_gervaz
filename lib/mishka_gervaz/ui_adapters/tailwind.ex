@@ -19,6 +19,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   alias Phoenix.LiveView.JS
   alias MishkaGervaz.Table.Templates.Shared
+  alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
 
   import MishkaGervaz.Helpers,
     only: [
@@ -183,11 +184,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   The same field as `input_class/1`, for a control that grows down the page instead of holding one
-  line. Everything but the height is shared; `rows` decides the height, so `extra` carries it.
+  line. Everything but the height is shared; `rows` decides the height, so `extra` carries it. It
+  is a block, so the ring a field with an error is wrapped in fits it.
   """
   @spec multiline_class(String.t()) :: String.t()
   def multiline_class(extra) do
-    "w-full rounded-[11px] border border-[#ecebe6] bg-[#faf9f6] px-[14px] py-[11px] text-[13px] " <>
+    "block w-full rounded-[11px] border border-[#ecebe6] bg-[#faf9f6] px-[14px] py-[11px] text-[13px] " <>
       extra <>
       "font-medium leading-[1.55] text-[#1b1a18] outline-none transition-shadow " <>
       "placeholder:text-[#a8a5a0] focus:border-[#c3c1f0] focus:bg-white " <>
@@ -339,6 +341,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Options may be grouped as `select/1`'s are, `{group_label, [options]}`: each group is drawn under
   its label, and a grouped option reads `"Group · Label"` once picked.
+
+  The input carries `aria-expanded`, `"true"` while the list is open.
   """
   @impl true
   def search_select(assigns) do
@@ -410,6 +414,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             @disabled && disabled_class()
           ]}
           disabled={@disabled}
+          aria-expanded={to_string(@dropdown_open? && !@disabled)}
           phx-debounce={if !@disabled, do: @debounce}
           phx-keyup={if !@disabled, do: "relation_search"}
           phx-focus={if !@disabled, do: "relation_focus"}
@@ -480,6 +485,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Shows a clickable trigger that opens a dropdown with options and a
   "Load more" button for pagination.
+
+  The trigger carries `aria-expanded`, `"true"` while the list is open.
   """
   @impl true
   def load_more_select(assigns) do
@@ -540,6 +547,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="button"
         id={@id}
         class={[@class, "w-full text-start flex items-center justify-between cursor-pointer bg-white"]}
+        aria-expanded={to_string(@dropdown_open?)}
         phx-click="relation_focus"
         phx-target={@myself}
         phx-value-filter={@filter_name}
@@ -607,6 +615,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Selected items appear with checkmarks in the dropdown. With `:show_selected`, they also appear as
   chips under the input while it is closed, each with a button that removes it; a chip reads its
   label from `:selected_options`, or the value when its label is not known.
+
+  The input carries `aria-expanded`, `"true"` while the list is open.
   """
   @impl true
   def multi_select(assigns) do
@@ -660,6 +670,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           value={@search_term || ""}
           placeholder={@placeholder}
           class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", "w-full"]}
+          aria-expanded={to_string(@dropdown_open?)}
           phx-debounce={@debounce}
           phx-keyup="relation_search"
           phx-focus="relation_focus"
@@ -787,6 +798,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @doc """
   A date input.
 
+  Given `:picker`, as a form's `:date` field is, it is a calendar the form draws instead of the
+  browser's: a button showing the date, and under it the month and year, a step a month or a year
+  either way, and the days. `:picker` is `%{month: month}`, the first day of the month shown, or
+  `%{month: nil}` while it is closed; `:field_name` and `:target` name the field and the form its
+  `picker_*` events go to. The value is in a hidden input of `:name`.
+
   ## Assigns
     * `:name`, `:value`, `:id`, `:min`, `:max` - the input's attributes
     * `:search` - `true` draws the filter bar's input instead of the form's
@@ -794,8 +811,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:aria_label` - the input's accessible name, for an input without a `<label>` of its own
     * `:disabled`, `:readonly` - switch the input off
     * `:class` - replaces the input's classes
+    * `:picker`, `:field_name`, `:target` - the form's calendar, above
   """
   @impl true
+  def date_input(%{picker: %{}} = assigns), do: calendar(assign(assigns, :kind, :date))
+
   def date_input(assigns) do
     assigns =
       assigns
@@ -836,7 +856,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A date and time input.
+
+  Given `:picker`, as a form's `:datetime` field is, it is the calendar `date_input/1` draws, with
+  the hour and the minute under the days — sent as `picker_time` — and a Done that closes it.
+  """
   @impl true
+  def datetime_input(%{picker: %{}} = assigns), do: calendar(assign(assigns, :kind, :datetime))
+
   def datetime_input(assigns) do
     assigns =
       assigns
@@ -857,7 +885,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="datetime-local"
         id={@id}
         name={@name}
-        value={@value}
+        value={Phoenix.HTML.Form.normalize_value("datetime-local", @value)}
         disabled={@disabled}
         readonly={@readonly}
         class={[
@@ -2368,7 +2396,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> "rounded-[16px] border border-[#ecebe6] p-5" end)
 
     ~H"""
-    <fieldset class={@class}>
+    <fieldset class={["min-w-0", @class]}>
       <%= if @collapsible do %>
         <legend class="px-2">
           <details open={!@collapsed}>
@@ -2919,7 +2947,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       )
 
     ~H"""
-    <div class="relative" phx-click-away={JS.hide(to: "##{@dropdown_id}")}>
+    <div class="relative" phx-click-away={combobox_close(@dropdown_id)}>
       <.render_icon
         :if={@icon}
         name={@icon}
@@ -2935,9 +2963,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         disabled={@disabled}
         class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", @disabled && disabled_class()]}
         phx-debounce={@phx_debounce}
-        phx-click={JS.show(to: "##{@dropdown_id}")}
-        phx-focus={JS.show(to: "##{@dropdown_id}")}
-        phx-keyup={JS.show(to: "##{@dropdown_id}")}
+        aria-controls={@dropdown_id}
+        aria-expanded="false"
+        phx-click={combobox_open(@dropdown_id)}
+        phx-focus={combobox_open(@dropdown_id)}
+        phx-keyup={combobox_open(@dropdown_id)}
         autocomplete="off"
       />
       <div
@@ -2952,7 +2982,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 value: %{field: to_string(@field_name), value: value},
                 target: @target
               )
-              |> JS.hide(to: "##{@dropdown_id}")
+              |> combobox_close(@dropdown_id)
             }
             class="block w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] transition-colors hover:bg-[#f2f1fc] hover:text-[#4f4bcc]"
           >
@@ -2962,6 +2992,248 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
     </div>
     """
+  end
+
+  defp calendar(assigns) do
+    {day, {hour, minute}} = DateTimeField.parts(assigns[:value])
+    month = assigns.picker[:month]
+
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> input_class(false) end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:readonly, fn -> false end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:placeholder, fn -> nil end)
+      |> assign(
+        day: day,
+        hour: hour,
+        minute: minute,
+        month: month,
+        today: Date.utc_today(),
+        stored: if(day, do: DateTimeField.value(day, {hour, minute}, assigns.kind), else: ""),
+        days: month && calendar_days(month),
+        off?: assigns[:disabled] == true or assigns[:readonly] == true
+      )
+
+    ~H"""
+    <div
+      class="relative"
+      id={"#{@id}-calendar"}
+      phx-click-away={
+        @month && JS.push("picker_close", value: %{field: @field_name}, target: @target)
+      }
+    >
+      <input type="hidden" name={@name} value={@stored} disabled={@disabled} />
+      <button
+        type="button"
+        id={@id}
+        aria-haspopup="dialog"
+        aria-expanded={to_string(!is_nil(@month))}
+        disabled={@off?}
+        phx-click={JS.push("picker_open", value: %{field: @field_name}, target: @target)}
+        class={[
+          @class,
+          "flex items-center justify-between gap-2 text-start",
+          is_nil(@day) && "text-[#a8a5a0]",
+          @off? && disabled_class()
+        ]}
+      >
+        <span class="truncate" dir="auto">
+          {shown_date(@day, @hour, @minute, @kind) || @placeholder || pick_label(@kind)}
+        </span>
+        <.render_icon name="hero-calendar-days" class="w-4 h-4 shrink-0 text-[#a8a5a0]" />
+      </button>
+
+      <div
+        :if={@month}
+        role="dialog"
+        aria-label={month_label(@month)}
+        class="absolute z-50 mt-1 w-[19.5rem] max-w-full rounded-[14px] border border-[#ecebe6] bg-white p-3 shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+      >
+        <div class="mb-2 flex items-center gap-0.5">
+          <button
+            :for={
+              {step, icon, label} <- [
+                {"-12", "hero-chevron-double-left", dgettext("mishka_gervaz", "Previous year")},
+                {"-1", "hero-chevron-left", dgettext("mishka_gervaz", "Previous month")}
+              ]
+            }
+            type="button"
+            phx-click={
+              JS.push("picker_month", value: %{field: @field_name, step: step}, target: @target)
+            }
+            aria-label={label}
+            title={label}
+            class="grid size-7 place-items-center rounded-[8px] text-[#8a877f] hover:bg-[#f2f1ec] hover:text-[#3a382f]"
+          >
+            <.render_icon name={icon} class="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <span
+            id={"#{@id}-month"}
+            class="flex-1 text-center text-[13px] font-bold text-[#1b1a18]"
+            aria-live="polite"
+          >
+            {month_label(@month)}
+          </span>
+          <button
+            :for={
+              {step, icon, label} <- [
+                {"1", "hero-chevron-right", dgettext("mishka_gervaz", "Next month")},
+                {"12", "hero-chevron-double-right", dgettext("mishka_gervaz", "Next year")}
+              ]
+            }
+            type="button"
+            phx-click={
+              JS.push("picker_month", value: %{field: @field_name, step: step}, target: @target)
+            }
+            aria-label={label}
+            title={label}
+            class="grid size-7 place-items-center rounded-[8px] text-[#8a877f] hover:bg-[#f2f1ec] hover:text-[#3a382f]"
+          >
+            <.render_icon name={icon} class="w-4 h-4 rtl:rotate-180" />
+          </button>
+        </div>
+
+        <div class="grid grid-cols-7 gap-0.5 text-center text-[10.5px] font-bold uppercase text-[#a8a5a0]">
+          <span :for={name <- weekday_names()}>{name}</span>
+        </div>
+        <div class="mt-1 grid grid-cols-7 gap-0.5">
+          <%= for d <- @days do %>
+            <span :if={is_nil(d)}></span>
+            <button
+              :if={d}
+              type="button"
+              id={"#{@id}-day-#{Date.to_iso8601(d)}"}
+              phx-click={
+                JS.push("picker_day",
+                  value: %{field: @field_name, date: Date.to_iso8601(d)},
+                  target: @target
+                )
+              }
+              aria-pressed={to_string(d == @day)}
+              class={[
+                "h-8 rounded-[8px] text-[12.5px] font-semibold",
+                (d == @day && "bg-[#5b57d6] text-white") || "text-[#3a382f] hover:bg-[#f2f1fc]",
+                d == @today && d != @day && "ring-1 ring-inset ring-[#c3c1f0]"
+              ]}
+            >
+              {d.day}
+            </button>
+          <% end %>
+        </div>
+
+        <div
+          :if={@kind == :datetime}
+          class="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[#5c5a54]"
+        >
+          <span class="me-1">{dgettext("mishka_gervaz", "Time")}</span>
+          <select
+            :for={
+              {part, top, now, label} <- [
+                {"hour", 23, @hour, dgettext("mishka_gervaz", "Hour")},
+                {"minute", 59, @minute, dgettext("mishka_gervaz", "Minute")}
+              ]
+            }
+            id={"#{@id}-#{part}"}
+            name={"_gvz_picker[#{@field_name}][#{part}]"}
+            phx-change="picker_time"
+            phx-target={@target}
+            aria-label={label}
+            dir="ltr"
+            class="h-9 rounded-[9px] border border-[#ecebe6] bg-[#faf9f6] px-2 text-[12.5px] font-semibold text-[#1b1a18] outline-none focus:border-[#c3c1f0]"
+          >
+            <option :for={n <- 0..top} value={n} selected={n == now}>{two_digits(n)}</option>
+          </select>
+        </div>
+
+        <div class="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            phx-click={JS.push("picker_clear", value: %{field: @field_name}, target: @target)}
+            class="h-8 rounded-[9px] px-2.5 text-[12px] font-semibold text-[#8a877f] hover:bg-[#f2f1ec] hover:text-[#3a382f]"
+          >
+            {dgettext("mishka_gervaz", "Clear")}
+          </button>
+          <button
+            type="button"
+            phx-click={JS.push("picker_close", value: %{field: @field_name}, target: @target)}
+            class="h-8 rounded-[9px] bg-[#f2f1fc] px-3 text-[12px] font-semibold text-[#4f4bcc] hover:bg-[#e9e7fb]"
+          >
+            {dgettext("mishka_gervaz", "Done")}
+          </button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp calendar_days(%Date{} = month) do
+    last = Date.end_of_month(month)
+    List.duplicate(nil, Date.day_of_week(month) - 1) ++ Enum.to_list(Date.range(month, last))
+  end
+
+  defp shown_date(nil, _hour, _minute, _kind), do: nil
+
+  defp shown_date(%Date{} = day, _hour, _minute, :date),
+    do: "#{two_digits(day.day)} #{month_short(day.month)} #{day.year}"
+
+  defp shown_date(%Date{} = day, hour, minute, :datetime),
+    do: "#{shown_date(day, hour, minute, :date)}, #{two_digits(hour)}:#{two_digits(minute)}"
+
+  defp pick_label(:date), do: dgettext("mishka_gervaz", "Pick a date")
+  defp pick_label(:datetime), do: dgettext("mishka_gervaz", "Pick a date and time")
+
+  defp month_label(%Date{} = month), do: "#{month_name(month.month)} #{month.year}"
+
+  defp two_digits(n), do: n |> Integer.to_string() |> String.pad_leading(2, "0")
+
+  defp month_name(1), do: dgettext("mishka_gervaz", "January")
+  defp month_name(2), do: dgettext("mishka_gervaz", "February")
+  defp month_name(3), do: dgettext("mishka_gervaz", "March")
+  defp month_name(4), do: dgettext("mishka_gervaz", "April")
+  defp month_name(5), do: dgettext("mishka_gervaz", "May")
+  defp month_name(6), do: dgettext("mishka_gervaz", "June")
+  defp month_name(7), do: dgettext("mishka_gervaz", "July")
+  defp month_name(8), do: dgettext("mishka_gervaz", "August")
+  defp month_name(9), do: dgettext("mishka_gervaz", "September")
+  defp month_name(10), do: dgettext("mishka_gervaz", "October")
+  defp month_name(11), do: dgettext("mishka_gervaz", "November")
+  defp month_name(12), do: dgettext("mishka_gervaz", "December")
+
+  defp month_short(1), do: dgettext("mishka_gervaz", "Jan")
+  defp month_short(2), do: dgettext("mishka_gervaz", "Feb")
+  defp month_short(3), do: dgettext("mishka_gervaz", "Mar")
+  defp month_short(4), do: dgettext("mishka_gervaz", "Apr")
+  defp month_short(5), do: dgettext("mishka_gervaz", "May")
+  defp month_short(6), do: dgettext("mishka_gervaz", "Jun")
+  defp month_short(7), do: dgettext("mishka_gervaz", "Jul")
+  defp month_short(8), do: dgettext("mishka_gervaz", "Aug")
+  defp month_short(9), do: dgettext("mishka_gervaz", "Sep")
+  defp month_short(10), do: dgettext("mishka_gervaz", "Oct")
+  defp month_short(11), do: dgettext("mishka_gervaz", "Nov")
+  defp month_short(12), do: dgettext("mishka_gervaz", "Dec")
+
+  defp weekday_names,
+    do: [
+      dgettext("mishka_gervaz", "Mo"),
+      dgettext("mishka_gervaz", "Tu"),
+      dgettext("mishka_gervaz", "We"),
+      dgettext("mishka_gervaz", "Th"),
+      dgettext("mishka_gervaz", "Fr"),
+      dgettext("mishka_gervaz", "Sa"),
+      dgettext("mishka_gervaz", "Su")
+    ]
+
+  defp combobox_open(dropdown_id) do
+    JS.show(to: "##{dropdown_id}")
+    |> JS.set_attribute({"aria-expanded", "true"}, to: "[aria-controls='#{dropdown_id}']")
+  end
+
+  defp combobox_close(js \\ %JS{}, dropdown_id) do
+    js
+    |> JS.hide(to: "##{dropdown_id}")
+    |> JS.set_attribute({"aria-expanded", "false"}, to: "[aria-controls='#{dropdown_id}']")
   end
 
   @impl true

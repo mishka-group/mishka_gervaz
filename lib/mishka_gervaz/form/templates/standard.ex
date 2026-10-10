@@ -643,17 +643,17 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  defp group_col_class(1), do: "grid gap-4"
-  defp group_col_class(2), do: "grid sm:grid-cols-2 gap-4"
-  defp group_col_class(3), do: "grid sm:grid-cols-3 gap-4"
-  defp group_col_class(4), do: "grid sm:grid-cols-2 md:grid-cols-4 gap-4"
-  defp group_col_class(_), do: "grid gap-4"
+  defp group_col_class(1), do: "grid grid-cols-1 gap-4"
+  defp group_col_class(2), do: "grid grid-cols-1 sm:grid-cols-2 gap-4"
+  defp group_col_class(3), do: "grid grid-cols-1 sm:grid-cols-3 gap-4"
+  defp group_col_class(4), do: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
+  defp group_col_class(_), do: "grid grid-cols-1 gap-4"
 
-  defp global_col_class(1), do: "grid gap-4"
-  defp global_col_class(2), do: "grid md:grid-cols-2 gap-4"
-  defp global_col_class(3), do: "grid md:grid-cols-2 lg:grid-cols-3 gap-4"
-  defp global_col_class(4), do: "grid md:grid-cols-2 lg:grid-cols-4 gap-4"
-  defp global_col_class(_), do: "grid gap-4"
+  defp global_col_class(1), do: "grid grid-cols-1 gap-4"
+  defp global_col_class(2), do: "grid grid-cols-1 md:grid-cols-2 gap-4"
+  defp global_col_class(3), do: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+  defp global_col_class(4), do: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+  defp global_col_class(_), do: "grid grid-cols-1 gap-4"
 
   # Draws one control per declared key through the UI adapter, reading each held value under
   # either a string or an atom key.
@@ -1341,6 +1341,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :date_input)
+        |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
+        |> assign(:field_name, field.name)
+        |> assign(:target, assigns[:myself])
         |> dynamic_component()
 
       :datetime ->
@@ -1348,6 +1351,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :datetime_input)
+        |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
+        |> assign(:field_name, field.name)
+        |> assign(:target, assigns[:myself])
         |> dynamic_component()
 
       :range ->

@@ -70,6 +70,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   }
 
   alias MishkaGervaz.Form.Types.Field.Relation, as: RelationType
+  alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
 
@@ -249,26 +250,97 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def do_handle("combobox_select", %{"field" => field_name, "value" => value}, state, socket) do
     if settable_field?(field_name, state) do
-      field_atom = String.to_existing_atom(field_name)
-
-      case run_hook(state, :on_change, [field_atom, value, state]) do
-        {:halt, updated_state} ->
-          {:noreply, Phoenix.Component.assign(socket, :form_state, updated_state)}
-
-        _ ->
-          new_field_values = Map.put(state.field_values, field_atom, value)
-          state = State.update(state, field_values: new_field_values, dirty?: true)
-          state = revalidate_combobox(state, field_atom, value)
-
-          socket =
-            socket
-            |> Phoenix.Component.assign(:form_state, state)
-            |> RelationHandler.reload_dependent_fields(state, field_atom)
-
-          {:noreply, socket}
-      end
+      {:noreply, put_value(state, socket, String.to_existing_atom(field_name), value)}
     else
       {:noreply, socket}
+    end
+  end
+
+  def do_handle("picker_open", %{"field" => name}, state, socket) do
+    case picker_field(name, state) do
+      %{name: field} ->
+        pickers = state.pickers || %{}
+
+        pickers =
+          case pickers do
+            %{^field => _month} -> Map.delete(pickers, field)
+            _closed -> Map.put(pickers, field, first_of_month(shown_day(state, field)))
+          end
+
+        {:noreply,
+         Phoenix.Component.assign(socket, :form_state, State.update(state, pickers: pickers))}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("picker_close", %{"field" => name}, state, socket) do
+    case picker_field(name, state) do
+      %{name: field} ->
+        pickers = Map.delete(state.pickers || %{}, field)
+
+        {:noreply,
+         Phoenix.Component.assign(socket, :form_state, State.update(state, pickers: pickers))}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("picker_month", %{"field" => name, "step" => step}, state, socket)
+      when step in ["-12", "-1", "1", "12"] do
+    with %{name: field} <- picker_field(name, state),
+         %Date{} = month <- Map.get(state.pickers || %{}, field) do
+      month = Date.shift(month, month: String.to_integer(step))
+      pickers = Map.put(state.pickers, field, month)
+
+      {:noreply,
+       Phoenix.Component.assign(socket, :form_state, State.update(state, pickers: pickers))}
+    else
+      _closed -> {:noreply, socket}
+    end
+  end
+
+  def do_handle("picker_day", %{"field" => name, "date" => day}, state, socket) do
+    with %{name: field, type: type} <- picker_field(name, state),
+         {:ok, date} <- Date.from_iso8601(to_string(day)) do
+      {_day, time} = DateTimeField.parts(current_value(state, field))
+
+      state =
+        if type == :date,
+          do: State.update(state, pickers: Map.delete(state.pickers || %{}, field)),
+          else: state
+
+      {:noreply, put_value(state, socket, field, DateTimeField.value(date, time, type))}
+    else
+      _not_a_day -> {:noreply, socket}
+    end
+  end
+
+  def do_handle("picker_time", %{"_gvz_picker" => picked}, state, socket) when is_map(picked) do
+    with [{name, %{} = parts}] <- Map.to_list(picked),
+         %{name: field, type: :datetime} <- picker_field(name, state) do
+      {day, {hour, minute}} = DateTimeField.parts(current_value(state, field))
+      hour = clock(parts["hour"], 23, hour)
+      minute = clock(parts["minute"], 59, minute)
+      day = day || Map.get(state.pickers || %{}, field) || Date.utc_today()
+
+      {:noreply,
+       put_value(state, socket, field, DateTimeField.value(day, {hour, minute}, :datetime))}
+    else
+      _not_a_time -> {:noreply, socket}
+    end
+  end
+
+  def do_handle("picker_clear", %{"field" => name}, state, socket) do
+    case picker_field(name, state) do
+      %{name: field} ->
+        state = State.update(state, pickers: Map.delete(state.pickers || %{}, field))
+        {:noreply, put_value(state, socket, field, "")}
+
+      nil ->
+        {:noreply, socket}
     end
   end
 
@@ -654,6 +726,54 @@ defmodule MishkaGervaz.Form.Web.Events do
       {:noreply, Phoenix.Component.assign(socket, :form_state, state)}
     else
       _refused -> {:noreply, socket}
+    end
+  end
+
+  defp put_value(state, socket, field_atom, value) do
+    case run_hook(state, :on_change, [field_atom, value, state]) do
+      {:halt, updated_state} ->
+        Phoenix.Component.assign(socket, :form_state, updated_state)
+
+      _ ->
+        new_field_values = Map.put(state.field_values, field_atom, value)
+        state = State.update(state, field_values: new_field_values, dirty?: true)
+        state = revalidate_combobox(state, field_atom, value)
+
+        socket
+        |> Phoenix.Component.assign(:form_state, state)
+        |> RelationHandler.reload_dependent_fields(state, field_atom)
+    end
+  end
+
+  defp picker_field(name, state) when is_binary(name) do
+    with true <- settable_field?(name, state),
+         %{type: type} = field when type in [:date, :datetime] <-
+           Enum.find(state.static.fields, &(Atom.to_string(&1.name) == name)) do
+      field
+    else
+      _ -> nil
+    end
+  end
+
+  defp picker_field(_name, _state), do: nil
+
+  defp current_value(%{form: nil} = state, field), do: Map.get(state.field_values, field)
+
+  defp current_value(state, field), do: Phoenix.HTML.Form.input_value(state.form, field)
+
+  defp shown_day(state, field) do
+    case DateTimeField.parts(current_value(state, field)) do
+      {%Date{} = day, _time} -> day
+      {nil, _time} -> Date.utc_today()
+    end
+  end
+
+  defp first_of_month(%Date{} = day), do: Date.beginning_of_month(day)
+
+  defp clock(text, top, fallback) do
+    case Integer.parse(to_string(text)) do
+      {number, ""} when number >= 0 and number <= top -> number
+      _not_a_number -> fallback
     end
   end
 
