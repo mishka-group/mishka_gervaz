@@ -401,6 +401,25 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
+  describe "a group of fields" do
+    test "is never wider than its column, whatever its class, however wide what it holds" do
+      for class <- [nil, "my-own-group"] do
+        assigns =
+          %{
+            __changed__: nil,
+            inner_block: [%{inner_block: fn _, _ -> "x" end, __slot__: :inner_block}]
+          }
+
+        assigns = if class, do: Map.put(assigns, :class, class), else: assigns
+
+        html = assigns |> Tailwind.field_group() |> rendered_to_string()
+
+        assert [fieldset] = Regex.run(~r/<fieldset[^>]*>/, html)
+        assert fieldset =~ ~r/class="min-w-0/
+      end
+    end
+  end
+
   describe "a list that opens under its control" do
     defp relation(fun, assigns) do
       %{

@@ -2396,7 +2396,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:class, fn -> "rounded-[16px] border border-[#ecebe6] p-5" end)
 
     ~H"""
-    <fieldset class={@class}>
+    <fieldset class={["min-w-0", @class]}>
       <%= if @collapsible do %>
         <legend class="px-2">
           <details open={!@collapsed}>
