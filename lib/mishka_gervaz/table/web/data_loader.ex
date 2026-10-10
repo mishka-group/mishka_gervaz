@@ -635,16 +635,26 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       @spec maybe_sync_url(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
       defp maybe_sync_url(socket, state) do
-        if State.bidirectional_url_sync?(state) do
-          path = build_sync_path(state)
+        path = State.bidirectional_url_sync?(state) && build_sync_path(state)
 
-          socket
-          |> Phoenix.Component.assign(:url_sync_pending, true)
-          |> Phoenix.LiveView.push_patch(to: path, replace: true)
-        else
-          socket
+        cond do
+          path == false ->
+            socket
+
+          shown?(socket.assigns[:url_seen], path) ->
+            socket
+
+          true ->
+            socket
+            |> Phoenix.Component.assign(:url_sync_pending, path)
+            |> Phoenix.LiveView.push_patch(to: path, replace: true)
         end
       end
+
+      defp shown?({path, query}, url),
+        do: UrlSync.same_url?(%{path: path, query: query}, url)
+
+      defp shown?(_seen, _url), do: false
 
       @spec build_sync_path(State.t()) :: String.t()
       defp build_sync_path(state) do

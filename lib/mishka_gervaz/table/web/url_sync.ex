@@ -71,7 +71,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
           template: atom() | nil,
           path: String.t() | nil,
           path_params: map(),
-          preserved_params: map()
+          preserved_params: map(),
+          query: %{String.t() => String.t()} | nil
         }
 
   @type decode_opts :: [
@@ -106,7 +107,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   Decode URL query params to table state.
 
   Gets all configuration from the resource's DSL (url_sync section and filters).
-  Always pass the URI - the system uses it for bidirectional sync if enabled in DSL.
+  Always pass the URI - the system uses it for bidirectional sync if enabled in DSL. Its query
+  string is kept as `:query`, the params by name, which the table compares with the URL it last
+  wrote (`same_url?/2`).
 
   ## Usage
 
@@ -135,8 +138,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec decode(map(), String.t(), module()) :: url_state() | nil
   def decode(params, uri, resource)
       when is_binary(uri) and is_atom(resource) and not is_nil(resource) do
-    path = extract_path(uri)
-    do_decode_for_resource(params, resource, [], path)
+    do_decode_for_resource(params, resource, [], uri)
   end
 
   @doc false
@@ -168,12 +170,30 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec decode(map(), String.t(), module(), decode_opts()) :: url_state() | nil
   def decode(params, uri, resource, opts)
       when is_binary(uri) and is_atom(resource) and not is_nil(resource) and is_list(opts) do
-    path = extract_path(uri)
-    do_decode_for_resource(params, resource, opts, path)
+    do_decode_for_resource(params, resource, opts, uri)
   end
 
-  @spec do_decode_for_resource(map(), module(), keyword(), String.t() | nil) :: url_state() | nil
-  defp do_decode_for_resource(params, resource, opts, path) do
+  @doc """
+  Whether `url_state` was decoded from `url`: the same path and the same query params, in any
+  order.
+
+      UrlSync.same_url?(UrlSync.decode(params, "/posts?sort=name:asc", MyApp.Post), "/posts?sort=name%3Aasc")
+      #=> true
+
+  A `url_state` decoded without a URI has no `:query`, and is never the same.
+  """
+  @spec same_url?(url_state() | nil, String.t()) :: boolean()
+  def same_url?(%{path: path, query: query}, url) when is_map(query) and is_binary(url) do
+    {url_path, url_query} = split_url(url)
+    path == url_path and query == url_query
+  end
+
+  def same_url?(_url_state, _url), do: false
+
+  @spec do_decode_for_resource(map(), module(), keyword(), String.t()) :: url_state() | nil
+  defp do_decode_for_resource(params, resource, opts, uri) do
+    {path, query} = split_url(uri)
+
     alias MishkaGervaz.Resource.Info.Table, as: TableInfo
 
     url_sync_config = TableInfo.url_sync(resource)
@@ -206,7 +226,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
       preserved =
         extract_preserved_params(params, prefix, preserve_params_config, effective_max)
 
-      Map.put(url_state, :preserved_params, preserved)
+      url_state
+      |> Map.put(:preserved_params, preserved)
+      |> Map.put(:query, query)
     else
       nil
     end
@@ -753,9 +775,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     end
   end
 
-  @spec extract_path(String.t()) :: String.t() | nil
-  defp extract_path(uri) when is_binary(uri) do
-    %URI{path: path} = URI.parse(uri)
-    path
+  @spec split_url(String.t()) :: {String.t() | nil, %{String.t() => String.t()}}
+  defp split_url(url) when is_binary(url) do
+    %URI{path: path, query: query} = URI.parse(url)
+    {path, URI.decode_query(query || "")}
   end
 end
