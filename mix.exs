@@ -36,6 +36,7 @@ defmodule MishkaGervaz.MixProject do
 
   defp deps do
     [
+      {:decimal, "~> 3.2", override: true},
       {:spark, "~> 2.7"},
       {:ash, "~> 3.33"},
       {:splode, "~> 0.3"},
