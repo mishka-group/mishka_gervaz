@@ -245,19 +245,27 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           <% end %>
         <% end %>
       </select>
-      <svg
-        class="pointer-events-none absolute end-[11px] top-1/2 size-[13px] -translate-y-1/2 text-[#a8a5a0]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="m6 9 6 6 6-6" />
-      </svg>
+      <.select_chevron />
     </div>
+    """
+  end
+
+  attr :class, :string, default: "end-[11px] size-[13px]"
+
+  defp select_chevron(assigns) do
+    ~H"""
+    <svg
+      class={["pointer-events-none absolute top-1/2 -translate-y-1/2 text-[#a8a5a0]", @class]}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
     """
   end
 
@@ -3128,23 +3136,28 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           class="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[#5c5a54]"
         >
           <span class="me-1">{dgettext("mishka_gervaz", "Time")}</span>
-          <select
+          <div
             :for={
               {part, top, now, label} <- [
                 {"hour", 23, @hour, dgettext("mishka_gervaz", "Hour")},
                 {"minute", 59, @minute, dgettext("mishka_gervaz", "Minute")}
               ]
             }
-            id={"#{@id}-#{part}"}
-            name={"_gvz_picker[#{@field_name}][#{part}]"}
-            phx-change="picker_time"
-            phx-target={@target}
-            aria-label={label}
             dir="ltr"
-            class="h-9 rounded-[9px] border border-[#ecebe6] bg-[#faf9f6] px-2 text-[12.5px] font-semibold text-[#1b1a18] outline-none focus:border-[#c3c1f0]"
+            class="relative"
           >
-            <option :for={n <- 0..top} value={n} selected={n == now}>{two_digits(n)}</option>
-          </select>
+            <select
+              id={"#{@id}-#{part}"}
+              name={"_gvz_picker[#{@field_name}][#{part}]"}
+              phx-change="picker_time"
+              phx-target={@target}
+              aria-label={label}
+              class="h-9 cursor-pointer appearance-none rounded-[9px] border border-[#ecebe6] bg-[#faf9f6] ps-2.5 pe-7 text-[12.5px] font-semibold text-[#1b1a18] outline-none focus:border-[#c3c1f0]"
+            >
+              <option :for={n <- 0..top} value={n} selected={n == now}>{two_digits(n)}</option>
+            </select>
+            <.select_chevron class="end-[9px] size-3" />
+          </div>
         </div>
 
         <div class="mt-3 flex items-center justify-between">
