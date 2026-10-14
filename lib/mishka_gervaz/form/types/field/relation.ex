@@ -56,7 +56,8 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
   Renders the relation field input by building assigns and calling the UI adapter.
 
   Delegates to the appropriate UI adapter function based on mode:
-  - `:static` → `ui.select/1`
+  - `:static` → `ui.select/1`, with the empty choice `MishkaGervaz.Form.Types.Field.Select.prompt/1`
+    gives the field
   - `:search` → `ui.search_select/1`
   - `:load_more` → `ui.load_more_select/1`
   - `:search_multi` → `ui.multi_select/1`
@@ -70,13 +71,16 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
     assigns = build_assigns(field, rel_data, state_assigns, mode)
 
     case mode do
-      :static -> ui.select(assigns)
+      :static -> ui.select(with_prompt(assigns, field))
       :search -> ui.search_select(assigns)
       :load_more -> ui.load_more_select(assigns)
       :search_multi -> ui.multi_select(assigns)
-      _ -> ui.select(assigns)
+      _ -> ui.select(with_prompt(assigns, field))
     end
   end
+
+  defp with_prompt(assigns, field),
+    do: Map.put(assigns, :prompt, MishkaGervaz.Form.Types.Field.Select.prompt(field))
 
   defp build_assigns(field, rel_data, state_assigns, mode) do
     option_list = Map.get(rel_data, :options, [])

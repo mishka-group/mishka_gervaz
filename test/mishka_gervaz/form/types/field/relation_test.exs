@@ -64,6 +64,19 @@ defmodule MishkaGervaz.Form.Types.Field.RelationTest do
       assert_received {:dispatched, :select, _}
     end
 
+    test ":static hands the select the field's empty choice", %{
+      ui: ui,
+      field: field,
+      rel_data: rel,
+      state_assigns: st
+    } do
+      Relation.render_input(Map.put(field, :required, true), rel, st, ui)
+      assert_received {:dispatched, :select, %{prompt: nil}}
+
+      Relation.render_input(Map.put(field, :required, false), rel, st, ui)
+      assert_received {:dispatched, :select, %{prompt: "Select..."}}
+    end
+
     test ":search → ui.search_select", %{ui: ui, field: field, rel_data: rel, state_assigns: st} do
       Relation.render_input(Map.put(field, :mode, :search), rel, st, ui)
       assert_received {:dispatched, :search_select, _}

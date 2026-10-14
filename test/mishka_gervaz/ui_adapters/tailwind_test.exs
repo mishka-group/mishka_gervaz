@@ -15,6 +15,39 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
     render_component(&Tailwind.select/1, Map.merge(base, assigns))
   end
 
+  describe "select/1 empty choice" do
+    defp bare_select(assigns) do
+      render_component(
+        &Tailwind.select/1,
+        Map.merge(%{name: :status, value: nil, options: [{"Draft", "draft"}]}, assigns)
+      )
+    end
+
+    test "a select given no prompt draws no empty choice" do
+      html = bare_select(%{})
+
+      refute html =~ ~s(<option value="">)
+      refute html =~ ">All<"
+    end
+
+    test "a filter select given no prompt is All" do
+      html = bare_select(%{variant: :filter})
+
+      assert html =~ ~r/<option value="">\s*All\s*<\/option>/
+    end
+
+    test "an explicit prompt is honoured, filter or not" do
+      assert bare_select(%{prompt: "Pick one"}) =~ ~r/<option value="">\s*Pick one\s*<\/option>/
+
+      assert bare_select(%{prompt: "Pick one", variant: :filter}) =~
+               ~r/<option value="">\s*Pick one\s*<\/option>/
+    end
+
+    test "a nil prompt draws no empty choice, filter or not" do
+      refute bare_select(%{prompt: nil, variant: :filter}) =~ ~s(<option value="">)
+    end
+  end
+
   describe "select/1 grouped options" do
     test "flat options render plain <option> and no <optgroup>" do
       html = select(%{options: [{"Active", "active"}, {"Archived", "archived"}]})

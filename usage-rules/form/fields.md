@@ -133,6 +133,10 @@ loaded record — a virtual field has no attribute to read. A virtual many-relat
 `value_field` stores a non-primary-key attribute from the chosen record.
 `include_nil fn -> dgettext(…) end` adds a labelled "none" option — useful for "auto-generate".
 
+A `:select` and a static `:relation` draw an empty choice ahead of the options: labelled with
+`ui placeholder` when it is set, none when the field is `required` or has a `default`, "Select..."
+otherwise. It is never "All"; that is the filter wording.
+
 A choice that follows another field but is **not rows of a resource** — the languages of the picked
 site — is a `:relation` with no `resource` whose `options` is `fn state -> list end`. It is read again
 on every load, a `depends_on` change included, and it loads at init even while the parent is empty or

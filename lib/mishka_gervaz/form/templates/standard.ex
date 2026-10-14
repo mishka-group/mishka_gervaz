@@ -1305,7 +1305,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
       :select ->
         options = resolve_field_options(field)
-        base |> assign(:function, :select) |> assign(:options, options) |> dynamic_component()
+
+        base
+        |> assign(:function, :select)
+        |> assign(:options, options)
+        |> assign(:prompt, MishkaGervaz.Form.Types.Field.Select.prompt(field))
+        |> dynamic_component()
 
       :multi_select ->
         options = resolve_field_options(field)

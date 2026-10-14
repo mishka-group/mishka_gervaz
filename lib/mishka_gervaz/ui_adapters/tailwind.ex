@@ -204,7 +204,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign(:options, normalized)
       |> assign_new(:class, fn -> input_class(assigns[:search] == true) end)
-      |> assign_new(:prompt, fn -> dgettext("mishka_gervaz", "All") end)
+      |> assign_new(:prompt, fn -> select_prompt(assigns[:variant]) end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:id, fn -> nil end)
@@ -249,6 +249,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     """
   end
+
+  # The empty choice a select draws when the caller passes no `:prompt`: "All" for a filter, where
+  # it means no filter, and none for any other select.
+  defp select_prompt(:filter), do: dgettext("mishka_gervaz", "All")
+  defp select_prompt(_variant), do: nil
 
   attr :class, :string, default: "end-[11px] size-[13px]"
 

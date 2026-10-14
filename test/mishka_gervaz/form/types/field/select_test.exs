@@ -29,4 +29,29 @@ defmodule MishkaGervaz.Form.Types.Field.SelectTest do
   test "default_ui/0" do
     assert Select.default_ui() == %{type: :select}
   end
+
+  describe "prompt/1" do
+    test "none for a required field" do
+      assert Select.prompt(%{required: true}) == nil
+    end
+
+    test "none for a field with a default" do
+      assert Select.prompt(%{required: false, default: :draft}) == nil
+    end
+
+    test "a neutral \"Select...\" for an optional field, never \"All\"" do
+      assert Select.prompt(%{required: false}) == "Select..."
+      assert Select.prompt(%{}) == "Select..."
+    end
+
+    test "the ui placeholder wins, string or function, required or not" do
+      assert Select.prompt(%{required: true, ui: %{placeholder: "Pick one"}}) == "Pick one"
+      assert Select.prompt(%{ui: %{placeholder: fn -> "Choose" end}}) == "Choose"
+    end
+
+    test "a ui without a placeholder falls back to the field rules" do
+      assert Select.prompt(%{required: true, ui: %{placeholder: nil}}) == nil
+      assert Select.prompt(%{ui: nil}) == "Select..."
+    end
+  end
 end
