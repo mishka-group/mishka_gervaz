@@ -16,11 +16,11 @@ defmodule MishkaGervaz.Table.Dsl.FilterGroups do
           filters [:status, :issue_type, :site_id]
           collapsible true
           collapsed true
-          columns 3
 
           ui do
             label "Advanced Search"
             icon "hero-funnel"
+            columns 3
           end
         end
       end
@@ -50,11 +50,11 @@ defmodule MishkaGervaz.Table.Dsl.FilterGroups do
             filters [:status, :issue_type, :site_id]
             collapsible true
             collapsed true
-            columns 3
 
             ui do
               label "Advanced Search"
               icon "hero-funnel"
+              columns 3
             end
           end
       """,

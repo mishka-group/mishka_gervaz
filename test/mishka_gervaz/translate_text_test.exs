@@ -24,6 +24,7 @@ defmodule MishkaGervaz.TranslateTextTest do
       resolve_label: 1,
       resolve_dynamic: 2,
       resolve_confirm: 2,
+      resolve_bulk_confirm: 2,
       resolve_ui_label: 1,
       get_ui_label: 1,
       resolve_translated_options: 1,

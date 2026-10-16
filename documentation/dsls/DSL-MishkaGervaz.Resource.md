@@ -729,7 +729,7 @@ Define a filter input.
 | [`virtual`](#mishka_gervaz-table-filters-filter-virtual){: #mishka_gervaz-table-filters-filter-virtual } | `boolean` | `false` | No database column. |
 | [`resource`](#mishka_gervaz-table-filters-filter-resource){: #mishka_gervaz-table-filters-filter-resource } | `module` |  | Resource to load options from (for virtual). |
 | [`load_action`](#mishka_gervaz-table-filters-filter-load_action){: #mishka_gervaz-table-filters-filter-load_action } | `atom` | `:read` | Action to load options. |
-| [`load`](#mishka_gervaz-table-filters-filter-load){: #mishka_gervaz-table-filters-filter-load } | `(any, any -> any)` |  | Custom load function `fn query, assigns -> options`. |
+| [`load`](#mishka_gervaz-table-filters-filter-load){: #mishka_gervaz-table-filters-filter-load } | `(any, any -> any)` |  | Scopes the query that loads a relation filter's options: `fn query, state -> query`. |
 | [`apply`](#mishka_gervaz-table-filters-filter-apply){: #mishka_gervaz-table-filters-filter-apply } | `(any, any, any -> any)` |  | Custom apply function `fn query, value, assigns -> query`. |
 | [`mode`](#mishka_gervaz-table-filters-filter-mode){: #mishka_gervaz-table-filters-filter-mode } | `:static \| :load_more \| :search \| :search_multi` | `:static` | Loading mode for relation filters. - `:static` - Load all options at once (default, for small datasets) - `:load_more` - Initial page with "Load more" button - `:search` - Type to search with pagination (single select) - `:search_multi` - Type to search with pagination (multi select) |
 | [`page_size`](#mishka_gervaz-table-filters-filter-page_size){: #mishka_gervaz-table-filters-filter-page_size } | `pos_integer` | `20` | Number of options per page when using paginated modes. |
@@ -833,11 +833,11 @@ group :advanced do
 filters [:status, :issue_type, :site_id]
 collapsible true
 collapsed true
-columns 3
 
 ui do
 label "Advanced Search"
 icon "hero-funnel"
+columns 3
 end
 end
 
@@ -860,7 +860,6 @@ end
 | [`filters`](#mishka_gervaz-table-filter_groups-group-filters){: #mishka_gervaz-table-filter_groups-group-filters .spark-required} | `list(atom)` |  | Filter names belonging to this group. |
 | [`collapsed`](#mishka_gervaz-table-filter_groups-group-collapsed){: #mishka_gervaz-table-filter_groups-group-collapsed } | `boolean` | `true` | Start collapsed. |
 | [`collapsible`](#mishka_gervaz-table-filter_groups-group-collapsible){: #mishka_gervaz-table-filter_groups-group-collapsible } | `boolean` | `false` | Can be collapsed by user. |
-| [`columns`](#mishka_gervaz-table-filter_groups-group-columns){: #mishka_gervaz-table-filter_groups-group-columns } | `1 \| 2 \| 3 \| 4 \| 5 \| 6` |  | Grid columns for this group's filters. |
 | [`visible`](#mishka_gervaz-table-filter_groups-group-visible){: #mishka_gervaz-table-filter_groups-group-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. |
 | [`restricted`](#mishka_gervaz-table-filter_groups-group-restricted){: #mishka_gervaz-table-filter_groups-group-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. |
 | [`position`](#mishka_gervaz-table-filter_groups-group-position){: #mishka_gervaz-table-filter_groups-group-position } | `any` |  | Group position (integer, :first, :last). |
@@ -885,7 +884,7 @@ UI configuration for the filter group.
 | [`description`](#mishka_gervaz-table-filter_groups-group-ui-description){: #mishka_gervaz-table-filter_groups-group-ui-description } | `String.t` |  | Group description. |
 | [`class`](#mishka_gervaz-table-filter_groups-group-ui-class){: #mishka_gervaz-table-filter_groups-group-ui-class } | `String.t` |  | Group CSS classes. |
 | [`header_class`](#mishka_gervaz-table-filter_groups-group-ui-header_class){: #mishka_gervaz-table-filter_groups-group-ui-header_class } | `String.t` |  | Group header CSS classes. |
-| [`columns`](#mishka_gervaz-table-filter_groups-group-ui-columns){: #mishka_gervaz-table-filter_groups-group-ui-columns } | `1 \| 2 \| 3 \| 4 \| 5 \| 6` |  | Number of grid columns for this group (overrides layout columns). |
+| [`columns`](#mishka_gervaz-table-filter_groups-group-ui-columns){: #mishka_gervaz-table-filter_groups-group-ui-columns } | `1 \| 2 \| 3 \| 4 \| 5 \| 6` |  | Number of grid columns for this group's filters. Default: 3. Only a collapsible group draws the grid. |
 | [`extra`](#mishka_gervaz-table-filter_groups-group-ui-extra){: #mishka_gervaz-table-filter_groups-group-ui-extra } | `map` | `%{}` | Additional options. |
 
 
@@ -1274,7 +1273,7 @@ Define a bulk action.
 |------|------|---------|------|
 | [`type`](#mishka_gervaz-table-bulk_actions-action-type){: #mishka_gervaz-table-bulk_actions-action-type } | `:event \| :destroy \| :update \| :unarchive \| :permanent_destroy` |  | Built-in action type. When set, the handler is automatically resolved. Built-in types: - `:event` - Send event to parent LiveView (uses `event` option or action name) - `:destroy` - Soft delete records (uses source.actions.destroy) - `:update` - Run update action (uses `action` option) - `:unarchive` - Restore archived records (uses archive.actions.restore) - `:permanent_destroy` - Permanently delete archived records (uses archive.actions.destroy) When `type` is set, you don't need to specify `handler` - it will be resolved automatically. If both `type` and `handler` are set, `handler` takes precedence. |
 | [`action`](#mishka_gervaz-table-bulk_actions-action-action){: #mishka_gervaz-table-bulk_actions-action-action } | `atom \| {atom, atom}` |  | Ash action to execute for `:update` type. Can be an atom (single action) or tuple {master_action, tenant_action}. |
-| [`confirm`](#mishka_gervaz-table-bulk_actions-action-confirm){: #mishka_gervaz-table-bulk_actions-action-confirm } | `boolean \| String.t` |  | Confirmation message ({count} interpolated). |
+| [`confirm`](#mishka_gervaz-table-bulk_actions-action-confirm){: #mishka_gervaz-table-bulk_actions-action-confirm } | `boolean \| String.t` |  | Confirmation text shown before the action runs. `{count}` becomes the number of rows the action runs on: the checked rows, or with select all the table's total minus the unchecked rows. With select all, `{count}` stays as written for a `:load_more` or `:infinite` table with `show_total false` while rows are left to load. |
 | [`event`](#mishka_gervaz-table-bulk_actions-action-event){: #mishka_gervaz-table-bulk_actions-action-event } | `atom` |  | Event name for `:event` type. Defaults to action name if not specified. |
 | [`payload`](#mishka_gervaz-table-bulk_actions-action-payload){: #mishka_gervaz-table-bulk_actions-action-payload } | `(any -> any)` |  | Payload function `fn selected_ids -> payload`. |
 | [`restricted`](#mishka_gervaz-table-bulk_actions-action-restricted){: #mishka_gervaz-table-bulk_actions-action-restricted } | `boolean` | `false` | Permission check. |
@@ -1552,9 +1551,9 @@ Lifecycle callbacks.
 | [`before_delete`](#mishka_gervaz-table-hooks-before_delete){: #mishka_gervaz-table-hooks-before_delete } | `(any, any -> any)` |  | `fn record, state -> {:ok, state} \| {:halt, {:error, msg}}` - Before delete. |
 | [`after_delete`](#mishka_gervaz-table-hooks-after_delete){: #mishka_gervaz-table-hooks-after_delete } | `(any, any -> any)` |  | `fn record, state -> any` - After delete (side effects only). |
 | [`on_realtime`](#mishka_gervaz-table-hooks-on_realtime){: #mishka_gervaz-table-hooks-on_realtime } | `(any, any -> any)` |  | `fn notification, socket -> socket \| {:cont, socket} \| {:halt, socket}` - PubSub received. Return {:halt, socket} to skip the table's own update; a hook that adds or removes rows itself pipes its socket through `MishkaGervaz.Table.Web.DataLoader.refresh_total/1`. |
-| [`on_expand`](#mishka_gervaz-table-hooks-on_expand){: #mishka_gervaz-table-hooks-on_expand } | `(any, any -> any)` |  | `fn record_id, socket -> socket \| {:cont, socket} \| {:halt, socket}` - Row expanded. Return {:halt, socket} to cancel. |
+| [`on_expand`](#mishka_gervaz-table-hooks-on_expand){: #mishka_gervaz-table-hooks-on_expand } | `(any, any -> any)` |  | `fn record_id, socket -> socket \| {:cont, socket} \| {:halt, socket}` - Row expanded. Return {:halt, socket} to skip the `{:expand_row, id}` message the table sends to its parent LiveView. |
 | [`on_filter`](#mishka_gervaz-table-hooks-on_filter){: #mishka_gervaz-table-hooks-on_filter } | `(any, any -> any)` |  | `fn filter_values, socket -> socket \| {:cont, socket} \| {:halt, socket}` - Filter changed. |
-| [`on_event`](#mishka_gervaz-table-hooks-on_event){: #mishka_gervaz-table-hooks-on_event } | `(any, any, any -> any)` |  | `fn event_name, params, socket -> {:ok, socket} \| {:halt, socket}` - Custom event handler. |
+| [`on_event`](#mishka_gervaz-table-hooks-on_event){: #mishka_gervaz-table-hooks-on_event } | `(any, any, any -> any)` |  | `fn event_name, params, socket -> socket \| {:cont, socket} \| {:halt, socket}` - Runs for an event the table does not handle: a row action event with no matching action or `override_row_action`, a `custom_event`, or an unknown event name. Return {:halt, socket} to skip the message the table then sends to its parent LiveView. |
 | [`on_select`](#mishka_gervaz-table-hooks-on_select){: #mishka_gervaz-table-hooks-on_select } | `(any, any -> any)` |  | `fn selected_ids, socket -> socket \| {:cont, socket} \| {:halt, socket}` - Selection changed. |
 | [`on_sort`](#mishka_gervaz-table-hooks-on_sort){: #mishka_gervaz-table-hooks-on_sort } | `(any, any -> any)` |  | `fn {field, direction}, socket -> socket \| {:cont, socket} \| {:halt, socket}` - Sort changed. |
 | [`switch_to_active_on_empty_archive`](#mishka_gervaz-table-hooks-switch_to_active_on_empty_archive){: #mishka_gervaz-table-hooks-switch_to_active_on_empty_archive } | `boolean` | `false` | Switch to active mode after a successful unarchive/permanent_destroy if the archive list is now empty. |
@@ -1959,7 +1958,7 @@ Pagination configuration.
 | [`enabled`](#mishka_gervaz-table-pagination-enabled){: #mishka_gervaz-table-pagination-enabled } | `boolean` |  | Enable or disable pagination. Set to false at resource level to override domain defaults. |
 | [`type`](#mishka_gervaz-table-pagination-type){: #mishka_gervaz-table-pagination-type } | `:infinite \| :numbered \| :load_more` |  | Pagination style. Default: :load_more |
 | [`page_size`](#mishka_gervaz-table-pagination-page_size){: #mishka_gervaz-table-pagination-page_size } | `integer` |  | Records per page. Default: 20 |
-| [`page_size_options`](#mishka_gervaz-table-pagination-page_size_options){: #mishka_gervaz-table-pagination-page_size_options } | `list(integer)` |  | Available page size options. Default: [10, 25, 50, 100] |
+| [`page_size_options`](#mishka_gervaz-table-pagination-page_size_options){: #mishka_gervaz-table-pagination-page_size_options } | `list(integer)` |  | Page sizes the reader can pick. Default: none, and the page size selector is not drawn. |
 | [`max_page_size`](#mishka_gervaz-table-pagination-max_page_size){: #mishka_gervaz-table-pagination-max_page_size } | `pos_integer` |  | Maximum allowed page size. Clamps URL-provided values. Default: 150 |
 
 
@@ -1984,7 +1983,7 @@ UI/presentation configuration for pagination.
 | [`next_label`](#mishka_gervaz-table-pagination-ui-next_label){: #mishka_gervaz-table-pagination-ui-next_label } | `String.t` | `"Next"` | Next page button text. |
 | [`first_label`](#mishka_gervaz-table-pagination-ui-first_label){: #mishka_gervaz-table-pagination-ui-first_label } | `String.t` | `"First"` | First page button text. |
 | [`last_label`](#mishka_gervaz-table-pagination-ui-last_label){: #mishka_gervaz-table-pagination-ui-last_label } | `String.t` | `"Last"` | Last page button text. |
-| [`page_info_format`](#mishka_gervaz-table-pagination-ui-page_info_format){: #mishka_gervaz-table-pagination-ui-page_info_format } | `String.t` | `"Page {page} of {total}"` | Page info format. Use {page}, {total}, {from}, {to}, {count}. |
+| [`page_info_format`](#mishka_gervaz-table-pagination-ui-page_info_format){: #mishka_gervaz-table-pagination-ui-page_info_format } | `String.t` | `"Page {page} of {total}"` | Page info format. Placeholders: {page}, {total} and {count}. |
 
 
 
@@ -2360,7 +2359,7 @@ Define a form field.
 | [`mode`](#mishka_gervaz-form-fields-field-mode){: #mishka_gervaz-form-fields-field-mode } | `:static \| :load_more \| :search \| :search_multi` | `:static` | Data loading mode for select/relation fields. |
 | [`page_size`](#mishka_gervaz-form-fields-field-page_size){: #mishka_gervaz-form-fields-field-page_size } | `pos_integer` | `20` | Page size for load_more/search modes. |
 | [`load_action`](#mishka_gervaz-form-fields-field-load_action){: #mishka_gervaz-form-fields-field-load_action } | `atom \| {atom, atom}` |  | Action to use for loading options. Atom or `{master_action, tenant_action}` tuple. If the action has pagination, it must set `required?: false`. |
-| [`load`](#mishka_gervaz-form-fields-field-load){: #mishka_gervaz-form-fields-field-load } | `(any, any -> any)` |  | Custom load function. `fn query, state -> results end` |
+| [`load`](#mishka_gervaz-form-fields-field-load){: #mishka_gervaz-form-fields-field-load } | `(any, any -> any)` |  | Scopes the query that loads the field's options: `fn query, state -> query`. |
 | [`apply`](#mishka_gervaz-form-fields-field-apply){: #mishka_gervaz-form-fields-field-apply } | `(any, any, any -> any)` |  | Custom apply function. `fn value, changeset, state -> changeset end` |
 | [`format`](#mishka_gervaz-form-fields-field-format){: #mishka_gervaz-form-fields-field-format } | `(any -> any) \| (any, any, any -> any)` |  | Value formatter for display. |
 | [`render`](#mishka_gervaz-form-fields-field-render){: #mishka_gervaz-form-fields-field-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render function. |

@@ -32,7 +32,7 @@ end
 | `type` | `:event` \| `:destroy` \| `:update` \| `:unarchive` \| `:permanent_destroy` | — | resolves the handler automatically |
 | `action` | atom \| `{master, tenant}` | — | the Ash action for `:update` |
 | `handler` | `:parent` \| `fn ids, state -> {:ok, state}` \| atom \| `{master, tenant}` | `:parent` | explicit handler wins over `type` |
-| `confirm` | bool \| string | — | `{count}` is interpolated |
+| `confirm` | bool \| string | — | `{count}` becomes the number of rows the action runs on; with select all on a `:load_more` or `:infinite` table with `show_total false`, it stays as written while rows are left to load |
 | `event` | atom | action name | for `:event` type |
 | `payload` | `fn selected_ids -> map` | — | |
 | `restricted` | bool | `false` | master-only |

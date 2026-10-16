@@ -299,7 +299,7 @@ Default pagination configuration.
 | [`enabled`](#mishka_gervaz-table-pagination-enabled){: #mishka_gervaz-table-pagination-enabled } | `boolean` |  | Enable or disable pagination. Set to false at resource level to override domain defaults. |
 | [`type`](#mishka_gervaz-table-pagination-type){: #mishka_gervaz-table-pagination-type } | `:infinite \| :numbered \| :load_more` |  | Pagination style. Default: :load_more |
 | [`page_size`](#mishka_gervaz-table-pagination-page_size){: #mishka_gervaz-table-pagination-page_size } | `integer` |  | Records per page. Default: 20 |
-| [`page_size_options`](#mishka_gervaz-table-pagination-page_size_options){: #mishka_gervaz-table-pagination-page_size_options } | `list(integer)` |  | Available page size options. Default: [10, 25, 50, 100] |
+| [`page_size_options`](#mishka_gervaz-table-pagination-page_size_options){: #mishka_gervaz-table-pagination-page_size_options } | `list(integer)` |  | Page sizes the reader can pick. Default: none, and the page size selector is not drawn. |
 | [`max_page_size`](#mishka_gervaz-table-pagination-max_page_size){: #mishka_gervaz-table-pagination-max_page_size } | `pos_integer` |  | Maximum allowed page size. Clamps URL-provided values. Default: 150 |
 
 
@@ -324,7 +324,7 @@ UI/presentation configuration for pagination.
 | [`next_label`](#mishka_gervaz-table-pagination-ui-next_label){: #mishka_gervaz-table-pagination-ui-next_label } | `String.t` | `"Next"` | Next page button text. |
 | [`first_label`](#mishka_gervaz-table-pagination-ui-first_label){: #mishka_gervaz-table-pagination-ui-first_label } | `String.t` | `"First"` | First page button text. |
 | [`last_label`](#mishka_gervaz-table-pagination-ui-last_label){: #mishka_gervaz-table-pagination-ui-last_label } | `String.t` | `"Last"` | Last page button text. |
-| [`page_info_format`](#mishka_gervaz-table-pagination-ui-page_info_format){: #mishka_gervaz-table-pagination-ui-page_info_format } | `String.t` | `"Page {page} of {total}"` | Page info format. Use {page}, {total}, {from}, {to}, {count}. |
+| [`page_info_format`](#mishka_gervaz-table-pagination-ui-page_info_format){: #mishka_gervaz-table-pagination-ui-page_info_format } | `String.t` | `"Page {page} of {total}"` | Page info format. Placeholders: {page}, {total} and {count}. |
 
 
 

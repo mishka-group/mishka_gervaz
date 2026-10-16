@@ -673,8 +673,13 @@ defmodule MishkaGervaz.Table.Web.Events do
                 do_edit(state, payload, socket)
 
               _ ->
-                send(self(), {:row_action, event_name, payload})
-                {:noreply, socket}
+                forward_event(
+                  state,
+                  event_name,
+                  payload,
+                  {:row_action, event_name, payload},
+                  socket
+                )
             end
         end
     end
@@ -716,8 +721,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       _ ->
-        send(self(), {:row_action, event_name, payload})
-        {:noreply, socket}
+        forward_event(state, event_name, payload, {:row_action, event_name, payload}, socket)
     end
   end
 
@@ -898,9 +902,20 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
-  def do_handle(event, params, _state, socket) do
-    send(self(), {:table_event, event, params})
-    {:noreply, socket}
+  def do_handle(event, params, state, socket) do
+    forward_event(state, event, params, {:table_event, event, params}, socket)
+  end
+
+  @spec forward_event(State.t(), String.t(), map(), tuple(), socket()) :: {:noreply, socket()}
+  defp forward_event(state, event_name, params, message, socket) do
+    case apply_hook_result(state, :on_event, [event_name, params, socket], socket) do
+      {:halt, socket} ->
+        {:noreply, socket}
+
+      socket ->
+        send(self(), message)
+        {:noreply, socket}
+    end
   end
 
   @doc false

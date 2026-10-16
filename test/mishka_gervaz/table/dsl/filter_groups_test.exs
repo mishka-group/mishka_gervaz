@@ -170,6 +170,69 @@ defmodule MishkaGervaz.DSL.FilterGroupsTest do
     end
   end
 
+  describe "the columns of a group" do
+    defp compile_group(group_body) do
+      Code.compile_string("""
+      defmodule MishkaGervaz.Test.GroupColumns#{System.unique_integer([:positive])} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :name, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+          read :master_read
+          read :tenant_read
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :group_columns
+              route "/admin/group-columns"
+            end
+
+            columns do
+              column :name
+            end
+
+            filters do
+              filter :name, :text
+            end
+
+            filter_groups do
+              group :main do
+                filters [:name]
+                #{group_body}
+              end
+            end
+          end
+        end
+      end
+      """)
+    end
+
+    test "the group schema has no columns option" do
+      refute Keyword.has_key?(MishkaGervaz.Table.Entities.FilterGroup.opt_schema(), :columns)
+      refute Map.has_key?(struct(MishkaGervaz.Table.Entities.FilterGroup), :columns)
+    end
+
+    test "columns set on the group itself fails the compile" do
+      catch_error(compile_group("columns 3"))
+    end
+
+    test "columns set in the group's ui block compiles" do
+      ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        compile_group("ui do\n columns 3\n end")
+      end)
+    end
+  end
+
   describe "existing filter tests still pass with groups" do
     test "filters still accessible individually" do
       filter = TableInfo.filter(ComplexTestResource, :search)

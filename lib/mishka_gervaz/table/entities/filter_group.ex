@@ -17,11 +17,11 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
           filters [:status, :issue_type, :site_id]
           collapsible true
           collapsed true
-          columns 3
 
           ui do
             label fn -> dgettext("mishka_gervaz", "Advanced Search") end
             icon "hero-funnel"
+            columns 3
           end
         end
       end
@@ -37,7 +37,6 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
           filters: [atom()],
           collapsed: boolean(),
           collapsible: boolean(),
-          columns: 1 | 2 | 3 | 4 | 5 | 6 | nil,
           visible: boolean() | (map() -> boolean()),
           restricted: boolean() | (map() -> boolean()),
           position: integer() | :first | :last | nil,
@@ -51,7 +50,6 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
     filters: [],
     collapsed: true,
     collapsible: false,
-    columns: nil,
     visible: true,
     restricted: false,
     position: nil,
@@ -79,10 +77,6 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup do
       type: :boolean,
       default: false,
       doc: "Can be collapsed by user."
-    ],
-    columns: [
-      type: {:in, [1, 2, 3, 4, 5, 6]},
-      doc: "Grid columns for this group's filters."
     ],
     visible: [
       type: {:or, [:boolean, {:fun, 1}]},
@@ -165,7 +159,8 @@ defmodule MishkaGervaz.Table.Entities.FilterGroup.Ui do
     ],
     columns: [
       type: {:in, [1, 2, 3, 4, 5, 6]},
-      doc: "Number of grid columns for this group (overrides layout columns)."
+      doc:
+        "Number of grid columns for this group's filters. Default: 3. Only a collapsible group draws the grid."
     ],
     extra: [
       type: :map,

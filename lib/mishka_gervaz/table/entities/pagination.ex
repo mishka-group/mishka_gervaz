@@ -43,7 +43,8 @@ defmodule MishkaGervaz.Table.Entities.Pagination do
     ],
     page_size_options: [
       type: {:list, :integer},
-      doc: "Available page size options. Default: [10, 25, 50, 100]"
+      doc:
+        "Page sizes the reader can pick. Default: none, and the page size selector is not drawn."
     ],
     max_page_size: [
       type: :pos_integer,

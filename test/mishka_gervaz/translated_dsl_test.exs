@@ -145,6 +145,29 @@ defmodule MishkaGervaz.TranslatedDslTest do
       assert bulk_button(action) =~ "From a function"
       refute bulk_button(%{action | confirm: false}) =~ "data-confirm"
     end
+
+    test "fills {count} into the confirm after translating it" do
+      action = %{name: :archive_all, confirm: "Archive {count} posts?", ui: nil}
+
+      render = fn count ->
+        html(
+          Tailwind.bulk_action_button(%{
+            __changed__: nil,
+            action: action,
+            myself: nil,
+            count: count
+          })
+        )
+      end
+
+      {english, persian} = both(fn -> render.(4) end)
+      assert english =~ ~s(data-confirm="Archive 4 posts?")
+      assert persian =~ ~s(data-confirm="#{@fa}Archive 4 posts?")
+
+      {english, persian} = both(fn -> render.(nil) end)
+      assert english =~ ~s(data-confirm="Archive {count} posts?")
+      assert persian =~ ~s(data-confirm="#{@fa}Archive {count} posts?")
+    end
   end
 
   describe "a column type" do

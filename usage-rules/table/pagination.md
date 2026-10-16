@@ -18,7 +18,7 @@ pagination do
     next_label "Next"
     first_label "First"
     last_label "Last"
-    page_info_format "Page {page} of {total}"   # {page} {total} {from} {to} {count}
+    page_info_format "Page {page} of {total}"   # {page} {total} {count}
   end
 end
 ```

@@ -14,7 +14,6 @@ filter_groups do
     filters [:status, :language, :contributor, :created_at, :updated_at]
     collapsible true
     collapsed true
-    columns 3
 
     ui do
       label fn -> dgettext("mishka_gervaz", "Advanced Search") end
@@ -30,11 +29,10 @@ end
 | `filters` | `[atom]` | — | **required** |
 | `collapsed` | bool | **`true`** | note the default — a group starts closed |
 | `collapsible` | bool | `false` | whether the user may toggle it |
-| `columns` | 1..6 | — | grid columns for this group's inputs |
 | `visible` / `restricted` | bool \| `fn state ->` | `true` / `false` | arity **1** |
 | `position` | int \| `:first` \| `:last` | — | |
 
-`ui`: `label` · `icon` · `description` · `class` · `header_class` · `columns` (1..6) · `extra`.
+`ui`: `label` · `icon` · `description` · `class` · `header_class` · `columns` (1..6, default 3, drawn by a collapsible group only) · `extra`.
 
 Compile fails if a group names a filter that does not exist, or if one filter appears in two
 groups.

@@ -42,7 +42,7 @@ defmodule MishkaGervaz.Table.Entities.Filter do
           virtual: boolean(),
           resource: module() | nil,
           load_action: atom(),
-          load: (Ash.Query.t(), map() -> list()) | nil,
+          load: (Ash.Query.t(), map() -> Ash.Query.t()) | nil,
           apply: (Ash.Query.t(), any(), map() -> Ash.Query.t()) | nil,
           mode: relation_mode(),
           page_size: pos_integer(),
@@ -216,7 +216,7 @@ defmodule MishkaGervaz.Table.Entities.Filter do
     ],
     load: [
       type: {:fun, 2},
-      doc: "Custom load function `fn query, assigns -> options`."
+      doc: "Scopes the query that loads a relation filter's options: `fn query, state -> query`."
     ],
     apply: [
       type: {:fun, 3},

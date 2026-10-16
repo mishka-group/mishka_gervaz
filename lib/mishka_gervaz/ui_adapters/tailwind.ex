@@ -25,6 +25,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     only: [
       normalize_options: 1,
       normalize_selected_values: 1,
+      resolve_bulk_confirm: 2,
       resolve_label: 1,
       resolve_ui_label: 1,
       translate_text: 1
@@ -1945,6 +1946,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   ## Assigns
     * `:action` - The action map
     * `:myself` - LiveComponent target
+    * `:count` - The number of rows the action runs on, or `nil` when the table cannot tell.
+      `{count}` in the action's `confirm` becomes this number.
   """
   @impl true
   def bulk_action_button(assigns) do
@@ -1959,7 +1962,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :label,
         resolve_ui_label(action) || translate_text(Phoenix.Naming.humanize(action.name))
       )
-      |> assign(:confirm, translate_text(action.confirm))
+      |> assign(:confirm, resolve_bulk_confirm(action.confirm, assigns[:count]))
       |> assign(:btn_class, (action.ui && action.ui.class) || bulk_button_class(variant))
 
     ~H"""

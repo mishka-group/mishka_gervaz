@@ -67,7 +67,7 @@ defmodule MishkaGervaz.Table.Entities.Pagination.Ui do
     page_info_format: [
       type: :string,
       default: "Page {page} of {total}",
-      doc: "Page info format. Use {page}, {total}, {from}, {to}, {count}."
+      doc: "Page info format. Placeholders: {page}, {total} and {count}."
     ]
   ]
 

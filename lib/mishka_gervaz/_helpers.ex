@@ -195,6 +195,39 @@ defmodule MishkaGervaz.Helpers do
   def resolve_confirm(confirm, _record), do: translate_text(confirm)
 
   @doc """
+  Resolves a bulk action's `confirm`.
+
+  A string is translated in the caller's locale (`translate_text/1`), then every `{count}` in it
+  becomes `count`. With no `count`, the text keeps `{count}` as written. Anything else is returned
+  as it is.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.resolve_bulk_confirm("Delete {count} posts?", 3)
+      "Delete 3 posts?"
+
+      iex> MishkaGervaz.Helpers.resolve_bulk_confirm("Delete {count} posts?", nil)
+      "Delete {count} posts?"
+
+      iex> MishkaGervaz.Helpers.resolve_bulk_confirm("Sure?", 3)
+      "Sure?"
+
+      iex> MishkaGervaz.Helpers.resolve_bulk_confirm(nil, 3)
+      nil
+  """
+  @spec resolve_bulk_confirm(boolean() | String.t() | nil, non_neg_integer() | nil) ::
+          boolean() | String.t() | nil
+  def resolve_bulk_confirm(confirm, count) do
+    case translate_text(confirm) do
+      text when is_binary(text) and is_integer(count) ->
+        String.replace(text, "{count}", Integer.to_string(count))
+
+      other ->
+        other
+    end
+  end
+
+  @doc """
   Resolves a display value from a record using either an atom field or a function.
 
   Supports:

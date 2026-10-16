@@ -56,7 +56,7 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
   Most hooks can return:
   - `socket` - Continue with modified socket
   - `{:cont, socket}` - Explicitly continue with modified socket
-  - `{:halt, socket}` - Stop the action (e.g., skip realtime update, cancel expand)
+  - `{:halt, socket}` - Stop the built-in behavior (e.g., skip the realtime update, skip the `{:expand_row, id}` message)
 
   ## Example
 
@@ -102,7 +102,7 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     on_expand: [
       type: {:fun, 2},
       doc:
-        "`fn record_id, socket -> socket | {:cont, socket} | {:halt, socket}` - Row expanded. Return {:halt, socket} to cancel."
+        "`fn record_id, socket -> socket | {:cont, socket} | {:halt, socket}` - Row expanded. Return {:halt, socket} to skip the `{:expand_row, id}` message the table sends to its parent LiveView."
     ],
     on_filter: [
       type: {:fun, 2},
@@ -112,7 +112,7 @@ defmodule MishkaGervaz.Table.Dsl.Hooks do
     on_event: [
       type: {:fun, 3},
       doc:
-        "`fn event_name, params, socket -> {:ok, socket} | {:halt, socket}` - Custom event handler."
+        "`fn event_name, params, socket -> socket | {:cont, socket} | {:halt, socket}` - Runs for an event the table does not handle: a row action event with no matching action or `override_row_action`, a `custom_event`, or an unknown event name. Return {:halt, socket} to skip the message the table then sends to its parent LiveView."
     ],
     on_select: [
       type: {:fun, 2},

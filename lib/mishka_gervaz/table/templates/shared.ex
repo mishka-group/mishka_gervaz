@@ -1017,6 +1017,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:has_selection, has_selection)
       |> assign(:excluded_count, excluded_count)
       |> assign(:selected_count, selected_count)
+      |> assign(:selection_count, bulk_selection_count(state))
       |> assign(:visible_bulk_actions, visible_bulk_actions)
       |> assign(:ui_adapter, static.ui_adapter)
 
@@ -1042,11 +1043,35 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         module={@ui_adapter}
         function={:bulk_action_button}
         action={action}
+        count={@selection_count}
         myself={@myself}
       />
     </.dynamic_component>
     """
   end
+
+  @doc """
+  The number of rows a bulk action runs on, or `nil` when the table cannot tell.
+
+  Checked rows are counted. With select all, the count is the table's total minus the unchecked
+  rows, and the table can tell only when it holds every row or counts its rows (`:numbered`
+  pagination, or `show_total true` in the pagination `ui` block).
+  """
+  @spec bulk_selection_count(map()) :: non_neg_integer() | nil
+  def bulk_selection_count(%{select_all?: true} = state) do
+    if total_known?(state),
+      do: max(state.total_count - MapSet.size(state.excluded_ids), 0),
+      else: nil
+  end
+
+  def bulk_selection_count(state), do: MapSet.size(state.selected_ids)
+
+  defp total_known?(%{total_count: total, total_pages: pages})
+       when is_integer(total) and is_integer(pages),
+       do: true
+
+  defp total_known?(%{total_count: total, has_more?: false}) when is_integer(total), do: true
+  defp total_known?(_state), do: false
 
   defp filter_visible_bulk_actions(bulk_actions, archive_status, state) do
     Enum.filter(bulk_actions, fn action ->

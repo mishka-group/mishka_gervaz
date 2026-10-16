@@ -75,7 +75,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
           mode: :static | :load_more | :search | :search_multi,
           page_size: pos_integer(),
           load_action: atom() | {atom(), atom()} | nil,
-          load: (any(), map() -> any()) | nil,
+          load: (Ash.Query.t(), map() -> Ash.Query.t()) | nil,
           apply: (any(), any(), map() -> any()) | nil,
           format: (any() -> any()) | (map(), map(), any() -> any()) | nil,
           render:
@@ -270,7 +270,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                 ],
                 load: [
                   type: {:fun, 2},
-                  doc: "Custom load function. `fn query, state -> results end`"
+                  doc:
+                    "Scopes the query that loads the field's options: `fn query, state -> query`."
                 ],
                 apply: [
                   type: {:fun, 3},

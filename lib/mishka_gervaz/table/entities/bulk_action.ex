@@ -80,7 +80,8 @@ defmodule MishkaGervaz.Table.Entities.BulkAction do
     ],
     confirm: [
       type: {:or, [:boolean, :string]},
-      doc: "Confirmation message ({count} interpolated)."
+      doc:
+        "Confirmation text shown before the action runs. `{count}` becomes the number of rows the action runs on: the checked rows, or with select all the table's total minus the unchecked rows. With select all, `{count}` stays as written for a `:load_more` or `:infinite` table with `show_total false` while rows are left to load."
     ],
     event: [
       type: :atom,

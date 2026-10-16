@@ -579,6 +579,46 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
     end
   end
 
+  describe "pagination events - change_page_size" do
+    defp with_page_size_options(state, options) do
+      %{state | static: %{state.static | page_size_options: options}}
+    end
+
+    defp change_page_size(state, size) do
+      socket = create_socket(state, with_stream: true)
+      {:noreply, socket} = Events.handle("change_page_size", %{"size" => size}, socket)
+      socket.assigns.table_state
+    end
+
+    test "a table with no page_size_options takes any size up to max_page_size" do
+      state = init_loaded_state(BasicResource, master_user())
+      assert state.static.page_size_options == nil
+
+      assert change_page_size(state, "37").current_page_size == 37
+
+      too_big = to_string(state.static.max_page_size + 1)
+      assert change_page_size(state, too_big).current_page_size == state.static.max_page_size
+    end
+
+    test "a table with page_size_options takes a size on the list" do
+      state = with_page_size_options(init_loaded_state(BasicResource, master_user()), [10, 40])
+
+      assert change_page_size(state, "40").current_page_size == 40
+    end
+
+    test "a table with page_size_options turns a size off the list into the default size" do
+      state = with_page_size_options(init_loaded_state(BasicResource, master_user()), [10, 40])
+
+      assert change_page_size(state, "37").current_page_size == state.static.page_size
+    end
+
+    test "a size change reloads from page 1" do
+      state = init_loaded_state(BasicResource, master_user(), page: 3, total_pages: 6)
+
+      assert change_page_size(state, "50").loading == :loading
+    end
+  end
+
   describe "delete event" do
     test "deletes record" do
       [record | _] = create_test_data(BasicResource, 3)
@@ -1290,6 +1330,114 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
         Events.handle("row_action", %{"event" => "blocked_action", "id" => "test"}, socket)
 
       assert_received :on_event_halted
+    end
+
+    test "the global on_event hook runs for a row action event nothing else handles" do
+      test_pid = self()
+
+      on_event = fn event_name, params, socket ->
+        send(test_pid, {:on_event_called, event_name, params})
+        socket
+      end
+
+      state = init_loaded_state(BasicResource, master_user(), hooks: %{on_event: on_event})
+      socket = create_socket(state)
+      params = %{"event" => "custom_action", "id" => "row-1"}
+
+      {:noreply, _socket} = Events.handle("row_action", params, socket)
+
+      assert_received {:on_event_called, "custom_action", ^params}
+      assert_received {:row_action, "custom_action", ^params}
+    end
+
+    test "the global on_event hook runs for a custom_event with its decoded values" do
+      test_pid = self()
+
+      on_event = fn event_name, params, socket ->
+        send(test_pid, {:on_event_called, event_name, params})
+        {:cont, socket}
+      end
+
+      state = init_loaded_state(BasicResource, master_user(), hooks: %{on_event: on_event})
+      socket = create_socket(state)
+
+      {:noreply, _socket} =
+        Events.handle(
+          "custom_event",
+          %{"event" => "ping", "values" => Jason.encode!(%{"id" => "7"})},
+          socket
+        )
+
+      assert_received {:on_event_called, "ping", %{"id" => "7"}}
+      assert_received {:row_action, "ping", %{"id" => "7"}}
+    end
+
+    test "the global on_event hook runs for an event name the table does not know" do
+      test_pid = self()
+
+      on_event = fn event_name, params, socket ->
+        send(test_pid, {:on_event_called, event_name, params})
+        socket
+      end
+
+      state = init_loaded_state(BasicResource, master_user(), hooks: %{on_event: on_event})
+      socket = create_socket(state)
+
+      {:noreply, _socket} = Events.handle("some_unknown_event", %{"key" => "value"}, socket)
+
+      assert_received {:on_event_called, "some_unknown_event", %{"key" => "value"}}
+      assert_received {:table_event, "some_unknown_event", %{"key" => "value"}}
+    end
+
+    test "the global on_event hook halts the message to the parent LiveView" do
+      on_event = fn _event_name, _params, socket -> {:halt, socket} end
+
+      state = init_loaded_state(BasicResource, master_user(), hooks: %{on_event: on_event})
+      socket = create_socket(state)
+
+      {:noreply, _} = Events.handle("some_unknown_event", %{"key" => "value"}, socket)
+      {:noreply, _} = Events.handle("row_action", %{"event" => "custom_action"}, socket)
+      {:noreply, _} = Events.handle("custom_event", %{"event" => "ping"}, socket)
+
+      refute_received {:table_event, _, _}
+      refute_received {:row_action, _, _}
+    end
+
+    test "the socket the global on_event hook returns is the one the table keeps" do
+      on_event = fn _event_name, _params, socket ->
+        Phoenix.Component.assign(socket, :marker, :set_by_on_event)
+      end
+
+      state = init_loaded_state(BasicResource, master_user(), hooks: %{on_event: on_event})
+      socket = create_socket(state)
+
+      {:noreply, socket} = Events.handle("some_unknown_event", %{}, socket)
+
+      assert socket.assigns.marker == :set_by_on_event
+      assert_received {:table_event, "some_unknown_event", %{}}
+    end
+
+    test "the global on_event hook does not run for an event the table handles" do
+      test_pid = self()
+
+      on_event = fn event_name, _params, socket ->
+        send(test_pid, {:on_event_called, event_name})
+        socket
+      end
+
+      per_event = fn _payload, state -> {:ok, state} end
+
+      state =
+        init_loaded_state(BasicResource, master_user(),
+          hooks: %{{:on_event, "handled_action"} => per_event, on_event: on_event}
+        )
+
+      socket = create_socket(state)
+
+      {:noreply, _} = Events.handle("toggle_select_all", %{}, socket)
+      {:noreply, _} = Events.handle("row_action", %{"event" => "handled_action"}, socket)
+
+      refute_received {:on_event_called, _}
     end
 
     test "after_delete hook is called after successful deletion" do

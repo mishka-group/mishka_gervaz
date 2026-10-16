@@ -16,16 +16,21 @@ hooks do
   before_delete fn record, state -> {:ok, state} end          # {:halt, {:error, msg}} refuses
   after_delete  fn record, state -> :ok end                    # side effects only
   on_realtime fn notification, socket -> {:cont, socket} end   # {:halt, socket} skips the update
-  on_expand   fn record_id, socket -> {:cont, socket} end      # {:halt, socket} cancels
+  on_expand   fn record_id, socket -> {:cont, socket} end      # {:halt, socket} skips the {:expand_row, id} message
   on_filter   fn filter_values, socket -> socket end
   on_select   fn selected_ids, socket -> socket end
   on_sort     fn {field, direction}, socket -> socket end
-  on_event    fn event_name, params, socket -> {:ok, socket} end
+  on_event    fn event_name, params, socket -> socket end      # {:halt, socket} skips the message to the parent
 end
 ```
 
 Most may return `socket`, `{:cont, socket}` or `{:halt, socket}`. `:halt` stops the built-in
 behaviour.
+
+`on_event` runs for an event the table does not handle itself: a row action event with no matching
+action or `override_row_action`, a `custom_event`, or an unknown event name. The table then sends
+`{:row_action, event_name, params}` or `{:table_event, event_name, params}` to the parent LiveView,
+unless the hook halts.
 
 An `on_realtime` that halts and adds or removes rows itself hands its socket through
 `MishkaGervaz.Table.Web.DataLoader.refresh_total/1`, so "Showing N", the page count and the empty

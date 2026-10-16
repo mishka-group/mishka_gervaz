@@ -232,6 +232,39 @@ defmodule MishkaGervaz.Table.Web.DataLoader.RelationLoaderTest do
     end
   end
 
+  describe "a filter's load function" do
+    require Ash.Query
+
+    test "receives the query and the state, and the query it returns is the one read" do
+      create_records(NoPaginationResource, 5)
+      test_pid = self()
+
+      load = fn query, state ->
+        send(test_pid, {:load_called, query, state})
+        Ash.Query.filter(query, name in ["Item 2", "Item 4"])
+      end
+
+      filter = build_filter(NoPaginationResource, mode: :static) |> Map.put(:load, load)
+      state = build_mock_state(master_user())
+
+      {:ok, result} = RelationLoader.load_options(filter, state)
+
+      assert_received {:load_called, %Ash.Query{resource: NoPaginationResource}, ^state}
+      assert result.options |> Enum.map(&elem(&1, 0)) |> Enum.sort() == ["Item 2", "Item 4"]
+    end
+
+    test "scopes the paginated modes as well" do
+      create_records(OptionalPaginationResource, 5)
+
+      load = fn query, _state -> Ash.Query.filter(query, name == "Item 3") end
+      filter = build_filter(OptionalPaginationResource, mode: :load_more) |> Map.put(:load, load)
+
+      {:ok, result} = RelationLoader.load_options(filter, build_mock_state(master_user()))
+
+      assert Enum.map(result.options, &elem(&1, 0)) == ["Item 3"]
+    end
+  end
+
   # ============================================================================
   # RelationLoader.load_options/3 - load_more mode (paginated)
   # ============================================================================
