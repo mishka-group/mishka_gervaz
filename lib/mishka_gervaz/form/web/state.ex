@@ -290,6 +290,8 @@ defmodule MishkaGervaz.Form.Web.State do
 
     require Logger
 
+    alias MishkaGervaz.Form.Web.DataLoader.RelationLoader
+
     import MishkaGervaz.Helpers, only: [module_to_snake: 2]
 
     @doc """
@@ -496,12 +498,16 @@ defmodule MishkaGervaz.Form.Web.State do
     defp declared_readonly?(_field, _state), do: false
 
     @doc false
-    @spec load_static_relation_options(list(map()), map() | nil) :: map()
-    def load_static_relation_options(fields, current_user) do
+    @spec load_static_relation_options(list(map()), map() | nil, boolean()) :: map()
+    def load_static_relation_options(fields, current_user, master_user? \\ false) do
+      label_state = %{current_user: current_user, master_user?: master_user?}
+
       fields
       |> Enum.filter(&static_relation?/1)
       |> Task.async_stream(
-        MishkaGervaz.Messages.in_caller_locale(&{&1.name, load_relation(&1, current_user)}),
+        MishkaGervaz.Messages.in_caller_locale(
+          &{&1.name, load_relation(&1, current_user, label_state)}
+        ),
         timeout: :infinity,
         ordered: false,
         on_timeout: :kill_task
@@ -513,10 +519,10 @@ defmodule MishkaGervaz.Form.Web.State do
       end)
     end
 
-    defp load_relation(field, current_user) do
+    defp load_relation(field, current_user, label_state) do
       case Ash.read(field.resource, actor: current_user, authorize?: false, page: false) do
         {:ok, records} ->
-          {:ok, build_relation_payload(field, records)}
+          {:ok, build_relation_payload(field, records, label_state)}
 
         {:error, reason} ->
           Logger.warning(
@@ -560,15 +566,14 @@ defmodule MishkaGervaz.Form.Web.State do
 
     defp static_relation?(_field), do: false
 
-    defp build_relation_payload(field, records) do
-      display_field = field.display_field || :name
+    defp build_relation_payload(field, records, label_state) do
+      display_field = RelationLoader.resolve_display_field(field, field.resource)
 
       options =
         records
         |> Enum.map(fn record ->
-          label = to_string(Map.get(record, display_field, Map.get(record, :id)))
-          value = to_string(record.id)
-          {label, value}
+          {RelationLoader.get_display_value(record, display_field, label_state),
+           to_string(record.id)}
         end)
         |> prepend_nil_option(field.include_nil)
 
@@ -679,7 +684,8 @@ defmodule MishkaGervaz.Form.Web.State do
           errors: %{},
           form_errors: [],
           field_values: %{},
-          relation_options: StateHelpers.load_static_relation_options(fields, current_user),
+          relation_options:
+            StateHelpers.load_static_relation_options(fields, current_user, master_user?),
           combobox_options: StateHelpers.load_combobox_options(fields),
           upload_state: %{},
           existing_files: %{},

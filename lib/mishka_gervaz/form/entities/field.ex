@@ -236,7 +236,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                 ],
                 display_field: [
                   type: {:or, [:atom, {:fun, 1}, {:fun, 2}]},
-                  doc: "Display field for relation/select options."
+                  doc:
+                    "What a relation option reads as: an attribute, `fn record -> label end`, or `fn record, state -> label end` given the form state. A record whose attribute is `nil` reads as its id."
                 ],
                 search_field: [
                   type: :atom,

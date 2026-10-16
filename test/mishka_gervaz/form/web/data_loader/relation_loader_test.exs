@@ -575,4 +575,86 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoaderTest do
       assert length(page2) == 5
     end
   end
+
+  # ============================================================================
+  # An option's label
+  # ============================================================================
+
+  describe "an option's label" do
+    setup do
+      named = Ash.create!(OptionalPaginationResource, %{name: "Named", title: "1.0 — Stable"})
+      unnamed = Ash.create!(OptionalPaginationResource, %{name: "Unnamed"})
+
+      %{named: named, unnamed: unnamed}
+    end
+
+    test "is the record's id when the display field is empty on it, in every mode", ctx do
+      state = build_state(master_user())
+      ids = [to_string(ctx.named.id), to_string(ctx.unnamed.id)]
+
+      for field <- [
+            build_field(OptionalPaginationResource, display_field: :title),
+            build_field(OptionalPaginationResource, display_field: :title, mode: :search)
+          ] do
+        {:ok, options, false} = RelationLoader.load_options(field, state)
+        {:ok, selected} = RelationLoader.resolve_selected(field, state, ids)
+
+        for labels <- [
+              Map.new(options, &{elem(&1, 1), elem(&1, 0)}),
+              Map.new(selected, &{elem(&1, 1), elem(&1, 0)})
+            ] do
+          assert labels[to_string(ctx.named.id)] == "1.0 — Stable"
+          assert labels[to_string(ctx.unnamed.id)] == to_string(ctx.unnamed.id)
+        end
+      end
+    end
+
+    test "is what a two-argument display field makes of the record and the form state", ctx do
+      label = fn record, state ->
+        "#{record.name} (#{if state.master_user?, do: "master", else: "site"})"
+      end
+
+      field = build_field(OptionalPaginationResource, display_field: label, mode: :search)
+      master = build_state(master_user())
+      site = build_state(%{id: "site-1", site_id: "site-a", role: :admin})
+
+      {:ok, options, false} = RelationLoader.load_options(field, master)
+      assert {"Named (master)", to_string(ctx.named.id)} in options
+
+      {:ok, found, false} = RelationLoader.search_options(field, site, "Unnamed")
+      assert found == [{"Unnamed (site)", to_string(ctx.unnamed.id)}]
+
+      {:ok, selected} = RelationLoader.resolve_selected(field, master, [to_string(ctx.named.id)])
+      assert selected == [{"Named (master)", to_string(ctx.named.id)}]
+    end
+
+    test "of a static relation loaded with the form is read the same way", ctx do
+      fields = [
+        Map.put(
+          build_field(OptionalPaginationResource, name: :by_title, display_field: :title),
+          :type,
+          :relation
+        ),
+        Map.put(
+          build_field(OptionalPaginationResource,
+            name: :by_role,
+            display_field: fn record, state -> "#{record.name}/#{state.master_user?}" end
+          ),
+          :type,
+          :relation
+        )
+      ]
+
+      loaded =
+        MishkaGervaz.Form.Web.State.Helpers.load_static_relation_options(
+          fields,
+          master_user(),
+          true
+        )
+
+      assert {to_string(ctx.unnamed.id), to_string(ctx.unnamed.id)} in loaded.by_title.options
+      assert {"1.0 — Stable", to_string(ctx.named.id)} in loaded.by_title.options
+      assert {"Named/true", to_string(ctx.named.id)} in loaded.by_role.options
+    end
+  end
 end

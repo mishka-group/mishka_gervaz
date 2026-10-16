@@ -62,7 +62,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
     case Ash.read(query, opts) do
       {:ok, records} ->
-        options = build_options(records, display_field, field[:include_nil], vf)
+        options = build_options(records, display_field, field[:include_nil], vf, state)
         {:ok, options, false}
 
       {:error, reason} ->
@@ -96,13 +96,13 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
       {:ok, %{results: records}} ->
         has_more? = length(records) > page_size
         actual = if has_more?, do: Enum.take(records, page_size), else: records
-        options = build_options(actual, display_field, include_nil, vf)
+        options = build_options(actual, display_field, include_nil, vf, state)
         {:ok, options, has_more?}
 
       {:ok, records} when is_list(records) ->
         has_more? = length(records) > page_size
         actual = if has_more?, do: Enum.take(records, page_size), else: records
-        options = build_options(actual, display_field, include_nil, vf)
+        options = build_options(actual, display_field, include_nil, vf, state)
         {:ok, options, has_more?}
 
       {:error, reason} ->
@@ -111,10 +111,16 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
   end
 
   @doc false
-  def build_options(records, display_field, include_nil \\ false, value_field \\ nil) do
+  def build_options(
+        records,
+        display_field,
+        include_nil \\ false,
+        value_field \\ nil,
+        state \\ nil
+      ) do
     base =
       Enum.map(records, fn record ->
-        {get_display_value(record, display_field), get_record_value(record, value_field)}
+        {get_display_value(record, display_field, state), get_record_value(record, value_field)}
       end)
 
     prepend_nil_option(base, include_nil)
@@ -192,20 +198,31 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
     end
   end
 
-  @doc false
-  def get_display_value(record, display_field) when is_atom(display_field) do
-    to_string(Map.get(record, display_field, Map.get(record, :id)))
-  end
+  @doc """
+  A record's option label, by its `display_field` as `MishkaGervaz.Helpers.resolve_label/3` reads it:
+  an attribute, `fn record -> label end`, or `fn record, state -> label end` given the form state. An
+  attribute the record leaves `nil` reads as the record's id.
 
-  def get_display_value(record, display_field) when is_function(display_field, 1) do
-    display_field.(record)
-  end
+      iex> MishkaGervaz.Form.Web.DataLoader.RelationLoader.get_display_value(
+      ...>   %{id: "v-1", version_name: nil},
+      ...>   :version_name
+      ...> )
+      "v-1"
+  """
+  @spec get_display_value(map(), atom() | function(), map() | nil) :: String.t()
+  def get_display_value(record, display_field, state \\ nil)
 
-  def get_display_value(record, _), do: to_string(record.id)
+  def get_display_value(record, display_field, state)
+      when is_atom(display_field) or is_function(display_field, 1) or
+             is_function(display_field, 2),
+      do: MishkaGervaz.Helpers.resolve_label(record, display_field, state)
+
+  def get_display_value(record, _display_field, _state), do: to_string(record.id)
 
   @doc false
   def resolve_display_field(%{display_field: field}, _resource)
-      when is_function(field, 1) or (is_atom(field) and not is_nil(field)) do
+      when is_function(field, 1) or is_function(field, 2) or
+             (is_atom(field) and not is_nil(field)) do
     field
   end
 
@@ -266,10 +283,10 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
 
           case Ash.read(query, read_opts) do
             {:ok, %{results: [record | _]}} ->
-              {get_display_value(record, display_field), get_record_value(record, vf)}
+              {get_display_value(record, display_field, state), get_record_value(record, vf)}
 
             {:ok, [record | _]} ->
-              {get_display_value(record, display_field), get_record_value(record, vf)}
+              {get_display_value(record, display_field, state), get_record_value(record, vf)}
 
             _ ->
               nil
@@ -280,7 +297,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
         Enum.map(selected_ids, fn id ->
           case Ash.get(resource, id, get_opts) do
             {:ok, record} ->
-              {get_display_value(record, display_field), to_string(record.id)}
+              {get_display_value(record, display_field, state), to_string(record.id)}
 
             _ ->
               nil
@@ -353,6 +370,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           get_tenant: 1,
           maybe_apply_custom_load: 3,
           get_display_value: 2,
+          get_display_value: 3,
           get_record_value: 2,
           resolve_selected_fallback: 7,
           field_options: 2,
@@ -453,7 +471,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
               {:ok, records} ->
                 matched =
                   Enum.map(records, fn record ->
-                    {get_display_value(record, display_field), get_record_value(record, vf)}
+                    {get_display_value(record, display_field, state),
+                     get_record_value(record, vf)}
                   end)
 
                 {:ok, matched}

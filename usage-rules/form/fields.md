@@ -58,7 +58,7 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 | `derive_value` | `fn record -> value` | — | how edit mode reads a virtual field off the record |
 | `options` | list \| `fn -> list` \| `fn state -> list` | — | function runs at load; `fn state` only on a resource-less `:relation` |
 | `options_source` | `{resource, action, display_field}` | — | ⚠ not wired — use `options` or `load` |
-| `display_field` | atom \| `fn r ->` \| `fn r, state ->` | — | relation label |
+| `display_field` | atom \| `fn r ->` \| `fn r, state ->` | — | relation label; a `nil` attribute reads as the record's id |
 | `search_field` | atom | — | autocomplete field |
 | `value_field` | atom | — | store this attribute instead of `:id` |
 | `mode` | `:static` \| `:load_more` \| `:search` \| `:search_multi` | `:static` | |
