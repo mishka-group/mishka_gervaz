@@ -1,7 +1,7 @@
 defmodule MishkaGervaz.MixProject do
   use Mix.Project
 
-  @version "0.0.1-alpha.6"
+  @version "0.0.1-alpha.7"
   @source_url "https://github.com/mishka-group/mishka_gervaz"
 
   def project do
@@ -38,7 +38,7 @@ defmodule MishkaGervaz.MixProject do
     [
       {:decimal, "~> 3.2", override: true},
       {:spark, "~> 2.7"},
-      {:ash, "~> 3.33"},
+      {:ash, "~> 3.36"},
       {:splode, "~> 0.3"},
       {:gettext, "~> 1.0"},
       {:phoenix_live_view, "~> 1.2", optional: true},
