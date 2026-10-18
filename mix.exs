@@ -51,7 +51,8 @@ defmodule MishkaGervaz.MixProject do
       {:sourceror, "~> 1.12", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:igniter, "~> 0.8", only: [:dev, :test], runtime: false},
-      {:ash_archival, "~> 2.0", only: :test}
+      {:ash_archival, "~> 2.0", only: :test},
+      {:lazy_html, "~> 0.1.13", only: :test}
     ]
   end
 

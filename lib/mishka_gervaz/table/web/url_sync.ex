@@ -108,8 +108,10 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   Gets all configuration from the resource's DSL (url_sync section and filters).
   Always pass the URI - the system uses it for bidirectional sync if enabled in DSL. Its query
-  string is kept as `:query`, the params by name, which the table compares with the URL it last
-  wrote (`same_url?/2`).
+  string is kept as `:query`, the params by name. The table applies each URL once: handed the one
+  it took last again, as when the page renders it for a reason of its own, it keeps its state; its
+  own write coming back is the very URL it wrote (`same_url?/2`). A `url_state` without `:query`
+  is applied whenever it differs from the table's state.
 
   ## Usage
 

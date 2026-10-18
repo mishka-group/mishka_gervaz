@@ -203,6 +203,9 @@ defmodule MishkaGervaz.Table.Web.Live do
 
           {state, path_params != existing_state.path_params}
 
+        seen_url?(socket.assigns[:url_seen], url_state) ->
+          {existing_state, false}
+
         true ->
           state =
             existing_state
@@ -282,6 +285,11 @@ defmodule MishkaGervaz.Table.Web.Live do
   end
 
   defp own_url?(_url, _url_state), do: false
+
+  # The URL the table took last, handed to it again: nothing in it is new. A `url_state` decoded
+  # without a URI is never one.
+  defp seen_url?({path, query}, %{path: path, query: query}), do: true
+  defp seen_url?(_seen, _url_state), do: false
 
   @spec expanded_result(AsyncResult.t() | nil, term()) :: AsyncResult.t()
   defp expanded_result(%AsyncResult{} = current, html), do: AsyncResult.ok(current, html)

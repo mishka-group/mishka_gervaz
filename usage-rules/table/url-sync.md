@@ -57,6 +57,11 @@ and passes `url_state={@url_state}` to the component. `decode/3` reads the resou
 `decode/4` takes overrides: `allowed_params`, `allowed_filters`, `max_filter_length`, `prefix`.
 It returns `nil` when the resource has URL sync disabled. Full flow: [../mounting.md](../mounting.md).
 
+The table applies each URL once. The page rendering it again with the same `url_state` — a
+PubSub event, a rail or a flash of its own — leaves the reader's filters, sort and page as they
+are, even while their load is running. A URL the reader goes to — a link, a patch, Back — is
+applied.
+
 ## TODO
 - [ ] Unique `prefix` per table appearing on the same page
 - [ ] Parent calls `UrlSync.decode/3` in `handle_params` and assigns `:url_state`
