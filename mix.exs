@@ -8,7 +8,7 @@ defmodule MishkaGervaz.MixProject do
     [
       app: :mishka_gervaz,
       version: @version,
-      elixir: "~> 1.17",
+      elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
       deps: deps(),
@@ -20,7 +20,7 @@ defmodule MishkaGervaz.MixProject do
       description:
         "Mishka Gervaz is a comprehensive, declarative UI library for the Ash ecosystem — define tables, forms, and data-driven interfaces entirely through DSL, with built-in sorting, filtering, real-time updates, and extensible templates.",
       source_url: @source_url,
-      homepage_url: @source_url,
+      homepage_url: "https://mishka.tools/gervaz",
       elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
@@ -61,9 +61,12 @@ defmodule MishkaGervaz.MixProject do
       maintainers: ["Shahryar Tavakkoli", "Mona Aghili"],
       licenses: ["Apache-2.0"],
       links: %{
+        "Mishka Gervaz" => "https://mishka.tools/gervaz",
+        "Official document" => "https://mishka.tools/gervaz/docs",
         "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/master/CHANGELOG.md",
-        "Sponsor" => "https://github.com/sponsors/mishka-group"
+        "Sponsor" => "https://github.com/sponsors/mishka-group",
+        "Contributors" => "#{@source_url}/graphs/contributors"
       },
       files: ~w(lib mix.exs .formatter.exs README.md LICENSE CHANGELOG.md
                 usage-rules.md usage-rules documentation)
