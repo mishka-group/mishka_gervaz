@@ -78,6 +78,50 @@ defmodule MishkaGervaz.Form.Types.KeyMapTest do
     end
   end
 
+  # A Phoenix attribute's `default` is "medium" on one attribute and `%{}` on another. Under `:text`
+  # the map could not be drawn and would be saved back as the string "%{}"; a `:json` key reads its
+  # text as the `:json` field type does.
+  describe "a :json key" do
+    defp json_keys, do: %{options: [[name: :default, type: :json]]}
+
+    test "reads a JSON object or array back as the map or list it spells" do
+      assert KeyMap.parse_params(%{"default" => "{}"}, json_keys()) == %{"default" => %{}}
+
+      assert KeyMap.parse_params(%{"default" => ~s({"a": 1})}, json_keys()) == %{
+               "default" => %{"a" => 1}
+             }
+
+      assert KeyMap.parse_params(%{"default" => ~s(["x"])}, json_keys()) == %{"default" => ["x"]}
+    end
+
+    test "keeps text that is not JSON as text" do
+      assert KeyMap.parse_params(%{"default" => "medium"}, json_keys()) == %{
+               "default" => "medium"
+             }
+
+      assert KeyMap.parse_params(%{"default" => "{broken"}, json_keys()) == %{
+               "default" => "{broken"
+             }
+    end
+
+    test "and a value that is already a map or a list passes through" do
+      assert KeyMap.parse_params(%{"default" => %{}}, json_keys()) == %{"default" => %{}}
+      assert KeyMap.parse_params(%{"default" => []}, json_keys()) == %{"default" => []}
+    end
+
+    test "is dropped when left blank, but an empty map is a value, not a blank" do
+      assert KeyMap.parse_params(%{"default" => ""}, json_keys()) == %{}
+      assert KeyMap.parse_params(%{"default" => "{}"}, json_keys()) == %{"default" => %{}}
+    end
+
+    test "inside a nested row too, which is where an attribute's options live" do
+      subs = [%{name: :opts, type: :key_map, options: [[name: :default, type: :json]]}]
+
+      assert [%{"opts" => %{"default" => %{}}}] =
+               Nested.parse_params([%{"opts" => %{"default" => "{}"}}], %{nested_fields: subs})
+    end
+  end
+
   # The other half: what the row is worth once it has been parsed.
   describe "a nested row's values are the types they were declared as" do
     defp rows(value), do: Nested.parse_params(value, %{nested_fields: subs()})
