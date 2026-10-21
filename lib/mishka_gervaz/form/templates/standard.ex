@@ -802,6 +802,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp key_map_control(%{type: :number} = key, _value),
     do: %{function: :number_input, placeholder: translate_text(key.placeholder)}
 
+  # A map or a list held under a `:json` key is shown as the `:json` field type shows one; a text
+  # control cannot draw it.
+  defp key_map_control(%{type: :json} = key, value),
+    do: %{
+      function: :text_input,
+      value: encode_json_value(value),
+      placeholder: translate_text(key.placeholder)
+    }
+
   defp key_map_control(key, _value),
     do: %{function: :text_input, placeholder: translate_text(key.placeholder)}
 

@@ -143,6 +143,17 @@ defmodule MishkaGervaz.Form.Templates.StandardKeyFieldRenderTest do
       assert html =~ "checked", "the toggle reads the stored boolean"
     end
 
+    # A text control cannot draw a map, and asking it to crashed the whole form's LiveView.
+    test "a :json key draws a stored map or list as JSON", %{field: field} do
+      html = render_form(field, with_record(%{settings: %{defaults: %{}}}))
+
+      assert html =~ ~s|name="form[settings][defaults]"|
+      assert html =~ ~s|value="{}"|
+
+      html = render_form(field, with_record(%{settings: %{defaults: ["a"]}}))
+      assert html =~ "&quot;a&quot;"
+    end
+
     test "an unset map still draws its keys", %{field: field} do
       html = render_form(field)
 

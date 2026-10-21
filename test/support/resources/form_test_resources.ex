@@ -1436,7 +1436,8 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
         field :settings, :key_map do
           options [
             [name: :theme, type: :text, label: "Theme"],
-            [name: :compact, type: :toggle, label: "Compact"]
+            [name: :compact, type: :toggle, label: "Compact"],
+            [name: :defaults, type: :json, label: "Defaults", placeholder: ~s({"size": "md"})]
           ]
 
           ui do
