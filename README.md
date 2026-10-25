@@ -14,12 +14,6 @@
 
 ---
 
-> [!WARNING]
-> **🚧 Status — alpha.** APIs are still evolving and the library is not yet recommended for production.
-> Track progress on [GitHub](https://github.com/mishka-group/mishka_gervaz) and the [CHANGELOG](https://github.com/mishka-group/mishka_gervaz/blob/master/CHANGELOG.md).
-
----
-
 ## 📖 Table of contents
 
 - [Why MishkaGervaz?](#-why-mishkagervaz)
