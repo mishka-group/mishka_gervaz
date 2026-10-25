@@ -1,7 +1,7 @@
 defmodule MishkaGervaz.MixProject do
   use Mix.Project
 
-  @version "0.0.1"
+  @version "0.0.2"
   @source_url "https://github.com/mishka-group/mishka_gervaz"
 
   def project do
@@ -68,7 +68,7 @@ defmodule MishkaGervaz.MixProject do
         "Sponsor" => "https://github.com/sponsors/mishka-group",
         "Contributors" => "#{@source_url}/graphs/contributors"
       },
-      files: ~w(lib mix.exs .formatter.exs README.md LICENSE CHANGELOG.md
+      files: ~w(lib priv mix.exs .formatter.exs README.md LICENSE CHANGELOG.md
                 usage-rules.md usage-rules documentation)
     ]
   end
