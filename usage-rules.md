@@ -33,10 +33,10 @@ Everything below is needed by **every** job. Read it once, then go to the sub-ru
 
 ```elixir
 # mix.exs
-{:mishka_gervaz, "~> 0.0.1-alpha.5"}
+{:mishka_gervaz, "~> 0.0.1"}
 ```
 
-Runtime deps it brings: `ash ~> 3.29`, `ash_phoenix ~> 2.3`, `spark ~> 2.7`, `splode ~> 0.3.1`,
+Runtime deps it brings: `ash ~> 3.37`, `ash_phoenix ~> 2.3`, `spark ~> 2.7`, `splode ~> 0.3`,
 `gettext ~> 1.0`, `jason ~> 1.4`, `html_sanitize_ex ~> 1.5`. `phoenix_live_view ~> 1.2` is an
 **optional** dep — your Phoenix app supplies it.
 
@@ -79,7 +79,7 @@ end
 ```
 
 **TODO — wiring**
-- [ ] `{:mishka_gervaz, "~> 0.0.1-alpha.5"}` in `mix.exs`
+- [ ] `{:mishka_gervaz, "~> 0.0.1"}` in `mix.exs`
 - [ ] `:mishka_gervaz` added to `import_deps` **and** `Spark.Formatter` in `plugins`
 - [ ] `MishkaGervaz.Domain` on the Ash domain, `MishkaGervaz.Resource` on each resource
 - [ ] Domain declares `actions`, `pagination`, `realtime.pubsub`, `archive`, `form.actions`, `form.submit` once (see §3)

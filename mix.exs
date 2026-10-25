@@ -1,7 +1,7 @@
 defmodule MishkaGervaz.MixProject do
   use Mix.Project
 
-  @version "0.0.1-alpha.7"
+  @version "0.0.1"
   @source_url "https://github.com/mishka-group/mishka_gervaz"
 
   def project do
@@ -36,9 +36,9 @@ defmodule MishkaGervaz.MixProject do
 
   defp deps do
     [
-      {:decimal, "~> 3.2", override: true},
+      {:decimal, "~> 3.2"},
       {:spark, "~> 2.7"},
-      {:ash, "~> 3.36"},
+      {:ash, "~> 3.37"},
       {:splode, "~> 0.3"},
       {:gettext, "~> 1.0"},
       {:phoenix_live_view, "~> 1.2", optional: true},
@@ -48,7 +48,7 @@ defmodule MishkaGervaz.MixProject do
 
       # Test&Dev-only dependencies
       {:ex_doc, "~> 0.40", only: [:dev, :test], runtime: false},
-      {:sourceror, "~> 1.12", only: [:dev, :test], runtime: false},
+      {:sourceror, "~> 1.13", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:igniter, "~> 0.8", only: [:dev, :test], runtime: false},
       {:ash_archival, "~> 2.0", only: :test},
