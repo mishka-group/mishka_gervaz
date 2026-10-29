@@ -282,10 +282,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   attr :filter_name, :any, required: true
   attr :myself, :any, default: nil
 
+  # AN OPTION, SAID AS ONE. A `<button>` keeps what a keyboard already does with it, Enter and Space
+  # choose it, and `role="option"` with `aria-selected` is what tells a screen reader that it is one
+  # of a list and which of them is picked; the picked one's tint alone said that only to the eye.
   defp search_select_option(assigns) do
     ~H"""
     <button
       type="button"
+      role="option"
+      aria-selected={to_string(@current_value == to_string(@value))}
       class={[
         "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
         @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
@@ -357,6 +362,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   its label, and a grouped option reads `"Group · Label"` once picked.
 
   The input carries `aria-expanded`, `"true"` while the list is open.
+
+  It is a combobox over a listbox: the input says so and names the list it controls, each option is
+  an `option` that says whether it is the picked one, a group is a `group` named by its heading, and
+  the list is named by the field's label (the `<id>-label` a form's field wrapper writes). Tab
+  reaches the options and Enter or Space picks one, because each is a button; Escape closes the open
+  list.
   """
   @impl true
   def search_select(assigns) do
@@ -400,6 +411,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:search_term, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
 
+    assigns =
+      assign(assigns, :listbox, "search-select-#{assigns.table_id}-#{assigns.filter_name}-list")
+
     ~H"""
     <div
       class="relative"
@@ -428,6 +442,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             @disabled && disabled_class()
           ]}
           disabled={@disabled}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-controls={@listbox}
           aria-expanded={to_string(@dropdown_open? && !@disabled)}
           phx-debounce={if !@disabled, do: @debounce}
           phx-keyup={if !@disabled, do: "relation_search"}
@@ -445,39 +463,52 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <input type="hidden" name={@name} value={@current_value} />
 
+      <%!-- Escape is on the window, and only while the list is open: the input's own key binding
+            is the search, and a `phx-key` there would filter the search down to one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
         class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        phx-window-keydown="relation_close_dropdown"
+        phx-key="Escape"
+        phx-value-filter={@filter_name}
+        phx-target={@myself}
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
         </div>
-        <%= for entry <- @display_options do %>
-          <%= case entry do %>
-            <% {:group, group_label, opts} -> %>
-              <div class="px-3 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a8a5a0]">
-                {group_label}
-              </div>
-              <.search_select_option
-                :for={{opt_label, opt_value} <- opts}
-                label={opt_label}
-                picked_label={"#{group_label} · #{opt_label}"}
-                value={opt_value}
-                current_value={@current_value}
-                filter_name={@filter_name}
-                myself={@myself}
-              />
-            <% {:option, opt_label, opt_value} -> %>
-              <.search_select_option
-                label={opt_label}
-                picked_label={opt_label}
-                value={opt_value}
-                current_value={@current_value}
-                filter_name={@filter_name}
-                myself={@myself}
-              />
+        <div id={@listbox} role="listbox" aria-labelledby={@id && "#{@id}-label"}>
+          <%= for {entry, index} <- Enum.with_index(@display_options) do %>
+            <%= case entry do %>
+              <% {:group, group_label, opts} -> %>
+                <div role="group" aria-labelledby={"#{@listbox}-group-#{index}"}>
+                  <div
+                    id={"#{@listbox}-group-#{index}"}
+                    class="px-3 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a8a5a0]"
+                  >
+                    {group_label}
+                  </div>
+                  <.search_select_option
+                    :for={{opt_label, opt_value} <- opts}
+                    label={opt_label}
+                    picked_label={"#{group_label} · #{opt_label}"}
+                    value={opt_value}
+                    current_value={@current_value}
+                    filter_name={@filter_name}
+                    myself={@myself}
+                  />
+                </div>
+              <% {:option, opt_label, opt_value} -> %>
+                <.search_select_option
+                  label={opt_label}
+                  picked_label={opt_label}
+                  value={opt_value}
+                  current_value={@current_value}
+                  filter_name={@filter_name}
+                  myself={@myself}
+                />
+            <% end %>
           <% end %>
-        <% end %>
+        </div>
 
         <button
           :if={@has_more?}
