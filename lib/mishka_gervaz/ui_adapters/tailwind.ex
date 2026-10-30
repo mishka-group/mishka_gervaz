@@ -368,6 +368,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   the list is named by the field's label (the `<id>-label` a form's field wrapper writes). Tab
   reaches the options and Enter or Space picks one, because each is a button; Escape closes the open
   list.
+
+  The input's `:debounce` holds only while the list is shut. A press on an option blurs the input,
+  and LiveView sends a debounced keyup still waiting at that moment: its answer redrew the list
+  under the pointer between the press and the release, and the click landed on whatever was there
+  then, so the first click after typing only lit an option up. With the list open each keyup
+  searches at once, and the list on screen is the one a click acts on.
   """
   @impl true
   def search_select(assigns) do
@@ -447,7 +453,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-haspopup="listbox"
           aria-controls={@listbox}
           aria-expanded={to_string(@dropdown_open? && !@disabled)}
-          phx-debounce={if !@disabled, do: @debounce}
+          phx-debounce={if !@disabled and !@dropdown_open?, do: @debounce}
           phx-keyup={if !@disabled, do: "relation_search"}
           phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
@@ -661,7 +667,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   chips under the input while it is closed, each with a button that removes it; a chip reads its
   label from `:selected_options`, or the value when its label is not known.
 
-  The input carries `aria-expanded`, `"true"` while the list is open.
+  The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
+  while the list is shut, for the reason `search_select/1` gives.
   """
   @impl true
   def multi_select(assigns) do
@@ -716,7 +723,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           placeholder={@placeholder}
           class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", "w-full"]}
           aria-expanded={to_string(@dropdown_open?)}
-          phx-debounce={@debounce}
+          phx-debounce={if !@dropdown_open?, do: @debounce}
           phx-keyup="relation_search"
           phx-focus="relation_focus"
           phx-target={@myself}
