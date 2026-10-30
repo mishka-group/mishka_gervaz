@@ -168,8 +168,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     end
   end
 
-  # AN INPUT WITH AN ICON AT ITS START KEEPS THE PAGE'S DIRECTION, so its start padding stays on the
-  # icon's side; `[unicode-bidi:plaintext]` lets what is typed run in its own direction instead.
+  # The `dir` an input gets: none when it has an icon at its start, so it keeps the page's direction
+  # and its start padding stays on the icon's side. `[unicode-bidi:plaintext]` lets what is typed
+  # run in its own direction instead.
   defp icon_dir(icon, _dir) when icon not in [nil, false], do: nil
   defp icon_dir(_icon, dir), do: dir
 
@@ -282,9 +283,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   attr :filter_name, :any, required: true
   attr :myself, :any, default: nil
 
-  # AN OPTION, SAID AS ONE. A `<button>` keeps what a keyboard already does with it, Enter and Space
-  # choose it, and `role="option"` with `aria-selected` is what tells a screen reader that it is one
-  # of a list and which of them is picked; the picked one's tint alone said that only to the eye.
+  # One choice in the open list. It is a `<button>`, so Enter and Space pick it, and `role="option"`
+  # with `aria-selected` tells a screen reader it is one of a list and whether it is the picked one.
   defp search_select_option(assigns) do
     ~H"""
     <button
@@ -363,17 +363,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   The input carries `aria-expanded`, `"true"` while the list is open.
 
-  It is a combobox over a listbox: the input says so and names the list it controls, each option is
-  an `option` that says whether it is the picked one, a group is a `group` named by its heading, and
-  the list is named by the field's label (the `<id>-label` a form's field wrapper writes). Tab
-  reaches the options and Enter or Space picks one, because each is a button; Escape closes the open
-  list.
+  The input is a combobox over a listbox: it names the list it controls, and the list is named by
+  the field's label, the `<id>-label` a form's field wrapper writes. Each option says whether it is
+  the picked one, and a group is named by its heading. Tab reaches the options, Enter or Space picks
+  one and Escape closes the open list.
 
-  The input's `:debounce` holds only while the list is shut. A press on an option blurs the input,
-  and LiveView sends a debounced keyup still waiting at that moment: its answer redrew the list
-  under the pointer between the press and the release, and the click landed on whatever was there
-  then, so the first click after typing only lit an option up. With the list open each keyup
-  searches at once, and the list on screen is the one a click acts on.
+  The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
+  at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
+  input, and its answer redraws the list between the press and the release.
   """
   @impl true
   def search_select(assigns) do
@@ -469,8 +466,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <input type="hidden" name={@name} value={@current_value} />
 
-      <%!-- Escape is on the window, and only while the list is open: the input's own key binding
-            is the search, and a `phx-key` there would filter the search down to one key. --%>
+      <%!-- Escape is bound on the window, because a `phx-key` on the input would limit its search
+            to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
         class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"

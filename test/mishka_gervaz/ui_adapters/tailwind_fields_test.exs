@@ -158,9 +158,6 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
-  # A LIST A SCREEN READER AND A KEYBOARD CAN USE. The options were buttons in a plain `div`: Enter
-  # picked one, but nothing said they were a list, which of them was picked, or what the input had to
-  # do with them.
   describe "a search select read by its roles" do
     defp open_select(value) do
       %{
@@ -514,12 +511,9 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
-    # AN OPEN LIST IS SEARCHED AT ONCE. A press on an option blurs the input, and LiveView sends a
-    # debounced keyup still waiting at that moment; its answer redrew the list under the pointer
-    # between the press and the release, so the click landed on whatever was there now — the first
-    # click on "localhost" after typing "loc" only lit the row up, and a second one picked it. With
-    # nothing waiting, the list on screen is the one the click acts on. Closed, the input keeps its
-    # debounce: there is no list to click yet.
+    # With the list open nothing waits on the debounce when a press on an option blurs the input, so
+    # the list a click acts on is the one on screen. Shut, the input keeps its debounce: there is no
+    # list to click yet.
     test "searches at once while its list is open, and debounces while it is shut" do
       for fun <- [:search_select, :multi_select] do
         refute relation(fun, %{dropdown_open?: true}) =~ "phx-debounce", "#{fun}"
