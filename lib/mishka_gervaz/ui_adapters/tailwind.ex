@@ -168,8 +168,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     end
   end
 
-  # AN INPUT WITH AN ICON AT ITS START KEEPS THE PAGE'S DIRECTION, so its start padding stays on the
-  # icon's side; `[unicode-bidi:plaintext]` lets what is typed run in its own direction instead.
+  # The `dir` an input gets: none when it has an icon at its start, so it keeps the page's direction
+  # and its start padding stays on the icon's side. `[unicode-bidi:plaintext]` lets what is typed
+  # run in its own direction instead.
   defp icon_dir(icon, _dir) when icon not in [nil, false], do: nil
   defp icon_dir(_icon, dir), do: dir
 
@@ -282,10 +283,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   attr :filter_name, :any, required: true
   attr :myself, :any, default: nil
 
+  # One choice in the open list. It is a `<button>`, so Enter and Space pick it, and `role="option"`
+  # with `aria-selected` tells a screen reader it is one of a list and whether it is the picked one.
   defp search_select_option(assigns) do
     ~H"""
     <button
       type="button"
+      role="option"
+      aria-selected={to_string(@current_value == to_string(@value))}
       class={[
         "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
         @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
@@ -357,6 +362,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   its label, and a grouped option reads `"Group · Label"` once picked.
 
   The input carries `aria-expanded`, `"true"` while the list is open.
+
+  The input is a combobox over a listbox: it names the list it controls, and the list is named by
+  the field's label, the `<id>-label` a form's field wrapper writes. Each option says whether it is
+  the picked one, and a group is named by its heading. Tab reaches the options, Enter or Space picks
+  one and Escape closes the open list.
+
+  The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
+  at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
+  input, and its answer redraws the list between the press and the release.
   """
   @impl true
   def search_select(assigns) do
@@ -400,6 +414,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:search_term, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
 
+    assigns =
+      assign(assigns, :listbox, "search-select-#{assigns.table_id}-#{assigns.filter_name}-list")
+
     ~H"""
     <div
       class="relative"
@@ -428,8 +445,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             @disabled && disabled_class()
           ]}
           disabled={@disabled}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-controls={@listbox}
           aria-expanded={to_string(@dropdown_open? && !@disabled)}
-          phx-debounce={if !@disabled, do: @debounce}
+          phx-debounce={if !@disabled and !@dropdown_open?, do: @debounce}
           phx-keyup={if !@disabled, do: "relation_search"}
           phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
@@ -445,39 +466,52 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <input type="hidden" name={@name} value={@current_value} />
 
+      <%!-- Escape is bound on the window, because a `phx-key` on the input would limit its search
+            to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
         class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        phx-window-keydown="relation_close_dropdown"
+        phx-key="Escape"
+        phx-value-filter={@filter_name}
+        phx-target={@myself}
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
         </div>
-        <%= for entry <- @display_options do %>
-          <%= case entry do %>
-            <% {:group, group_label, opts} -> %>
-              <div class="px-3 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a8a5a0]">
-                {group_label}
-              </div>
-              <.search_select_option
-                :for={{opt_label, opt_value} <- opts}
-                label={opt_label}
-                picked_label={"#{group_label} · #{opt_label}"}
-                value={opt_value}
-                current_value={@current_value}
-                filter_name={@filter_name}
-                myself={@myself}
-              />
-            <% {:option, opt_label, opt_value} -> %>
-              <.search_select_option
-                label={opt_label}
-                picked_label={opt_label}
-                value={opt_value}
-                current_value={@current_value}
-                filter_name={@filter_name}
-                myself={@myself}
-              />
+        <div id={@listbox} role="listbox" aria-labelledby={@id && "#{@id}-label"}>
+          <%= for {entry, index} <- Enum.with_index(@display_options) do %>
+            <%= case entry do %>
+              <% {:group, group_label, opts} -> %>
+                <div role="group" aria-labelledby={"#{@listbox}-group-#{index}"}>
+                  <div
+                    id={"#{@listbox}-group-#{index}"}
+                    class="px-3 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a8a5a0]"
+                  >
+                    {group_label}
+                  </div>
+                  <.search_select_option
+                    :for={{opt_label, opt_value} <- opts}
+                    label={opt_label}
+                    picked_label={"#{group_label} · #{opt_label}"}
+                    value={opt_value}
+                    current_value={@current_value}
+                    filter_name={@filter_name}
+                    myself={@myself}
+                  />
+                </div>
+              <% {:option, opt_label, opt_value} -> %>
+                <.search_select_option
+                  label={opt_label}
+                  picked_label={opt_label}
+                  value={opt_value}
+                  current_value={@current_value}
+                  filter_name={@filter_name}
+                  myself={@myself}
+                />
+            <% end %>
           <% end %>
-        <% end %>
+        </div>
 
         <button
           :if={@has_more?}
@@ -630,7 +664,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   chips under the input while it is closed, each with a button that removes it; a chip reads its
   label from `:selected_options`, or the value when its label is not known.
 
-  The input carries `aria-expanded`, `"true"` while the list is open.
+  The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
+  while the list is shut, for the reason `search_select/1` gives.
   """
   @impl true
   def multi_select(assigns) do
@@ -685,7 +720,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           placeholder={@placeholder}
           class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", "w-full"]}
           aria-expanded={to_string(@dropdown_open?)}
-          phx-debounce={@debounce}
+          phx-debounce={if !@dropdown_open?, do: @debounce}
           phx-keyup="relation_search"
           phx-focus="relation_focus"
           phx-target={@myself}

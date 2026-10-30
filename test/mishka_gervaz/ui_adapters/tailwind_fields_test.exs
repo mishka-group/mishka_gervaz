@@ -158,6 +158,71 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
   end
 
+  describe "a search select read by its roles" do
+    defp open_select(value) do
+      %{
+        __changed__: nil,
+        id: "entry-form_record",
+        name: :record,
+        field: nil,
+        options: [
+          {"Nothing", "__nil__"},
+          {"Blog", [{"Post", "blog:post"}, {"Tag", "blog:tag"}]},
+          {"Docs", [{"Page", "docs:page"}]}
+        ],
+        value: value,
+        disabled: false,
+        dropdown_open?: true
+      }
+      |> Tailwind.search_select()
+      |> rendered_to_string()
+      |> LazyHTML.from_fragment()
+    end
+
+    defp attrs(html, selector, name),
+      do: html |> LazyHTML.query(selector) |> LazyHTML.attribute(name)
+
+    test "the input is a combobox over the list it opens" do
+      html = open_select("")
+      input = "input[name=_search_record]"
+      list = "search-select--record-list"
+
+      assert attrs(html, input, "role") == ["combobox"]
+      assert attrs(html, input, "aria-autocomplete") == ["list"]
+      assert attrs(html, input, "aria-controls") == [list]
+
+      assert attrs(html, "##{list}", "role") == ["listbox"]
+      assert attrs(html, "##{list}", "aria-labelledby") == ["entry-form_record-label"]
+    end
+
+    test "every choice is an option, and only the picked one is selected" do
+      html = open_select("blog:tag")
+
+      assert attrs(html, "[role=listbox] button", "role") == List.duplicate("option", 4)
+
+      assert attrs(html, "[role=option][aria-selected=true]", "phx-value-id") == ["blog:tag"]
+      assert length(attrs(html, "[role=option][aria-selected=false]", "phx-value-id")) == 3
+    end
+
+    test "a group is named by its heading" do
+      html = open_select("")
+
+      for {label, value} <- [{"Blog", "blog:post"}, {"Docs", "docs:page"}] do
+        [group] = attrs(html, "[role=group]:has([phx-value-id='#{value}'])", "aria-labelledby")
+        assert html |> LazyHTML.query("##{group}") |> LazyHTML.text() |> String.trim() == label
+      end
+    end
+
+    test "Escape closes the open list" do
+      html = open_select("")
+      [list] = html |> LazyHTML.query("div:has(> [role=listbox])") |> Enum.to_list()
+
+      assert LazyHTML.attribute(list, "phx-window-keydown") == ["relation_close_dropdown"]
+      assert LazyHTML.attribute(list, "phx-key") == ["Escape"]
+      assert LazyHTML.attribute(list, "phx-value-filter") == ["record"]
+    end
+  end
+
   describe "the stand-in for a field that is waiting" do
     @template File.read!("lib/mishka_gervaz/form/templates/standard.ex")
 
@@ -443,6 +508,16 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       for fun <- [:search_select, :multi_select, :load_more_select] do
         assert relation(fun, %{dropdown_open?: true}) =~ ~s(aria-expanded="true"), "#{fun}"
         assert relation(fun, %{dropdown_open?: false}) =~ ~s(aria-expanded="false"), "#{fun}"
+      end
+    end
+
+    # With the list open nothing waits on the debounce when a press on an option blurs the input, so
+    # the list a click acts on is the one on screen. Shut, the input keeps its debounce: there is no
+    # list to click yet.
+    test "searches at once while its list is open, and debounces while it is shut" do
+      for fun <- [:search_select, :multi_select] do
+        refute relation(fun, %{dropdown_open?: true}) =~ "phx-debounce", "#{fun}"
+        assert relation(fun, %{dropdown_open?: false}) =~ ~s(phx-debounce="300"), "#{fun}"
       end
     end
 
