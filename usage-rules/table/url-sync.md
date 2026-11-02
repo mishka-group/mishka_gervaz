@@ -34,6 +34,9 @@ end
 &<prefix>_template=grid
 ```
 
+With `:search` in `params`, a filter named `:search` is written as `<prefix>_search` only, never
+again as `<prefix>_filter_search`; without it, the search filter is a `filter_` param like any other.
+
 A page or page size that is not a positive whole number reads as missing. The table opens a page
 only when the database can read it: `(page - 1)` times its page size fits a signed 64-bit integer,
 the range Postgres takes for `OFFSET`. Any other page opens page 1, and a `:bidirectional` table

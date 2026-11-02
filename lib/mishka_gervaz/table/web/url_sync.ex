@@ -45,7 +45,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   - Filters: `?table_filter_status=active&table_filter_category=1`
   - Sort: `?table_sort=name:asc` or `?table_sort=inserted_at:desc`
   - Page: `?table_page=2`
-  - Search: `?table_search=hello`
+  - Search: `?table_search=hello` — with `:search` in `params`, the search filter is written here
+    and not again as `table_filter_search`
   - Template: `?table_template=grid`
 
   See `MishkaGervaz.Table.Web.State`,
@@ -347,12 +348,15 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   Check if url_state matches current table state.
 
   Used to detect if incoming url_state is from our own push_patch
-  (to avoid duplicate data reload).
+  (to avoid duplicate data reload). The URL's search is read as the `:search` filter it is applied
+  as.
   """
   @spec matches_state?(url_state() | nil, map()) :: boolean()
   def matches_state?(nil, _state), do: false
 
   def matches_state?(url_state, state) do
+    url_state = with_search_filter(url_state)
+
     Enum.all?(
       [
         {:filters, Map.get(state, :filter_values)},
@@ -365,6 +369,11 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     )
   end
 
+  defp with_search_filter(%{search: search} = url_state) when is_binary(search) and search != "",
+    do: Map.put(url_state, :filters, Map.put(url_state[:filters] || %{}, :search, search))
+
+  defp with_search_filter(url_state), do: url_state
+
   @spec specified_match?(url_state(), atom(), any()) :: boolean()
   defp specified_match?(url_state, key, current) do
     case url_state[key] do
@@ -376,7 +385,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec maybe_encode_filters(map(), map(), map(), String.t() | nil) :: map()
   defp maybe_encode_filters(params, state, config, prefix) do
     if :filters in (config[:params] || []) do
-      filters = Map.get(state, :filter_values, %{})
+      filters = without_searched(Map.get(state, :filter_values, %{}), config)
 
       Enum.reduce(filters, params, fn {key, value}, acc ->
         if is_nil(value) or value == "" do
@@ -444,17 +453,26 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec maybe_encode_search(map(), map(), map(), String.t() | nil) :: map()
   defp maybe_encode_search(params, state, config, prefix) do
     if :search in (config[:params] || []) do
-      filter_values = state.filter_values
-      search = filter_values[:search] || filter_values[:q]
-
-      if search && search != "" do
-        Map.put(params, build_key(prefix, "search"), search)
-      else
-        params
+      case searched(state.filter_values) do
+        nil -> params
+        key -> Map.put(params, build_key(prefix, "search"), state.filter_values[key])
       end
     else
       params
     end
+  end
+
+  # The filter the `<prefix>_search` param carries: `:search`, or `:q` when there is no search.
+  defp searched(%{search: search}) when search not in [nil, ""], do: :search
+  defp searched(%{q: q}) when q not in [nil, ""], do: :q
+  defp searched(_filter_values), do: nil
+
+  # The filters without the one the `<prefix>_search` param carries, when `:search` is a param, so
+  # the URL holds it once.
+  defp without_searched(filters, config) do
+    if :search in (config[:params] || []),
+      do: Map.delete(filters, searched(filters)),
+      else: filters
   end
 
   @spec maybe_encode_template(map(), map(), map(), String.t() | nil) :: map()
