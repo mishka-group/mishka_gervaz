@@ -25,6 +25,7 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
         <span data-state-page={@state.page}></span>
         <span data-stream-count={@stream_count}></span>
         <span data-empty={to_string(@empty?)}></span>
+        <span data-failed={to_string(@failed?)}></span>
       </div>
       """
     end
@@ -190,6 +191,23 @@ defmodule MishkaGervaz.Table.Web.RendererTest do
       state = create_state(total_count: 0, loading: :error)
 
       assert render_component(&Renderer.render/1, create_assigns(state)) =~ ~s(data-empty="false")
+    end
+  end
+
+  describe "failed? detection" do
+    test "true when the first read failed" do
+      state = create_state(has_initial_data?: false, loading: :error)
+
+      assert render_component(&Renderer.render/1, create_assigns(state)) =~ ~s(data-failed="true")
+    end
+
+    test "false once a read has succeeded, even when a later one fails" do
+      for loading <- [:loaded, :loading, :error] do
+        state = create_state(has_initial_data?: true, loading: loading)
+
+        assert render_component(&Renderer.render/1, create_assigns(state)) =~
+                 ~s(data-failed="false")
+      end
     end
   end
 

@@ -236,7 +236,12 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
   @callback render_loading(assigns()) :: rendered()
 
   @doc """
-  Render the error state. Optional - has default implementation.
+  Render the error state, drawn in place of the rows when the renderer's `@failed?` is true: no
+  read has succeeded and the last one failed. Optional - has default implementation.
+
+  The default draws the DSL's `error_state` (its message, icon and Retry label) through the
+  resource's UI adapter. Its Retry sends `"reload"` to `@myself`, which loads the table's first
+  page again with its filters, sort and search.
   """
   @callback render_error(assigns()) :: rendered()
 
@@ -314,10 +319,10 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
       end
 
       def render_error(assigns) do
-        assigns =
-          assign(assigns, :error_state, Map.get(assigns.static.config, :error_state, %{}))
-
-        MishkaGervaz.Table.Templates.Shared.render_error_state(assigns)
+        assigns
+        |> assign(:error_state, Map.get(assigns.static.config, :error_state, %{}))
+        |> assign_new(:ui_adapter, fn -> assigns.static.ui_adapter end)
+        |> MishkaGervaz.Table.Templates.Shared.render_error_state()
       end
 
       defoverridable render_filters: 1,

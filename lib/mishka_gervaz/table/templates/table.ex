@@ -137,10 +137,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       {render_chrome_header(assigns)}
       {render_notices_at(assigns, :after_header)}
 
-      <div
-        :if={@state.has_initial_data? or @state.loading == :loaded}
-        class={Shared.rail_class(@rail, :grid)}
-      >
+      <div class={Shared.rail_class(@rail, :grid)}>
         <div class={Shared.rail_class(@rail, :top)}>
           {render_notices_at(assigns, :before_filters)}
           <.render_filters
@@ -182,7 +179,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           <% end %>
 
           <div
-            :if={not @empty?}
+            :if={not @empty? and not @failed?}
             data-role="gervaz-table-frame"
             class={[
               "relative isolate overflow-x-auto rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)]",
@@ -247,9 +244,15 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
           {render_notices_at(assigns, :empty_state)}
           <.render_empty :if={@empty?} static={@static} state={@state} myself={@myself} />
+          <.render_error :if={@failed?} static={@static} state={@state} myself={@myself} />
 
           {render_notices_at(assigns, :before_pagination)}
-          <.render_pagination :if={@show_pagination} static={@static} state={@state} myself={@myself} />
+          <.render_pagination
+            :if={@show_pagination and not @failed?}
+            static={@static}
+            state={@state}
+            myself={@myself}
+          />
           {render_notices_at(assigns, :after_pagination)}
 
           {render_notices_at(assigns, :table_bottom)}

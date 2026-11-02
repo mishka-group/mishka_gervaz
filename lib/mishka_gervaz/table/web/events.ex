@@ -10,6 +10,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   - Row expansion
   - Archive status changes
   - Pagination
+  - Reloading, the error state's Retry (`"reload"`)
 
   ## Sub-builders
 
@@ -432,6 +433,9 @@ defmodule MishkaGervaz.Table.Web.Events do
     socket = DataLoader.load_more(socket, state)
     {:noreply, socket}
   end
+
+  def do_handle("reload", _params, state, socket),
+    do: {:noreply, DataLoader.reload(socket, state)}
 
   def do_handle("prev_page", _params, state, socket) do
     if state.page > 1 do

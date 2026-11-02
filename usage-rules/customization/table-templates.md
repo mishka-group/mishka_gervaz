@@ -77,7 +77,7 @@ end
 | `render_item/1` | ✔ | — |
 | `render_header/1` | — | `Shared.render_header/1` (renders nothing) |
 | `render_empty/1` | — | `Shared.render_empty_state/1`, reading the DSL's `empty_state` |
-| `render_error/1` | — | `Shared.render_error_state/1`, reading the DSL's `error_state` |
+| `render_error/1` | — | `Shared.render_error_state/1`, reading the DSL's `error_state`, through the resource's UI adapter |
 | `render_loading/1` | — | `Shared.render_loading/1` |
 | `render_pagination/1` | — | `Shared.render_pagination/1` |
 | `render_filters/1` | — | `Shared.render_filters/1` |
@@ -96,6 +96,7 @@ end
 | `@state` | the dynamic state — page, filter_values, selected_ids, archive_status, loading, records_result, loaded_records, path_params, … |
 | `@stream` | the LiveView stream for `static.stream_name` |
 | `@empty?` | whether the table has nothing to show |
+| `@failed?` | whether no read has succeeded and the last one failed; draw `render_error/1` in place of the rows, and keep the filters |
 | `@myself` | the LiveComponent target for `phx-target` |
 
 Read config out of `@static`, never re-derive it from the resource.

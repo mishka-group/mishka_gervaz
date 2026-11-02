@@ -279,6 +279,7 @@ defmodule MishkaGervaz.TranslatedDslTest do
         stream: (empty? && []) || [{"#{stream_name}-1", record}],
         streams: %{stream_name => []},
         empty?: empty?,
+        failed?: false,
         myself: nil,
         __changed__: %{}
       })

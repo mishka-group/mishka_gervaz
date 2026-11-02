@@ -500,7 +500,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         do: refresh_total_done(socket, nil, :skip)
 
       @doc """
-      Reload data with current filters/sort (for refresh after changes).
+      Reload data with current filters/sort (for refresh after changes). The error state's Retry
+      calls it, through the table's `"reload"` event.
       """
       @spec reload(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
       def reload(socket, state) do
