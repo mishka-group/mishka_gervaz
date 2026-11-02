@@ -82,6 +82,15 @@ defmodule MishkaGervaz.Table.Dsl.RowActions do
     auto_collapse_after: [
       type: :integer,
       doc: "Auto-collapse after N actions."
+    ],
+    width: [
+      type: :string,
+      doc: """
+      The Actions column's track in the plain table's grid, such as `"minmax(96px,max-content)"`.
+      Without it the track is `max-content`, as wide as the widest Actions cell on the page. Give
+      it the width of the most controls a row can show when rows show different ones, so a row
+      whose buttons change never moves the other columns.
+      """
     ]
   ]
 

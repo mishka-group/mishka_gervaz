@@ -3,7 +3,8 @@ defmodule MishkaGervaz.Table.Templates.ActionsTrackTest do
   From 980px up the table is one grid that owns the column tracks. The header, the rows' stream,
   each row group and each row are subgrids of it, so every row lays its cells on the same tracks,
   and the Actions track is `max-content`: as wide as the widest Actions cell in the header and the
-  rows, its buttons and 16px of padding on either side. Below 980px nothing of it applies and the
+  rows, its buttons and 16px of padding on either side, unless `actions_layout`'s `width` gives the
+  track, which stays the same whichever buttons the rows show. Below 980px nothing of it applies and the
   rows are cards. A table wider than its frame shows a scrollbar to reach the rest.
   """
   use ExUnit.Case, async: true
@@ -179,6 +180,30 @@ defmodule MishkaGervaz.Table.Templates.ActionsTrackTest do
         assert String.ends_with?(tracks, " max-content")
         refute tracks =~ ~r/\d+px,max-content/
       end
+    end
+
+    test "is actions_layout's width when it gives one, whichever buttons the rows show" do
+      state = three_buttons(table_state())
+
+      only_row_1 =
+        Enum.map(state.static.row_actions, fn action ->
+          Map.put(action, :visible, fn record, _state -> record.id == "row-1" end)
+        end)
+
+      tracks =
+        for row_actions <- [state.static.row_actions, only_row_1, Enum.take(only_row_1, 1)] do
+          state =
+            with_static(state,
+              row_actions: row_actions,
+              row_actions_layout: %{sticky: true, inline: [], dropdown: [], width: "120px"}
+            )
+
+          state |> render_table() |> tracks(state)
+        end
+
+      assert [one] = Enum.uniq(tracks)
+      assert String.ends_with?(one, " 120px")
+      refute one =~ "max-content"
     end
 
     test "is absent when no row action is visible" do

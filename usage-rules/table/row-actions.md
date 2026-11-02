@@ -97,6 +97,17 @@ lay their cells on its columns. The Actions column is a `max-content` track: as 
 row of controls on the page, header included, with 16px of padding either side. A row streamed in
 later widens it like any other.
 
+When rows show different controls, say Run again and Cancel on one and Cancel alone on another, a
+`max-content` track changes width as they change and the `fr` columns move with it. `actions_layout`'s
+`width` gives the track instead: the width of the most controls a row can show, as a grid track.
+With the Tailwind adapter's 30px buttons, 4px apart, two are `"minmax(96px,max-content)"`:
+
+```elixir
+actions_layout do
+  width "minmax(96px,max-content)"
+end
+```
+
 With `sticky true` the column is pinned to the frame's right edge and fades the columns scrolling
 under it out over 16px on its left. The cell and its fade take the row's `background-color`, so a
 `row class`, `theme row_class`, selection or hover colour reaches them too. Both are CSS alone: the

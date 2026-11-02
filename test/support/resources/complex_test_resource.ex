@@ -232,6 +232,7 @@ defmodule MishkaGervaz.Test.Resources.ComplexTestResource do
           inline [:show, :edit]
           dropdown [:more_actions]
           auto_collapse_after 3
+          width "minmax(150px,max-content)"
         end
 
         action :show do

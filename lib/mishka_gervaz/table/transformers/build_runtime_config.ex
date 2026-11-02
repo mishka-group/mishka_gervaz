@@ -456,7 +456,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
           sticky: default_if_nil(get_opt(dsl_state, layout_path, :sticky), true),
           inline: get_opt(dsl_state, layout_path, :inline) || [],
           dropdown: get_opt(dsl_state, layout_path, :dropdown) || [],
-          auto_collapse_after: get_opt(dsl_state, layout_path, :auto_collapse_after)
+          auto_collapse_after: get_opt(dsl_state, layout_path, :auto_collapse_after),
+          width: get_opt(dsl_state, layout_path, :width)
         }
       }
     else

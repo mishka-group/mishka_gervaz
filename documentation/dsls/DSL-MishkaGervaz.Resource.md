@@ -936,6 +936,7 @@ Layout configuration for row actions.
 | [`inline`](#mishka_gervaz-table-row_actions-actions_layout-inline){: #mishka_gervaz-table-row_actions-actions_layout-inline } | `list(atom)` |  | Actions shown as buttons. |
 | [`dropdown`](#mishka_gervaz-table-row_actions-actions_layout-dropdown){: #mishka_gervaz-table-row_actions-actions_layout-dropdown } | `list(atom)` | `[]` | Actions in dropdown menu. |
 | [`auto_collapse_after`](#mishka_gervaz-table-row_actions-actions_layout-auto_collapse_after){: #mishka_gervaz-table-row_actions-actions_layout-auto_collapse_after } | `integer` |  | Auto-collapse after N actions. |
+| [`width`](#mishka_gervaz-table-row_actions-actions_layout-width){: #mishka_gervaz-table-row_actions-actions_layout-width } | `String.t` |  | The Actions column's track in the plain table's grid, such as `"minmax(96px,max-content)"`. Without it the track is `max-content`, as wide as the widest Actions cell on the page. Give it the width of the most controls a row can show when rows show different ones, so a row whose buttons change never moves the other columns. |
 
 
 

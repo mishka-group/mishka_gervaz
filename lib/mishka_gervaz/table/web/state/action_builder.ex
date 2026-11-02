@@ -89,7 +89,7 @@ defmodule MishkaGervaz.Table.Web.State.ActionBuilder do
       ## Returns
 
         - A map with `:position`, `:sticky`, `:inline`, `:dropdown`,
-          and `:auto_collapse_after` keys, or `nil` if not configured
+          `:auto_collapse_after` and `:width` keys, or `nil` if not configured
       """
       @spec build_row_actions_layout(map()) :: map() | nil
       def build_row_actions_layout(config) when is_map(config) do
