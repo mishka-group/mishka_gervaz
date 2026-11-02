@@ -2162,3 +2162,63 @@ defmodule MishkaGervaz.Test.Resources.HookedEntry do
     end
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
+  @moduledoc """
+  A form whose `:title` and `:status` fields declare the value a create form starts with.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :defaulted_entry
+        route "/admin/defaulted-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text, default: "Untitled"
+
+        field :status, :select do
+          options [{"Draft", "draft"}, {"Published", "published"}]
+          default "published"
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :status, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :status]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :status]
+    end
+  end
+end

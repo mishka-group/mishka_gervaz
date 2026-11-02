@@ -62,8 +62,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
           virtual: boolean(),
           resource: module() | nil,
           derive_value: (struct() -> any()) | nil,
-          options: list() | (-> list()) | nil,
-          options_source: {module(), atom(), atom()} | nil,
+          options: list() | (-> list()) | (map() -> list()) | nil,
           display_field:
             atom()
             | (struct() -> String.t())
@@ -76,12 +75,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
           page_size: pos_integer(),
           load_action: atom() | {atom(), atom()} | nil,
           load: (Ash.Query.t(), map() -> Ash.Query.t()) | nil,
-          apply: (any(), any(), map() -> any()) | nil,
-          format: (any() -> any()) | (map(), map(), any() -> any()) | nil,
-          render:
-            (struct() -> Phoenix.LiveView.Rendered.t())
-            | (struct(), map() -> Phoenix.LiveView.Rendered.t())
-            | nil,
           position: position() | nil,
           include_nil: boolean() | String.t() | (-> String.t()),
           min: integer() | nil,
@@ -89,7 +82,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
           min_chars: integer() | nil,
           auto_fields: boolean(),
           nested_fields: list(),
-          array_fields: list(),
           add_label: String.t() | nil,
           remove_label: String.t() | nil,
           ui: __MODULE__.Ui.t() | nil,
@@ -113,7 +105,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
     resource: nil,
     derive_value: nil,
     options: nil,
-    options_source: nil,
     display_field: nil,
     search_field: nil,
     value_field: nil,
@@ -122,9 +113,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
     page_size: 20,
     load_action: nil,
     load: nil,
-    apply: nil,
-    format: nil,
-    render: nil,
     position: nil,
     include_nil: false,
     min: nil,
@@ -133,7 +121,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
     auto_fields: false,
     nested_fields: [],
     _nested_field_entities: [],
-    array_fields: [],
     add_label: nil,
     remove_label: nil,
     ui: nil,
@@ -199,7 +186,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                 ],
                 default: [
                   type: :any,
-                  doc: "Default value for the field."
+                  doc:
+                    "The value a create form starts with: drawn in the field's input and saved when it is left. A value the mount's `defaults` gives the field is saved instead. A `:select` with a default draws no empty choice."
                 ],
                 depends_on: [
                   type: :atom,
@@ -233,10 +221,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   the form state each time the field is drawn and each time its params are read, so
                   the keys can follow `state.defaults`. See `MishkaGervaz.Form.Types.Field.KeyMap`.
                   """
-                ],
-                options_source: [
-                  type: {:tuple, [{:behaviour, Ash.Resource}, :atom, :atom]},
-                  doc: "Options from resource: {resource, action, display_field}."
                 ],
                 display_field: [
                   type: {:or, [:atom, {:fun, 1}, {:fun, 2}]},
@@ -277,18 +261,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   doc:
                     "Scopes the query that loads the field's options: `fn query, state -> query`."
                 ],
-                apply: [
-                  type: {:fun, 3},
-                  doc: "Custom apply function. `fn value, changeset, state -> changeset end`"
-                ],
-                format: [
-                  type: {:or, [{:fun, 1}, {:fun, 3}]},
-                  doc: "Value formatter for display."
-                ],
-                render: [
-                  type: {:or, [{:fun, 1}, {:fun, 2}]},
-                  doc: "Custom HEEx render function."
-                ],
                 position: [
                   type: :any,
                   doc:
@@ -322,11 +294,6 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   type: {:list, :any},
                   default: [],
                   doc: "Fields for nested/embedded forms."
-                ],
-                array_fields: [
-                  type: {:list, :any},
-                  default: [],
-                  doc: "Fields for array_of_maps entries."
                 ],
                 add_label: [
                   type: {:or, [:string, {:fun, 0}]},

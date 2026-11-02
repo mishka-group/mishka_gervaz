@@ -234,7 +234,7 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFieldsTest do
           Code.compile_string(code)
         end)
 
-      assert output =~ "requires a `resource`, `options` or"
+      assert output =~ "requires a `resource` or an `options`"
       assert output =~ "category"
     end
   end
@@ -343,7 +343,7 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateFieldsTest do
           Code.compile_string(code)
         end)
 
-      assert output =~ "requires a `resource`, `options` or"
+      assert output =~ "requires a `resource` or an `options`"
       assert output =~ "tag"
     end
 

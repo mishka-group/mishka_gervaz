@@ -147,7 +147,6 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         required: default_if_nil(override && override.required, defaults.required),
         visible: default_if_nil(override && override.visible, defaults.visible),
         readonly: default_if_nil(override && override.readonly, defaults.readonly),
-        format: override && override.format,
         ui: ui
       }
     end)

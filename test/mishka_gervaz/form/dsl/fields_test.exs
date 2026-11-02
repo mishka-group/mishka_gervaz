@@ -12,6 +12,18 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
     MinimalForm
   }
 
+  describe "options a form never reads" do
+    test "are not offered on a field or an auto_fields override" do
+      unread = [:apply, :format, :render, :options_source, :array_fields]
+
+      field_options = Keyword.keys(MishkaGervaz.Form.Entities.Field.opt_schema())
+      override_options = Keyword.keys(MishkaGervaz.Form.Entities.AutoFields.Override.opt_schema())
+
+      assert Enum.filter(unread, &(&1 in field_options)) == []
+      assert Enum.filter(unread, &(&1 in override_options)) == []
+    end
+  end
+
   describe "field count" do
     test "FormPost has 8 fields" do
       fields = FormInfo.fields(FormPost)
@@ -218,11 +230,6 @@ defmodule MishkaGervaz.Form.DSL.FieldsTest do
     test "virtual defaults to false" do
       field = FormInfo.field(FormPost, :title)
       assert field.virtual == false
-    end
-
-    test "format defaults to nil" do
-      field = FormInfo.field(FormPost, :title)
-      assert field.format == nil
     end
 
     test "show_on defaults to nil" do

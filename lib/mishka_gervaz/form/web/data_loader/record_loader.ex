@@ -119,7 +119,10 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       end
 
       @doc """
-      Build an empty AshPhoenix.Form for creating a new record.
+      Build the AshPhoenix.Form for creating a new record.
+
+      The form starts with each field's `default` as its params, except a field the mount's
+      `defaults` give a value.
       """
       @spec new_for_create(State.t(), keyword()) ::
               {:ok, Phoenix.HTML.Form.t()} | {:error, term()}
@@ -131,12 +134,30 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
         build_form(state, state.static.resource, :create,
           action: create_action,
           actor: actor,
-          tenant: tenant
+          tenant: tenant,
+          params: field_defaults(state)
         )
       end
 
+      defp field_defaults(%{static: %{fields: fields}} = state) when is_list(fields) do
+        given = state.defaults || %{}
+
+        params =
+          for %{name: name, default: default} <- fields,
+              not is_nil(default),
+              not Map.has_key?(given, name),
+              not Map.has_key?(given, to_string(name)),
+              into: %{},
+              do: {to_string(name), default}
+
+        if params == %{}, do: nil, else: params
+      end
+
+      defp field_defaults(_state), do: nil
+
       @doc """
-      Build an AshPhoenix.Form from a record (for edit) or resource (for create).
+      Build an AshPhoenix.Form from a record (for edit) or resource (for create). `opts` take
+      `:action`, `:actor`, `:tenant` and `:params`, the params the form starts with.
 
       Returns `{:error, {:no_such_action, action}}` when the resource has no `type` action named
       `action`. Anything else that fails while the form is built raises.
@@ -153,6 +174,7 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
           |> keyword_put_if_set(:id, form_id(state))
           |> keyword_put_if_set(:actor, actor)
           |> keyword_put_if_set(:tenant, tenant)
+          |> keyword_put_if_set(:params, Keyword.get(opts, :params))
 
         case {type, action_of_type(resource_or_record, action, type)} do
           {_type, nil} ->

@@ -2346,13 +2346,12 @@ Define a form field.
 | [`source`](#mishka_gervaz-form-fields-field-source){: #mishka_gervaz-form-fields-field-source } | `atom` |  | Data source attribute. Defaults to field name. |
 | [`required`](#mishka_gervaz-form-fields-field-required){: #mishka_gervaz-form-fields-field-required } | `boolean` | `false` | Whether the field is required. |
 | [`show_on`](#mishka_gervaz-form-fields-field-show_on){: #mishka_gervaz-form-fields-field-show_on } | `:create \| :update` |  | Only show on specific action mode. |
-| [`default`](#mishka_gervaz-form-fields-field-default){: #mishka_gervaz-form-fields-field-default } | `any` |  | Default value for the field. |
+| [`default`](#mishka_gervaz-form-fields-field-default){: #mishka_gervaz-form-fields-field-default } | `any` |  | The value a create form starts with: drawn in the field's input and saved when it is left. A value the mount's `defaults` gives the field is saved instead. A `:select` with a default draws no empty choice. |
 | [`depends_on`](#mishka_gervaz-form-fields-field-depends_on){: #mishka_gervaz-form-fields-field-depends_on } | `atom` |  | Field this depends on (for cascading selects). |
 | [`virtual`](#mishka_gervaz-form-fields-field-virtual){: #mishka_gervaz-form-fields-field-virtual } | `boolean` | `false` | Virtual field (not in resource attributes). |
 | [`resource`](#mishka_gervaz-form-fields-field-resource){: #mishka_gervaz-form-fields-field-resource } | `module` |  | Resource module for virtual or relation fields. |
 | [`derive_value`](#mishka_gervaz-form-fields-field-derive_value){: #mishka_gervaz-form-fields-field-derive_value } | `(any -> any)` |  | Derive value from record on edit. `fn record -> value end` |
 | [`options`](#mishka_gervaz-form-fields-field-options){: #mishka_gervaz-form-fields-field-options } | `list(any) \| (-> any) \| (any -> any)` |  | Static options or function returning options. A `:relation` field with no `resource` may take `fn state -> options end`: it is read with the form state each time the field's options load — at init, on search, and when a `depends_on` parent changes — so it can offer what the parent's value (`state.field_values`) allows. Such a field loads at init even while its parent is empty or out of reach; the function decides what an empty parent means. A `:key_map` or `:key_list` field may take `fn state -> keys end`: it is read with the form state each time the field is drawn and each time its params are read, so the keys can follow `state.defaults`. See `MishkaGervaz.Form.Types.Field.KeyMap`. |
-| [`options_source`](#mishka_gervaz-form-fields-field-options_source){: #mishka_gervaz-form-fields-field-options_source } | `{module, atom, atom}` |  | Options from resource: {resource, action, display_field}. |
 | [`display_field`](#mishka_gervaz-form-fields-field-display_field){: #mishka_gervaz-form-fields-field-display_field } | `atom \| (any -> any) \| (any, any -> any)` |  | What a relation option reads as: an attribute, `fn record -> label end`, or `fn record, state -> label end` given the form state. A record whose attribute is `nil` reads as its id. |
 | [`search_field`](#mishka_gervaz-form-fields-field-search_field){: #mishka_gervaz-form-fields-field-search_field } | `atom` |  | Field to search on for autocomplete. |
 | [`value_field`](#mishka_gervaz-form-fields-field-value_field){: #mishka_gervaz-form-fields-field-value_field } | `atom` |  | Attribute to store from selected record instead of :id. For relation fields that need a non-primary-key value. |
@@ -2361,9 +2360,6 @@ Define a form field.
 | [`page_size`](#mishka_gervaz-form-fields-field-page_size){: #mishka_gervaz-form-fields-field-page_size } | `pos_integer` | `20` | Page size for load_more/search modes. |
 | [`load_action`](#mishka_gervaz-form-fields-field-load_action){: #mishka_gervaz-form-fields-field-load_action } | `atom \| {atom, atom}` |  | Action to use for loading options. Atom or `{master_action, tenant_action}` tuple. If the action has pagination, it must set `required?: false`. |
 | [`load`](#mishka_gervaz-form-fields-field-load){: #mishka_gervaz-form-fields-field-load } | `(any, any -> any)` |  | Scopes the query that loads the field's options: `fn query, state -> query`. |
-| [`apply`](#mishka_gervaz-form-fields-field-apply){: #mishka_gervaz-form-fields-field-apply } | `(any, any, any -> any)` |  | Custom apply function. `fn value, changeset, state -> changeset end` |
-| [`format`](#mishka_gervaz-form-fields-field-format){: #mishka_gervaz-form-fields-field-format } | `(any -> any) \| (any, any, any -> any)` |  | Value formatter for display. |
-| [`render`](#mishka_gervaz-form-fields-field-render){: #mishka_gervaz-form-fields-field-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render function. |
 | [`position`](#mishka_gervaz-form-fields-field-position){: #mishka_gervaz-form-fields-field-position } | `any` |  | Field position (integer, :first, :last, {:before, :field}, {:after, :field}). |
 | [`include_nil`](#mishka_gervaz-form-fields-field-include_nil){: #mishka_gervaz-form-fields-field-include_nil } | `boolean \| String.t \| (-> any)` | `false` | Include nil option in select. String or `fn -> gettext(...) end` sets label. |
 | [`min`](#mishka_gervaz-form-fields-field-min){: #mishka_gervaz-form-fields-field-min } | `integer` |  | Minimum value for number/range fields. |
@@ -2371,7 +2367,6 @@ Define a form field.
 | [`min_chars`](#mishka_gervaz-form-fields-field-min_chars){: #mishka_gervaz-form-fields-field-min_chars } | `integer` |  | Minimum characters before search triggers. |
 | [`auto_fields`](#mishka_gervaz-form-fields-field-auto_fields){: #mishka_gervaz-form-fields-field-auto_fields } | `boolean` | `false` | When true with explicit nested_field entries, auto-detect remaining fields from the resource and merge with overrides. |
 | [`nested_fields`](#mishka_gervaz-form-fields-field-nested_fields){: #mishka_gervaz-form-fields-field-nested_fields } | `list(any)` | `[]` | Fields for nested/embedded forms. |
-| [`array_fields`](#mishka_gervaz-form-fields-field-array_fields){: #mishka_gervaz-form-fields-field-array_fields } | `list(any)` | `[]` | Fields for array_of_maps entries. |
 | [`add_label`](#mishka_gervaz-form-fields-field-add_label){: #mishka_gervaz-form-fields-field-add_label } | `String.t \| (-> any)` |  | Label for add button in array/nested/string_list fields. String or `fn -> gettext(...) end`. |
 | [`remove_label`](#mishka_gervaz-form-fields-field-remove_label){: #mishka_gervaz-form-fields-field-remove_label } | `String.t \| (-> any)` |  | Label for remove button in array/nested/string_list fields. String or `fn -> gettext(...) end`. |
 | [`visible`](#mishka_gervaz-form-fields-field-visible){: #mishka_gervaz-form-fields-field-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
@@ -2625,7 +2620,6 @@ Override a specific auto-discovered field.
 | [`required`](#mishka_gervaz-form-fields-auto_fields-override-required){: #mishka_gervaz-form-fields-auto_fields-override-required } | `boolean` |  | Override required. |
 | [`visible`](#mishka_gervaz-form-fields-auto_fields-override-visible){: #mishka_gervaz-form-fields-auto_fields-override-visible } | `boolean` |  | Override visible. |
 | [`readonly`](#mishka_gervaz-form-fields-auto_fields-override-readonly){: #mishka_gervaz-form-fields-auto_fields-override-readonly } | `boolean` |  | Override readonly. |
-| [`format`](#mishka_gervaz-form-fields-auto_fields-override-format){: #mishka_gervaz-form-fields-auto_fields-override-format } | `(any -> any) \| (any, any, any -> any)` |  | Value formatter. |
 
 
 ### mishka_gervaz.form.fields.auto_fields.override.ui

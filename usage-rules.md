@@ -243,7 +243,7 @@ the most common mistake in this DSL.
 |---|---|---|
 | **entity body** (`source`, `sortable`, `required`, `mode`, `visible`, `restricted`, `load`, `apply`, `format`) | *what the data is and how it behaves* | `sortable true`, `mode :search_multi`, `required true` |
 | **`ui do … end`** | *how it is presented* | `label`, `placeholder`, `icon`, `class`, `width`, `type`, `span`, `rows`, `extra` |
-| **`render fn … end`** | *replace the output entirely* with HEEx | a custom cell / input |
+| **`render fn … end`** | *replace the output entirely* with HEEx | a custom cell, header, footer or notice |
 
 `ui.extra` is the escape hatch map for options a template or column type invented — it is never
 validated, so read the type module before filling it.
