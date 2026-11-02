@@ -2370,7 +2370,7 @@ Define a form field.
 | [`add_label`](#mishka_gervaz-form-fields-field-add_label){: #mishka_gervaz-form-fields-field-add_label } | `String.t \| (-> any)` |  | Label for add button in array/nested/string_list fields. String or `fn -> gettext(...) end`. |
 | [`remove_label`](#mishka_gervaz-form-fields-field-remove_label){: #mishka_gervaz-form-fields-field-remove_label } | `String.t \| (-> any)` |  | Label for remove button in array/nested/string_list fields. String or `fn -> gettext(...) end`. |
 | [`visible`](#mishka_gervaz-form-fields-field-visible){: #mishka_gervaz-form-fields-field-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-fields-field-restricted){: #mishka_gervaz-form-fields-field-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-fields-field-restricted){: #mishka_gervaz-form-fields-field-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 ### mishka_gervaz.form.fields.field.ui
@@ -2714,7 +2714,7 @@ Define a field group.
 | [`collapsible`](#mishka_gervaz-form-groups-group-collapsible){: #mishka_gervaz-form-groups-group-collapsible } | `boolean` | `false` | Can be collapsed by user. |
 | [`position`](#mishka_gervaz-form-groups-group-position){: #mishka_gervaz-form-groups-group-position } | `any` |  | Group position (integer, :first, :last). |
 | [`visible`](#mishka_gervaz-form-groups-group-visible){: #mishka_gervaz-form-groups-group-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-groups-group-restricted){: #mishka_gervaz-form-groups-group-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-groups-group-restricted){: #mishka_gervaz-form-groups-group-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 ### mishka_gervaz.form.groups.group.ui
@@ -2870,7 +2870,7 @@ Static form header (title + description) rendered above the fields.
 | [`render`](#mishka_gervaz-form-layout-header-render){: #mishka_gervaz-form-layout-header-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render. `fn assigns -> ~H"..." end` or `fn assigns, state -> ~H"..." end`. |
 | [`extra`](#mishka_gervaz-form-layout-header-extra){: #mishka_gervaz-form-layout-header-extra } | `map` | `%{}` | Additional template-specific options. |
 | [`visible`](#mishka_gervaz-form-layout-header-visible){: #mishka_gervaz-form-layout-header-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-layout-header-restricted){: #mishka_gervaz-form-layout-header-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-layout-header-restricted){: #mishka_gervaz-form-layout-header-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -2899,7 +2899,7 @@ Static form footer rendered below the submit row.
 | [`render`](#mishka_gervaz-form-layout-footer-render){: #mishka_gervaz-form-layout-footer-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render. `fn assigns -> ~H"..." end` or `fn assigns, state -> ~H"..." end`. |
 | [`extra`](#mishka_gervaz-form-layout-footer-extra){: #mishka_gervaz-form-layout-footer-extra } | `map` | `%{}` | Additional template-specific options. |
 | [`visible`](#mishka_gervaz-form-layout-footer-visible){: #mishka_gervaz-form-layout-footer-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-layout-footer-restricted){: #mishka_gervaz-form-layout-footer-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-layout-footer-restricted){: #mishka_gervaz-form-layout-footer-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -2943,7 +2943,7 @@ Static alert/banner with positioning and validation binding.
 | [`only_steps`](#mishka_gervaz-form-layout-notice-only_steps){: #mishka_gervaz-form-layout-notice-only_steps } | `list(atom)` |  | Wizard/tabs scoping: only render on these step names. |
 | [`render`](#mishka_gervaz-form-layout-notice-render){: #mishka_gervaz-form-layout-notice-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render. `fn assigns -> ~H"..." end` or `fn assigns, state -> ~H"..." end`. |
 | [`visible`](#mishka_gervaz-form-layout-notice-visible){: #mishka_gervaz-form-layout-notice-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-layout-notice-restricted){: #mishka_gervaz-form-layout-notice-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-layout-notice-restricted){: #mishka_gervaz-form-layout-notice-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 ### mishka_gervaz.form.layout.notice.ui
@@ -3216,7 +3216,7 @@ create button configuration.
 | [`active`](#mishka_gervaz-form-submit-create-active){: #mishka_gervaz-form-submit-create-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-create-disabled){: #mishka_gervaz-form-submit-create-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-create-visible){: #mishka_gervaz-form-submit-create-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-create-restricted){: #mishka_gervaz-form-submit-create-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-create-restricted){: #mishka_gervaz-form-submit-create-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -3244,7 +3244,7 @@ update button configuration.
 | [`active`](#mishka_gervaz-form-submit-update-active){: #mishka_gervaz-form-submit-update-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-update-disabled){: #mishka_gervaz-form-submit-update-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-update-visible){: #mishka_gervaz-form-submit-update-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-update-restricted){: #mishka_gervaz-form-submit-update-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-update-restricted){: #mishka_gervaz-form-submit-update-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -3272,7 +3272,7 @@ cancel button configuration.
 | [`active`](#mishka_gervaz-form-submit-cancel-active){: #mishka_gervaz-form-submit-cancel-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-cancel-disabled){: #mishka_gervaz-form-submit-cancel-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-cancel-visible){: #mishka_gervaz-form-submit-cancel-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 

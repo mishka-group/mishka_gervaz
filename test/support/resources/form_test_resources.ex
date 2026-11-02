@@ -2261,3 +2261,63 @@ defmodule MishkaGervaz.Test.Resources.ColoredEntry do
     defaults [:read, :destroy, create: :*, update: :*]
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.RestrictedEntry do
+  @moduledoc """
+  A form whose `:note` field is `restricted fn state -> … end`: restricted for every user but an
+  editor.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :restricted_entry
+        route "/admin/restricted-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :note, :text do
+          restricted fn state -> state.current_user[:role] != :editor end
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :note, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :note]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :note]
+    end
+  end
+end

@@ -49,7 +49,7 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 |---|---|---|---|
 | `source` | atom | field name | attribute when it differs from the field name |
 | `required` | bool | `false` | |
-| `visible` / `restricted` / `readonly` | bool \| `fn state ->` | `true` / `false` / `false` | arity **1** |
+| `visible` / `restricted` / `readonly` | bool \| `fn state ->` | `true` / `false` / `false` | arity **1**; `restricted true` is masters only, `restricted fn` decides alone — `true` hides the field and leaves it out of the save for every user |
 | `show_on` | `:create` \| `:update` | — | show only in that mode |
 | `default` | any | — | the value a create form starts with; the mount's `defaults` win |
 | `depends_on` | atom | — | cascading select; must be a field in this form |

@@ -772,6 +772,8 @@ defmodule MishkaGervaz.Helpers do
 
   Handles:
   - `restricted: true` → accessible only when `state.master_user?` is `true`
+  - `restricted: fn state -> boolean end` → not accessible when it answers `true`, whoever the
+    user is
   - `visible: false` → not accessible
   - `visible: fn state -> boolean end` → calls function
 
@@ -786,6 +788,12 @@ defmodule MishkaGervaz.Helpers do
       iex> MishkaGervaz.Helpers.accessible?(%{restricted: true}, %{})
       false
 
+      iex> MishkaGervaz.Helpers.accessible?(%{restricted: fn _state -> true end}, %{master_user?: true})
+      false
+
+      iex> MishkaGervaz.Helpers.accessible?(%{restricted: fn _state -> false end}, %{})
+      true
+
       iex> MishkaGervaz.Helpers.accessible?(%{visible: false}, %{})
       false
 
@@ -797,6 +805,10 @@ defmodule MishkaGervaz.Helpers do
     do: accessible?(Map.delete(element, :restricted), state)
 
   def accessible?(%{restricted: true}, _state), do: false
+
+  def accessible?(%{restricted: restricted} = element, state) when is_function(restricted, 1),
+    do: restricted.(state) != true and accessible?(Map.delete(element, :restricted), state)
+
   def accessible?(%{visible: visible}, state) when is_function(visible, 1), do: visible.(state)
   def accessible?(%{visible: false}, _state), do: false
   def accessible?(_, _), do: true

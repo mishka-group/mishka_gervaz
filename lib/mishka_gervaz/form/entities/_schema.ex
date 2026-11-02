@@ -13,7 +13,8 @@ defmodule MishkaGervaz.Form.Entities.Schema do
     restricted: [
       type: {:or, [:boolean, {:fun, 1}]},
       default: false,
-      doc: "Restrict to master users. `true` or `fn state -> boolean() end`."
+      doc:
+        "Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user."
     ]
   ]
 
@@ -26,8 +27,8 @@ defmodule MishkaGervaz.Form.Entities.Schema do
 
   @doc """
   The `:restricted` schema entry — boolean or `fn state -> boolean() end`,
-  default `false` (everyone sees it). Set to `true` or a predicate to
-  gate to master users.
+  default `false` (everyone sees it). `true` gates it to master users; a
+  predicate decides alone, `true` restricting it for every user.
   """
   @spec restricted_key() :: keyword()
   def restricted_key, do: @restricted_key

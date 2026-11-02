@@ -27,14 +27,14 @@ defmodule MishkaGervaz.Form.Web.DropProtectedFieldsTest do
       refute field_restricted?(field, state)
     end
 
-    test "restricted fn returning false means restricted" do
-      field = %{restricted: fn _state -> false end, readonly: false}
+    test "restricted fn returning true means restricted" do
+      field = %{restricted: fn _state -> true end, readonly: false}
       state = %{master_user?: false}
       assert field_restricted?(field, state)
     end
 
-    test "restricted fn returning true means allowed" do
-      field = %{restricted: fn _state -> true end, readonly: false}
+    test "restricted fn returning false means allowed" do
+      field = %{restricted: fn _state -> false end, readonly: false}
       state = %{master_user?: false}
       refute field_restricted?(field, state)
     end

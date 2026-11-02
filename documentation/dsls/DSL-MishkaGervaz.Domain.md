@@ -472,7 +472,7 @@ create button configuration.
 | [`active`](#mishka_gervaz-form-submit-create-active){: #mishka_gervaz-form-submit-create-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-create-disabled){: #mishka_gervaz-form-submit-create-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-create-visible){: #mishka_gervaz-form-submit-create-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-create-restricted){: #mishka_gervaz-form-submit-create-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-create-restricted){: #mishka_gervaz-form-submit-create-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -500,7 +500,7 @@ update button configuration.
 | [`active`](#mishka_gervaz-form-submit-update-active){: #mishka_gervaz-form-submit-update-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-update-disabled){: #mishka_gervaz-form-submit-update-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-update-visible){: #mishka_gervaz-form-submit-update-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-update-restricted){: #mishka_gervaz-form-submit-update-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-update-restricted){: #mishka_gervaz-form-submit-update-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -528,7 +528,7 @@ cancel button configuration.
 | [`active`](#mishka_gervaz-form-submit-cancel-active){: #mishka_gervaz-form-submit-cancel-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-cancel-disabled){: #mishka_gervaz-form-submit-cancel-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-cancel-visible){: #mishka_gervaz-form-submit-cancel-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 

@@ -222,13 +222,16 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   def field_protected?(field, state),
     do: field_restricted?(field, state) or field_readonly?(field, state)
 
-  @doc false
+  @doc """
+  Whether `field` is `restricted` for the current user: `restricted true` for a user who is not a
+  master, or `restricted fn state -> boolean end` answering `true`.
+  """
   @spec field_restricted?(map(), map()) :: boolean()
   def field_restricted?(%{restricted: true}, %{master_user?: true}), do: false
   def field_restricted?(%{restricted: true}, _state), do: true
 
   def field_restricted?(%{restricted: f}, state) when is_function(f, 1),
-    do: not f.(state)
+    do: f.(state) == true
 
   def field_restricted?(_, _), do: false
 
