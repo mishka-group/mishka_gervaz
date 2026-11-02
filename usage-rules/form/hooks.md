@@ -7,7 +7,7 @@ hooks do
   on_init          fn form, state -> form end
   on_validate      fn params, state -> params end
   on_change        fn field, value, state -> state end       # {:halt, state} stops it
-  before_save      fn params, state -> params end            # {:halt, state} CANCELS the save
+  before_save      fn params, state -> params end            # {:halt, reason} CANCELS the save
   after_save       fn result, state -> state end
   on_error         fn form, state -> state end
   on_cancel        fn state -> state end
@@ -30,7 +30,7 @@ end
 | `on_init` | `form, state` | `form` — after initialization |
 | `on_validate` | `params, state` | `params` — on the `phx-change` event |
 | `on_change` | `field, value, state` | `state` or `{:halt, state}` — one field changed |
-| `before_save` | `params, state` | `params`, or `{:halt, state}` to cancel |
+| `before_save` | `params, state` | `params` or `{:cont, params}` to save them, `{:halt, reason}` to cancel |
 | `after_save` | `result, state` | `state` — side effects |
 | `on_error` | `form, state` | `state` |
 | `on_cancel` | `state` | `state` |
@@ -61,14 +61,18 @@ end
 
 For the simple case use `before_save` instead — it runs, and it can also refuse.
 
-`before_save` is where a refusal belongs. Return `{:halt, state}` with your own message rather
-than letting a doomed record reach the action:
+`before_save` receives the save event's params, with the form's values under `"form"`, and the
+params it returns, bare or as `{:cont, params}`, are the ones saved. Anything else saves the params
+unchanged.
+
+`before_save` is where a refusal belongs. Return `{:halt, reason}`, telling the author yourself,
+rather than letting a doomed record reach the action:
 
 ```elixir
 before_save fn params, state ->
   case refuse(params) do
     nil     -> {:cont, apply_visibility(params, state)}
-    message -> {:halt, tell_author(message, state)}
+    message -> {:halt, tell_author(message)}
   end
 end
 ```
@@ -91,7 +95,7 @@ the `{:form_saved, …}` / `{:form_cancelled, …}` messages instead
 ([../mounting.md](../mounting.md)). Pick **one** of the two — doing both closes the modal twice.
 
 ## TODO
-- [ ] `before_save` returns `params` / `{:cont, params}` / `{:halt, state}` and nothing else
+- [ ] `before_save` returns `params` / `{:cont, params}` / `{:halt, reason}` and nothing else
 - [ ] `after_save` used for side effects only — it cannot change the result
 - [ ] Modal open/close driven by `js` hooks **or** the parent's messages, not both
 - [ ] `on_change` returns `{:halt, state}` only where a change must genuinely be swallowed

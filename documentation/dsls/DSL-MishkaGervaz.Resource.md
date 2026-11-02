@@ -3130,7 +3130,7 @@ Lifecycle callbacks for forms.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`on_init`](#mishka_gervaz-form-hooks-on_init){: #mishka_gervaz-form-hooks-on_init } | `(any, any -> any)` |  | `fn form, state -> form` - After form initialization. |
-| [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:halt, state}` - Before save. Return {:halt, state} to cancel. |
+| [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:cont, params} \| {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `"form"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save. |
 | [`after_save`](#mishka_gervaz-form-hooks-after_save){: #mishka_gervaz-form-hooks-after_save } | `(any, any -> any)` |  | `fn result, state -> state` - After successful save. |
 | [`on_error`](#mishka_gervaz-form-hooks-on_error){: #mishka_gervaz-form-hooks-on_error } | `(any, any -> any)` |  | `fn form, state -> state` - On save error. |
 | [`on_cancel`](#mishka_gervaz-form-hooks-on_cancel){: #mishka_gervaz-form-hooks-on_cancel } | `(any -> any)` |  | `fn state -> state` - When form is cancelled. |

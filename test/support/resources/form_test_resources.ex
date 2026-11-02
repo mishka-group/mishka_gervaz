@@ -2092,3 +2092,63 @@ defmodule MishkaGervaz.Test.Resources.SourceConnection do
     end
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.HookedEntry do
+  @moduledoc """
+  A form whose `before_save` hook returns the params as a bare map, with the title in capitals.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :hooked_entry
+        route "/admin/hooked-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+      end
+
+      hooks do
+        before_save fn %{"form" => form} = params, _state ->
+          Map.put(params, "form", Map.update(form, "title", nil, &String.upcase/1))
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title]
+    end
+
+    update :update do
+      primary? true
+      accept [:title]
+    end
+  end
+end

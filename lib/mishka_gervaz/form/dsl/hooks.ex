@@ -7,9 +7,8 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
   ## Example
 
       hooks do
-        before_save fn params, state ->
-          # Transform params before saving
-          Map.put(params, "processed", true)
+        before_save fn %{"form" => values} = params, _state ->
+          Map.put(params, "form", Map.put(values, "processed", true))
         end
 
         after_save fn result, state ->
@@ -28,7 +27,7 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     before_save: [
       type: {:fun, 2},
       doc:
-        "`fn params, state -> params | {:halt, state}` - Before save. Return {:halt, state} to cancel."
+        "`fn params, state -> params | {:cont, params} | {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `\"form\"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save."
     ],
     after_save: [
       type: {:fun, 2},
