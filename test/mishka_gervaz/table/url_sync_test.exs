@@ -685,6 +685,36 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       assert result.page == 1
     end
 
+    test "reads a page or page size that is not a positive whole number as missing" do
+      for value <- ["0", "-3", "two", "1.5", "2abc", " 2", ""] do
+        result =
+          UrlSync.decode(%{"t_page" => value, "t_page_size" => value}, "t",
+            allowed_params: [:page, :page_size]
+          )
+
+        assert {value, result.page, result.page_size} == {value, 1, nil}
+      end
+    end
+
+    test "reads a page or page size given as a list or a map as missing" do
+      for value <- [["2"], %{"a" => "2"}] do
+        result =
+          UrlSync.decode(%{"t_page" => value, "t_page_size" => value}, "t",
+            allowed_params: [:page, :page_size]
+          )
+
+        assert {result.page, result.page_size} == {1, nil}
+      end
+    end
+
+    test "keeps a page of any size, for the table to check against its page size" do
+      for page <- [9_223_372_036_854_775_807, 99_999_999_999_999_999_999_999] do
+        result = UrlSync.decode(%{"t_page" => to_string(page)}, "t", allowed_params: [:page])
+
+        assert result.page == page
+      end
+    end
+
     test "handles non-existing atom in template gracefully" do
       params = %{
         "t_template" => "this_template_does_not_exist_xyz"

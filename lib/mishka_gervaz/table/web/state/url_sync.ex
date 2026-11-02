@@ -7,6 +7,13 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   - `apply_url_state/2` - Apply URL state to table state
   - `bidirectional?/1` - Check if bidirectional sync is enabled
 
+  ## The page from the URL
+
+  The table opens the URL's page when the database can read it: its offset, `(page - 1)` times
+  the page size the table reads with, fits a signed 64-bit integer, the range Postgres takes for
+  `OFFSET`. A table of 20 rows a page opens any page up to 461,168,601,842,738,791. A page past that
+  opens page 1, as a URL without a page does. A page past the last row is opened, and shows no rows.
+
   ## User Override
 
       defmodule MyApp.Table.UrlSync do
@@ -27,6 +34,8 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   """
 
   import MishkaGervaz.Helpers, only: [accessible?: 2, find_by_name: 2]
+
+  @max_offset 9_223_372_036_854_775_807
 
   @doc false
   @spec apply_url_filters(map(), map()) :: map()
@@ -65,10 +74,17 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   @doc false
   @spec apply_url_page(map(), map()) :: map()
   def apply_url_page(state, %{page: page}) when is_integer(page) and page > 0 do
-    %{state | page: page}
+    %{state | page: readable_page(page, state.current_page_size || state.static.page_size)}
   end
 
   def apply_url_page(state, _), do: state
+
+  @spec readable_page(pos_integer(), pos_integer() | nil) :: pos_integer()
+  defp readable_page(page, page_size)
+       when is_integer(page_size) and (page - 1) * page_size > @max_offset,
+       do: 1
+
+  defp readable_page(page, _page_size), do: page
 
   @doc false
   @spec apply_url_search(map(), map()) :: map()
@@ -159,12 +175,12 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
         state
         |> apply_url_filters(url_state)
         |> apply_url_sort(url_state)
+        |> apply_url_page_size(url_state)
         |> apply_url_page(url_state)
         |> apply_url_search(url_state)
         |> apply_url_path(url_state)
         |> apply_url_path_params(url_state)
         |> apply_url_preserved_params(url_state)
-        |> apply_url_page_size(url_state)
       end
 
       @doc """

@@ -34,6 +34,11 @@ end
 &<prefix>_template=grid
 ```
 
+A page or page size that is not a positive whole number reads as missing. The table opens a page
+only when the database can read it: `(page - 1)` times its page size fits a signed 64-bit integer,
+the range Postgres takes for `OFFSET`. Any other page opens page 1, and a `:bidirectional` table
+writes the URL without it. A page past the last row opens, and shows no rows.
+
 A distinct `prefix` per table is what lets two tables share one page — and lets another page
 deep-link into this one:
 

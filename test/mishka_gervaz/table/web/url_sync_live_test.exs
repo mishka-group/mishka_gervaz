@@ -94,6 +94,23 @@ defmodule MishkaGervaz.Table.Web.UrlSyncLiveTest do
       assert shown(view) == ["draft", "published"]
     end
 
+    test "with a page past what the database can read opens the first page" do
+      for page <- ["9223372036854775807", "99999999999999999999999"] do
+        view = open("/items?page=#{page}")
+
+        assert shown(view) == ["draft", "published"]
+        assert_patch(view, "/items")
+      end
+    end
+
+    test "with the last page the database can read opens that page, past the rows" do
+      page = div(9_223_372_036_854_775_807, 20) + 1
+      view = open("/items?page=#{page}")
+
+      assert shown(view) == []
+      assert has_element?(view, "[data-role=gervaz-table-frame]")
+    end
+
     test "is followed after the table wrote its own" do
       view = open("/items")
 

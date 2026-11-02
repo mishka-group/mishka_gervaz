@@ -65,7 +65,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @type url_state :: %{
           filters: map(),
           sort: list({atom(), :asc | :desc}),
-          page: integer(),
+          page: pos_integer(),
           page_size: pos_integer() | nil,
           search: String.t() | nil,
           template: atom() | nil,
@@ -112,6 +112,10 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   it took last again, as when the page renders it for a reason of its own, it keeps its state; its
   own write coming back is the very URL it wrote (`same_url?/2`). A `url_state` without `:query`
   is applied whenever it differs from the table's state.
+
+  A page or page size that is not a positive whole number (`0`, `-2`, `two`, `1.5`) reads as
+  missing: page 1, and the table's own page size. A page of any size is kept here; the table opens
+  it only when the database can read it (`MishkaGervaz.Table.Web.State.UrlSync`).
 
   ## Usage
 
@@ -528,31 +532,23 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   @spec decode_page(map(), String.t() | nil) :: pos_integer()
   defp decode_page(params, prefix) do
-    key = build_key(prefix, "page")
-
-    case Map.get(params, key) do
-      nil -> 1
-      page -> String.to_integer(page)
-    end
-  rescue
-    _ -> 1
+    params |> Map.get(build_key(prefix, "page")) |> positive_integer() || 1
   end
 
   @spec decode_page_size(map(), String.t() | nil) :: pos_integer() | nil
   defp decode_page_size(params, prefix) do
-    key = build_key(prefix, "page_size")
-
-    case Map.get(params, key) do
-      nil ->
-        nil
-
-      size_str ->
-        size = String.to_integer(size_str)
-        if size > 0, do: size, else: nil
-    end
-  rescue
-    _ -> nil
+    params |> Map.get(build_key(prefix, "page_size")) |> positive_integer()
   end
+
+  @spec positive_integer(term()) :: pos_integer() | nil
+  defp positive_integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {number, ""} when number > 0 -> number
+      _not_positive -> nil
+    end
+  end
+
+  defp positive_integer(_value), do: nil
 
   @spec decode_search(map(), String.t() | nil) :: String.t() | nil
   defp decode_search(params, prefix) do
