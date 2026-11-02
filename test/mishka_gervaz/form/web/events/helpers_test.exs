@@ -8,14 +8,14 @@ defmodule MishkaGervaz.Form.Web.Events.HelpersTest do
 
   alias MishkaGervaz.Form.Web.Events.Helpers
 
-  describe "parse_typed_params/2" do
+  describe "parse_typed_params/3" do
     test "passes through when fields list is empty" do
-      assert Helpers.parse_typed_params([], %{"a" => 1}) == %{"a" => 1}
+      assert Helpers.parse_typed_params([], %{"a" => 1}, %{}) == %{"a" => 1}
     end
 
     test "passes through when no field has :type_module" do
       fields = [%{name: :title}]
-      assert Helpers.parse_typed_params(fields, %{"title" => "T"}) == %{"title" => "T"}
+      assert Helpers.parse_typed_params(fields, %{"title" => "T"}, %{}) == %{"title" => "T"}
     end
 
     test "applies type_module.parse_params/2 when present" do
@@ -24,7 +24,7 @@ defmodule MishkaGervaz.Form.Web.Events.HelpersTest do
       end
 
       fields = [%{name: :title, type_module: TestParseType, custom_parse_params?: true}]
-      assert Helpers.parse_typed_params(fields, %{"title" => "hi"}) == %{"title" => "HI"}
+      assert Helpers.parse_typed_params(fields, %{"title" => "hi"}, %{}) == %{"title" => "HI"}
     end
 
     test "skips fields not in params" do
@@ -33,12 +33,12 @@ defmodule MishkaGervaz.Form.Web.Events.HelpersTest do
       end
 
       fields = [%{name: :missing, type_module: TestSkipType, custom_parse_params?: true}]
-      assert Helpers.parse_typed_params(fields, %{"other" => 1}) == %{"other" => 1}
+      assert Helpers.parse_typed_params(fields, %{"other" => 1}, %{}) == %{"other" => 1}
     end
 
     test "fallthrough for non-list fields or non-map params" do
-      assert Helpers.parse_typed_params(:atom, %{"a" => 1}) == %{"a" => 1}
-      assert Helpers.parse_typed_params([], "string") == "string"
+      assert Helpers.parse_typed_params(:atom, %{"a" => 1}, %{}) == %{"a" => 1}
+      assert Helpers.parse_typed_params([], "string", %{}) == "string"
     end
   end
 

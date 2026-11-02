@@ -19,7 +19,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       end
 
   See `MishkaGervaz.Form.Web.Events`,
-  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/2`),
+  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/3`),
   and the sibling sub-handlers.
   """
 
@@ -64,7 +64,8 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
               |> then(
                 &MishkaGervaz.Form.Web.Events.Helpers.parse_typed_params(
                   state.static.fields,
-                  &1
+                  &1,
+                  state
                 )
               )
 

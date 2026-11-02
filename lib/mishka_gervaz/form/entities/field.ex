@@ -228,6 +228,10 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   and when a `depends_on` parent changes — so it can offer what the parent's value
                   (`state.field_values`) allows. Such a field loads at init even while its parent is
                   empty or out of reach; the function decides what an empty parent means.
+
+                  A `:key_map` or `:key_list` field may take `fn state -> keys end`: it is read with
+                  the form state each time the field is drawn and each time its params are read, so
+                  the keys can follow `state.defaults`. See `MishkaGervaz.Form.Types.Field.KeyMap`.
                   """
                 ],
                 options_source: [

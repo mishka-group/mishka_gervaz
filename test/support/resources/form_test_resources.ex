@@ -2016,3 +2016,79 @@ defmodule MishkaGervaz.Test.Resources.PasswordForm do
     update_timestamp :updated_at
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.SourceConnection do
+  @moduledoc """
+  One create form for every source: the page opens it with the source in `defaults`, and the
+  `:settings` key map draws that source's keys, which each source supplies as data.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :source_connection
+        route "/admin/source-connections"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :settings, :key_map do
+          options fn state ->
+            MishkaGervaz.Test.Resources.SourceConnection.source_keys(state.defaults)
+          end
+        end
+      end
+    end
+  end
+
+  @doc false
+  def source_keys(%{source: "wordpress"}),
+    do: [
+      [name: :url, type: :text, label: "Site URL", required: true],
+      [name: :username, type: :text, label: "Username"],
+      [name: :app_password, type: :password, label: "Application password", required: true]
+    ]
+
+  def source_keys(%{source: "ghost"}),
+    do: [
+      [name: :api_url, type: :text, label: "API URL", required: true],
+      [name: :admin_api_key, type: :password, label: "Admin API key"]
+    ]
+
+  def source_keys(_defaults), do: []
+
+  attributes do
+    uuid_primary_key :id
+    attribute :source, :string, public?: true
+    attribute :settings, :map, default: %{}, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:source, :settings]
+    end
+
+    update :update do
+      primary? true
+      accept [:source, :settings]
+    end
+  end
+end

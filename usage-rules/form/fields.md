@@ -25,8 +25,8 @@ end
 
 `:text` · `:password` · `:textarea` · `:number` · `:checkbox` · `:toggle` · `:date` · `:datetime` ·
 `:range` · `:select` · `:multi_select` · `:combobox` · `:relation` · `:json` · `:nested` ·
-`:array_of_maps` · `:string_list` · `:file` · `:upload` · `:hidden` · or a module implementing
-`MishkaGervaz.Form.Behaviours.FieldType`
+`:key_map` · `:key_list` · `:array_of_maps` · `:string_list` · `:file` · `:upload` · `:hidden` ·
+or a module implementing `MishkaGervaz.Form.Behaviours.FieldType`
 ([../customization/types.md](../customization/types.md)).
 
 Omit `type` and it is inferred from the Ash attribute:
@@ -56,7 +56,7 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 | `virtual` | bool | `false` | not a resource attribute |
 | `resource` | Ash resource | — | **required** for virtual `:relation` / `:select` |
 | `derive_value` | `fn record -> value` | — | how edit mode reads a virtual field off the record |
-| `options` | list \| `fn -> list` \| `fn state -> list` | — | function runs at load; `fn state` only on a resource-less `:relation` |
+| `options` | list \| `fn -> list` \| `fn state -> list` | — | function runs at load; `fn state` only on a resource-less `:relation`, a `:key_map` or a `:key_list` |
 | `options_source` | `{resource, action, display_field}` | — | ⚠ not wired — use `options` or `load` |
 | `display_field` | atom \| `fn r ->` \| `fn r, state ->` | — | relation label; a `nil` attribute reads as the record's id |
 | `search_field` | atom | — | autocomplete field |
@@ -170,6 +170,33 @@ again.
 A value the mount passed in `defaults` is saved only while its field still holds it in
 `state.field_values`. A picker that opened on its default and was then cleared, or emptied because a
 field it depends on changed, is saved empty — refused when required — never with the default.
+
+## Key map fields
+
+A `:key_map` field draws one control per declared key over a `:map` column; a `:key_list` repeats
+those keys row by row over `{:array, :map}`. A key is `[name:, type:, label:, placeholder:,
+options:, required:]`, where `type` is `:text` `:textarea` `:toggle` `:checkbox` `:number`
+`:select` `:json` or `:password`, and `required: true` marks its label. A `:password` key is drawn
+through the adapter's `password_input` with `autocomplete="off"` and never shows what it holds; left
+empty it is dropped, so an edit asks for it again.
+
+One form can draw different keys for different openings with `options fn state -> keys end`, read
+each time the field is drawn and its params are read. The page opens it with what decides the keys:
+
+```elixir
+field :settings, :key_map do
+  options fn state -> MyApp.Sources.keys(state.defaults[:source]) end
+end
+
+send_update(MishkaGervaz.Form.Web.Live,
+  id: "connection-form",
+  defaults: %{source: "wordpress"},
+  reset: true
+)
+```
+
+What is typed under a key the function does not name is not saved. See
+`MishkaGervaz.Form.Types.Field.KeyMap`.
 
 ## Read-only fields
 

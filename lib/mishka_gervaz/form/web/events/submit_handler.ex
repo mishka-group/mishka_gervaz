@@ -25,7 +25,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   `__using__` macro to avoid per-consumer compile cost.
 
   See `MishkaGervaz.Form.Web.Events`,
-  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/2` and
+  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/3` and
   `merge_uploaded_files/4`),
   `MishkaGervaz.Form.Web.DataLoader`,
   `MishkaGervaz.Form.Web.UploadHelpers`, and the sibling sub-handlers.
@@ -315,7 +315,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       """
       @spec transform_params(State.t(), map()) :: map()
       def transform_params(state, params) do
-        EventsHelpers.parse_typed_params(state.static.fields, params)
+        EventsHelpers.parse_typed_params(state.static.fields, params, state)
       end
 
       @doc """
