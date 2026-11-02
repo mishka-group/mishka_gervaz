@@ -42,6 +42,11 @@ only when the database can read it: `(page - 1)` times its page size fits a sign
 the range Postgres takes for `OFFSET`. Any other page opens page 1, and a `:bidirectional` table
 writes the URL without it. A page past the last row opens, and shows no rows.
 
+The table sorts by the URL's sort fields that it sorts by itself: a sortable column's `sort_field`
+(or its name) or a field of `default_sort`. A field the resource does not have, or a column that is
+not `sortable`, is left out. A sort that keeps no field opens the table's own sort, and a
+`:bidirectional` table writes the URL without it.
+
 A distinct `prefix` per table is what lets two tables share one page — and lets another page
 deep-link into this one:
 

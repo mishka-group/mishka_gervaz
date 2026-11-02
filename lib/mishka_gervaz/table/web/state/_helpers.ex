@@ -339,6 +339,33 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
   end
 
   @doc """
+  The part of `sort` the table can sort by, in its order: each `{field, order}` whose field a
+  sortable column sorts by (its `sort_field`, or its own name) or the table's default sort names.
+
+  A field of no column, or of a column that is not sortable, is left out, so a sort from the URL
+  never sends the read a field the resource cannot sort by or the table does not offer. On a table
+  whose only sortable column is `:display_name`:
+
+      readable_sort(state, display_name: :desc, name: :desc)
+      #=> [display_name: :desc]
+  """
+  @spec readable_sort(map(), [{atom(), :asc | :desc}]) :: [{atom(), :asc | :desc}]
+  def readable_sort(%{static: static}, sort) when is_list(sort) do
+    sortable = sortable_fields(static)
+    for {field, order} <- sort, MapSet.member?(sortable, field), do: {field, order}
+  end
+
+  defp sortable_fields(static) do
+    defaults = for entry <- get_default_sort(static.config, static.columns), do: sort_name(entry)
+    columns = (static.sort_field_map || %{}) |> Map.values() |> List.flatten()
+
+    MapSet.new(defaults ++ columns)
+  end
+
+  defp sort_name({field, _order}), do: field
+  defp sort_name(field), do: field
+
+  @doc """
   The URL-sync module for a resource — its `state do url_sync … end` override, or the default
   passed in.
   """

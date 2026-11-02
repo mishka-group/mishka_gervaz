@@ -120,6 +120,11 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   missing: page 1, and the table's own page size. A page of any size is kept here; the table opens
   it only when the database can read it (`MishkaGervaz.Table.Web.State.UrlSync`).
 
+  A sort entry whose order is neither `asc` nor `desc`, or whose field names no existing atom, is
+  dropped here. The table then sorts only by the fields it sorts by itself, its sortable columns and
+  its default sort; a URL whose sort keeps none of them opens the table's own sort
+  (`MishkaGervaz.Table.Web.State.UrlSync`).
+
   ## Usage
 
       # In handle_params - always pass params and uri

@@ -16,6 +16,15 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   The check is `MishkaGervaz.Table.Web.State.Helpers.readable_page/2`, which a `go_to_page` event
   passes through too.
 
+  ## The sort from the URL
+
+  The table sorts by the URL's fields that it sorts by itself: a sortable column's `sort_field` (or
+  its name) or a field of its default sort, through
+  `MishkaGervaz.Table.Web.State.Helpers.readable_sort/2`. Any other field, one the resource does not
+  have or a column that is not sortable, is left out. A URL whose sort keeps no field opens the
+  table's own sort, as a URL without a sort does, and a `:bidirectional` table writes the URL
+  without it.
+
   ## User Override
 
       defmodule MyApp.Table.UrlSync do
@@ -36,7 +45,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   """
 
   import MishkaGervaz.Helpers, only: [accessible?: 2, find_by_name: 2]
-  import MishkaGervaz.Table.Web.State.Helpers, only: [readable_page: 2]
+  import MishkaGervaz.Table.Web.State.Helpers, only: [readable_page: 2, readable_sort: 2]
 
   @doc false
   @spec apply_url_filters(map(), map()) :: map()
@@ -66,8 +75,11 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
 
   @doc false
   @spec apply_url_sort(map(), map()) :: map()
-  def apply_url_sort(state, %{sort: sort}) when sort != [] do
-    %{state | sort_fields: sort}
+  def apply_url_sort(state, %{sort: [_ | _] = sort}) do
+    case readable_sort(state, sort) do
+      [] -> state
+      readable -> %{state | sort_fields: readable}
+    end
   end
 
   def apply_url_sort(state, _), do: state
