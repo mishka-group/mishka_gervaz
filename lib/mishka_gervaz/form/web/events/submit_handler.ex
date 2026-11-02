@@ -19,8 +19,9 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       end
 
   Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
-  `save_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`,
-  `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`, `field_readonly?/2`)
+  `save_errors/2`, `add_field_type_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`,
+  `merge_defaults/2`, `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`,
+  `field_readonly?/2`)
   are public so user overrides can reuse them — they live outside the
   `__using__` macro to avoid per-consumer compile cost.
 
@@ -116,6 +117,18 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   end
 
   defp path_error(_error, _form_keys), do: []
+
+  @doc """
+  `changeset` with an error on each field whose type's `FieldType.validate/2` refused its value, as
+  `MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params/2` lists them, so the save fails and
+  shows them as it shows the action's own errors.
+  """
+  @spec add_field_type_errors(Ash.Changeset.t(), [{atom(), String.t()}]) :: Ash.Changeset.t()
+  def add_field_type_errors(changeset, errors) do
+    Enum.reduce(errors, changeset, fn {field, message}, acc ->
+      Ash.Changeset.add_error(acc, field: field, message: message)
+    end)
+  end
 
   @doc false
   @spec cleanup_temp_uploads(map()) :: :ok
@@ -276,10 +289,18 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             socket
 
           form ->
+            type_errors =
+              EventsHelpers.validate_typed_params(state.static.fields, form_params)
+
             result =
               AshPhoenix.Form.submit(form.source,
                 params: form_params,
-                force?: true
+                force?: true,
+                before_submit:
+                  &MishkaGervaz.Form.Web.Events.SubmitHandler.add_field_type_errors(
+                    &1,
+                    type_errors
+                  )
               )
 
             cleanup_temp_uploads(form_params)

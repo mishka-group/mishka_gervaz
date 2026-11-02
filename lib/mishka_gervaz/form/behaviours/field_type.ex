@@ -73,7 +73,8 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   @doc """
   Validate a field value.
 
-  Returns `{:ok, value}` for valid values or `{:error, message}` for invalid.
+  Returns `{:ok, value}` for valid values or `{:error, message}` for invalid. It runs on each change
+  and on save: `message` is shown under the field, and a save it refuses writes nothing.
   """
   @callback validate(value :: any(), config()) :: {:ok, any()} | {:error, String.t()}
 

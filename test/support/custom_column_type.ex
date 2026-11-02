@@ -58,10 +58,15 @@ end
 defmodule MishkaGervaz.Test.ColorFieldType do
   @moduledoc """
   Custom form field type for testing that the Standard template draws a field through its type
-  module's `render/2`.
+  module's `render/2`, and that its `validate/2` refuses a value that is not a hex colour.
   """
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
   use Phoenix.Component
+
+  @impl true
+  def validate(value, _config) when value in [nil, ""], do: {:ok, value}
+  def validate("#" <> _hex = value, _config), do: {:ok, value}
+  def validate(_value, _config), do: {:error, "must be a hex colour"}
 
   @impl true
   def render(assigns, _config) do
