@@ -524,6 +524,41 @@ defmodule MishkaGervaz.Helpers do
   def to_boolean(_), do: nil
 
   @doc """
+  The positive whole number a value spells, or `nil` for anything else.
+
+  Reads the page numbers and page sizes that arrive in URL params and event params. A string must
+  be the digits of the number and nothing more; an integer is kept when it is above zero.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.positive_integer("12")
+      12
+
+      iex> MishkaGervaz.Helpers.positive_integer(7)
+      7
+
+      iex> MishkaGervaz.Helpers.positive_integer("0")
+      nil
+
+      iex> MishkaGervaz.Helpers.positive_integer("1.5")
+      nil
+
+      iex> MishkaGervaz.Helpers.positive_integer(["2"])
+      nil
+  """
+  @spec positive_integer(term()) :: pos_integer() | nil
+  def positive_integer(value) when is_integer(value) and value > 0, do: value
+
+  def positive_integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {number, ""} when number > 0 -> number
+      _not_positive -> nil
+    end
+  end
+
+  def positive_integer(_value), do: nil
+
+  @doc """
   Puts a key-value pair into a map only if the value is present and valid.
 
   Designed for building configuration maps where optional values should only

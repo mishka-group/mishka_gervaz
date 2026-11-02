@@ -56,11 +56,13 @@ defmodule MishkaGervaz.Table.Web.Events.SanitizationHandler do
   @callback sanitize_column(column :: String.t()) :: atom()
 
   @doc """
-  Sanitizes a page number from params.
+  Reads a page number or a page size from an event's params.
 
-  Returns an integer page number.
+  Returns the positive whole number it spells, or `nil` for anything else (`0`, `-2`, `two`, `1.5`,
+  a list), the way `MishkaGervaz.Table.Web.UrlSync` reads the page from the URL. A `go_to_page`
+  event with `nil` opens page 1, and a `change_page_size` event with `nil` is ignored.
   """
-  @callback sanitize_page(page :: String.t() | integer()) :: integer()
+  @callback sanitize_page(page :: term()) :: pos_integer() | nil
 
   @optional_callbacks sanitize_column: 1, sanitize_page: 1
 
@@ -83,15 +85,8 @@ defmodule MishkaGervaz.Table.Web.Events.SanitizationHandler do
       end
 
       @impl true
-      @spec sanitize_page(binary() | integer() | any()) :: integer()
-      def sanitize_page(page) when is_binary(page) do
-        page
-        |> sanitize()
-        |> String.to_integer()
-      end
-
-      def sanitize_page(page) when is_integer(page), do: page
-      def sanitize_page(_), do: 1
+      @spec sanitize_page(term()) :: pos_integer() | nil
+      def sanitize_page(page), do: page |> sanitize() |> MishkaGervaz.Helpers.positive_integer()
 
       defoverridable sanitize: 1, sanitize_column: 1, sanitize_page: 1
     end

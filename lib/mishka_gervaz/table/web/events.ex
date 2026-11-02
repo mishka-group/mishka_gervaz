@@ -60,6 +60,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   """
 
   alias MishkaGervaz.Table.Web.{State, DataLoader}
+  alias MishkaGervaz.Table.Web.State.Helpers, as: StateHelpers
 
   alias MishkaGervaz.Table.Web.Events.{
     SanitizationHandler,
@@ -140,7 +141,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   def sanitize_column(state, column), do: sanitization_handler(state).sanitize_column(column)
 
   @doc false
-  @spec sanitize_page(State.t(), String.t() | integer()) :: pos_integer()
+  @spec sanitize_page(State.t(), term()) :: pos_integer() | nil
   def sanitize_page(state, page), do: sanitization_handler(state).sanitize_page(page)
 
   @doc false
@@ -458,36 +459,18 @@ defmodule MishkaGervaz.Table.Web.Events do
   end
 
   def do_handle("go_to_page", %{"page" => page}, state, socket) do
-    page_num = sanitize_page(state, page)
+    page_num = sanitize_page(state, page) || 1
+    page_num = max(1, min(page_num, state.total_pages || page_num))
 
-    max_page = state.total_pages || page_num
-    page_num = max(1, min(page_num, max_page))
-
-    if page_num != state.page do
-      socket = DataLoader.load_async(socket, state, page: page_num, reset: true)
-      {:noreply, socket}
-    else
-      {:noreply, socket}
-    end
+    state
+    |> StateHelpers.readable_page(page_num)
+    |> go_to_page(state, socket)
   end
 
   def do_handle("change_page_size", %{"size" => size}, state, socket) do
-    page_size = sanitize_page(state, size)
-    max = state.static.max_page_size
-    options = state.static.page_size_options
-
-    clamped = if max, do: min(page_size, max), else: page_size
-
-    effective =
-      if options && clamped not in options do
-        state.static.page_size
-      else
-        clamped
-      end
-
-    state = State.update(state, current_page_size: effective)
-    socket = DataLoader.load_async(socket, state, page: 1, reset: true)
-    {:noreply, socket}
+    state
+    |> sanitize_page(size)
+    |> change_page_size(state, socket)
   end
 
   def do_handle("delete", %{"id" => id} = params, state, socket) do
@@ -920,6 +903,33 @@ defmodule MishkaGervaz.Table.Web.Events do
         send(self(), message)
         {:noreply, socket}
     end
+  end
+
+  @spec go_to_page(integer(), State.t(), socket()) :: {:noreply, socket()}
+  defp go_to_page(page, %State{page: page}, socket), do: {:noreply, socket}
+
+  defp go_to_page(page, state, socket),
+    do: {:noreply, DataLoader.load_async(socket, state, page: page, reset: true)}
+
+  @spec change_page_size(pos_integer() | nil, State.t(), socket()) :: {:noreply, socket()}
+  defp change_page_size(nil, _state, socket), do: {:noreply, socket}
+
+  defp change_page_size(page_size, state, socket) do
+    max = state.static.max_page_size
+    options = state.static.page_size_options
+
+    clamped = if max, do: min(page_size, max), else: page_size
+
+    effective =
+      if options && clamped not in options do
+        state.static.page_size
+      else
+        clamped
+      end
+
+    state = State.update(state, current_page_size: effective)
+    socket = DataLoader.load_async(socket, state, page: 1, reset: true)
+    {:noreply, socket}
   end
 
   @doc false

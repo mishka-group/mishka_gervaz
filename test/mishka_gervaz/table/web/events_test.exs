@@ -577,6 +577,44 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
       assert updated_state.page == 2
       assert updated_state.loading == :loaded
     end
+
+    test "with a page that is not a positive whole number opens page 1" do
+      for page <- ["two", "1.5", "", ["2"]] do
+        on_first = init_loaded_state(BasicResource, master_user(), page: 1, total_pages: 2)
+        on_second = init_loaded_state(BasicResource, master_user(), page: 2, total_pages: 2)
+
+        {:noreply, first} =
+          Events.handle(
+            "go_to_page",
+            %{"page" => page},
+            create_socket(on_first, with_stream: true)
+          )
+
+        {:noreply, second} =
+          Events.handle(
+            "go_to_page",
+            %{"page" => page},
+            create_socket(on_second, with_stream: true)
+          )
+
+        assert {page, first.assigns.table_state.loading} == {page, :loaded}
+        assert {page, second.assigns.table_state.loading} == {page, :loading}
+      end
+    end
+
+    test "on a table that keeps no count stays on page 1 for a page the database cannot read" do
+      state = init_loaded_state(BasicResource, master_user(), page: 1, total_pages: nil)
+      past = div(9_223_372_036_854_775_807, state.static.page_size) + 2
+
+      {:noreply, socket} =
+        Events.handle(
+          "go_to_page",
+          %{"page" => to_string(past)},
+          create_socket(state, with_stream: true)
+        )
+
+      assert socket.assigns.table_state.loading == :loaded
+    end
   end
 
   describe "pagination events - change_page_size" do
@@ -616,6 +654,17 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
       state = init_loaded_state(BasicResource, master_user(), page: 3, total_pages: 6)
 
       assert change_page_size(state, "50").loading == :loading
+    end
+
+    test "a size that is not a positive whole number is ignored" do
+      state = init_loaded_state(BasicResource, master_user(), page: 3, total_pages: 6)
+
+      for size <- ["two", "1.5", "0", "-3", "", ["50"]] do
+        changed = change_page_size(state, size)
+
+        assert {size, changed.current_page_size, changed.loading} ==
+                 {size, state.current_page_size, :loaded}
+      end
     end
   end
 

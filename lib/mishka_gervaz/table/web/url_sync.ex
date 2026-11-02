@@ -54,6 +54,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   `MishkaGervaz.Table.Dsl.Defaults` (domain-level defaults).
   """
 
+  import MishkaGervaz.Helpers, only: [positive_integer: 1]
+
   @default_config %{
     enabled: false,
     params: [:filters, :sort, :page],
@@ -539,16 +541,6 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   defp decode_page_size(params, prefix) do
     params |> Map.get(build_key(prefix, "page_size")) |> positive_integer()
   end
-
-  @spec positive_integer(term()) :: pos_integer() | nil
-  defp positive_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} when number > 0 -> number
-      _not_positive -> nil
-    end
-  end
-
-  defp positive_integer(_value), do: nil
 
   @spec decode_search(map(), String.t() | nil) :: String.t() | nil
   defp decode_search(params, prefix) do

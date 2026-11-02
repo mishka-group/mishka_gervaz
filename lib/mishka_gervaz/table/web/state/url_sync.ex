@@ -13,6 +13,8 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   the page size the table reads with, fits a signed 64-bit integer, the range Postgres takes for
   `OFFSET`. A table of 20 rows a page opens any page up to 461,168,601,842,738,791. A page past that
   opens page 1, as a URL without a page does. A page past the last row is opened, and shows no rows.
+  The check is `MishkaGervaz.Table.Web.State.Helpers.readable_page/2`, which a `go_to_page` event
+  passes through too.
 
   ## User Override
 
@@ -34,8 +36,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   """
 
   import MishkaGervaz.Helpers, only: [accessible?: 2, find_by_name: 2]
-
-  @max_offset 9_223_372_036_854_775_807
+  import MishkaGervaz.Table.Web.State.Helpers, only: [readable_page: 2]
 
   @doc false
   @spec apply_url_filters(map(), map()) :: map()
@@ -74,17 +75,10 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   @doc false
   @spec apply_url_page(map(), map()) :: map()
   def apply_url_page(state, %{page: page}) when is_integer(page) and page > 0 do
-    %{state | page: readable_page(page, state.current_page_size || state.static.page_size)}
+    %{state | page: readable_page(state, page)}
   end
 
   def apply_url_page(state, _), do: state
-
-  @spec readable_page(pos_integer(), pos_integer() | nil) :: pos_integer()
-  defp readable_page(page, page_size)
-       when is_integer(page_size) and (page - 1) * page_size > @max_offset,
-       do: 1
-
-  defp readable_page(page, _page_size), do: page
 
   @doc false
   @spec apply_url_search(map(), map()) :: map()

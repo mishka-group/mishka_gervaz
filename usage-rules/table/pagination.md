@@ -39,6 +39,15 @@ end
 `max_page_size` also clamps a page size arriving from the URL — it is the guard against
 `?t_page_size=100000`.
 
+## Page events
+
+The pager's `go_to_page` and `change_page_size` events read their page and size the way the URL
+does. A `go_to_page` whose page is not a positive whole number opens page 1; a counted table holds
+it to its last page, and a table that keeps no count opens it when the database can read its offset
+(see [url-sync.md](url-sync.md)) and opens page 1 when it cannot. A `change_page_size` whose size is
+not a positive whole number is ignored. A custom `events do sanitization … end` handler's
+`sanitize_page/1` returns the number, or `nil` for anything else.
+
 ## `show_total` costs a COUNT
 
 `show_total` defaults to **true** and issues a count query. Turn it off for a data layer that
