@@ -8,11 +8,9 @@ hooks do
   on_validate      fn params, state -> params end
   on_change        fn field, value, state -> state end       # {:halt, state} stops it
   before_save      fn params, state -> params end            # {:halt, reason} CANCELS the save
-  after_save       fn result, state -> state end
+  after_save       fn record, state -> :ok end
   on_error         fn form, state -> state end
   on_cancel        fn state -> state end
-  transform_params fn params -> params end
-  transform_errors fn changeset, errors -> errors end
 
   js do
     on_init    fn -> JS.focus(to: "#title") end
@@ -31,35 +29,9 @@ end
 | `on_validate` | `params, state` | `params` — on the `phx-change` event |
 | `on_change` | `field, value, state` | `state` or `{:halt, state}` — one field changed |
 | `before_save` | `params, state` | `params` or `{:cont, params}` to save them, `{:halt, reason}` to cancel |
-| `after_save` | `result, state` | `state` — side effects |
-| `on_error` | `form, state` | `state` |
+| `after_save` | `record, state` | not read — runs for side effects with the saved record, then the form starts over |
+| `on_error` | `form, state` | `state` — the form a failed save left; the state returned is the one shown |
 | `on_cancel` | `state` | `state` |
-| `transform_params` | `params` | ⚠ compiled but not read — see below |
-| `transform_errors` | `changeset, errors` | ⚠ compiled but not read — see below |
-
-### ⚠ `transform_params` and `transform_errors` are not wired
-
-Both land in `Info.Form.hooks/1`, but nothing in `lib/mishka_gervaz/form/web/` reads them. The
-`transform_params/2` that *does* run is an **overridable callback** on
-`MishkaGervaz.Form.Web.Events.SubmitHandler`, which is a different thing:
-
-```elixir
-defmodule MyApp.Form.SubmitHandler do
-  use MishkaGervaz.Form.Web.Events.SubmitHandler
-
-  def transform_params(state, params) do
-    params |> super(state) |> Map.put("ingested_at", DateTime.utc_now())
-  end
-end
-```
-
-```elixir
-form do
-  events do submit MyApp.Form.SubmitHandler end
-end
-```
-
-For the simple case use `before_save` instead — it runs, and it can also refuse.
 
 `before_save` receives the save event's params, with the form's values under `"form"`, and the
 params it returns, bare or as `{:cont, params}`, are the ones saved. Anything else saves the params
@@ -74,6 +46,27 @@ before_save fn params, state ->
     nil     -> {:cont, apply_visibility(params, state)}
     message -> {:halt, tell_author(message)}
   end
+end
+```
+
+### Changing params in code of your own
+
+`before_save` changes what is saved. To change it for every form of a kind, override
+`transform_params/2` on `MishkaGervaz.Form.Web.Events.SubmitHandler`:
+
+```elixir
+defmodule MyApp.Form.SubmitHandler do
+  use MishkaGervaz.Form.Web.Events.SubmitHandler
+
+  def transform_params(state, params) do
+    state |> super(params) |> Map.put("ingested_at", DateTime.utc_now())
+  end
+end
+```
+
+```elixir
+form do
+  events do submit MyApp.Form.SubmitHandler end
 end
 ```
 
@@ -97,10 +90,10 @@ the `{:form_saved, …}` / `{:form_cancelled, …}` messages instead
 ## TODO
 - [ ] `before_save` returns `params` / `{:cont, params}` / `{:halt, reason}` and nothing else
 - [ ] `after_save` used for side effects only — it cannot change the result
+- [ ] `on_error` returns the state, or the form keeps its own
 - [ ] Modal open/close driven by `js` hooks **or** the parent's messages, not both
 - [ ] `on_change` returns `{:halt, state}` only where a change must genuinely be swallowed
 - [ ] Slow work moved out of `on_validate` — it runs on every keystroke past the debounce
-- [ ] `transform_errors` used for wording, not to hide real validation failures
 
 ## DSL reference
 

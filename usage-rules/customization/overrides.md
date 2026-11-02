@@ -14,8 +14,8 @@ defmodule MyApp.Form.SubmitHandler do
   use MishkaGervaz.Form.Web.Events.SubmitHandler
 
   def transform_params(state, params) do
-    params
-    |> super(state)
+    state
+    |> super(params)
     |> Map.put("ingested_at", DateTime.utc_now())
   end
 end

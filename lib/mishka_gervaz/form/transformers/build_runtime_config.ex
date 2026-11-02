@@ -476,9 +476,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       :on_error,
       :on_cancel,
       :on_validate,
-      :on_change,
-      :transform_params,
-      :transform_errors
+      :on_change
     ]
 
     values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})

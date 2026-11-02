@@ -3131,13 +3131,11 @@ Lifecycle callbacks for forms.
 |------|------|---------|------|
 | [`on_init`](#mishka_gervaz-form-hooks-on_init){: #mishka_gervaz-form-hooks-on_init } | `(any, any -> any)` |  | `fn form, state -> form` - After form initialization. |
 | [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:cont, params} \| {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `"form"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save. |
-| [`after_save`](#mishka_gervaz-form-hooks-after_save){: #mishka_gervaz-form-hooks-after_save } | `(any, any -> any)` |  | `fn result, state -> state` - After successful save. |
-| [`on_error`](#mishka_gervaz-form-hooks-on_error){: #mishka_gervaz-form-hooks-on_error } | `(any, any -> any)` |  | `fn form, state -> state` - On save error. |
+| [`after_save`](#mishka_gervaz-form-hooks-after_save){: #mishka_gervaz-form-hooks-after_save } | `(any, any -> any)` |  | `fn record, state -> any` - After a successful save, with the saved record, for side effects. What it returns is not read: the form then starts over. |
+| [`on_error`](#mishka_gervaz-form-hooks-on_error){: #mishka_gervaz-form-hooks-on_error } | `(any, any -> any)` |  | `fn form, state -> state` - After a failed save, with the form it left. The state it returns is the one the form shows; anything else keeps the form's own. |
 | [`on_cancel`](#mishka_gervaz-form-hooks-on_cancel){: #mishka_gervaz-form-hooks-on_cancel } | `(any -> any)` |  | `fn state -> state` - When form is cancelled. |
 | [`on_validate`](#mishka_gervaz-form-hooks-on_validate){: #mishka_gervaz-form-hooks-on_validate } | `(any, any -> any)` |  | `fn params, state -> params` - On form validate event. |
 | [`on_change`](#mishka_gervaz-form-hooks-on_change){: #mishka_gervaz-form-hooks-on_change } | `(any, any, any -> any)` |  | `fn field, value, state -> state \| {:halt, state}` - On individual field change. |
-| [`transform_params`](#mishka_gervaz-form-hooks-transform_params){: #mishka_gervaz-form-hooks-transform_params } | `(any -> any)` |  | `fn params -> params` - Transform params before action. |
-| [`transform_errors`](#mishka_gervaz-form-hooks-transform_errors){: #mishka_gervaz-form-hooks-transform_errors } | `(any, any -> any)` |  | `fn changeset, errors -> errors` - Transform error messages. |
 
 
 ### mishka_gervaz.form.hooks.js

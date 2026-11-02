@@ -85,7 +85,7 @@ template or handler reads them** — on the form side only `render` on `header` 
 
 So today they are extension points for a custom template
 ([../customization/form-templates.md](../customization/form-templates.md)), not working options.
-To change a value on the way in, use `hooks do before_save / transform_params end`
+To change a value on the way in, use `hooks do before_save end`
 ([hooks.md](hooks.md)); to change how an input renders, use a
 [custom field type](../customization/types.md) or the
 [UI adapter](../customization/ui-adapters.md).
@@ -229,7 +229,7 @@ most common source of a field that looks right and saves wrong.
 Read the wired ones as a timeline: `default` / `derive_value` fill the field → `options` / `load`
 populate the choices → the field type and the UI adapter draw it → the Ash action writes it.
 
-To change a value on the way **in**, use `hooks do before_save / transform_params end`. To change
+To change a value on the way **in**, use `hooks do before_save end`. To change
 how an input **draws**, use a custom field type or the UI adapter.
 
 Three related pairs worth keeping straight:

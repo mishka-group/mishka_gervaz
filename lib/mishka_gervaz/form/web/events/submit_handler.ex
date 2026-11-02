@@ -14,7 +14,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         use MishkaGervaz.Form.Web.Events.SubmitHandler
 
         def transform_params(state, params) do
-          params |> super(state) |> Map.put("custom_field", "value")
+          state |> super(params) |> Map.put("custom_field", "value")
         end
       end
 
@@ -291,13 +291,23 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               {:error, updated_form} ->
                 field_names = MapSet.new(state.static.fields, & &1.name)
                 {errors, form_errors} = save_errors(updated_form, field_names)
+                failed_form = Phoenix.Component.to_form(updated_form)
 
                 state =
                   State.update(state,
-                    form: Phoenix.Component.to_form(updated_form),
+                    form: failed_form,
                     errors: errors,
                     form_errors: form_errors
                   )
+
+                state =
+                  case MishkaGervaz.Form.Web.Events.run_hook(state, :on_error, [
+                         failed_form,
+                         state
+                       ]) do
+                    %State{} = hooked -> hooked
+                    _not_a_state -> state
+                  end
 
                 record_id = socket.assigns[:record_id]
 
@@ -321,7 +331,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       @doc """
       Handle post-save logic.
 
-      Sends `{:form_saved, mode, record}` to the parent LiveView and runs the `after_save` JS hook.
+      Runs the `after_save` hook with the saved record, for its side effects, sends
+      `{:form_saved, mode, record}` to the parent LiveView and runs the `after_save` JS hook.
       An update save on a form mounted with a `record_id` assign reloads the saved record for
       editing; every other save returns the form to an empty create form.
       """
@@ -329,6 +340,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               Phoenix.LiveView.Socket.t()
       def after_save(state, result, socket) do
         record_id = Map.get(result, :id)
+        MishkaGervaz.Form.Web.Events.run_hook(state, :after_save, [result, state])
         send(self(), {:form_saved, state.mode, result})
 
         socket = push_js_hook(socket, state, :after_save, record_id)

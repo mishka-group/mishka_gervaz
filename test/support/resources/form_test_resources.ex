@@ -520,8 +520,6 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
         on_cancel fn state -> state end
         on_validate fn params, _state -> params end
         on_change fn _field, _value, state -> state end
-        transform_params fn params -> params end
-        transform_errors fn _changeset, errors -> errors end
 
         js do
           on_init fn -> Phoenix.LiveView.JS.dispatch("form:init") end
@@ -2095,7 +2093,9 @@ end
 
 defmodule MishkaGervaz.Test.Resources.HookedEntry do
   @moduledoc """
-  A form whose `before_save` hook returns the params as a bare map, with the title in capitals.
+  A form whose server hooks run on a save: `before_save` returns the params as a bare map, with the
+  title in capitals, `after_save` tells the test process which record was saved, and `on_error`
+  tells it the save failed and adds a message of its own to the form.
   """
   use Ash.Resource,
     domain: MishkaGervaz.Test.Domain,
@@ -2128,6 +2128,16 @@ defmodule MishkaGervaz.Test.Resources.HookedEntry do
       hooks do
         before_save fn %{"form" => form} = params, _state ->
           Map.put(params, "form", Map.update(form, "title", nil, &String.upcase/1))
+        end
+
+        after_save fn record, state ->
+          send(self(), {:after_save_hook, record.title})
+          state
+        end
+
+        on_error fn form, state ->
+          send(self(), {:on_error_hook, form.source.type})
+          %{state | form_errors: state.form_errors ++ ["Checked by the hook."]}
         end
       end
     end

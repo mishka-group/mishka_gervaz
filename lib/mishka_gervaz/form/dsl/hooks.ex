@@ -11,10 +11,8 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
           Map.put(params, "form", Map.put(values, "processed", true))
         end
 
-        after_save fn result, state ->
-          # Side effects after save
-          Logger.info("Saved: \#{inspect(result)}")
-          state
+        after_save fn record, _state ->
+          Logger.info("Saved: \#{inspect(record)}")
         end
       end
   """
@@ -31,11 +29,13 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     ],
     after_save: [
       type: {:fun, 2},
-      doc: "`fn result, state -> state` - After successful save."
+      doc:
+        "`fn record, state -> any` - After a successful save, with the saved record, for side effects. What it returns is not read: the form then starts over."
     ],
     on_error: [
       type: {:fun, 2},
-      doc: "`fn form, state -> state` - On save error."
+      doc:
+        "`fn form, state -> state` - After a failed save, with the form it left. The state it returns is the one the form shows; anything else keeps the form's own."
     ],
     on_cancel: [
       type: {:fun, 1},
@@ -48,14 +48,6 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     on_change: [
       type: {:fun, 3},
       doc: "`fn field, value, state -> state | {:halt, state}` - On individual field change."
-    ],
-    transform_params: [
-      type: {:fun, 1},
-      doc: "`fn params -> params` - Transform params before action."
-    ],
-    transform_errors: [
-      type: {:fun, 2},
-      doc: "`fn changeset, errors -> errors` - Transform error messages."
     ]
   ]
 
