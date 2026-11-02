@@ -274,11 +274,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
+  # Draws the groups in order, then the fields no group holds, with the `:before_fields` notices
+  # ahead of those fields.
   defp render_groups(assigns) do
     groups = assigns.static.groups
 
     if groups == [] do
-      render_group_fields(assigns, assigns.static.fields, nil)
+      ~H"""
+      {render_notices_at(assigns, :before_fields)}
+      {render_group_fields(assigns, @static.fields, nil)}
+      """
     else
       visible_groups = Enum.filter(groups, &accessible?(&1, assigns.state))
 
@@ -304,6 +309,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           {render_notices_at(assigns, {:after_group, group.name})}
         <% end %>
         <%= if @ungrouped_fields != [] do %>
+          {render_notices_at(assigns, :before_fields)}
           {render_group_fields(assigns, @ungrouped_fields, nil)}
         <% end %>
       </div>

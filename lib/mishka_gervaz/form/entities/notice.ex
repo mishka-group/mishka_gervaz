@@ -15,7 +15,10 @@ defmodule MishkaGervaz.Form.Entities.Notice do
   Atoms:
   - `:form_top` - above the `<.form>` element.
   - `:before_header` / `:after_header` - around the form header.
-  - `:before_groups` / `:before_fields` - before grouped/ungrouped field rows.
+  - `:before_groups` - before the groups.
+  - `:before_fields` - before the fields no group holds: every field of a form without groups, or
+    the fields a grouped form leaves out of its groups, after the groups. A form whose every field
+    is in a group draws it nowhere.
   - `:before_submit` - above the submit/cancel row.
   - `:form_bottom` - below the submit row but inside `<.form>`.
   - `:form_footer` - below the form footer (last possible slot).

@@ -80,9 +80,10 @@ defined relative to it:
 
 1. notices at `:form_top`
 2. header chrome (with `:before_header` / `:after_header` notices)
-3. notices at `:before_groups` / `:before_fields`
+3. notices at `:before_groups`
 4. the body — groups (standard) or the current step's groups (wizard/tabs), with
-   `{:before_group, g}` / `{:after_group, g}` notices interleaved
+   `{:before_group, g}` / `{:after_group, g}` notices interleaved, then (standard) the fields no
+   group holds, with the `:before_fields` notices ahead of them
 5. upload sections
 6. notices at `:before_submit`
 7. the submit row — respecting `static.submit_visible?` and `static.submit_alternatives`
