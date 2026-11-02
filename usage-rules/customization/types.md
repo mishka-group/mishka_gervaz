@@ -163,7 +163,7 @@ end
 
 | Callback | Required | Note |
 |---|---|---|
-| `render/2` | ✔ | `assigns, config` |
+| `render/2` | ✔ | `assigns, config` — the Standard template draws the field with it, inside its label and errors; `assigns` carry `name`, `id`, `value`, `placeholder`, `disabled` and `module` (the UI adapter) |
 | `sanitize/2` | — | runs **before** validation; text types strip HTML, textarea/json/nested pass through |
 | `parse_params/2` | — | raw param → typed value |
 | `validate/2` | — | `{:ok, value}` \| `{:error, message}` |

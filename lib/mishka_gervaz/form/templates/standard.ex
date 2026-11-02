@@ -1490,9 +1490,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         render_nested_input(ui, field, form_field, assigns)
 
       _ ->
-        base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
+        render_own_type(base, field)
     end
   end
+
+  # A field whose type is a module of its own, rather than a built-in token, is drawn by that
+  # module's `render/2`; any other type is drawn as a text input.
+  defp render_own_type(base, %{type: module, type_module: module} = field)
+       when is_atom(module) and not is_nil(module) do
+    if MishkaGervaz.Helpers.exports?(module, :render, 2),
+      do: module.render(base, field),
+      else: render_text_input(base)
+  end
+
+  defp render_own_type(base, _field), do: render_text_input(base)
+
+  defp render_text_input(base),
+    do: base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
 
   defp render_upload_field(ui, field, form_field, assigns) do
     upload_config = UploadHelpers.find_upload_for_field(assigns.static, field.name)

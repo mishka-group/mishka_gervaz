@@ -54,3 +54,19 @@ defmodule MishkaGervaz.Test.CustomActionType do
     """
   end
 end
+
+defmodule MishkaGervaz.Test.ColorFieldType do
+  @moduledoc """
+  Custom form field type for testing that the Standard template draws a field through its type
+  module's `render/2`.
+  """
+  @behaviour MishkaGervaz.Form.Behaviours.FieldType
+  use Phoenix.Component
+
+  @impl true
+  def render(assigns, _config) do
+    ~H"""
+    <input type="color" data-role="color-picker" name={@name} id={@id} value={@value} />
+    """
+  end
+end

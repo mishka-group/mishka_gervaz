@@ -2222,3 +2222,43 @@ defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
     end
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.ColoredEntry do
+  @moduledoc """
+  A form whose `:color` field is a custom field type module.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :colored_entry
+        route "/admin/colored-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :color, MishkaGervaz.Test.ColorFieldType
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :color, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+end

@@ -59,9 +59,13 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   @doc """
   Render the form field input.
 
+  The Standard template calls it for a field whose type is this module, inside the field's label
+  and errors. The built-in types are drawn by the template itself.
+
   ## Parameters
 
-  - `assigns` — Phoenix assigns with field data
+  - `assigns` — Phoenix assigns with field data: `:name`, `:id` and `:value` of the input,
+    `:placeholder`, `:disabled`, `:module` (the form's UI adapter) and the form's own assigns
   - `config`  — field configuration map from the DSL
   """
   @callback render(assigns(), config()) :: rendered()
