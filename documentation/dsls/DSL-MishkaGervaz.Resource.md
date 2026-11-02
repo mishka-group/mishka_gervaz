@@ -2811,7 +2811,6 @@ Define a wizard/tab step.
 | [`on_enter`](#mishka_gervaz-form-layout-step-on_enter){: #mishka_gervaz-form-layout-step-on_enter } | `(any -> any)` |  | Callback invoked when entering the step. Receives state, returns state. |
 | [`before_leave`](#mishka_gervaz-form-layout-step-before_leave){: #mishka_gervaz-form-layout-step-before_leave } | `(any -> any)` |  | Callback invoked before leaving the step. Return {:halt, state} to block navigation. |
 | [`after_leave`](#mishka_gervaz-form-layout-step-after_leave){: #mishka_gervaz-form-layout-step-after_leave } | `(any -> any)` |  | Callback invoked after leaving the step. Receives state, returns state. |
-| [`visible`](#mishka_gervaz-form-layout-step-visible){: #mishka_gervaz-form-layout-step-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
 
 
 ### mishka_gervaz.form.layout.step.ui

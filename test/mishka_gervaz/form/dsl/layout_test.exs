@@ -109,10 +109,8 @@ defmodule MishkaGervaz.Form.DSL.LayoutTest do
       assert details.summary != true
     end
 
-    test "step visible function" do
-      step = FormInfo.step(TabsForm, :settings_tab)
-      assert is_function(step.visible, 1)
-      assert step.visible.(%{}) == true
+    test "a step offers no visible option, which no navigation reads" do
+      refute Keyword.has_key?(MishkaGervaz.Form.Entities.Step.opt_schema(), :visible)
     end
 
     test "step on_enter callback" do

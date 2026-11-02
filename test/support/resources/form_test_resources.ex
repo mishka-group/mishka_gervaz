@@ -854,7 +854,6 @@ defmodule MishkaGervaz.Test.Resources.TabsForm do
 
         step :settings_tab do
           groups [:settings_group]
-          visible fn _assigns -> true end
 
           ui do
             label "Settings"

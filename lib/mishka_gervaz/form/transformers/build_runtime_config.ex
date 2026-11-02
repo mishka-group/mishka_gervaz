@@ -350,7 +350,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       name: step.name,
       groups: step.groups,
       action: step.action,
-      visible: step.visible,
       summary: step.summary,
       on_enter: step.on_enter,
       before_leave: step.before_leave,
