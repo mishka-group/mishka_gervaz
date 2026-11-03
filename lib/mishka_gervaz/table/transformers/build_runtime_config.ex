@@ -560,6 +560,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   end
 
   defp bulk_action_to_map(action) do
+    ui = extract_nested_entity(action.ui, BulkAction.Ui)
+
     %{
       name: action.name,
       confirm: action.confirm,
@@ -569,7 +571,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       visible: action.visible,
       handler: default_if_nil(action.handler, :parent),
       action: action.action,
-      ui: maybe_ui(action.ui, &bulk_ui_to_map/1, &has_bulk_ui_values?/1)
+      ui: maybe_ui(ui, &bulk_ui_to_map/1, &has_bulk_ui_values?/1)
     }
   end
 
