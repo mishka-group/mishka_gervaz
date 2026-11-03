@@ -26,6 +26,10 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
        summary whose `:skipped_count` / `:skipped_record_ids` describe the
        skipped rows; default flash is `"X unarchived, Y skipped — a record
        with the same name already exists."`. Skipped rows stay selected.
+    4. The table then loads its first page again, or, with
+       `keep_loaded_records true`, every page it had loaded, so the rows the
+       reader loaded stay. A function handler that returns `:reload` reloads
+       the same way.
 
   See `MishkaGervaz.Table.Web.Events.BulkActionResult` for the summary
   shape; `MishkaGervaz.Table.Web.Events.BulkActionHooks` for `silence/1`
@@ -466,7 +470,7 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
             {:noreply, socket}
 
           :reload ->
-            socket = DataLoader.load_async(socket, state, page: 1, reset: true)
+            socket = DataLoader.load_async(socket, state, page: reload_page(state), reset: true)
 
             socket =
               apply_lifecycle_socket(
@@ -588,10 +592,23 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
             state
           end
 
-        socket = DataLoader.load_async(socket, new_state, page: 1, reset: true, sync_url: false)
+        socket =
+          DataLoader.load_async(socket, new_state,
+            page: reload_page(state),
+            reset: true,
+            sync_url: false
+          )
+
         socket = MishkaGervaz.Table.Web.AutoState.after_bulk_action(socket, new_state, action)
         {:noreply, socket}
       end
+
+      @spec reload_page(State.t()) :: pos_integer()
+      defp reload_page(%State{static: %{keep_loaded_records: true}, page: page})
+           when is_integer(page) and page > 0,
+           do: page
+
+      defp reload_page(_state), do: 1
 
       defp finish_bulk_error(action, %BulkActionResult{} = summary, state, socket) do
         socket =
@@ -731,7 +748,13 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
             select_all?: false
           )
 
-        socket = DataLoader.load_async(socket, new_state, page: 1, reset: true, sync_url: false)
+        socket =
+          DataLoader.load_async(socket, new_state,
+            page: reload_page(state),
+            reset: true,
+            sync_url: false
+          )
+
         {:noreply, socket}
       end
 

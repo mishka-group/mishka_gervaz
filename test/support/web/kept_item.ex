@@ -6,7 +6,7 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
   kept rows. Its template and page are synced to the URL in `:bidirectional` mode.
 
   Its read reads at most three rows at a time (`max_page_size 3`), fewer than a table that has
-  loaded two pages keeps.
+  loaded two pages keeps. Its rows can be picked, and its Wipe bulk action destroys the picked ones.
   """
 
   use Ash.Resource,
@@ -42,6 +42,14 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
         page_size 2
       end
 
+      row do
+        selectable true
+      end
+
+      bulk_actions do
+        action :wipe, type: :destroy
+      end
+
       url_sync do
         enabled true
         mode :bidirectional
@@ -59,6 +67,7 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
 
     read :master_get
     read :tenant_read
+    destroy :master_destroy
   end
 
   attributes do

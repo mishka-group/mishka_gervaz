@@ -6,7 +6,8 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
   Load more adds the next page to every row loaded before, page after page, past the most rows
   the resource's read takes at once (`max_page_size`), until the last row. A page larger than that
-  holds every row it asks for on a table that keeps no rows too.
+  holds every row it asks for on a table that keeps no rows too. A bulk action reloads every page
+  loaded before it.
   """
   use ExUnit.Case, async: false
 
@@ -111,6 +112,29 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
       notify(view, :create, Ash.create!(KeptItem, %{title: "new"}))
 
       assert kept(view) == ~w(new a b)
+    end
+  end
+
+  describe "a bulk action" do
+    test "reloads every page loaded before it, so the rows loaded stay", %{
+      items: [_a, b | _] = items
+    } do
+      view = open("/kept?template=table")
+      load_more(view)
+      load_more(view)
+
+      view
+      |> element(~s|#items [phx-click="toggle_select"][phx-value-id="#{b.id}"]|)
+      |> render_click()
+
+      view
+      |> element(~s|#items [phx-click="bulk_action"][phx-value-action="wipe"]|)
+      |> render_click()
+
+      render_async(view, @await)
+
+      assert listed(view, items) == ~w(a c d e f g)
+      refute more?(view)
     end
   end
 
