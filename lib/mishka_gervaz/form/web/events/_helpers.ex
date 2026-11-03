@@ -13,7 +13,7 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
 
   Three groups:
 
-  - **Typed-param helpers** (`parse_typed_params/2`,
+  - **Typed-param helpers** (`parse_typed_params/3`,
     `sanitize_typed_params/2`) — dispatch through `field.type_module`
     when set; pass through otherwise.
   - **Sanitization helpers** (`sanitize_string/1`,
@@ -29,21 +29,27 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
   sub-handlers.
   """
 
-  @doc false
-  @spec parse_typed_params(list(map()), map()) :: map()
-  def parse_typed_params(fields, params) when is_list(fields) and is_map(params) do
+  @doc """
+  Runs each field's `FieldType.parse_params/2` over its value in `params`.
+
+  The type module reads the field's `options` as a list: a field whose `options` is
+  `fn state -> options end` has it read with the form `state` first, so a `:key_map` parses against
+  the keys the form draws.
+  """
+  @spec parse_typed_params(list(map()), map(), map()) :: map()
+  def parse_typed_params(fields, params, state) when is_list(fields) and is_map(params) do
     Enum.reduce(fields, params, fn field, acc ->
-      apply_type_fn(acc, field, :parse_params)
+      apply_type_fn(acc, field, :parse_params, state)
     end)
   end
 
-  def parse_typed_params(_fields, params), do: params
+  def parse_typed_params(_fields, params, _state), do: params
 
   @doc false
   @spec sanitize_typed_params(list(map()), map()) :: map()
   def sanitize_typed_params(fields, params) when is_list(fields) and is_map(params) do
     Enum.reduce(fields, params, fn field, acc ->
-      apply_type_fn(acc, field, :sanitize)
+      apply_type_fn(acc, field, :sanitize, nil)
     end)
   end
 
@@ -82,18 +88,23 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
     end
   end
 
-  defp apply_type_fn(params, field, fun_name) do
+  defp apply_type_fn(params, field, fun_name, state) do
     field_name = to_string(field.name)
     type_mod = Map.get(field, :type_module)
 
     with {:ok, value} <- Map.fetch(params, field_name),
          true <- not is_nil(type_mod),
          true <- Map.get(field, callback_flag(fun_name), false) do
-      Map.put(params, field_name, apply(type_mod, fun_name, [value, field]))
+      Map.put(params, field_name, apply(type_mod, fun_name, [value, read_options(field, state)]))
     else
       _ -> params
     end
   end
+
+  defp read_options(%{options: options} = field, %{} = state) when is_function(options, 1),
+    do: %{field | options: options.(state)}
+
+  defp read_options(field, _state), do: field
 
   defp callback_flag(:sanitize), do: :custom_sanitize?
   defp callback_flag(:parse_params), do: :custom_parse_params?

@@ -37,6 +37,20 @@ defmodule MishkaGervaz.HelpersTest do
     end
   end
 
+  describe "positive_integer/1" do
+    test "reads the digits of a positive whole number, and keeps a positive integer" do
+      assert Helpers.positive_integer("12") == 12
+      assert Helpers.positive_integer("99999999999999999999999") == 99_999_999_999_999_999_999_999
+      assert Helpers.positive_integer(7) == 7
+    end
+
+    test "is nil for anything else" do
+      for value <- ["0", "-3", "two", "1.5", "2abc", " 2", "", 0, -3, 1.5, nil, :one, ["2"], %{}] do
+        assert {value, Helpers.positive_integer(value)} == {value, nil}
+      end
+    end
+  end
+
   describe "humanize/1" do
     test "converts atom with underscores to title case" do
       assert Helpers.humanize(:first_name) == "First Name"

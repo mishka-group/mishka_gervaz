@@ -7,15 +7,12 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
   ## Example
 
       hooks do
-        before_save fn params, state ->
-          # Transform params before saving
-          Map.put(params, "processed", true)
+        before_save fn %{"form" => values} = params, _state ->
+          Map.put(params, "form", Map.put(values, "processed", true))
         end
 
-        after_save fn result, state ->
-          # Side effects after save
-          Logger.info("Saved: \#{inspect(result)}")
-          state
+        after_save fn record, _state ->
+          Logger.info("Saved: \#{inspect(record)}")
         end
       end
   """
@@ -28,15 +25,17 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     before_save: [
       type: {:fun, 2},
       doc:
-        "`fn params, state -> params | {:halt, state}` - Before save. Return {:halt, state} to cancel."
+        "`fn params, state -> params | {:cont, params} | {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `\"form\"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save."
     ],
     after_save: [
       type: {:fun, 2},
-      doc: "`fn result, state -> state` - After successful save."
+      doc:
+        "`fn record, state -> any` - After a successful save, with the saved record, for side effects. What it returns is not read: the form then starts over."
     ],
     on_error: [
       type: {:fun, 2},
-      doc: "`fn form, state -> state` - On save error."
+      doc:
+        "`fn form, state -> state` - After a failed save, with the form it left. The state it returns is the one the form shows; anything else keeps the form's own."
     ],
     on_cancel: [
       type: {:fun, 1},
@@ -49,14 +48,6 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     on_change: [
       type: {:fun, 3},
       doc: "`fn field, value, state -> state | {:halt, state}` - On individual field change."
-    ],
-    transform_params: [
-      type: {:fun, 1},
-      doc: "`fn params -> params` - Transform params before action."
-    ],
-    transform_errors: [
-      type: {:fun, 2},
-      doc: "`fn changeset, errors -> errors` - Transform error messages."
     ]
   ]
 

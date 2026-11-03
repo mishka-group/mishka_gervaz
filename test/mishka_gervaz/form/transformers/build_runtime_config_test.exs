@@ -96,7 +96,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfigTest do
       assert Map.has_key?(step, :name)
       assert Map.has_key?(step, :groups)
       assert Map.has_key?(step, :action)
-      assert Map.has_key?(step, :visible)
       assert Map.has_key?(step, :summary)
       assert Map.has_key?(step, :on_enter)
       assert Map.has_key?(step, :before_leave)

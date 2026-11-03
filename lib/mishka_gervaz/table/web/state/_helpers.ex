@@ -32,6 +32,8 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
 
   import MishkaGervaz.Helpers, only: [module_to_snake: 2]
 
+  @max_offset 9_223_372_036_854_775_807
+
   @doc """
   Resolves the labels for one relation filter's currently selected ids and stores them under
   the filter's name.
@@ -126,6 +128,27 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
   @spec get_max_page_size(map()) :: pos_integer() | nil
   def get_max_page_size(%{pagination: %{max_page_size: max}}), do: max
   def get_max_page_size(_), do: nil
+
+  @doc """
+  The page the table opens for `page`: `page` itself when the database can read its offset, and
+  page 1 when it cannot.
+
+  The offset is `(page - 1)` times the page size the table reads with, its `current_page_size` or
+  else the configured one. The database can read it when it fits a signed 64-bit integer, the range
+  Postgres takes for `OFFSET`, so a table of 20 rows a page opens any page up to
+  461,168,601,842,738,791. A table without a page size reads no offset and keeps any page. Both the
+  page from the URL and the page of a `go_to_page` event pass through it.
+  """
+  @spec readable_page(map(), integer()) :: integer()
+  def readable_page(state, page),
+    do: readable_at(page, state.current_page_size || state.static.page_size)
+
+  @spec readable_at(integer(), pos_integer() | nil) :: integer()
+  defp readable_at(page, page_size)
+       when is_integer(page_size) and (page - 1) * page_size > @max_offset,
+       do: 1
+
+  defp readable_at(page, _page_size), do: page
 
   @doc """
   The table's `layout do header … end` map, or `nil` when the resource declares none.
@@ -314,6 +337,33 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
         []
     end
   end
+
+  @doc """
+  The part of `sort` the table can sort by, in its order: each `{field, order}` whose field a
+  sortable column sorts by (its `sort_field`, or its own name) or the table's default sort names.
+
+  A field of no column, or of a column that is not sortable, is left out, so a sort from the URL
+  never sends the read a field the resource cannot sort by or the table does not offer. On a table
+  whose only sortable column is `:display_name`:
+
+      readable_sort(state, display_name: :desc, name: :desc)
+      #=> [display_name: :desc]
+  """
+  @spec readable_sort(map(), [{atom(), :asc | :desc}]) :: [{atom(), :asc | :desc}]
+  def readable_sort(%{static: static}, sort) when is_list(sort) do
+    sortable = sortable_fields(static)
+    for {field, order} <- sort, MapSet.member?(sortable, field), do: {field, order}
+  end
+
+  defp sortable_fields(static) do
+    defaults = for entry <- get_default_sort(static.config, static.columns), do: sort_name(entry)
+    columns = (static.sort_field_map || %{}) |> Map.values() |> List.flatten()
+
+    MapSet.new(defaults ++ columns)
+  end
+
+  defp sort_name({field, _order}), do: field
+  defp sort_name(field), do: field
 
   @doc """
   The URL-sync module for a resource — its `state do url_sync … end` override, or the default

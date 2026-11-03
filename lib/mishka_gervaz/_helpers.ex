@@ -524,6 +524,41 @@ defmodule MishkaGervaz.Helpers do
   def to_boolean(_), do: nil
 
   @doc """
+  The positive whole number a value spells, or `nil` for anything else.
+
+  Reads the page numbers and page sizes that arrive in URL params and event params. A string must
+  be the digits of the number and nothing more; an integer is kept when it is above zero.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.positive_integer("12")
+      12
+
+      iex> MishkaGervaz.Helpers.positive_integer(7)
+      7
+
+      iex> MishkaGervaz.Helpers.positive_integer("0")
+      nil
+
+      iex> MishkaGervaz.Helpers.positive_integer("1.5")
+      nil
+
+      iex> MishkaGervaz.Helpers.positive_integer(["2"])
+      nil
+  """
+  @spec positive_integer(term()) :: pos_integer() | nil
+  def positive_integer(value) when is_integer(value) and value > 0, do: value
+
+  def positive_integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {number, ""} when number > 0 -> number
+      _not_positive -> nil
+    end
+  end
+
+  def positive_integer(_value), do: nil
+
+  @doc """
   Puts a key-value pair into a map only if the value is present and valid.
 
   Designed for building configuration maps where optional values should only
@@ -737,6 +772,8 @@ defmodule MishkaGervaz.Helpers do
 
   Handles:
   - `restricted: true` → accessible only when `state.master_user?` is `true`
+  - `restricted: fn state -> boolean end` → not accessible when it answers `true`, whoever the
+    user is
   - `visible: false` → not accessible
   - `visible: fn state -> boolean end` → calls function
 
@@ -751,6 +788,12 @@ defmodule MishkaGervaz.Helpers do
       iex> MishkaGervaz.Helpers.accessible?(%{restricted: true}, %{})
       false
 
+      iex> MishkaGervaz.Helpers.accessible?(%{restricted: fn _state -> true end}, %{master_user?: true})
+      false
+
+      iex> MishkaGervaz.Helpers.accessible?(%{restricted: fn _state -> false end}, %{})
+      true
+
       iex> MishkaGervaz.Helpers.accessible?(%{visible: false}, %{})
       false
 
@@ -762,6 +805,10 @@ defmodule MishkaGervaz.Helpers do
     do: accessible?(Map.delete(element, :restricted), state)
 
   def accessible?(%{restricted: true}, _state), do: false
+
+  def accessible?(%{restricted: restricted} = element, state) when is_function(restricted, 1),
+    do: restricted.(state) != true and accessible?(Map.delete(element, :restricted), state)
+
   def accessible?(%{visible: visible}, state) when is_function(visible, 1), do: visible.(state)
   def accessible?(%{visible: false}, _state), do: false
   def accessible?(_, _), do: true

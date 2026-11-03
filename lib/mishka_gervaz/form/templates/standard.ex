@@ -274,11 +274,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
+  # Draws the groups in order, then the fields no group holds, with the `:before_fields` notices
+  # ahead of those fields.
   defp render_groups(assigns) do
     groups = assigns.static.groups
 
     if groups == [] do
-      render_group_fields(assigns, assigns.static.fields, nil)
+      ~H"""
+      {render_notices_at(assigns, :before_fields)}
+      {render_group_fields(assigns, @static.fields, nil)}
+      """
     else
       visible_groups = Enum.filter(groups, &accessible?(&1, assigns.state))
 
@@ -304,6 +309,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           {render_notices_at(assigns, {:after_group, group.name})}
         <% end %>
         <%= if @ungrouped_fields != [] do %>
+          {render_notices_at(assigns, :before_fields)}
           {render_group_fields(assigns, @ungrouped_fields, nil)}
         <% end %>
       </div>
@@ -658,7 +664,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   # Draws one control per declared key through the UI adapter, reading each held value under
   # either a string or an atom key.
   defp key_map_inputs(assigns) do
-    assigns = assign_new(assigns, :label_id, fn -> nil end)
+    assigns =
+      assigns
+      |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:drawn, fn -> opened(assigns) end)
 
     ~H"""
     <div class="grid grid-cols-2 gap-2.5" role={@label_id && "group"} aria-labelledby={@label_id}>
@@ -667,22 +676,34 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           class="mb-[5px] block text-[10px] font-bold text-[#8a877f]"
           for={"#{@input_id}_#{key.name}"}
         >
-          {translate_text(key.label || MishkaGervaz.Helpers.humanize(key.name))}
+          {translate_text(key.label || MishkaGervaz.Helpers.humanize(key.name))}<span
+            :if={key.required}
+            class="ms-0.5 text-[#e5484d]"
+          >*</span>
         </label>
         {key_map_input(
           @ui,
           key,
           "#{@input_name}[#{key.name}]",
           "#{@input_id}_#{key.name}",
-          Map.get(@held, to_string(key.name), Map.get(@held, key.name))
+          Map.get(@held, to_string(key.name), Map.get(@held, key.name)),
+          @drawn
         )}
       </div>
     </div>
     """
   end
 
+  defp opened(%{state: %{opened: opened}}) when is_integer(opened), do: opened
+  defp opened(_assigns), do: 0
+
+  # Each row's controls are drawn with the row count in `drawn`, so a row added or removed draws
+  # every password key of the list anew rather than leaving one typed into a row that moved.
   defp key_list_rows(assigns) do
-    assigns = assign_new(assigns, :label_id, fn -> nil end)
+    assigns =
+      assigns
+      |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:drawn, fn -> opened(assigns) end)
 
     ~H"""
     <div class="space-y-[9px]" role={@label_id && "group"} aria-labelledby={@label_id}>
@@ -708,6 +729,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           held={row}
           input_name={"#{@input_name}[#{index}]"}
           input_id={"#{@input_id}_#{index}"}
+          drawn={"#{@drawn}-#{length(@rows)}"}
         />
       </div>
 
@@ -758,13 +780,28 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp row_event(_no_owner, _which, _index), do: %{}
 
   # Renders one key's control through the adapter, from an assigns map built here.
-  defp key_map_input(ui, key, name, id, value) do
+  defp key_map_input(ui, key, name, id, value, drawn) do
     control =
       %{__changed__: nil, module: ui, name: name, id: id, value: value}
       |> Map.merge(key_map_control(key, value))
       |> dynamic_component()
 
-    if Map.get(key, :type) in [:checkbox, :toggle], do: boolean_box(control), else: control
+    case Map.get(key, :type) do
+      type when type in [:checkbox, :toggle] -> boolean_box(control)
+      :password -> password_box(control, "#{id}-box-#{drawn}")
+      _type -> control
+    end
+  end
+
+  # A password key is drawn without its value, so the client is told to leave the box alone and keep
+  # what is typed into it. The box's id carries `drawn`, the form's `opened` count, so each start
+  # over draws it anew and empty.
+  defp password_box(control, id) do
+    assigns = %{control: control, id: id}
+
+    ~H"""
+    <div id={@id} phx-update="ignore">{@control}</div>
+    """
   end
 
   # A checkbox or toggle, centred in the 44px height of the inputs beside it.
@@ -801,6 +838,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp key_map_control(%{type: :number} = key, _value),
     do: %{function: :number_input, placeholder: translate_text(key.placeholder)}
+
+  defp key_map_control(%{type: :password} = key, _value),
+    do: %{
+      function: :password_input,
+      value: nil,
+      autocomplete: "off",
+      placeholder: translate_text(key.placeholder)
+    }
 
   # A map or a list held under a `:json` key is shown as the `:json` field type shows one; a text
   # control cannot draw it.
@@ -1451,9 +1496,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         render_nested_input(ui, field, form_field, assigns)
 
       _ ->
-        base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
+        render_own_type(base, field)
     end
   end
+
+  # A field whose type is a module of its own, rather than a built-in token, is drawn by that
+  # module's `render/2`; any other type is drawn as a text input.
+  defp render_own_type(base, %{type: module, type_module: module} = field)
+       when is_atom(module) and not is_nil(module) do
+    if MishkaGervaz.Helpers.exports?(module, :render, 2),
+      do: module.render(base, field),
+      else: render_text_input(base)
+  end
+
+  defp render_own_type(base, _field), do: render_text_input(base)
+
+  defp render_text_input(base),
+    do: base |> assign(:function, :text_input) |> assign(:type, "text") |> dynamic_component()
 
   defp render_upload_field(ui, field, form_field, assigns) do
     upload_config = UploadHelpers.find_upload_for_field(assigns.static, field.name)
@@ -1524,7 +1583,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     assigns
     |> assign(:ui, assigns.static.ui_adapter)
-    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(field))
+    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyMap.keys(field, assigns.state))
     |> assign(:held, ((is_map(held) and not is_struct(held)) && held) || %{})
     |> assign(:input_name, form_field.name)
     |> assign(:input_id, form_field.id)
@@ -1538,7 +1597,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     assigns
     |> assign(:ui, assigns.static.ui_adapter)
-    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(field))
+    |> assign(:keys, MishkaGervaz.Form.Types.Field.KeyList.keys(field, assigns.state))
     |> assign(
       :rows,
       MishkaGervaz.Form.Types.Field.KeyList.rows(

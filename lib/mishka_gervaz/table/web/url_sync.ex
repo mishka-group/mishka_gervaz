@@ -45,14 +45,18 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   - Filters: `?table_filter_status=active&table_filter_category=1`
   - Sort: `?table_sort=name:asc` or `?table_sort=inserted_at:desc`
   - Page: `?table_page=2`
-  - Search: `?table_search=hello`
-  - Template: `?table_template=grid`
+  - Search: `?table_search=hello` — with `:search` in `params`, the search filter is written here
+    and not again as `table_filter_search`
+  - Template: `?table_template=grid` — the `name/0` of the template the table shows. A URL naming
+    one of the table's `switchable_templates` opens the table in it; any other name is ignored
 
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.State.UrlSync` (the in-state sub-builder),
   `MishkaGervaz.Table.Dsl.UrlSync` (resource-level DSL section),
   `MishkaGervaz.Table.Dsl.Defaults` (domain-level defaults).
   """
+
+  import MishkaGervaz.Helpers, only: [positive_integer: 1]
 
   @default_config %{
     enabled: false,
@@ -65,7 +69,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @type url_state :: %{
           filters: map(),
           sort: list({atom(), :asc | :desc}),
-          page: integer(),
+          page: pos_integer(),
           page_size: pos_integer() | nil,
           search: String.t() | nil,
           template: atom() | nil,
@@ -112,6 +116,15 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   it took last again, as when the page renders it for a reason of its own, it keeps its state; its
   own write coming back is the very URL it wrote (`same_url?/2`). A `url_state` without `:query`
   is applied whenever it differs from the table's state.
+
+  A page or page size that is not a positive whole number (`0`, `-2`, `two`, `1.5`) reads as
+  missing: page 1, and the table's own page size. A page of any size is kept here; the table opens
+  it only when the database can read it (`MishkaGervaz.Table.Web.State.UrlSync`).
+
+  A sort entry whose order is neither `asc` nor `desc`, or whose field names no existing atom, is
+  dropped here. The table then sorts only by the fields it sorts by itself, its sortable columns and
+  its default sort; a URL whose sort keeps none of them opens the table's own sort
+  (`MishkaGervaz.Table.Web.State.UrlSync`).
 
   ## Usage
 
@@ -341,23 +354,32 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   Check if url_state matches current table state.
 
   Used to detect if incoming url_state is from our own push_patch
-  (to avoid duplicate data reload).
+  (to avoid duplicate data reload). The URL's search is read as the `:search` filter it is applied
+  as, and its template as the name of the state's template.
   """
   @spec matches_state?(url_state() | nil, map()) :: boolean()
   def matches_state?(nil, _state), do: false
 
   def matches_state?(url_state, state) do
+    url_state = with_search_filter(url_state)
+
     Enum.all?(
       [
         {:filters, Map.get(state, :filter_values)},
         {:sort, Map.get(state, :sort_fields)},
         {:page, Map.get(state, :page)},
         {:page_size, Map.get(state, :current_page_size)},
-        {:path_params, Map.get(state, :path_params) || %{}}
+        {:path_params, Map.get(state, :path_params) || %{}},
+        {:template, template_name(Map.get(state, :template))}
       ],
       fn {key, current} -> specified_match?(url_state, key, current) end
     )
   end
+
+  defp with_search_filter(%{search: search} = url_state) when is_binary(search) and search != "",
+    do: Map.put(url_state, :filters, Map.put(url_state[:filters] || %{}, :search, search))
+
+  defp with_search_filter(url_state), do: url_state
 
   @spec specified_match?(url_state(), atom(), any()) :: boolean()
   defp specified_match?(url_state, key, current) do
@@ -370,7 +392,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec maybe_encode_filters(map(), map(), map(), String.t() | nil) :: map()
   defp maybe_encode_filters(params, state, config, prefix) do
     if :filters in (config[:params] || []) do
-      filters = Map.get(state, :filter_values, %{})
+      filters = without_searched(Map.get(state, :filter_values, %{}), config)
 
       Enum.reduce(filters, params, fn {key, value}, acc ->
         if is_nil(value) or value == "" do
@@ -438,33 +460,46 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec maybe_encode_search(map(), map(), map(), String.t() | nil) :: map()
   defp maybe_encode_search(params, state, config, prefix) do
     if :search in (config[:params] || []) do
-      filter_values = state.filter_values
-      search = filter_values[:search] || filter_values[:q]
-
-      if search && search != "" do
-        Map.put(params, build_key(prefix, "search"), search)
-      else
-        params
+      case searched(state.filter_values) do
+        nil -> params
+        key -> Map.put(params, build_key(prefix, "search"), state.filter_values[key])
       end
     else
       params
     end
+  end
+
+  # The filter the `<prefix>_search` param carries: `:search`, or `:q` when there is no search.
+  defp searched(%{search: search}) when search not in [nil, ""], do: :search
+  defp searched(%{q: q}) when q not in [nil, ""], do: :q
+  defp searched(_filter_values), do: nil
+
+  # The filters without the one the `<prefix>_search` param carries, when `:search` is a param, so
+  # the URL holds it once.
+  defp without_searched(filters, config) do
+    if :search in (config[:params] || []),
+      do: Map.delete(filters, searched(filters)),
+      else: filters
   end
 
   @spec maybe_encode_template(map(), map(), map(), String.t() | nil) :: map()
   defp maybe_encode_template(params, state, config, prefix) do
-    if :template in (config[:params] || []) do
-      template = Map.get(state, :template)
-
-      if is_atom(template) do
-        Map.put(params, build_key(prefix, "template"), to_string(template))
-      else
-        params
-      end
+    with true <- :template in (config[:params] || []),
+         name when not is_nil(name) <- template_name(Map.get(state, :template)) do
+      Map.put(params, build_key(prefix, "template"), to_string(name))
     else
-      params
+      _not_synced -> params
     end
   end
+
+  @spec template_name(term()) :: atom() | nil
+  defp template_name(template) when is_atom(template) and not is_nil(template) do
+    if Code.ensure_loaded?(template) and function_exported?(template, :name, 0),
+      do: template.name(),
+      else: template
+  end
+
+  defp template_name(_template), do: nil
 
   @spec decode_filters(map(), String.t() | nil, keyword()) :: map()
   defp decode_filters(params, prefix, opts) do
@@ -528,30 +563,12 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   @spec decode_page(map(), String.t() | nil) :: pos_integer()
   defp decode_page(params, prefix) do
-    key = build_key(prefix, "page")
-
-    case Map.get(params, key) do
-      nil -> 1
-      page -> String.to_integer(page)
-    end
-  rescue
-    _ -> 1
+    params |> Map.get(build_key(prefix, "page")) |> positive_integer() || 1
   end
 
   @spec decode_page_size(map(), String.t() | nil) :: pos_integer() | nil
   defp decode_page_size(params, prefix) do
-    key = build_key(prefix, "page_size")
-
-    case Map.get(params, key) do
-      nil ->
-        nil
-
-      size_str ->
-        size = String.to_integer(size_str)
-        if size > 0, do: size, else: nil
-    end
-  rescue
-    _ -> nil
+    params |> Map.get(build_key(prefix, "page_size")) |> positive_integer()
   end
 
   @spec decode_search(map(), String.t() | nil) :: String.t() | nil
@@ -618,11 +635,10 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   defp maybe_apply_search(state, _), do: state
 
   @spec maybe_apply_template(map(), map()) :: map()
-  defp maybe_apply_template(state, %{template: template}) when not is_nil(template) do
-    state
-  end
+  defp maybe_apply_template(%MishkaGervaz.Table.Web.State{} = state, url_state),
+    do: MishkaGervaz.Table.Web.State.UrlSync.apply_url_template(state, url_state)
 
-  defp maybe_apply_template(state, _), do: state
+  defp maybe_apply_template(state, _url_state), do: state
 
   @spec extract_preserved_params(
           map(),

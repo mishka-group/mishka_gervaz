@@ -75,6 +75,11 @@ fail the build.
 `enabled false` turns the archive UI off without deleting the block. `restricted true` hides the
 archive toggle from tenant users.
 
+The active and archived views each keep their own filters, sort and selection. The first switch to
+the archive opens it with none, so a URL-synced table writes the URL without the active view's
+filters and sort; switching back restores them. Which view is open is not URL state: a reload opens
+the active view.
+
 ## TODO
 - [ ] `read` reachable from the resource or the domain
 - [ ] `get` declared if any row is selectable, expandable or acts on a single record

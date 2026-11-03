@@ -6,7 +6,7 @@ costs more code to maintain.
 | # | Layer | Change it when | Rules |
 |---|---|---|---|
 | 1 | **DSL options** | a value, a label, a class, a predicate | [table.md](table.md) · [form.md](form.md) |
-| 2 | **`render` / `format` on one entity** | one cell or one input renders differently | [table/columns.md](table/columns.md) · [form/fields.md](form/fields.md) |
+| 2 | **`render` / `format` on one entity** | one table cell renders differently | [table/columns.md](table/columns.md) |
 | 3 | **A custom type** | that rendering repeats across resources | [customization/types.md](customization/types.md) |
 | 4 | **A UI adapter** | every button / select / badge should look like your design system | [customization/ui-adapters.md](customization/ui-adapters.md) |
 | 5 | **A template** | the *arrangement* differs — cards, a gallery, grouped sections, a sidebar form | [customization/table-templates.md](customization/table-templates.md) · [customization/form-templates.md](customization/form-templates.md) |

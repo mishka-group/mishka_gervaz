@@ -456,7 +456,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
           sticky: default_if_nil(get_opt(dsl_state, layout_path, :sticky), true),
           inline: get_opt(dsl_state, layout_path, :inline) || [],
           dropdown: get_opt(dsl_state, layout_path, :dropdown) || [],
-          auto_collapse_after: get_opt(dsl_state, layout_path, :auto_collapse_after)
+          auto_collapse_after: get_opt(dsl_state, layout_path, :auto_collapse_after),
+          width: get_opt(dsl_state, layout_path, :width)
         }
       }
     else
@@ -559,6 +560,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
   end
 
   defp bulk_action_to_map(action) do
+    ui = extract_nested_entity(action.ui, BulkAction.Ui)
+
     %{
       name: action.name,
       confirm: action.confirm,
@@ -567,7 +570,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       restricted: default_if_nil(action.restricted, false),
       visible: action.visible,
       handler: default_if_nil(action.handler, :parent),
-      ui: maybe_ui(action.ui, &bulk_ui_to_map/1, &has_bulk_ui_values?/1)
+      action: action.action,
+      ui: maybe_ui(ui, &bulk_ui_to_map/1, &has_bulk_ui_values?/1)
     }
   end
 

@@ -34,7 +34,9 @@ defmodule MishkaGervaz.Table.Web.Renderer do
 
   Until the first read returns, the template's `c:MishkaGervaz.Table.Behaviours.Template.render_loading/1`
   is drawn instead of its `render/1`. After that, `render/1` is passed `@static`, `@state`, the
-  `@stream` for the resource's stream name and an `@empty?` flag.
+  `@stream` for the resource's stream name, an `@empty?` flag and a `@failed?` flag. `@failed?` is
+  true when no read has succeeded and the last one failed: the table has no rows to show, so the
+  template draws its `c:MishkaGervaz.Table.Behaviours.Template.render_error/1` in their place.
   """
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
@@ -50,7 +52,8 @@ defmodule MishkaGervaz.Table.Web.Renderer do
   @doc """
   Whether the table has nothing to draw yet.
 
-  True from the component's first render until the first read comes back, and never again — a later
+  True from the component's first render until the first read comes back, and again while a read
+  runs after a first read that failed. Once a read has succeeded it is never true again — a later
   page, filter or sort keeps the rows on screen and marks them stale instead.
   """
   @spec first_read_out?(MishkaGervaz.Table.Web.State.t()) :: boolean()
@@ -67,6 +70,7 @@ defmodule MishkaGervaz.Table.Web.Renderer do
     |> assign(:state, state)
     |> assign(:stream, get_stream(assigns, state.static.stream_name))
     |> assign(:empty?, table_empty?(state))
+    |> assign(:failed?, first_read_failed?(state))
     |> assign_new(:myself, fn -> nil end)
     |> template.render()
   end
@@ -104,4 +108,8 @@ defmodule MishkaGervaz.Table.Web.Renderer do
   defp table_empty?(state) do
     state.loading == :loaded and state.total_count == 0
   end
+
+  @spec first_read_failed?(MishkaGervaz.Table.Web.State.t()) :: boolean()
+  defp first_read_failed?(%{has_initial_data?: false, loading: :error}), do: true
+  defp first_read_failed?(_state), do: false
 end

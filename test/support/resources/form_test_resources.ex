@@ -520,8 +520,6 @@ defmodule MishkaGervaz.Test.Resources.FormPost do
         on_cancel fn state -> state end
         on_validate fn params, _state -> params end
         on_change fn _field, _value, state -> state end
-        transform_params fn params -> params end
-        transform_errors fn _changeset, errors -> errors end
 
         js do
           on_init fn -> Phoenix.LiveView.JS.dispatch("form:init") end
@@ -856,7 +854,6 @@ defmodule MishkaGervaz.Test.Resources.TabsForm do
 
         step :settings_tab do
           groups [:settings_group]
-          visible fn _assigns -> true end
 
           ui do
             label "Settings"
@@ -2014,5 +2011,313 @@ defmodule MishkaGervaz.Test.Resources.PasswordForm do
 
     create_timestamp :inserted_at
     update_timestamp :updated_at
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.SourceConnection do
+  @moduledoc """
+  One create form for every source: the page opens it with the source in `defaults`, and the
+  `:settings` key map draws that source's keys, which each source supplies as data.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :source_connection
+        route "/admin/source-connections"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :settings, :key_map do
+          options fn state ->
+            MishkaGervaz.Test.Resources.SourceConnection.source_keys(state.defaults)
+          end
+        end
+      end
+    end
+  end
+
+  @doc false
+  def source_keys(%{source: "wordpress"}),
+    do: [
+      [name: :url, type: :text, label: "Site URL", required: true],
+      [name: :username, type: :text, label: "Username"],
+      [name: :app_password, type: :password, label: "Application password", required: true]
+    ]
+
+  def source_keys(%{source: "ghost"}),
+    do: [
+      [name: :api_url, type: :text, label: "API URL", required: true],
+      [name: :admin_api_key, type: :password, label: "Admin API key"]
+    ]
+
+  def source_keys(_defaults), do: []
+
+  attributes do
+    uuid_primary_key :id
+    attribute :source, :string, public?: true
+    attribute :settings, :map, default: %{}, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:source, :settings]
+    end
+
+    update :update do
+      primary? true
+      accept [:source, :settings]
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.HookedEntry do
+  @moduledoc """
+  A form whose server hooks run on a save: `before_save` returns the params as a bare map, with the
+  title in capitals, `after_save` tells the test process which record was saved, and `on_error`
+  tells it the save failed and adds a message of its own to the form.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :hooked_entry
+        route "/admin/hooked-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+      end
+
+      hooks do
+        before_save fn %{"form" => form} = params, _state ->
+          Map.put(params, "form", Map.update(form, "title", nil, &String.upcase/1))
+        end
+
+        after_save fn record, state ->
+          send(self(), {:after_save_hook, record.title})
+          state
+        end
+
+        on_error fn form, state ->
+          send(self(), {:on_error_hook, form.source.type})
+          %{state | form_errors: state.form_errors ++ ["Checked by the hook."]}
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title]
+    end
+
+    update :update do
+      primary? true
+      accept [:title]
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
+  @moduledoc """
+  A form whose `:title` and `:status` fields declare the value a create form starts with.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :defaulted_entry
+        route "/admin/defaulted-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text, default: "Untitled"
+
+        field :status, :select do
+          options [{"Draft", "draft"}, {"Published", "published"}]
+          default "published"
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :status, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :status]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :status]
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.ColoredEntry do
+  @moduledoc """
+  A form whose `:color` field is a custom field type module.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :colored_entry
+        route "/admin/colored-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :color, MishkaGervaz.Test.ColorFieldType
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :color, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.RestrictedEntry do
+  @moduledoc """
+  A form whose `:note` field is `restricted fn state -> … end`: restricted for every user but an
+  editor.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :restricted_entry
+        route "/admin/restricted-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :note, :text do
+          restricted fn state -> state.current_user[:role] != :editor end
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :note, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :note]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :note]
+    end
   end
 end

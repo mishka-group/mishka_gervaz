@@ -41,13 +41,10 @@ defmodule MishkaGervaz.Form.Entities.Step do
   `MishkaGervaz.Form.Entities.Step.Ui` for the `ui` sub-entity.
   """
 
-  alias MishkaGervaz.Form.Entities.Schema
-
   @type t :: %__MODULE__{
           name: atom(),
           groups: [atom()],
           action: atom() | nil,
-          visible: boolean() | (map() -> boolean()),
           summary: boolean(),
           on_enter: (map() -> map()) | nil,
           before_leave: (map() -> map()) | nil,
@@ -65,46 +62,44 @@ defmodule MishkaGervaz.Form.Entities.Step do
     :before_leave,
     :after_leave,
     groups: [],
-    visible: true,
     summary: false,
     ui: nil,
     __spark_metadata__: nil
   ]
 
   @opt_schema [
-                name: [
-                  type: :atom,
-                  required: true,
-                  doc: "Step identifier."
-                ],
-                groups: [
-                  type: {:list, :atom},
-                  required: true,
-                  doc: "Group names belonging to this step."
-                ],
-                action: [
-                  type: :atom,
-                  doc: "Validation action to run when leaving this step."
-                ],
-                summary: [
-                  type: :boolean,
-                  default: false,
-                  doc: "Whether this step is a summary/review step."
-                ],
-                on_enter: [
-                  type: {:fun, 1},
-                  doc: "Callback invoked when entering the step. Receives state, returns state."
-                ],
-                before_leave: [
-                  type: {:fun, 1},
-                  doc:
-                    "Callback invoked before leaving the step. Return {:halt, state} to block navigation."
-                ],
-                after_leave: [
-                  type: {:fun, 1},
-                  doc: "Callback invoked after leaving the step. Receives state, returns state."
-                ]
-              ] ++ Schema.visible_key()
+    name: [
+      type: :atom,
+      required: true,
+      doc: "Step identifier."
+    ],
+    groups: [
+      type: {:list, :atom},
+      required: true,
+      doc: "Group names belonging to this step."
+    ],
+    action: [
+      type: :atom,
+      doc: "Validation action to run when leaving this step."
+    ],
+    summary: [
+      type: :boolean,
+      default: false,
+      doc: "Whether this step is a summary/review step."
+    ],
+    on_enter: [
+      type: {:fun, 1},
+      doc: "Callback invoked when entering the step. Receives state, returns state."
+    ],
+    before_leave: [
+      type: {:fun, 1},
+      doc: "Callback invoked before leaving the step. Return {:halt, state} to block navigation."
+    ],
+    after_leave: [
+      type: {:fun, 1},
+      doc: "Callback invoked after leaving the step. Receives state, returns state."
+    ]
+  ]
 
   @doc false
   def opt_schema, do: @opt_schema

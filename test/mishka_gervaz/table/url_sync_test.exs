@@ -137,6 +137,44 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       assert result["t_search"] == "hello"
       assert result["t_template"] == "grid"
     end
+
+    # A search filter with `:search` in `params` is the search the URL names `<prefix>_search`, and
+    # it is written there once, not again as `<prefix>_filter_search`.
+    test "writes a search filter once, as the search param, when :search is a param" do
+      state = %{filter_values: %{status: "active", search: "hello"}}
+      config = %{params: [:filters, :search], prefix: "pages"}
+
+      assert UrlSync.encode(state, config) == %{
+               "pages_filter_status" => "active",
+               "pages_search" => "hello"
+             }
+    end
+
+    test "writes a search filter as a filter when :search is not a param" do
+      state = %{filter_values: %{status: "active", search: "hello"}}
+      config = %{params: [:filters], prefix: "pages"}
+
+      assert UrlSync.encode(state, config) == %{
+               "pages_filter_status" => "active",
+               "pages_filter_search" => "hello"
+             }
+    end
+
+    test "a URL written with the search param reads back to the same search" do
+      state = %{filter_values: %{status: "active", search: "hello"}}
+      config = %{params: [:filters, :search], prefix: "pages"}
+
+      decoded =
+        state
+        |> UrlSync.encode(config)
+        |> UrlSync.decode("pages",
+          allowed_params: [:filters, :search],
+          allowed_filters: [:status, :search]
+        )
+
+      assert decoded.filters == %{status: "active"}
+      assert decoded.search == "hello"
+    end
   end
 
   describe "encode/2 respects params config" do
@@ -685,6 +723,36 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       assert result.page == 1
     end
 
+    test "reads a page or page size that is not a positive whole number as missing" do
+      for value <- ["0", "-3", "two", "1.5", "2abc", " 2", ""] do
+        result =
+          UrlSync.decode(%{"t_page" => value, "t_page_size" => value}, "t",
+            allowed_params: [:page, :page_size]
+          )
+
+        assert {value, result.page, result.page_size} == {value, 1, nil}
+      end
+    end
+
+    test "reads a page or page size given as a list or a map as missing" do
+      for value <- [["2"], %{"a" => "2"}] do
+        result =
+          UrlSync.decode(%{"t_page" => value, "t_page_size" => value}, "t",
+            allowed_params: [:page, :page_size]
+          )
+
+        assert {result.page, result.page_size} == {1, nil}
+      end
+    end
+
+    test "keeps a page of any size, for the table to check against its page size" do
+      for page <- [9_223_372_036_854_775_807, 99_999_999_999_999_999_999_999] do
+        result = UrlSync.decode(%{"t_page" => to_string(page)}, "t", allowed_params: [:page])
+
+        assert result.page == page
+      end
+    end
+
     test "handles non-existing atom in template gracefully" do
       params = %{
         "t_template" => "this_template_does_not_exist_xyz"
@@ -864,6 +932,20 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
   end
 
   describe "matches_state?/2" do
+    test "reads the URL's search as the search filter it is" do
+      url_state = %{filters: %{status: "active"}, search: "hello", sort: [], page: 1}
+
+      state = %{
+        filter_values: %{status: "active", search: "hello"},
+        sort_fields: [],
+        page: 1,
+        current_page_size: nil
+      }
+
+      assert UrlSync.matches_state?(url_state, state)
+      refute UrlSync.matches_state?(%{url_state | search: "other"}, state)
+    end
+
     test "returns true when url_state matches state" do
       url_state = %{
         filters: %{status: "active"},
@@ -1060,8 +1142,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       decoded =
         UrlSync.decode(encoded, "", allowed_params: [:filters, :sort, :page, :search, :template])
 
-      # search is in filter_values, so it's encoded both as filter_search AND search param
-      assert decoded.filters == %{status: "active", search: "hello"}
+      assert decoded.filters == %{status: "active"}
       assert decoded.sort == [{:name, :asc}]
       assert decoded.page == 3
       assert decoded.search == "hello"
@@ -1107,8 +1188,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
           allowed_params: [:filters, :sort, :page, :search, :template]
         )
 
-      # search is in filter_values, so it's encoded both as filter_search AND search param
-      assert decoded.filters == %{status: "active", search: "test"}
+      assert decoded.filters == %{status: "active"}
       assert decoded.sort == [{:name, :desc}]
       assert decoded.page == 7
       assert decoded.search == "test"

@@ -122,52 +122,56 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
 
     ~H"""
     <div id={@static.id} class="mishka-gervaz-media-gallery">
-      <div :if={@state.has_initial_data? or @state.loading == :loaded}>
-        <.render_header static={@static} state={@state} myself={@myself} />
+      <.render_header static={@static} state={@state} myself={@myself} />
 
-        <.render_filters :if={@show_filters} static={@static} state={@state} myself={@myself} />
+      <.render_filters :if={@show_filters} static={@static} state={@state} myself={@myself} />
 
-        <.render_selection_toolbar
-          :if={@show_checkboxes}
+      <.render_selection_toolbar
+        :if={@show_checkboxes}
+        static={@static}
+        state={@state}
+        myself={@myself}
+      />
+
+      <.render_bulk_actions
+        :if={@show_bulk_actions}
+        static={@static}
+        state={@state}
+        myself={@myself}
+      />
+
+      <div :if={not @failed?} class="relative isolate">
+        <.render_loading_overlay
+          :if={
+            @state.has_initial_data? and @state.loading == :loading and
+              @state.loading_type == :reset
+          }
           static={@static}
           state={@state}
-          myself={@myself}
         />
 
-        <.render_bulk_actions
-          :if={@show_bulk_actions}
-          static={@static}
-          state={@state}
-          myself={@myself}
-        />
-
-        <div class="relative isolate">
-          <.render_loading_overlay
-            :if={
-              @state.has_initial_data? and @state.loading == :loading and
-                @state.loading_type == :reset
-            }
+        <div id={"#{@static.stream_name}"} phx-update="stream" class={gallery_classes(@static)}>
+          <.render_item
+            :for={{id, record} <- @stream}
+            id={id}
+            record={record}
             static={@static}
             state={@state}
+            show_checkboxes={@show_checkboxes}
+            myself={@myself}
           />
-
-          <div id={"#{@static.stream_name}"} phx-update="stream" class={gallery_classes(@static)}>
-            <.render_item
-              :for={{id, record} <- @stream}
-              id={id}
-              record={record}
-              static={@static}
-              state={@state}
-              show_checkboxes={@show_checkboxes}
-              myself={@myself}
-            />
-          </div>
         </div>
-
-        <.render_empty :if={@empty?} static={@static} state={@state} myself={@myself} />
-
-        <.render_pagination :if={@show_pagination} static={@static} state={@state} myself={@myself} />
       </div>
+
+      <.render_empty :if={@empty?} static={@static} state={@state} myself={@myself} />
+      <.render_error :if={@failed?} static={@static} state={@state} myself={@myself} />
+
+      <.render_pagination
+        :if={@show_pagination and not @failed?}
+        static={@static}
+        state={@state}
+        myself={@myself}
+      />
     </div>
     """
   end

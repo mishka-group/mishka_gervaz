@@ -52,16 +52,6 @@ defmodule MishkaGervaz.Form.DSL.HooksTest do
       hooks = FormInfo.hooks(FormPost)
       assert is_function(hooks.on_change, 3)
     end
-
-    test "transform_params is function/1" do
-      hooks = FormInfo.hooks(FormPost)
-      assert is_function(hooks.transform_params, 1)
-    end
-
-    test "transform_errors is function/2" do
-      hooks = FormInfo.hooks(FormPost)
-      assert is_function(hooks.transform_errors, 2)
-    end
   end
 
   describe "FormPost JS hooks" do
@@ -138,20 +128,31 @@ defmodule MishkaGervaz.Form.DSL.HooksTest do
       end
     end
 
+    test "offers only the server hooks a form runs" do
+      assert MishkaGervaz.Form.Dsl.Hooks.schema() |> Keyword.keys() |> Enum.sort() ==
+               Enum.sort([
+                 :on_init,
+                 :before_save,
+                 :after_save,
+                 :on_error,
+                 :on_cancel,
+                 :on_validate,
+                 :on_change
+               ])
+    end
+
     test "hooks have correct arity types" do
       schema = MishkaGervaz.Form.Dsl.Hooks.schema()
 
       # function/2 hooks
-      for key <- [:on_init, :before_save, :after_save, :on_error, :on_validate, :transform_errors] do
+      for key <- [:on_init, :before_save, :after_save, :on_error, :on_validate] do
         config = Keyword.get(schema, key)
         assert Keyword.get(config, :type) == {:fun, 2}, "#{key} should be fun/2"
       end
 
       # function/1 hooks
-      for key <- [:on_cancel, :transform_params] do
-        config = Keyword.get(schema, key)
-        assert Keyword.get(config, :type) == {:fun, 1}, "#{key} should be fun/1"
-      end
+      config = Keyword.get(schema, :on_cancel)
+      assert Keyword.get(config, :type) == {:fun, 1}
 
       # function/3 hooks
       config = Keyword.get(schema, :on_change)

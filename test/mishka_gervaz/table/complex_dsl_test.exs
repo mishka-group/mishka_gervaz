@@ -382,6 +382,7 @@ defmodule MishkaGervaz.Table.ComplexDslTest do
       assert layout.inline == [:show, :edit]
       assert layout.dropdown == [:more_actions]
       assert layout.auto_collapse_after == 3
+      assert layout.width == "minmax(150px,max-content)"
     end
   end
 

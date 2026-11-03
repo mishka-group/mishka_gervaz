@@ -54,7 +54,9 @@ end
 `{:after_group, :name}`.
 
 An invalid position fails the build with the list of valid ones. `{:before_group, …}` must name a
-declared group.
+declared group. `:before_fields` sits before the fields no group holds — every field of a form
+without groups, or the ungrouped ones after a grouped form's groups — so a form whose every field
+is in a group never draws it.
 
 ## `notice` bind_to
 

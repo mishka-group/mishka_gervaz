@@ -131,7 +131,7 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:mishka_gervaz, "~> 0.0.1"},
+    {:mishka_gervaz, "~> 0.0.4"},
     {:ash, "~> 3.0"},
     {:ash_phoenix, "~> 2.3"},
     {:phoenix_live_view, "~> 1.0"}

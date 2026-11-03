@@ -29,6 +29,7 @@ defmodule MishkaGervaz.Table.Templates.HeaderTest do
         stream: [],
         streams: %{stream_name => []},
         empty?: false,
+        failed?: false,
         myself: nil,
         __changed__: %{}
       })

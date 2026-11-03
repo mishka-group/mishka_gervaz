@@ -54,6 +54,17 @@ defmodule MishkaGervaz.Table.Web.UrlSyncLiveTest do
 
   defp row?(view, item), do: has_element?(view, "#items_gated_items-#{item.id}")
 
+  defp in_order(view) do
+    render_async(view, @await)
+    html = render(view)
+
+    GatedItem
+    |> Ash.read!()
+    |> Enum.filter(&row?(view, &1))
+    |> Enum.sort_by(fn item -> :binary.match(html, "items_gated_items-#{item.id}") end)
+    |> Enum.map(& &1.status)
+  end
+
   describe "the page re-renders while a pick loads" do
     test "the pick stays, and its URL is written" do
       view = open("/items")
@@ -92,6 +103,38 @@ defmodule MishkaGervaz.Table.Web.UrlSyncLiveTest do
       LoadGate.open()
 
       assert shown(view) == ["draft", "published"]
+    end
+
+    test "with a page past what the database can read opens the first page" do
+      for page <- ["9223372036854775807", "99999999999999999999999"] do
+        view = open("/items?page=#{page}")
+
+        assert shown(view) == ["draft", "published"]
+        assert_patch(view, "/items")
+      end
+    end
+
+    test "with the last page the database can read opens that page, past the rows" do
+      page = div(9_223_372_036_854_775_807, 20) + 1
+      view = open("/items?page=#{page}")
+
+      assert shown(view) == []
+      assert has_element?(view, "[data-role=gervaz-table-frame]")
+    end
+
+    test "with a sort by a field the table does not sort by opens with its own sort" do
+      for sort <- ["name:desc", "status:asc", "title:sideways"] do
+        view = open("/items?sort=#{sort}")
+
+        assert shown(view) == ["draft", "published"]
+        assert has_element?(view, "[data-role=gervaz-table-frame]")
+        assert_patch(view, "/items")
+      end
+    end
+
+    test "with a sort by a column the table sorts by opens in that order" do
+      assert "/items?sort=title:desc" |> open() |> in_order() == ["published", "draft"]
+      assert "/items?sort=title:asc" |> open() |> in_order() == ["draft", "published"]
     end
 
     test "is followed after the table wrote its own" do

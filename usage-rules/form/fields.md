@@ -25,8 +25,8 @@ end
 
 `:text` · `:password` · `:textarea` · `:number` · `:checkbox` · `:toggle` · `:date` · `:datetime` ·
 `:range` · `:select` · `:multi_select` · `:combobox` · `:relation` · `:json` · `:nested` ·
-`:array_of_maps` · `:string_list` · `:file` · `:upload` · `:hidden` · or a module implementing
-`MishkaGervaz.Form.Behaviours.FieldType`
+`:key_map` · `:key_list` · `:array_of_maps` · `:string_list` · `:file` · `:upload` · `:hidden` ·
+or a module implementing `MishkaGervaz.Form.Behaviours.FieldType`
 ([../customization/types.md](../customization/types.md)).
 
 Omit `type` and it is inferred from the Ash attribute:
@@ -49,15 +49,14 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 |---|---|---|---|
 | `source` | atom | field name | attribute when it differs from the field name |
 | `required` | bool | `false` | |
-| `visible` / `restricted` / `readonly` | bool \| `fn state ->` | `true` / `false` / `false` | arity **1** |
+| `visible` / `restricted` / `readonly` | bool \| `fn state ->` | `true` / `false` / `false` | arity **1**; `restricted true` is masters only, `restricted fn` decides alone — `true` hides the field and leaves it out of the save for every user |
 | `show_on` | `:create` \| `:update` | — | show only in that mode |
-| `default` | any | — | |
+| `default` | any | — | the value a create form starts with; the mount's `defaults` win |
 | `depends_on` | atom | — | cascading select; must be a field in this form |
 | `virtual` | bool | `false` | not a resource attribute |
 | `resource` | Ash resource | — | **required** for virtual `:relation` / `:select` |
 | `derive_value` | `fn record -> value` | — | how edit mode reads a virtual field off the record |
-| `options` | list \| `fn -> list` \| `fn state -> list` | — | function runs at load; `fn state` only on a resource-less `:relation` |
-| `options_source` | `{resource, action, display_field}` | — | ⚠ not wired — use `options` or `load` |
+| `options` | list \| `fn -> list` \| `fn state -> list` | — | function runs at load; `fn state` only on a resource-less `:relation`, a `:key_map` or a `:key_list` |
 | `display_field` | atom \| `fn r ->` \| `fn r, state ->` | — | relation label; a `nil` attribute reads as the record's id |
 | `search_field` | atom | — | autocomplete field |
 | `value_field` | atom | — | store this attribute instead of `:id` |
@@ -65,34 +64,13 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 | `page_size` | pos int | `20` | |
 | `load_action` | atom \| `{master, tenant}` | — | its pagination must be `required?: false` |
 | `load` | `fn query, state -> query` | — | scopes the option list |
-| `apply` | `fn value, changeset, state -> changeset` | — | ⚠ see below |
-| `format` | `fn value ->` \| `fn state, record, value ->` | — | ⚠ see below |
-| `render` | `fn record ->` \| `fn record, state ->` | — | ⚠ see below |
 | `position` | int \| `:first` \| `:last` \| `{:before, f}` \| `{:after, f}` | — | |
 | `include_nil` | bool \| string \| `fn -> string` | `false` | adds a nil option; the string is its label |
 | `min` / `max` | int | — | `:number` / `:range` |
 | `min_chars` | int | — | before search fires |
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |
-| `array_fields` | list | `[]` | ⚠ not wired |
 | `add_label` / `remove_label` | string \| `fn -> string` | — | repeater buttons |
-
-### ⚠ `apply`, `format`, `render`, `options_source`, `array_fields` are declared but not wired
-
-All five are accepted by the schema and land in `Info.Form.fields/1`, but **no built-in form
-template or handler reads them** — on the form side only `render` on `header` / `footer` /
-`notice` is consumed. Verified against `lib/mishka_gervaz/form/`.
-
-So today they are extension points for a custom template
-([../customization/form-templates.md](../customization/form-templates.md)), not working options.
-To change a value on the way in, use `hooks do before_save / transform_params end`
-([hooks.md](hooks.md)); to change how an input renders, use a
-[custom field type](../customization/types.md) or the
-[UI adapter](../customization/ui-adapters.md).
-
-On the **table** side the same names *are* wired: a column's `format` and `render` both run, and a
-filter's `apply` is `fn query, value, state -> query` — a different shape from the form field's
-`fn value, changeset, state -> changeset`.
 
 ## `ui do … end`
 
@@ -171,6 +149,33 @@ A value the mount passed in `defaults` is saved only while its field still holds
 `state.field_values`. A picker that opened on its default and was then cleared, or emptied because a
 field it depends on changed, is saved empty — refused when required — never with the default.
 
+## Key map fields
+
+A `:key_map` field draws one control per declared key over a `:map` column; a `:key_list` repeats
+those keys row by row over `{:array, :map}`. A key is `[name:, type:, label:, placeholder:,
+options:, required:]`, where `type` is `:text` `:textarea` `:toggle` `:checkbox` `:number`
+`:select` `:json` or `:password`, and `required: true` marks its label. A `:password` key is drawn
+through the adapter's `password_input` with `autocomplete="off"` and never shows what it holds; left
+empty it is dropped, so an edit asks for it again.
+
+One form can draw different keys for different openings with `options fn state -> keys end`, read
+each time the field is drawn and its params are read. The page opens it with what decides the keys:
+
+```elixir
+field :settings, :key_map do
+  options fn state -> MyApp.Sources.keys(state.defaults[:source]) end
+end
+
+send_update(MishkaGervaz.Form.Web.Live,
+  id: "connection-form",
+  defaults: %{source: "wordpress"},
+  reset: true
+)
+```
+
+What is typed under a key the function does not name is not saved. See
+`MishkaGervaz.Form.Types.Field.KeyMap`.
+
 ## Read-only fields
 
 A field is drawn read-only and left out of what the form saves when it declares `readonly`, or when
@@ -185,35 +190,28 @@ does every field that depends on it, so what the mount passed in `defaults` for 
 
 ## Which knob changes a value, and where — compared
 
-Seven options touch "the value". They act at different points, and picking the wrong one is the
+Four options touch "the value". They act at different points, and picking the wrong one is the
 most common source of a field that looks right and saves wrong.
 
-| Option | Acts | Receives | Returns | Wired? |
-|---|---|---|---|---|
-| `default` | before **create** renders | — | any | ✔ |
-| `derive_value` | when **edit** loads | `record` | any | ✔ — the only way a `virtual` field reads its current value |
-| `options` | when the input renders | — | `[{label, value}]` | ✔ |
-| `load` | when relation options load | `query, state` | `query` | ✔ — scopes the choice list |
-| `options_source` | — | — | — | ✖ compiled but never read |
-| `format` | display | `value`, or `state, record, value` | any | ✖ see below |
-| `apply` | save | `value, changeset, state` | `changeset` | ✖ see below |
-| `render` | instead of the input | `record`, or `record, state` | HEEx | ✖ see below |
+| Option | Acts | Receives | Returns |
+|---|---|---|---|
+| `default` | when the **create** form is built | — | any — drawn in the input and saved if left; the mount's `defaults` win |
+| `derive_value` | when **edit** loads | `record` | any — the only way a `virtual` field reads its current value |
+| `options` | when the input renders | — | `[{label, value}]` |
+| `load` | when relation options load | `query, state` | `query` — scopes the choice list |
 
-Read the wired ones as a timeline: `default` / `derive_value` fill the field → `options` / `load`
+Read them as a timeline: `default` / `derive_value` fill the field → `options` / `load`
 populate the choices → the field type and the UI adapter draw it → the Ash action writes it.
 
-To change a value on the way **in**, use `hooks do before_save / transform_params end`. To change
+To change a value on the way **in**, use `hooks do before_save end`. To change
 how an input **draws**, use a custom field type or the UI adapter.
 
-Three related pairs worth keeping straight:
+Two related pairs worth keeping straight:
 
 - **`visible` vs `show_on` vs `restricted`** — `visible` is any predicate, `show_on` is
   "this mode only", `restricted` is "masters only". Use the narrowest that says what you mean.
 - **`options` vs `load`** — `options` is a list; `load` scopes an Ash query. A `:relation` field
   uses `load`; a `:select` uses `options`.
-- **`load` vs `apply`** — `load` narrows what the reader may pick; `apply` decides what happens
-  when they pick it. On a table filter the same two names mean different things
-  ([../table/filters.md](../table/filters.md)) — and `apply`'s argument order differs.
 
 ## Nested fields
 
@@ -277,7 +275,6 @@ declare those as explicit `field`s.
 - [ ] `virtual true` on `:relation` / `:select` paired with `resource`
 - [ ] Virtual many-relations have both `load` and `derive_value`
 - [ ] `depends_on` names a field in this form, and `load` reads it from `state.field_values`
-- [ ] `apply` written as `fn value, changeset, state ->`
 - [ ] `nested_field` only inside `:nested`, and only with the narrower type set
 - [ ] `show_on` used where a field belongs to one mode only
 - [ ] `restricted true` on every master-only field

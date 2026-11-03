@@ -183,8 +183,7 @@ defmodule MishkaGervaz.Form.Entities.AutoFields.Override do
   @moduledoc """
   Per-field override applied on top of an auto-discovered field. Lets
   you change the inferred type, flip required / visible / readonly
-  flags, attach a custom `format` function, or replace the `ui` block
-  outright. Lives inside `MishkaGervaz.Form.Entities.AutoFields`.
+  flags, or replace the `ui` block outright. Lives inside `MishkaGervaz.Form.Entities.AutoFields`.
   """
 
   @builtin_field_types [
@@ -213,7 +212,6 @@ defmodule MishkaGervaz.Form.Entities.AutoFields.Override do
           required: boolean() | nil,
           visible: boolean() | nil,
           readonly: boolean() | nil,
-          format: (any() -> any()) | (map(), map(), any() -> any()) | nil,
           ui: MishkaGervaz.Form.Entities.Field.Ui.t() | nil,
           __spark_metadata__: map() | nil
         }
@@ -224,7 +222,6 @@ defmodule MishkaGervaz.Form.Entities.AutoFields.Override do
     required: nil,
     visible: nil,
     readonly: nil,
-    format: nil,
     ui: nil,
     __spark_metadata__: nil
   ]
@@ -251,10 +248,6 @@ defmodule MishkaGervaz.Form.Entities.AutoFields.Override do
     readonly: [
       type: :boolean,
       doc: "Override readonly."
-    ],
-    format: [
-      type: {:or, [{:fun, 1}, {:fun, 3}]},
-      doc: "Value formatter."
     ]
   ]
 

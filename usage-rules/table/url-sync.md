@@ -34,6 +34,24 @@ end
 &<prefix>_template=grid
 ```
 
+With `:search` in `params`, a filter named `:search` is written as `<prefix>_search` only, never
+again as `<prefix>_filter_search`; without it, the search filter is a `filter_` param like any other.
+
+With `:template` in `params`, `<prefix>_template` is the `name/0` of the template the table shows,
+written as the reader switches. A URL naming one of the table's `switchable_templates` opens the
+table in it, at mount and on a patch or the Back button; a name it does not offer opens the table's
+own template. The URL's template wins over a `template` the mount passes.
+
+A page or page size that is not a positive whole number reads as missing. The table opens a page
+only when the database can read it: `(page - 1)` times its page size fits a signed 64-bit integer,
+the range Postgres takes for `OFFSET`. Any other page opens page 1, and a `:bidirectional` table
+writes the URL without it. A page past the last row opens, and shows no rows.
+
+The table sorts by the URL's sort fields that it sorts by itself: a sortable column's `sort_field`
+(or its name) or a field of `default_sort`. A field the resource does not have, or a column that is
+not `sortable`, is left out. A sort that keeps no field opens the table's own sort, and a
+`:bidirectional` table writes the URL without it.
+
 A distinct `prefix` per table is what lets two tables share one page — and lets another page
 deep-link into this one:
 

@@ -131,10 +131,6 @@ end
 Read it as two halves: `options` / `load` / `display_field` / `preload` decide **what the reader
 can pick**; `source` / `fields` / `apply` decide **what picking it does**.
 
-> `apply` here is `fn query, value, state -> query`. On a **form field** the same name is
-> `fn value, changeset, state -> changeset` ([../form/fields.md](../form/fields.md)). They are not
-> interchangeable.
-
 `mode` is a third axis — it decides *how the options arrive*: `:static` loads all of them,
 `:load_more` pages, `:search` / `:search_multi` query as the reader types. `min_chars` and
 `page_size` only matter for the paginated modes.

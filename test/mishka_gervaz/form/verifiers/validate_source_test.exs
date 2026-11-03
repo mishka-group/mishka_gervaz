@@ -103,6 +103,92 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateSourceTest do
     end
   end
 
+  describe "required actions of a closed mode" do
+    defp compile_without_domain_actions(unique_id, form_source, actions) do
+      code = """
+      defmodule MishkaGervaz.Test.ClosedModeDomain#{unique_id} do
+        use Ash.Domain,
+          extensions: [MishkaGervaz.Domain],
+          validate_config_inclusion?: false
+
+        resources do
+          allow_unregistered? true
+        end
+      end
+
+      defmodule MishkaGervaz.Test.ClosedMode#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.ClosedModeDomain#{unique_id},
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :title, :string, public?: true
+        end
+
+        actions do
+          defaults [:read, create: :*, update: :*]
+        end
+
+        mishka_gervaz do
+          form do
+            identity do
+              name :closed_mode_f#{unique_id}
+              route "/admin/closed-mode-#{unique_id}"
+            end
+
+            source do
+              #{form_source}
+
+              actions do
+                #{actions}
+              end
+            end
+
+            fields do
+              field :title, :text
+            end
+          end
+        end
+      end
+      """
+
+      {_result, diagnostics} =
+        Code.with_diagnostics(fn ->
+          ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(code) end)
+        end)
+
+      for %{message: message} <- diagnostics, message =~ "Spark.Error.DslError", do: message
+    end
+
+    test "a form closed with access :update, false needs no update or read action" do
+      unique_id = System.unique_integer([:positive])
+
+      assert compile_without_domain_actions(unique_id, "access :update, false", "create :create") ==
+               []
+    end
+
+    test "a form closed with access :create, false needs no create action" do
+      unique_id = System.unique_integer([:positive])
+
+      assert compile_without_domain_actions(
+               unique_id,
+               "access :create, false",
+               "update :update\n read :read"
+             ) == []
+    end
+
+    test "a closed mode still requires the actions of the open one" do
+      unique_id = System.unique_integer([:positive])
+
+      assert [message] =
+               compile_without_domain_actions(unique_id, "access :update, false", "")
+
+      assert message =~ "Missing required form source action(s): :create\n"
+    end
+  end
+
   describe "edge: empty fields skip validation" do
     test "form with no fields compiles even with no actions configured" do
       unique_id = System.unique_integer([:positive])

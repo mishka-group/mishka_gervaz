@@ -110,6 +110,32 @@ defmodule MishkaGervaz.Form.Templates.StandardKeyFieldRenderTest do
       refute html =~ ~s|name="form[links][0][platform]"|
       assert html =~ ~s|phx-click="add_nested"|
     end
+
+    # The client keeps what is typed into a password key, since the page never holds it. When a row
+    # is added or removed the rows below move up or down, so every password box of the list is drawn
+    # anew rather than left holding what was typed for another row.
+    test "draws its password keys anew when a row is added or removed", %{field: field} do
+      field = %{field | options: [[name: :platform], [name: :token, type: :password]]}
+
+      one = render_form(field, with_params(%{"links" => %{"0" => %{"platform" => "a"}}}))
+
+      two =
+        render_form(
+          field,
+          with_params(%{"links" => %{"0" => %{"platform" => "a"}, "1" => %{"platform" => "b"}}})
+        )
+
+      assert [first] = token_boxes(one)
+      assert [first_of_two, _second] = token_boxes(two)
+      refute first == first_of_two
+    end
+  end
+
+  defp token_boxes(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query(~s|[phx-update="ignore"]:has(> input[type="password"])|)
+    |> Enum.map(&(&1 |> LazyHTML.attribute("id") |> List.first()))
   end
 
   describe "a top-level key map" do

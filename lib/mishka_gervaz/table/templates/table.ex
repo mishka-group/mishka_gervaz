@@ -110,7 +110,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         show_expand,
         show_checkboxes,
         get_visible_columns(static.columns, state),
-        show_actions
+        show_actions && actions_track(static)
       )
 
     assigns =
@@ -137,10 +137,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       {render_chrome_header(assigns)}
       {render_notices_at(assigns, :after_header)}
 
-      <div
-        :if={@state.has_initial_data? or @state.loading == :loaded}
-        class={Shared.rail_class(@rail, :grid)}
-      >
+      <div class={Shared.rail_class(@rail, :grid)}>
         <div class={Shared.rail_class(@rail, :top)}>
           {render_notices_at(assigns, :before_filters)}
           <.render_filters
@@ -182,7 +179,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           <% end %>
 
           <div
-            :if={not @empty?}
+            :if={not @empty? and not @failed?}
             data-role="gervaz-table-frame"
             class={[
               "relative isolate overflow-x-auto rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)]",
@@ -247,9 +244,15 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
           {render_notices_at(assigns, :empty_state)}
           <.render_empty :if={@empty?} static={@static} state={@state} myself={@myself} />
+          <.render_error :if={@failed?} static={@static} state={@state} myself={@myself} />
 
           {render_notices_at(assigns, :before_pagination)}
-          <.render_pagination :if={@show_pagination} static={@static} state={@state} myself={@myself} />
+          <.render_pagination
+            :if={@show_pagination and not @failed?}
+            static={@static}
+            state={@state}
+            myself={@myself}
+          />
           {render_notices_at(assigns, :after_pagination)}
 
           {render_notices_at(assigns, :table_bottom)}
@@ -972,23 +975,24 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp sticky_actions?(_static), do: true
 
   # The table grid's column tracks: 44px for the checkboxes, 34px for the expand caret, each visible
-  # column's track, and with row actions a `max-content` track, as wide as the widest Actions cell
-  # in the header and the rows.
-  defp grid_template_columns(show_expand, show_checkboxes, visible_columns, show_actions) do
+  # column's track, and with row actions the Actions track (`actions_track/1`).
+  defp grid_template_columns(show_expand, show_checkboxes, visible_columns, actions_track) do
     column_tracks =
       visible_columns
       |> Enum.with_index()
       |> Enum.map(fn {column, index} -> column_track(column, index) end)
 
-    [
-      show_checkboxes && "44px",
-      show_expand && "34px"
-    ]
-    |> Enum.filter(& &1)
+    [show_checkboxes && "44px", show_expand && "34px"]
     |> Kernel.++(column_tracks)
-    |> Kernel.++(if show_actions, do: ["max-content"], else: [])
+    |> Kernel.++([actions_track])
+    |> Enum.filter(& &1)
     |> Enum.join(" ")
   end
+
+  # The Actions track: `actions_layout`'s `width`, or `max-content`, as wide as the widest Actions
+  # cell in the header and the rows.
+  defp actions_track(%{row_actions_layout: %{width: width}}) when is_binary(width), do: width
+  defp actions_track(_static), do: "max-content"
 
   @scrollbar_class "[scrollbar-width:thin] [scrollbar-color:#d5d3cb_transparent] " <>
                      "[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent " <>

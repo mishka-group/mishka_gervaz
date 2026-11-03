@@ -38,10 +38,38 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   | Key            | Required      | Meaning                                                     |
   |----------------|---------------|-------------------------------------------------------------|
   | `:name`        | yes           | the key written into the map                                 |
-  | `:type`        | no (`:text`)  | `:text`, `:textarea`, `:toggle`, `:checkbox`, `:number`, `:select`, `:json` |
+  | `:type`        | no (`:text`)  | `:text`, `:textarea`, `:toggle`, `:checkbox`, `:number`, `:select`, `:json`, `:password` |
   | `:label`       | no            | shown above the control; humanized from `:name` otherwise    |
   | `:placeholder` | no            | placeholder text, or the empty option's label on a `:select` |
   | `:options`     | for `:select` | the choices, as `{label, value}` pairs or bare values        |
+  | `:required`    | no (`false`)  | marks the key's label as a required field's label is marked  |
+
+  ## Keys from the form state
+
+  A field of its own may take `options fn state -> keys end` in place of a list. The form reads it
+  with its state each time the field is drawn and each time its params are read, so one form can
+  draw different keys for different openings. A page that opens one create form per source passes
+  the source in `defaults`, and each source supplies its keys as data:
+
+      field :settings, :key_map do
+        options fn state -> MyApp.Sources.keys(state.defaults[:source]) end
+      end
+
+      send_update(MishkaGervaz.Form.Web.Live,
+        id: "connection-form",
+        defaults: %{source: "wordpress"},
+        reset: true
+      )
+
+  A key the function no longer names is dropped from what the form saves. A sub-field of a nested
+  row takes a list only.
+
+  ## A password key
+
+  `:password` draws the key through the UI adapter's `password_input`, with `autocomplete="off"`.
+  What the key holds is never written back into the page: the control starts empty each time the
+  form opens, the browser keeps what is typed into it while the form is open, and a key left empty
+  is dropped like any blank key, so a form that edits a record asks for it again.
 
   ## A key that may hold a map or a list
 
@@ -88,13 +116,14 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   def default_ui, do: %{type: :key_map}
 
   @doc """
-  The declared keys, normalised to maps with `:name`, `:type`, `:label`, `:placeholder` and
-  `:options`.
+  The declared keys, normalised to maps with `:name`, `:type`, `:label`, `:placeholder`,
+  `:options` and `:required`.
 
-  Reads `:keys` if the config carries one, `:options` otherwise. Keys with no `:name` are dropped.
+  Reads `:keys` if the config carries one, `:options` otherwise. Keys with no `:name` are dropped,
+  and so is `fn state -> keys end`, which only `keys/2` can read.
 
       iex> MishkaGervaz.Form.Types.Field.KeyMap.keys(%{options: [[name: :doc]]})
-      [%{name: :doc, type: :text, label: nil, placeholder: nil, options: []}]
+      [%{name: :doc, type: :text, label: nil, placeholder: nil, options: [], required: false}]
   """
   @spec keys(map() | keyword() | nil) :: [map()]
   def keys(config) do
@@ -109,6 +138,17 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
     |> Enum.reject(&is_nil(&1.name))
   end
 
+  @doc """
+  `keys/1`, with `options fn state -> keys end` read with the form `state`.
+  """
+  @spec keys(map() | keyword() | nil, map()) :: [map()]
+  def keys(config, state) do
+    case fetch(config, :options) do
+      declare when is_function(declare, 1) -> keys(%{options: declare.(state)})
+      _declared -> keys(config)
+    end
+  end
+
   defp normalise(key) when is_list(key), do: key |> Map.new() |> normalise()
 
   defp normalise(%{} = key) do
@@ -117,11 +157,12 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
       type: key[:type] || key["type"] || :text,
       label: key[:label] || key["label"],
       placeholder: key[:placeholder] || key["placeholder"],
-      options: key[:options] || key["options"] || []
+      options: key[:options] || key["options"] || [],
+      required: (key[:required] || key["required"]) == true
     }
   end
 
-  defp normalise(_other), do: %{name: nil, type: :text, label: nil, placeholder: nil, options: []}
+  defp normalise(_other), do: %{name: nil}
 
   defp fetch(config, key) when is_map(config), do: Map.get(config, key)
   defp fetch(config, key) when is_list(config), do: Keyword.get(config, key)

@@ -10,6 +10,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   - Async result handling
   - The total after realtime changes (`refresh_total/1`)
   - Whether a realtime row belongs in the view (`in_view?/2`)
+  - The query the table reads its rows with (`read_query/1`)
 
   ## Sub-builders
 
@@ -98,6 +99,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
   @spec in_view?(State.t(), term()) :: boolean()
   defdelegate in_view?(state, id), to: __MODULE__.Default
+
+  @spec read_query(State.t()) :: Ash.Query.t()
+  defdelegate read_query(state), to: __MODULE__.Default
 
   @spec reload(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate reload(socket, state), to: __MODULE__.Default
@@ -230,8 +234,15 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         pagination_mod.load_page(state, query, page, action, tenant)
       end
 
+      @doc """
+      The query the table reads its rows with now: its `path_params`, filters, search, sort and
+      preloads, and the `on_load` hook, before its read action and tenant are set.
+
+      `load_total/1` and `in_view?/2` read with it, and a bulk action starts from it
+      (`MishkaGervaz.Table.Web.Events.BulkActionHandler`), so each reaches the rows the table shows.
+      """
       @spec read_query(State.t()) :: Ash.Query.t()
-      defp read_query(state) do
+      def read_query(state) do
         query_mod = resolve_query_builder(state.static.resource)
         hook_mod = resolve_hook_runner(state.static.resource)
 
@@ -500,7 +511,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         do: refresh_total_done(socket, nil, :skip)
 
       @doc """
-      Reload data with current filters/sort (for refresh after changes).
+      Reload data with current filters/sort (for refresh after changes). The error state's Retry
+      calls it, through the table's `"reload"` event.
       """
       @spec reload(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
       def reload(socket, state) do
@@ -721,6 +733,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_async: 3,
                      load_total: 1,
                      in_view?: 2,
+                     read_query: 1,
                      refresh_total: 1,
                      handle_async: 3,
                      reload: 2,

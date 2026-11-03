@@ -39,8 +39,9 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
         end
       end
 
-  Keys are declared exactly as `:key_map` declares them — see its docs for the options each key
-  takes. `add_label` and `remove_label` name the two buttons; they default to `+ Add` and `Remove`.
+  Keys are declared exactly as `:key_map` declares them, a list or `fn state -> keys end` — see its
+  docs for the options each key takes. `add_label` and `remove_label` name the two buttons; they
+  default to `+ Add` and `Remove`.
 
   ## Where it works
 
@@ -89,6 +90,13 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
   """
   @spec keys(map() | keyword() | nil) :: [map()]
   defdelegate keys(config), to: KeyMap
+
+  @doc """
+  The declared keys of one row, with `options fn state -> keys end` read with the form `state`.
+  Delegates to `MishkaGervaz.Form.Types.Field.KeyMap.keys/2`.
+  """
+  @spec keys(map() | keyword() | nil, map()) :: [map()]
+  defdelegate keys(config, state), to: KeyMap
 
   @doc """
   The rows in order, whether they arrived as a list or as the index-keyed map a form posts.

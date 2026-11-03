@@ -54,6 +54,16 @@ end
 `ids` arrives as a list, `:all`, or `{:all_except, list}` — select-all does not enumerate the
 whole table.
 
+A built-in bulk action (`type`, or an Ash action as `handler`) runs on the table's own read,
+`DataLoader.read_query/1`: its `path_params`, filters, search and `on_load` hook. `:all` is every
+row that read finds, never a row the table would not show, such as another site's on a master's
+table scoped to one site, and a picked id it does not find is left alone. A function handler that
+reads rows itself can start from the same `read_query(state)`.
+
+After a built-in bulk action, or a function handler that returns `:reload`, the table loads its
+first page again; a table with `keep_loaded_records true` loads every page it had loaded, so the
+rows the reader loaded stay.
+
 ## Messaging the result
 
 Bulk hooks (`on_bulk_action_success` / `on_bulk_action_error`, arity 3) decide whether the core

@@ -44,6 +44,11 @@ The three `action_*` options draw one call-to-action link. Give all three or non
 | `icon` | string | — |
 | `retry_label` | string | `"Retry"` |
 
+It shows when the table's first load fails, in place of the rows: the header, filters, template
+switcher and notices stay, so the reader can change what failed. Retry loads the first page again
+with the same filters, sort and search. The exception goes to the log, never to the page. A load
+that fails after one has succeeded keeps the rows already on screen.
+
 ## Empty vs "no match"
 
 `empty_state` is the whole-table empty. A **filtered** empty ("nothing matches your filters") is

@@ -95,7 +95,6 @@ instead. Verified against `lib/` at v0.0.1-alpha.5.
 | table `presentation` | the whole `responsive` block | `ui do class "max-md:hidden" end` on the column |
 | table `presentation` | `features :export` / `:reorder` / `:inline_edit` | nothing — no template renders them |
 | table `row` | `selectable` | it makes `get` required; the checkboxes come from `:select` + bulk actions |
-| form `field` | `apply`, `format`, `render`, `options_source`, `array_fields` | `hooks before_save`, a custom field type, or the UI adapter |
 | form `step` | `action`, `on_enter`, `before_leave`, `after_leave` | override `StepHandler.can_advance?/2` |
 | form `layout` | `responsive` | CSS on the group / field |
 | form `presentation` | `features` | remove the DSL that produces the feature |

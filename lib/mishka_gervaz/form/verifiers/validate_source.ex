@@ -7,8 +7,10 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateSource do
 
   Every action named that way — master and tenant alike — must be an action of the resource, of
   the matching kind: `create` a create action, `update` an update action, `read` a read action.
-  A mode closed with `access :create, false` or `access :update, false` is not checked: `create`
-  belongs to `:create`, `update` and `read` to `:update`.
+
+  A mode closed with `access :create, false` or `access :update, false` needs none of its actions,
+  and they are not checked: `create` belongs to `:create`, `update` and `read` to `:update`. A form
+  that only ever creates closes `:update` and names a `create` action alone.
 
   The verifier short-circuits when no fields are declared (a form without
   fields has no source to consume).
@@ -36,8 +38,6 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateSource do
   @source_path [:mishka_gervaz, :form, :source]
   @actions_path [:mishka_gervaz, :form, :source, :actions]
   @fields_path [:mishka_gervaz, :form, :fields]
-
-  @required_actions [:create, :update, :read]
 
   @action_modes [create: :create, update: :update, read: :update]
 
@@ -68,26 +68,31 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateSource do
   defp validate_required_actions(dsl_state) do
     module = Verifier.get_persisted(dsl_state, :module)
     domain_actions = domain_actions(module)
+    required = open_action_keys(dsl_state)
 
-    @required_actions
+    required
     |> Enum.filter(fn key ->
       is_nil(Verifier.get_option(dsl_state, @actions_path, key)) and
         is_nil(Map.get(domain_actions, key))
     end)
     |> case do
       [] -> :ok
-      missing -> dsl_error(module, @actions_path, required_actions_message(missing))
+      missing -> dsl_error(module, @actions_path, required_actions_message(missing, required))
     end
+  end
+
+  defp open_action_keys(dsl_state) do
+    closed = closed_modes(dsl_state)
+    for {key, mode} <- @action_modes, mode not in closed, do: key
   end
 
   defp validate_actions_exist(dsl_state) do
     module = Verifier.get_persisted(dsl_state, :module)
     domain_actions = domain_actions(module)
-    closed = closed_modes(dsl_state)
 
-    @action_modes
-    |> Enum.reject(fn {_key, mode} -> mode in closed end)
-    |> Enum.flat_map(fn {key, _mode} ->
+    dsl_state
+    |> open_action_keys()
+    |> Enum.flat_map(fn key ->
       set_here = Verifier.get_option(dsl_state, @actions_path, key)
       value = set_here || Map.get(domain_actions, key)
       origin = origin(set_here, module)
@@ -142,11 +147,11 @@ defmodule MishkaGervaz.Form.Verifiers.ValidateSource do
     _ -> :error
   end
 
-  defp required_actions_message(missing) do
+  defp required_actions_message(missing, required) do
     """
     Missing required form source action(s): #{Enum.map_join(missing, ", ", &inspect/1)}
 
-    Each of #{Enum.map_join(@required_actions, ", ", &inspect/1)} must be defined
+    Each of #{Enum.map_join(required, ", ", &inspect/1)} must be defined
     either on the resource or on the domain. Resource values win when both are set.
 
     Provide them on the resource:

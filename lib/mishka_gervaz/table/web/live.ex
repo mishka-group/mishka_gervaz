@@ -399,7 +399,7 @@ defmodule MishkaGervaz.Table.Web.Live do
         if matches_view? do
           reload_and_insert(socket, state, record)
         else
-          stream_delete(socket, state.static.stream_name, record)
+          delete_row(socket, state, record)
         end
 
       :destroy ->
@@ -412,10 +412,10 @@ defmodule MishkaGervaz.Table.Web.Live do
           if state.archive_status == :archived do
             reload_and_insert(socket, state, record)
           else
-            stream_delete(socket, state.static.stream_name, record)
+            delete_row(socket, state, record)
           end
         else
-          stream_delete(socket, state.static.stream_name, record)
+          delete_row(socket, state, record)
         end
     end
   end
@@ -432,11 +432,10 @@ defmodule MishkaGervaz.Table.Web.Live do
   defp leave_view(socket, %State{expanded_id: id} = state, %{id: id} = record) do
     socket
     |> assign(:table_state, State.update(state, expanded_id: nil, expanded_data: nil))
-    |> stream_delete(state.static.stream_name, record)
+    |> delete_row(state, record)
   end
 
-  defp leave_view(socket, state, record),
-    do: stream_delete(socket, state.static.stream_name, record)
+  defp leave_view(socket, state, record), do: delete_row(socket, state, record)
 
   @spec load_and_insert(Phoenix.LiveView.Socket.t(), State.t(), map()) ::
           Phoenix.LiveView.Socket.t()
@@ -460,12 +459,52 @@ defmodule MishkaGervaz.Table.Web.Live do
     case Ash.get(state.static.resource, record.id, opts) do
       {:ok, loaded_record} ->
         loaded_record = Helpers.inject_preload_aliases(loaded_record, state.preload_aliases)
-        stream_insert(socket, state.static.stream_name, loaded_record, at: 0)
+
+        socket
+        |> stream_insert(state.static.stream_name, loaded_record, at: 0)
+        |> keep_row(loaded_record)
 
       _ ->
         socket
     end
   end
+
+  @spec delete_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp delete_row(socket, state, record) do
+    socket
+    |> stream_delete(state.static.stream_name, record)
+    |> drop_kept_row(record)
+  end
+
+  @spec keep_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp keep_row(
+         %{assigns: %{table_state: %State{static: %{keep_loaded_records: true}}}} = socket,
+         record
+       ) do
+    state = socket.assigns.table_state
+
+    rows =
+      case Enum.find_index(state.loaded_records, &(&1.id == record.id)) do
+        nil -> [record | state.loaded_records]
+        index -> List.replace_at(state.loaded_records, index, record)
+      end
+
+    assign(socket, :table_state, State.update(state, loaded_records: rows))
+  end
+
+  defp keep_row(socket, _record), do: socket
+
+  @spec drop_kept_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp drop_kept_row(
+         %{assigns: %{table_state: %State{static: %{keep_loaded_records: true}}}} = socket,
+         %{id: id}
+       ) do
+    state = socket.assigns.table_state
+    rows = Enum.reject(state.loaded_records, &(&1.id == id))
+    assign(socket, :table_state, State.update(state, loaded_records: rows))
+  end
+
+  defp drop_kept_row(socket, _record), do: socket
 
   @spec reinsert_expanded_record(Phoenix.LiveView.Socket.t(), State.t()) ::
           Phoenix.LiveView.Socket.t()

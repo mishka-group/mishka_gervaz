@@ -201,6 +201,9 @@ defmodule MishkaGervaz.Form.Web.Events do
         {:cont, modified_params} ->
           {:noreply, submit_with_picks(state, modified_params, socket)}
 
+        modified_params when is_map(modified_params) and not is_struct(modified_params) ->
+          {:noreply, submit_with_picks(state, modified_params, socket)}
+
         _ ->
           {:noreply, submit_with_picks(state, params, socket)}
       end

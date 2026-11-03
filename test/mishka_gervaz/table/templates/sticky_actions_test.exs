@@ -63,6 +63,7 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
       stream: Enum.map(@records, &{"#{stream_name}-#{&1.id}", &1}),
       streams: %{stream_name => []},
       empty?: false,
+      failed?: false,
       myself: nil,
       __changed__: %{}
     })

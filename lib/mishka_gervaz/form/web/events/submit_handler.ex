@@ -14,18 +14,19 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         use MishkaGervaz.Form.Web.Events.SubmitHandler
 
         def transform_params(state, params) do
-          params |> super(state) |> Map.put("custom_field", "value")
+          state |> super(params) |> Map.put("custom_field", "value")
         end
       end
 
   Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
-  `save_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `merge_defaults/2`,
-  `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`, `field_readonly?/2`)
+  `save_errors/2`, `add_field_type_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`,
+  `merge_defaults/2`, `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`,
+  `field_readonly?/2`)
   are public so user overrides can reuse them — they live outside the
   `__using__` macro to avoid per-consumer compile cost.
 
   See `MishkaGervaz.Form.Web.Events`,
-  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/2` and
+  `MishkaGervaz.Form.Web.Events.Helpers` (for `parse_typed_params/3` and
   `merge_uploaded_files/4`),
   `MishkaGervaz.Form.Web.DataLoader`,
   `MishkaGervaz.Form.Web.UploadHelpers`, and the sibling sub-handlers.
@@ -116,6 +117,18 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   end
 
   defp path_error(_error, _form_keys), do: []
+
+  @doc """
+  `changeset` with an error on each field whose type's `FieldType.validate/2` refused its value, as
+  `MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params/2` lists them, so the save fails and
+  shows them as it shows the action's own errors.
+  """
+  @spec add_field_type_errors(Ash.Changeset.t(), [{atom(), String.t()}]) :: Ash.Changeset.t()
+  def add_field_type_errors(changeset, errors) do
+    Enum.reduce(errors, changeset, fn {field, message}, acc ->
+      Ash.Changeset.add_error(acc, field: field, message: message)
+    end)
+  end
 
   @doc false
   @spec cleanup_temp_uploads(map()) :: :ok
@@ -209,13 +222,16 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   def field_protected?(field, state),
     do: field_restricted?(field, state) or field_readonly?(field, state)
 
-  @doc false
+  @doc """
+  Whether `field` is `restricted` for the current user: `restricted true` for a user who is not a
+  master, or `restricted fn state -> boolean end` answering `true`.
+  """
   @spec field_restricted?(map(), map()) :: boolean()
   def field_restricted?(%{restricted: true}, %{master_user?: true}), do: false
   def field_restricted?(%{restricted: true}, _state), do: true
 
   def field_restricted?(%{restricted: f}, state) when is_function(f, 1),
-    do: not f.(state)
+    do: f.(state) == true
 
   def field_restricted?(_, _), do: false
 
@@ -276,10 +292,18 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             socket
 
           form ->
+            type_errors =
+              EventsHelpers.validate_typed_params(state.static.fields, form_params)
+
             result =
               AshPhoenix.Form.submit(form.source,
                 params: form_params,
-                force?: true
+                force?: true,
+                before_submit:
+                  &MishkaGervaz.Form.Web.Events.SubmitHandler.add_field_type_errors(
+                    &1,
+                    type_errors
+                  )
               )
 
             cleanup_temp_uploads(form_params)
@@ -291,13 +315,23 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               {:error, updated_form} ->
                 field_names = MapSet.new(state.static.fields, & &1.name)
                 {errors, form_errors} = save_errors(updated_form, field_names)
+                failed_form = Phoenix.Component.to_form(updated_form)
 
                 state =
                   State.update(state,
-                    form: Phoenix.Component.to_form(updated_form),
+                    form: failed_form,
                     errors: errors,
                     form_errors: form_errors
                   )
+
+                state =
+                  case MishkaGervaz.Form.Web.Events.run_hook(state, :on_error, [
+                         failed_form,
+                         state
+                       ]) do
+                    %State{} = hooked -> hooked
+                    _not_a_state -> state
+                  end
 
                 record_id = socket.assigns[:record_id]
 
@@ -315,13 +349,14 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       """
       @spec transform_params(State.t(), map()) :: map()
       def transform_params(state, params) do
-        EventsHelpers.parse_typed_params(state.static.fields, params)
+        EventsHelpers.parse_typed_params(state.static.fields, params, state)
       end
 
       @doc """
       Handle post-save logic.
 
-      Sends `{:form_saved, mode, record}` to the parent LiveView and runs the `after_save` JS hook.
+      Runs the `after_save` hook with the saved record, for its side effects, sends
+      `{:form_saved, mode, record}` to the parent LiveView and runs the `after_save` JS hook.
       An update save on a form mounted with a `record_id` assign reloads the saved record for
       editing; every other save returns the form to an empty create form.
       """
@@ -329,6 +364,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               Phoenix.LiveView.Socket.t()
       def after_save(state, result, socket) do
         record_id = Map.get(result, :id)
+        MishkaGervaz.Form.Web.Events.run_hook(state, :after_save, [result, state])
         send(self(), {:form_saved, state.mode, result})
 
         socket = push_js_hook(socket, state, :after_save, record_id)

@@ -169,9 +169,12 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandlerTest do
       refute SubmitHandler.field_restricted?(%{restricted: true}, %{master_user?: true})
     end
 
-    test "function form: returns NOT of fn(state)" do
-      assert SubmitHandler.field_restricted?(%{restricted: fn _s -> false end}, %{})
-      refute SubmitHandler.field_restricted?(%{restricted: fn _s -> true end}, %{})
+    test "function form: what fn(state) answers, the master gate not applied" do
+      assert SubmitHandler.field_restricted?(%{restricted: fn _s -> true end}, %{
+               master_user?: true
+             })
+
+      refute SubmitHandler.field_restricted?(%{restricted: fn _s -> false end}, %{})
     end
 
     test "false when no :restricted key" do

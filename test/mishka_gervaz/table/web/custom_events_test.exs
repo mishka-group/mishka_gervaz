@@ -409,11 +409,9 @@ defmodule MishkaGervaz.Table.Web.CustomEventsTest do
       alias MishkaGervaz.Table.Web.Events.SanitizationHandler.Default
       assert Default.sanitize_page("5") == 5
       assert Default.sanitize_page(10) == 10
-      # Non-integer, non-binary values return 1
-      assert Default.sanitize_page(nil) == 1
-      assert Default.sanitize_page(:atom) == 1
-      # Invalid string raises ArgumentError (String.to_integer behavior)
-      assert_raise ArgumentError, fn -> Default.sanitize_page("invalid") end
+      assert Default.sanitize_page(nil) == nil
+      assert Default.sanitize_page(:atom) == nil
+      assert Default.sanitize_page("invalid") == nil
     end
   end
 

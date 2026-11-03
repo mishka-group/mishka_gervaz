@@ -37,7 +37,6 @@ layout do
     on_enter     fn state -> state end
     before_leave fn state -> state end        # {:halt, state} BLOCKS navigation
     after_leave  fn state -> state end
-    visible fn state -> … end
 
     ui do
       label "Basic Information"
@@ -59,7 +58,6 @@ end
 |---|---|---|---|
 | `groups` | `[atom]` | — | **required** |
 | `summary` | bool | `false` | read-only review step |
-| `visible` | bool \| `fn state ->` | `true` | arity **1** |
 | `action` | atom | — | ⚠ not wired — see below |
 | `on_enter` / `before_leave` / `after_leave` | `fn state -> state` | — | ⚠ not wired — see below |
 

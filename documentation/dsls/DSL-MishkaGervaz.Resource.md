@@ -936,6 +936,7 @@ Layout configuration for row actions.
 | [`inline`](#mishka_gervaz-table-row_actions-actions_layout-inline){: #mishka_gervaz-table-row_actions-actions_layout-inline } | `list(atom)` |  | Actions shown as buttons. |
 | [`dropdown`](#mishka_gervaz-table-row_actions-actions_layout-dropdown){: #mishka_gervaz-table-row_actions-actions_layout-dropdown } | `list(atom)` | `[]` | Actions in dropdown menu. |
 | [`auto_collapse_after`](#mishka_gervaz-table-row_actions-actions_layout-auto_collapse_after){: #mishka_gervaz-table-row_actions-actions_layout-auto_collapse_after } | `integer` |  | Auto-collapse after N actions. |
+| [`width`](#mishka_gervaz-table-row_actions-actions_layout-width){: #mishka_gervaz-table-row_actions-actions_layout-width } | `String.t` |  | The Actions column's track in the plain table's grid, such as `"minmax(96px,max-content)"`. Without it the track is `max-content`, as wide as the widest Actions cell on the page. Give it the width of the most controls a row can show when rows show different ones, so a row whose buttons change never moves the other columns. |
 
 
 
@@ -2345,13 +2346,12 @@ Define a form field.
 | [`source`](#mishka_gervaz-form-fields-field-source){: #mishka_gervaz-form-fields-field-source } | `atom` |  | Data source attribute. Defaults to field name. |
 | [`required`](#mishka_gervaz-form-fields-field-required){: #mishka_gervaz-form-fields-field-required } | `boolean` | `false` | Whether the field is required. |
 | [`show_on`](#mishka_gervaz-form-fields-field-show_on){: #mishka_gervaz-form-fields-field-show_on } | `:create \| :update` |  | Only show on specific action mode. |
-| [`default`](#mishka_gervaz-form-fields-field-default){: #mishka_gervaz-form-fields-field-default } | `any` |  | Default value for the field. |
+| [`default`](#mishka_gervaz-form-fields-field-default){: #mishka_gervaz-form-fields-field-default } | `any` |  | The value a create form starts with: drawn in the field's input and saved when it is left. A value the mount's `defaults` gives the field is saved instead. A `:select` with a default draws no empty choice. |
 | [`depends_on`](#mishka_gervaz-form-fields-field-depends_on){: #mishka_gervaz-form-fields-field-depends_on } | `atom` |  | Field this depends on (for cascading selects). |
 | [`virtual`](#mishka_gervaz-form-fields-field-virtual){: #mishka_gervaz-form-fields-field-virtual } | `boolean` | `false` | Virtual field (not in resource attributes). |
 | [`resource`](#mishka_gervaz-form-fields-field-resource){: #mishka_gervaz-form-fields-field-resource } | `module` |  | Resource module for virtual or relation fields. |
 | [`derive_value`](#mishka_gervaz-form-fields-field-derive_value){: #mishka_gervaz-form-fields-field-derive_value } | `(any -> any)` |  | Derive value from record on edit. `fn record -> value end` |
-| [`options`](#mishka_gervaz-form-fields-field-options){: #mishka_gervaz-form-fields-field-options } | `list(any) \| (-> any) \| (any -> any)` |  | Static options or function returning options. A `:relation` field with no `resource` may take `fn state -> options end`: it is read with the form state each time the field's options load — at init, on search, and when a `depends_on` parent changes — so it can offer what the parent's value (`state.field_values`) allows. Such a field loads at init even while its parent is empty or out of reach; the function decides what an empty parent means. |
-| [`options_source`](#mishka_gervaz-form-fields-field-options_source){: #mishka_gervaz-form-fields-field-options_source } | `{module, atom, atom}` |  | Options from resource: {resource, action, display_field}. |
+| [`options`](#mishka_gervaz-form-fields-field-options){: #mishka_gervaz-form-fields-field-options } | `list(any) \| (-> any) \| (any -> any)` |  | Static options or function returning options. A `:relation` field with no `resource` may take `fn state -> options end`: it is read with the form state each time the field's options load — at init, on search, and when a `depends_on` parent changes — so it can offer what the parent's value (`state.field_values`) allows. Such a field loads at init even while its parent is empty or out of reach; the function decides what an empty parent means. A `:key_map` or `:key_list` field may take `fn state -> keys end`: it is read with the form state each time the field is drawn and each time its params are read, so the keys can follow `state.defaults`. See `MishkaGervaz.Form.Types.Field.KeyMap`. |
 | [`display_field`](#mishka_gervaz-form-fields-field-display_field){: #mishka_gervaz-form-fields-field-display_field } | `atom \| (any -> any) \| (any, any -> any)` |  | What a relation option reads as: an attribute, `fn record -> label end`, or `fn record, state -> label end` given the form state. A record whose attribute is `nil` reads as its id. |
 | [`search_field`](#mishka_gervaz-form-fields-field-search_field){: #mishka_gervaz-form-fields-field-search_field } | `atom` |  | Field to search on for autocomplete. |
 | [`value_field`](#mishka_gervaz-form-fields-field-value_field){: #mishka_gervaz-form-fields-field-value_field } | `atom` |  | Attribute to store from selected record instead of :id. For relation fields that need a non-primary-key value. |
@@ -2360,9 +2360,6 @@ Define a form field.
 | [`page_size`](#mishka_gervaz-form-fields-field-page_size){: #mishka_gervaz-form-fields-field-page_size } | `pos_integer` | `20` | Page size for load_more/search modes. |
 | [`load_action`](#mishka_gervaz-form-fields-field-load_action){: #mishka_gervaz-form-fields-field-load_action } | `atom \| {atom, atom}` |  | Action to use for loading options. Atom or `{master_action, tenant_action}` tuple. If the action has pagination, it must set `required?: false`. |
 | [`load`](#mishka_gervaz-form-fields-field-load){: #mishka_gervaz-form-fields-field-load } | `(any, any -> any)` |  | Scopes the query that loads the field's options: `fn query, state -> query`. |
-| [`apply`](#mishka_gervaz-form-fields-field-apply){: #mishka_gervaz-form-fields-field-apply } | `(any, any, any -> any)` |  | Custom apply function. `fn value, changeset, state -> changeset end` |
-| [`format`](#mishka_gervaz-form-fields-field-format){: #mishka_gervaz-form-fields-field-format } | `(any -> any) \| (any, any, any -> any)` |  | Value formatter for display. |
-| [`render`](#mishka_gervaz-form-fields-field-render){: #mishka_gervaz-form-fields-field-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render function. |
 | [`position`](#mishka_gervaz-form-fields-field-position){: #mishka_gervaz-form-fields-field-position } | `any` |  | Field position (integer, :first, :last, {:before, :field}, {:after, :field}). |
 | [`include_nil`](#mishka_gervaz-form-fields-field-include_nil){: #mishka_gervaz-form-fields-field-include_nil } | `boolean \| String.t \| (-> any)` | `false` | Include nil option in select. String or `fn -> gettext(...) end` sets label. |
 | [`min`](#mishka_gervaz-form-fields-field-min){: #mishka_gervaz-form-fields-field-min } | `integer` |  | Minimum value for number/range fields. |
@@ -2370,11 +2367,10 @@ Define a form field.
 | [`min_chars`](#mishka_gervaz-form-fields-field-min_chars){: #mishka_gervaz-form-fields-field-min_chars } | `integer` |  | Minimum characters before search triggers. |
 | [`auto_fields`](#mishka_gervaz-form-fields-field-auto_fields){: #mishka_gervaz-form-fields-field-auto_fields } | `boolean` | `false` | When true with explicit nested_field entries, auto-detect remaining fields from the resource and merge with overrides. |
 | [`nested_fields`](#mishka_gervaz-form-fields-field-nested_fields){: #mishka_gervaz-form-fields-field-nested_fields } | `list(any)` | `[]` | Fields for nested/embedded forms. |
-| [`array_fields`](#mishka_gervaz-form-fields-field-array_fields){: #mishka_gervaz-form-fields-field-array_fields } | `list(any)` | `[]` | Fields for array_of_maps entries. |
 | [`add_label`](#mishka_gervaz-form-fields-field-add_label){: #mishka_gervaz-form-fields-field-add_label } | `String.t \| (-> any)` |  | Label for add button in array/nested/string_list fields. String or `fn -> gettext(...) end`. |
 | [`remove_label`](#mishka_gervaz-form-fields-field-remove_label){: #mishka_gervaz-form-fields-field-remove_label } | `String.t \| (-> any)` |  | Label for remove button in array/nested/string_list fields. String or `fn -> gettext(...) end`. |
 | [`visible`](#mishka_gervaz-form-fields-field-visible){: #mishka_gervaz-form-fields-field-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-fields-field-restricted){: #mishka_gervaz-form-fields-field-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-fields-field-restricted){: #mishka_gervaz-form-fields-field-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 ### mishka_gervaz.form.fields.field.ui
@@ -2624,7 +2620,6 @@ Override a specific auto-discovered field.
 | [`required`](#mishka_gervaz-form-fields-auto_fields-override-required){: #mishka_gervaz-form-fields-auto_fields-override-required } | `boolean` |  | Override required. |
 | [`visible`](#mishka_gervaz-form-fields-auto_fields-override-visible){: #mishka_gervaz-form-fields-auto_fields-override-visible } | `boolean` |  | Override visible. |
 | [`readonly`](#mishka_gervaz-form-fields-auto_fields-override-readonly){: #mishka_gervaz-form-fields-auto_fields-override-readonly } | `boolean` |  | Override readonly. |
-| [`format`](#mishka_gervaz-form-fields-auto_fields-override-format){: #mishka_gervaz-form-fields-auto_fields-override-format } | `(any -> any) \| (any, any, any -> any)` |  | Value formatter. |
 
 
 ### mishka_gervaz.form.fields.auto_fields.override.ui
@@ -2719,7 +2714,7 @@ Define a field group.
 | [`collapsible`](#mishka_gervaz-form-groups-group-collapsible){: #mishka_gervaz-form-groups-group-collapsible } | `boolean` | `false` | Can be collapsed by user. |
 | [`position`](#mishka_gervaz-form-groups-group-position){: #mishka_gervaz-form-groups-group-position } | `any` |  | Group position (integer, :first, :last). |
 | [`visible`](#mishka_gervaz-form-groups-group-visible){: #mishka_gervaz-form-groups-group-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-groups-group-restricted){: #mishka_gervaz-form-groups-group-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-groups-group-restricted){: #mishka_gervaz-form-groups-group-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 ### mishka_gervaz.form.groups.group.ui
@@ -2816,7 +2811,6 @@ Define a wizard/tab step.
 | [`on_enter`](#mishka_gervaz-form-layout-step-on_enter){: #mishka_gervaz-form-layout-step-on_enter } | `(any -> any)` |  | Callback invoked when entering the step. Receives state, returns state. |
 | [`before_leave`](#mishka_gervaz-form-layout-step-before_leave){: #mishka_gervaz-form-layout-step-before_leave } | `(any -> any)` |  | Callback invoked before leaving the step. Return {:halt, state} to block navigation. |
 | [`after_leave`](#mishka_gervaz-form-layout-step-after_leave){: #mishka_gervaz-form-layout-step-after_leave } | `(any -> any)` |  | Callback invoked after leaving the step. Receives state, returns state. |
-| [`visible`](#mishka_gervaz-form-layout-step-visible){: #mishka_gervaz-form-layout-step-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
 
 
 ### mishka_gervaz.form.layout.step.ui
@@ -2876,7 +2870,7 @@ Static form header (title + description) rendered above the fields.
 | [`render`](#mishka_gervaz-form-layout-header-render){: #mishka_gervaz-form-layout-header-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render. `fn assigns -> ~H"..." end` or `fn assigns, state -> ~H"..." end`. |
 | [`extra`](#mishka_gervaz-form-layout-header-extra){: #mishka_gervaz-form-layout-header-extra } | `map` | `%{}` | Additional template-specific options. |
 | [`visible`](#mishka_gervaz-form-layout-header-visible){: #mishka_gervaz-form-layout-header-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-layout-header-restricted){: #mishka_gervaz-form-layout-header-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-layout-header-restricted){: #mishka_gervaz-form-layout-header-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -2905,7 +2899,7 @@ Static form footer rendered below the submit row.
 | [`render`](#mishka_gervaz-form-layout-footer-render){: #mishka_gervaz-form-layout-footer-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render. `fn assigns -> ~H"..." end` or `fn assigns, state -> ~H"..." end`. |
 | [`extra`](#mishka_gervaz-form-layout-footer-extra){: #mishka_gervaz-form-layout-footer-extra } | `map` | `%{}` | Additional template-specific options. |
 | [`visible`](#mishka_gervaz-form-layout-footer-visible){: #mishka_gervaz-form-layout-footer-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-layout-footer-restricted){: #mishka_gervaz-form-layout-footer-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-layout-footer-restricted){: #mishka_gervaz-form-layout-footer-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -2949,7 +2943,7 @@ Static alert/banner with positioning and validation binding.
 | [`only_steps`](#mishka_gervaz-form-layout-notice-only_steps){: #mishka_gervaz-form-layout-notice-only_steps } | `list(atom)` |  | Wizard/tabs scoping: only render on these step names. |
 | [`render`](#mishka_gervaz-form-layout-notice-render){: #mishka_gervaz-form-layout-notice-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render. `fn assigns -> ~H"..." end` or `fn assigns, state -> ~H"..." end`. |
 | [`visible`](#mishka_gervaz-form-layout-notice-visible){: #mishka_gervaz-form-layout-notice-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-layout-notice-restricted){: #mishka_gervaz-form-layout-notice-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-layout-notice-restricted){: #mishka_gervaz-form-layout-notice-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 ### mishka_gervaz.form.layout.notice.ui
@@ -3129,14 +3123,12 @@ Lifecycle callbacks for forms.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`on_init`](#mishka_gervaz-form-hooks-on_init){: #mishka_gervaz-form-hooks-on_init } | `(any, any -> any)` |  | `fn form, state -> form` - After form initialization. |
-| [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:halt, state}` - Before save. Return {:halt, state} to cancel. |
-| [`after_save`](#mishka_gervaz-form-hooks-after_save){: #mishka_gervaz-form-hooks-after_save } | `(any, any -> any)` |  | `fn result, state -> state` - After successful save. |
-| [`on_error`](#mishka_gervaz-form-hooks-on_error){: #mishka_gervaz-form-hooks-on_error } | `(any, any -> any)` |  | `fn form, state -> state` - On save error. |
+| [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:cont, params} \| {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `"form"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save. |
+| [`after_save`](#mishka_gervaz-form-hooks-after_save){: #mishka_gervaz-form-hooks-after_save } | `(any, any -> any)` |  | `fn record, state -> any` - After a successful save, with the saved record, for side effects. What it returns is not read: the form then starts over. |
+| [`on_error`](#mishka_gervaz-form-hooks-on_error){: #mishka_gervaz-form-hooks-on_error } | `(any, any -> any)` |  | `fn form, state -> state` - After a failed save, with the form it left. The state it returns is the one the form shows; anything else keeps the form's own. |
 | [`on_cancel`](#mishka_gervaz-form-hooks-on_cancel){: #mishka_gervaz-form-hooks-on_cancel } | `(any -> any)` |  | `fn state -> state` - When form is cancelled. |
 | [`on_validate`](#mishka_gervaz-form-hooks-on_validate){: #mishka_gervaz-form-hooks-on_validate } | `(any, any -> any)` |  | `fn params, state -> params` - On form validate event. |
 | [`on_change`](#mishka_gervaz-form-hooks-on_change){: #mishka_gervaz-form-hooks-on_change } | `(any, any, any -> any)` |  | `fn field, value, state -> state \| {:halt, state}` - On individual field change. |
-| [`transform_params`](#mishka_gervaz-form-hooks-transform_params){: #mishka_gervaz-form-hooks-transform_params } | `(any -> any)` |  | `fn params -> params` - Transform params before action. |
-| [`transform_errors`](#mishka_gervaz-form-hooks-transform_errors){: #mishka_gervaz-form-hooks-transform_errors } | `(any, any -> any)` |  | `fn changeset, errors -> errors` - Transform error messages. |
 
 
 ### mishka_gervaz.form.hooks.js
@@ -3224,7 +3216,7 @@ create button configuration.
 | [`active`](#mishka_gervaz-form-submit-create-active){: #mishka_gervaz-form-submit-create-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-create-disabled){: #mishka_gervaz-form-submit-create-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-create-visible){: #mishka_gervaz-form-submit-create-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-create-restricted){: #mishka_gervaz-form-submit-create-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-create-restricted){: #mishka_gervaz-form-submit-create-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -3252,7 +3244,7 @@ update button configuration.
 | [`active`](#mishka_gervaz-form-submit-update-active){: #mishka_gervaz-form-submit-update-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-update-disabled){: #mishka_gervaz-form-submit-update-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-update-visible){: #mishka_gervaz-form-submit-update-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-update-restricted){: #mishka_gervaz-form-submit-update-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-update-restricted){: #mishka_gervaz-form-submit-update-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 
@@ -3280,7 +3272,7 @@ cancel button configuration.
 | [`active`](#mishka_gervaz-form-submit-cancel-active){: #mishka_gervaz-form-submit-cancel-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-cancel-disabled){: #mishka_gervaz-form-submit-cancel-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-cancel-visible){: #mishka_gervaz-form-submit-cancel-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
-| [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users. `true` or `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 

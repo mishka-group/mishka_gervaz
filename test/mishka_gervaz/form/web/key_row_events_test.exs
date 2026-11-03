@@ -233,7 +233,7 @@ defmodule MishkaGervaz.Form.Web.KeyRowEventsTest do
       params = %{"links" => %{"_empty" => "1", "0" => %{"platform" => "github"}}}
 
       assert %{"links" => [%{"platform" => "github"}]} =
-               EventsHelpers.parse_typed_params([field_config(links_field())], params)
+               EventsHelpers.parse_typed_params([field_config(links_field())], params, %{})
     end
 
     # The flag that decides whether the type module is consulted at all is computed from the field,

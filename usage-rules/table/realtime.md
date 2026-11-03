@@ -61,6 +61,10 @@ one that does not match the filters, search or `path_params` is not inserted, an
 them leaves the list, closing its expanded row if it had one. A manual read, which cannot be asked about one row, shows every row as it
 arrives.
 
+A row the list already shows is drawn again in its place; a new one goes first. A table with
+`keep_loaded_records true` does the same to `state.loaded_records`, so a template drawn from them
+shows the change too, and a row that leaves the list leaves them.
+
 Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
 default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor
 its empty state over realtime — use `show_total true` where rows arrive live.

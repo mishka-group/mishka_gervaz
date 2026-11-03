@@ -260,6 +260,35 @@ defmodule MishkaGervaz.Table.Web.StateTest do
       assert result.sort_fields == original_sort
     end
 
+    test "keeps only the fields of the URL's sort that the table sorts by", %{state: state} do
+      url_state = %{sort: [{:title, :desc}, {:name, :asc}, {:active, :desc}, {:email, :desc}]}
+
+      assert State.apply_url_state(state, url_state).sort_fields == [
+               {:name, :asc},
+               {:email, :desc}
+             ]
+    end
+
+    test "opens the default sort when the URL's sort names no field the table sorts by", %{
+      state: state
+    } do
+      assert state.sort_fields == [{:inserted_at, :desc}]
+
+      for sort <- [[{:title, :desc}], [{:active, :asc}], [{:title, :asc}, {:active, :desc}]] do
+        assert State.apply_url_state(state, %{sort: sort}).sort_fields == [{:inserted_at, :desc}]
+      end
+    end
+
+    test "keeps a field the table's default sort names, though no column sorts by it", %{
+      state: state
+    } do
+      state =
+        update_in(state.static.config.columns, &Map.put(&1, :default_sort, active: :desc))
+
+      assert State.apply_url_state(state, %{sort: [{:name, :asc}, {:active, :asc}]}).sort_fields ==
+               [{:name, :asc}, {:active, :asc}]
+    end
+
     test "applies page from url_state", %{state: state} do
       url_state = %{page: 5}
       result = State.apply_url_state(state, url_state)
@@ -271,6 +300,31 @@ defmodule MishkaGervaz.Table.Web.StateTest do
       assert State.apply_url_state(state, %{page: 0}).page == 1
       assert State.apply_url_state(state, %{page: -1}).page == 1
       assert State.apply_url_state(state, %{page: "invalid"}).page == 1
+    end
+
+    test "opens the last page whose offset the database can read, at the table's page size",
+         %{state: state} do
+      last = div(9_223_372_036_854_775_807, state.static.page_size) + 1
+
+      assert State.apply_url_state(state, %{page: last}).page == last
+      assert State.apply_url_state(state, %{page: last + 1}).page == 1
+      assert State.apply_url_state(state, %{page: 99_999_999_999_999_999_999_999}).page == 1
+    end
+
+    test "opens page 1 for a page past what the database can read, from any page", %{
+      state: state
+    } do
+      state = %{state | page: 4}
+
+      assert State.apply_url_state(state, %{page: 9_223_372_036_854_775_807}).page == 1
+    end
+
+    test "checks the page at the page size the URL picks", %{state: state} do
+      last_at_50 = div(9_223_372_036_854_775_807, 50) + 1
+
+      assert State.apply_url_state(state, %{page: last_at_50, page_size: 50}).page == last_at_50
+      assert State.apply_url_state(state, %{page: last_at_50 + 1, page_size: 50}).page == 1
+      assert State.apply_url_state(state, %{page: last_at_50 + 1}).page == last_at_50 + 1
     end
 
     test "applies search from url_state", %{state: state} do

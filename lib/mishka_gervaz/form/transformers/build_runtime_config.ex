@@ -201,7 +201,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       resource: field.resource,
       derive_value: field.derive_value,
       options: field.options,
-      options_source: field.options_source,
       display_field: field.display_field,
       search_field: field.search_field,
       value_field: field.value_field,
@@ -210,16 +209,12 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       page_size: field.page_size,
       load_action: field.load_action || :read,
       load: field.load,
-      apply: field.apply,
-      format: field.format,
-      render: field.render,
       position: field.position,
       include_nil: field.include_nil,
       min: field.min,
       max: field.max,
       min_chars: field.min_chars,
       nested_fields: field.nested_fields,
-      array_fields: field.array_fields,
       add_label: field.add_label,
       remove_label: field.remove_label,
       type_module: field.type_module,
@@ -355,7 +350,6 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       name: step.name,
       groups: step.groups,
       action: step.action,
-      visible: step.visible,
       summary: step.summary,
       on_enter: step.on_enter,
       before_leave: step.before_leave,
@@ -476,9 +470,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       :on_error,
       :on_cancel,
       :on_validate,
-      :on_change,
-      :transform_params,
-      :transform_errors
+      :on_change
     ]
 
     values = Map.new(keys, &{&1, get_opt(dsl_state, path, &1)})

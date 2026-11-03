@@ -55,13 +55,22 @@ defmodule MishkaGervaz.Table.Web.Events.SanitizationHandlerTest do
       assert Sanitizer.sanitize_page("10") == 10
     end
 
-    test "passes integers through" do
+    test "passes positive integers through" do
       assert Sanitizer.sanitize_page(7) == 7
     end
 
-    test "defaults to 1 for unknown shapes" do
-      assert Sanitizer.sanitize_page(nil) == 1
-      assert Sanitizer.sanitize_page(:weird) == 1
+    test "reads the number inside tags" do
+      assert Sanitizer.sanitize_page("<b>4</b>") == 4
+    end
+
+    test "is nil for anything that is not a positive whole number" do
+      for page <- ["two", "1.5", "", " 2", "2abc", "0", "-3", 0, -3, 1.5, nil, :weird, ["2"]] do
+        assert {page, Sanitizer.sanitize_page(page)} == {page, nil}
+      end
+    end
+
+    test "keeps a page of any size" do
+      assert Sanitizer.sanitize_page("99999999999999999999999") == 99_999_999_999_999_999_999_999
     end
   end
 
