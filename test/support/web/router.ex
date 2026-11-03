@@ -8,6 +8,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       writes it.
     * `/feed` — the same page with a table of `MishkaGervaz.Test.Web.FeedItem`, which keeps no
       count, writing its page into the URL.
+    * `/kept` — the same page with a table of `MishkaGervaz.Test.Web.KeptItem`, which keeps the rows
+      it has loaded, writing its template and page into the URL.
   """
 
   use Phoenix.Router
@@ -24,5 +26,6 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/items", MishkaGervaz.Test.Web.TablePageLive, :writes_url
     live "/items/fixed", MishkaGervaz.Test.Web.TablePageLive, :keeps_url
     live "/feed", MishkaGervaz.Test.Web.TablePageLive, :feed
+    live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
   end
 end

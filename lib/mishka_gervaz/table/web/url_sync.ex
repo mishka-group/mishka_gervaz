@@ -47,7 +47,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   - Page: `?table_page=2`
   - Search: `?table_search=hello` — with `:search` in `params`, the search filter is written here
     and not again as `table_filter_search`
-  - Template: `?table_template=grid`
+  - Template: `?table_template=grid` — the `name/0` of the template the table shows. A URL naming
+    one of the table's `switchable_templates` opens the table in it; any other name is ignored
 
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.State.UrlSync` (the in-state sub-builder),
@@ -354,7 +355,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   Used to detect if incoming url_state is from our own push_patch
   (to avoid duplicate data reload). The URL's search is read as the `:search` filter it is applied
-  as.
+  as, and its template as the name of the state's template.
   """
   @spec matches_state?(url_state() | nil, map()) :: boolean()
   def matches_state?(nil, _state), do: false
@@ -368,7 +369,8 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
         {:sort, Map.get(state, :sort_fields)},
         {:page, Map.get(state, :page)},
         {:page_size, Map.get(state, :current_page_size)},
-        {:path_params, Map.get(state, :path_params) || %{}}
+        {:path_params, Map.get(state, :path_params) || %{}},
+        {:template, template_name(Map.get(state, :template))}
       ],
       fn {key, current} -> specified_match?(url_state, key, current) end
     )
@@ -482,18 +484,22 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   @spec maybe_encode_template(map(), map(), map(), String.t() | nil) :: map()
   defp maybe_encode_template(params, state, config, prefix) do
-    if :template in (config[:params] || []) do
-      template = Map.get(state, :template)
-
-      if is_atom(template) do
-        Map.put(params, build_key(prefix, "template"), to_string(template))
-      else
-        params
-      end
+    with true <- :template in (config[:params] || []),
+         name when not is_nil(name) <- template_name(Map.get(state, :template)) do
+      Map.put(params, build_key(prefix, "template"), to_string(name))
     else
-      params
+      _not_synced -> params
     end
   end
+
+  @spec template_name(term()) :: atom() | nil
+  defp template_name(template) when is_atom(template) and not is_nil(template) do
+    if Code.ensure_loaded?(template) and function_exported?(template, :name, 0),
+      do: template.name(),
+      else: template
+  end
+
+  defp template_name(_template), do: nil
 
   @spec decode_filters(map(), String.t() | nil, keyword()) :: map()
   defp decode_filters(params, prefix, opts) do
@@ -629,11 +635,10 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   defp maybe_apply_search(state, _), do: state
 
   @spec maybe_apply_template(map(), map()) :: map()
-  defp maybe_apply_template(state, %{template: template}) when not is_nil(template) do
-    state
-  end
+  defp maybe_apply_template(%MishkaGervaz.Table.Web.State{} = state, url_state),
+    do: MishkaGervaz.Table.Web.State.UrlSync.apply_url_template(state, url_state)
 
-  defp maybe_apply_template(state, _), do: state
+  defp maybe_apply_template(state, _url_state), do: state
 
   @spec extract_preserved_params(
           map(),
