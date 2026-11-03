@@ -92,7 +92,9 @@ Add `:template` to `url_sync.params` to make the choice bookmarkable.
 
 Off by default. On, every loaded page accumulates in `state.loaded_records`. Each load reads every
 row loaded so far, in as many reads as the read action's `max_page_size` needs, so load-more goes on
-past that size without raising it.
+past that size without raising it. A reload at a URL page needs no `keep_loaded_records`: every
+`:load_more` or `:infinite` table opens page N with every row up to it (see
+[pagination.md](pagination.md)).
 
 Turn it on **only** for a template that *groups* rows — section headings, date buckets, category
 bands. A LiveView stream is one flat appending container and cannot express a heading, so such a

@@ -48,6 +48,15 @@ it to its last page, and a table that keeps no count opens it when the database 
 not a positive whole number is ignored. A custom `events do sanitization … end` handler's
 `sanitize_page/1` returns the number, or `nil` for anything else.
 
+## Load more and the URL page
+
+Load more adds the next page to the list; only its own rows are read. A `:load_more` or
+`:infinite` table whose page is in the URL (`url_sync` with `:page`) opens a URL at page N with
+every row up to page N — rows 1 to N × `page_size`, the rows the reader had loaded — and Load more
+goes on with page N + 1. Those rows are read in as many reads as the read action's `max_page_size`
+needs. A page short of rows shows the rows there are, and a page past the last row shows none. A
+`:numbered` table opens page N alone.
+
 ## `show_total` costs a COUNT
 
 `show_total` defaults to **true** and issues a count query. Turn it off for a data layer that

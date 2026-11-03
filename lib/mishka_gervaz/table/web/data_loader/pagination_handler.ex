@@ -57,6 +57,13 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       smaller returns at most that many rows a read, so the rest are read after them, as many reads
       as it takes, until the page is full or the read has no more rows. Each read stays within the
       action's `max_page_size`.
+
+      A `:load_more` or `:infinite` load that replaces the list instead of adding to it — any load
+      but a Load more (`state.loading_type` other than `:more`), such as the first load of a URL at
+      page N — holds every row up to page N, the rows a reader had loaded, and replaces the list.
+      Page N is read first: when it has rows, the rows before it are read too, from offset 0, in
+      as many reads as `max_page_size` needs. A page past the last row has none, so it shows no
+      rows and nothing before it is read.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
               {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
@@ -76,7 +83,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           pagination_type = get_pagination_type(state)
           count? = count_requested?(state, pagination_type)
           keep? = state.static.keep_loaded_records == true
+          replace? = replaces_list?(state, pagination_type)
           page_opts = build_page_opts(page, page_size, pagination_type, count?, keep?)
+          offset = page_opts[:offset] || 0
 
           read_query =
             Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
@@ -84,13 +93,33 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           page_result =
             read_query
             |> Ash.read!(page: page_opts)
-            |> read_rest(read_query, page_opts[:offset] || 0, page_opts[:limit])
+            |> read_rest(read_query, offset, page_opts[:limit])
+            |> read_before(read_query, offset, replace?)
 
           pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
 
-          {page, page_result, keep? or reset_stream?(pagination_type, page), pagination_info}
+          {page, page_result, keep? or replace? or reset_stream?(pagination_type, page),
+           pagination_info}
         end
       end
+
+      @spec replaces_list?(State.t(), atom()) :: boolean()
+      defp replaces_list?(_state, :numbered), do: false
+      defp replaces_list?(%{loading_type: :more}, _pagination_type), do: false
+      defp replaces_list?(_state, _pagination_type), do: true
+
+      @spec read_before(Ash.Page.Offset.t(), Ash.Query.t(), non_neg_integer(), boolean()) ::
+              Ash.Page.Offset.t()
+      defp read_before(%{results: [_ | _] = rows} = page, query, offset, true) when offset > 0 do
+        before =
+          query
+          |> Ash.read!(page: [offset: 0, limit: offset])
+          |> read_rest(query, 0, offset)
+
+        %{page | results: before.results ++ rows}
+      end
+
+      defp read_before(page, _query, _offset, _replace?), do: page
 
       @spec read_rest(Ash.Page.Offset.t(), Ash.Query.t(), non_neg_integer(), pos_integer()) ::
               Ash.Page.Offset.t()
@@ -185,7 +214,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       Whether this page replaces what is on screen or adds to it.
 
       A numbered page always replaces. Load-more and infinite build a list as you go, so only their
-      first page clears it.
+      first page clears it. A load-more or infinite load that holds every row up to its page
+      replaces the list too, whatever this returns (`load_page/5`).
       """
       @spec reset_stream?(atom(), pos_integer()) :: boolean()
       def reset_stream?(:numbered, _page), do: true
@@ -231,7 +261,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       `keep_loaded_records true` it is the first N slices instead, read from offset 0. Those tables
       render the whole loaded list from state rather than appending to a stream, so the load must
       return everything the reader already had. `load_page/5` reads it in as many reads as the read
-      action's `max_page_size` needs.
+      action's `max_page_size` needs. A load-more or infinite load that replaces the list asks for
+      the Nth slice here too; `load_page/5` reads the rows before it once that slice has rows.
       """
       @spec build_page_opts(integer(), integer(), atom(), boolean(), boolean()) :: keyword()
       def build_page_opts(page, page_size, _pagination_type, count?, keep_loaded_records?) do

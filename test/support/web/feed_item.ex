@@ -1,9 +1,11 @@
 defmodule MishkaGervaz.Test.Web.FeedItem do
   @moduledoc """
-  The resource of `MishkaGervaz.Test.Web.TablePageLive`'s `/feed` table: a list that loads more and
-  keeps no count, with its page synced to the URL in `:bidirectional` mode.
+  The resource of `MishkaGervaz.Test.Web.TablePageLive`'s `/feed` table: a list sorted by title
+  that loads more 20 rows at a time and keeps no count, with its page synced to the URL in
+  `:bidirectional` mode.
 
-  Keeping no count, the table knows no last page, so a page event goes to the page it names.
+  Keeping no count, the table knows no last page, so a page event goes to the page it names. Its
+  read reads at most 15 rows at a time (`max_page_size 15`), fewer than a page holds.
   """
 
   use Ash.Resource,
@@ -20,6 +22,8 @@ defmodule MishkaGervaz.Test.Web.FeedItem do
       end
 
       columns do
+        default_sort title: :asc
+
         column :title
       end
 
@@ -43,7 +47,7 @@ defmodule MishkaGervaz.Test.Web.FeedItem do
     defaults [:read, :destroy, create: :*]
 
     read :master_read do
-      pagination offset?: true
+      pagination offset?: true, max_page_size: 15
     end
 
     read :master_get

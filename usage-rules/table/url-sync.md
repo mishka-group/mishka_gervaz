@@ -45,7 +45,9 @@ own template. The URL's template wins over a `template` the mount passes.
 A page or page size that is not a positive whole number reads as missing. The table opens a page
 only when the database can read it: `(page - 1)` times its page size fits a signed 64-bit integer,
 the range Postgres takes for `OFFSET`. Any other page opens page 1, and a `:bidirectional` table
-writes the URL without it. A page past the last row opens, and shows no rows.
+writes the URL without it. A page past the last row opens, and shows no rows. A `:load_more` or
+`:infinite` table opened at page N shows every row up to it, as the reader had them, and Load more
+goes on with page N + 1 (see [pagination.md](pagination.md)).
 
 The table sorts by the URL's sort fields that it sorts by itself: a sortable column's `sort_field`
 (or its name) or a field of `default_sort`. A field the resource does not have, or a column that is

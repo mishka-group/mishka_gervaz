@@ -6,8 +6,8 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
   Load more adds the next page to every row loaded before, page after page, past the most rows
   the resource's read takes at once (`max_page_size`), until the last row. A page larger than that
-  holds every row it asks for on a table that keeps no rows too. A bulk action reloads every page
-  loaded before it.
+  holds every row it asks for on a table that keeps no rows too, and a load that replaces such a
+  table's list holds every row up to its page. A bulk action reloads every page loaded before it.
   """
   use ExUnit.Case, async: false
 
@@ -172,20 +172,21 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
       |> State.update(current_page_size: 5)
       |> then(&%{&1 | static: %{&1.static | keep_loaded_records: false}})
 
-    page = fn number ->
-      {^number, result, _reset?, _info} =
+    page = fn number, loading_type ->
+      {^number, result, reset?, _info} =
         PaginationHandler.Default.load_page(
-          state,
+          State.update(state, loading_type: loading_type),
           DataLoader.read_query(state),
           number,
           :master_read,
           nil
         )
 
-      {Enum.map(result.results, & &1.title), result.more?}
+      {Enum.map(result.results, & &1.title), result.more?, reset?}
     end
 
-    assert page.(1) == {~w(a b c d e), true}
-    assert page.(2) == {~w(f g), false}
+    assert page.(1, :reset) == {~w(a b c d e), true, true}
+    assert page.(2, :more) == {~w(f g), false, false}
+    assert page.(2, :reset) == {@titles, false, true}
   end
 end
