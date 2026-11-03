@@ -52,6 +52,11 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       @doc """
       Load a page of data with the given query, action, and tenant.
       Returns tuple of {page, page_result, reset?, pagination_info}.
+
+      The page holds every row its page options ask for. A read action whose `max_page_size` is
+      smaller returns at most that many rows a read, so the rest are read after them, as many reads
+      as it takes, until the page is full or the read has no more rows. Each read stays within the
+      action's `max_page_size`.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
               {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
@@ -73,16 +78,36 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           keep? = state.static.keep_loaded_records == true
           page_opts = build_page_opts(page, page_size, pagination_type, count?, keep?)
 
+          read_query =
+            Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
+
           page_result =
-            query
-            |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+            read_query
             |> Ash.read!(page: page_opts)
+            |> read_rest(read_query, page_opts[:offset] || 0, page_opts[:limit])
 
           pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
 
           {page, page_result, keep? or reset_stream?(pagination_type, page), pagination_info}
         end
       end
+
+      @spec read_rest(Ash.Page.Offset.t(), Ash.Query.t(), non_neg_integer(), pos_integer()) ::
+              Ash.Page.Offset.t()
+      defp read_rest(%{more?: true, results: [_ | _] = rows} = page, query, offset, limit)
+           when length(rows) < limit do
+        read = length(rows)
+        rest = Ash.read!(query, page: [offset: offset + read, limit: limit - read])
+
+        read_rest(
+          %{page | results: rows ++ rest.results, more?: rest.more?},
+          query,
+          offset,
+          limit
+        )
+      end
+
+      defp read_rest(page, _query, _offset, _limit), do: page
 
       @doc """
       The table's total as `load_page/5` would report it, without loading a page.
@@ -203,9 +228,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       Page options for one read.
 
       Normally page N is the Nth slice — `offset: (N-1) * size`. For a table that declared
-      `keep_loaded_records true` it is the first N slices instead, read in one query from offset 0.
-      Those tables render the whole loaded list from state rather than appending to a stream, so one
-      read must return everything the reader already had.
+      `keep_loaded_records true` it is the first N slices instead, read from offset 0. Those tables
+      render the whole loaded list from state rather than appending to a stream, so the load must
+      return everything the reader already had. `load_page/5` reads it in as many reads as the read
+      action's `max_page_size` needs.
       """
       @spec build_page_opts(integer(), integer(), atom(), boolean(), boolean()) :: keyword()
       def build_page_opts(page, page_size, _pagination_type, count?, keep_loaded_records?) do

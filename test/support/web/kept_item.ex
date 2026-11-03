@@ -4,6 +4,9 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
   rows at a time and keeps the rows it has loaded (`keep_loaded_records`), drawn by the stock
   `MishkaGervaz.Table.Templates.Table` or by `MishkaGervaz.Test.Web.KeptRows`, which draws those
   kept rows. Its template and page are synced to the URL in `:bidirectional` mode.
+
+  Its read reads at most three rows at a time (`max_page_size 3`), fewer than a table that has
+  loaded two pages keeps.
   """
 
   use Ash.Resource,
@@ -51,7 +54,7 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
-      pagination offset?: true, countable: true
+      pagination offset?: true, countable: true, max_page_size: 3
     end
 
     read :master_get
