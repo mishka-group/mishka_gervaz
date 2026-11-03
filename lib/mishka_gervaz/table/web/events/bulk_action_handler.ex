@@ -336,9 +336,12 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
             ) :: {:noreply, socket()}
 
   @doc """
-  Builds a query for bulk operations.
+  Builds the query a bulk action runs on.
 
-  Applies any necessary filters based on the selection.
+  It is the table's own read (`MishkaGervaz.Table.Web.DataLoader.read_query/1`): its
+  `path_params`, filters, search and `on_load` hook, under the view's read action and the tenant,
+  so picking every row reaches the rows the table shows and no other. `{:exclude, ids}` leaves out
+  the rows unpicked after picking every row.
   """
   @callback build_bulk_query(
               resource :: module(),
@@ -632,7 +635,11 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
             Info.action_for(resource, :read, state.master_user?)
           end
 
-        query = Ash.Query.for_read(resource, action, %{}, build_read_opts(state))
+        query =
+          state
+          |> DataLoader.read_query()
+          |> Ash.Query.unset([:load, :sort])
+          |> Ash.Query.for_read(action, %{}, build_read_opts(state))
 
         case filter do
           {:exclude, excluded_ids} ->
