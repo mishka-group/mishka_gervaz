@@ -6,7 +6,8 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
   kept rows. Its template and page are synced to the URL in `:bidirectional` mode.
 
   Its read reads at most three rows at a time (`max_page_size 3`), fewer than a table that has
-  loaded two pages keeps. Its rows can be picked, and its Wipe bulk action destroys the picked ones.
+  loaded two pages keeps. Its rows can be picked: its Wipe bulk action destroys the picked ones, and
+  its Mark done one runs `:master_finish` (`:finish` for a site's user) on them, which sets `done`.
   """
 
   use Ash.Resource,
@@ -48,6 +49,16 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
 
       bulk_actions do
         action :wipe, type: :destroy
+
+        action :finish do
+          type :update
+          action {:master_finish, :finish}
+
+          ui do
+            label "Mark done"
+            icon "hero-check"
+          end
+        end
       end
 
       url_sync do
@@ -68,11 +79,20 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
     read :master_get
     read :tenant_read
     destroy :master_destroy
+
+    update :finish do
+      change set_attribute(:done, true)
+    end
+
+    update :master_finish do
+      change set_attribute(:done, true)
+    end
   end
 
   attributes do
     uuid_primary_key :id
     attribute :title, :string, allow_nil?: false, public?: true
+    attribute :done, :boolean, default: false, public?: true
     create_timestamp :inserted_at
   end
 end

@@ -568,6 +568,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       restricted: default_if_nil(action.restricted, false),
       visible: action.visible,
       handler: default_if_nil(action.handler, :parent),
+      action: action.action,
       ui: maybe_ui(action.ui, &bulk_ui_to_map/1, &has_bulk_ui_values?/1)
     }
   end
