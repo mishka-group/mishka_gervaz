@@ -57,6 +57,63 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
     |> Enum.map(& &1.title)
   end
 
+  defp notify(view, action_name, record) do
+    notification = %Ash.Notifier.Notification{
+      resource: KeptItem,
+      action: Ash.Resource.Info.action(KeptItem, action_name),
+      data: record
+    }
+
+    send(view.pid, {:notify, notification})
+    render_async(view, @await)
+  end
+
+  defp retitle!(item, title), do: Ash.update!(item, %{title: title})
+
+  describe "a realtime update of a row the table shows" do
+    test "draws it again in its place, in the rows the table keeps", %{items: [a, b | _]} do
+      view = open("/kept?template=kept_rows")
+      load_more(view)
+
+      notify(view, :update, retitle!(b, "b2"))
+      assert kept(view) == ~w(a b2 c d)
+
+      notify(view, :update, retitle!(a, "a2"))
+      assert kept(view) == ~w(a2 b2 c d)
+    end
+
+    test "draws it again in its place in the stock table", %{items: [a, b | _] = items} do
+      view = open("/kept?template=table")
+      load_more(view)
+
+      notify(view, :update, retitle!(b, "b2"))
+      assert render(view) =~ "b2"
+      assert listed(view, Enum.map(items, &Ash.get!(KeptItem, &1.id))) == ~w(a b2 c d)
+
+      notify(view, :update, retitle!(a, "a2"))
+      assert listed(view, Enum.map(items, &Ash.get!(KeptItem, &1.id))) == ~w(a2 b2 c d)
+    end
+  end
+
+  describe "the rows the table keeps follow realtime" do
+    test "a row destroyed elsewhere leaves them", %{items: [_a, b | _]} do
+      view = open("/kept?template=kept_rows")
+
+      Ash.destroy!(b)
+      notify(view, :destroy, b)
+
+      assert kept(view) == ~w(a)
+    end
+
+    test "a row created elsewhere is drawn first, as the stock table draws it" do
+      view = open("/kept?template=kept_rows")
+
+      notify(view, :create, Ash.create!(KeptItem, %{title: "new"}))
+
+      assert kept(view) == ~w(new a b)
+    end
+  end
+
   describe "load more" do
     test "keeps every row loaded before, past the most rows the read takes at once" do
       view = open("/kept?template=kept_rows")

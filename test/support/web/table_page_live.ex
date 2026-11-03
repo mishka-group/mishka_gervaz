@@ -8,6 +8,8 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
 
   `send(view.pid, :activity)` stands for a live event of the page, such as a PubSub broadcast: it
   redraws the rail, so the page renders the table again with the `url_state` it already holds.
+  `send(view.pid, {:notify, notification})` hands an Ash notification on to the table, as a page
+  does with the realtime broadcasts it receives.
   """
 
   use Phoenix.LiveView
@@ -30,6 +32,11 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
 
   @impl true
   def handle_info(:activity, socket), do: {:noreply, update(socket, :activity, &(&1 + 1))}
+
+  def handle_info({:notify, notification}, socket) do
+    send_update(MishkaGervaz.Table.Web.Live, id: "items", pubsub_notification: notification)
+    {:noreply, socket}
+  end
 
   @impl true
   def render(assigns) do
