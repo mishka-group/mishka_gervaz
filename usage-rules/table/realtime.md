@@ -56,10 +56,12 @@ delivered twice counts once. The count runs as a task, one per burst of notifica
 table counts at once, so its first row arrives with its total. A numbered table left past its last
 page loads the last page.
 
-A row that arrives or changes over realtime is checked against the same read before it is shown:
-one that does not match the filters, search or `path_params` is not inserted, and one edited out of
-them leaves the list, closing its expanded row if it had one. A manual read, which cannot be asked about one row, shows every row as it
-arrives.
+A row that arrives or changes over realtime is read with the same read, filtered to that row, before
+it is shown (`DataLoader.rows_in_view/2`): one read, with its preloads, both says whether the row is
+in the view and draws it. One that does not match the filters, search or `path_params` is not
+inserted, and one edited out of them leaves the list, closing its expanded row if it had one. A
+manual read, which cannot be asked about one row, or a read that returns an error, shows every row
+as it arrives.
 
 A row the list already shows is drawn again in its place; a new one goes first. A table with
 `keep_loaded_records true` does the same to `state.loaded_records`, so a template drawn from them

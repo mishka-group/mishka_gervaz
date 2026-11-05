@@ -423,9 +423,11 @@ defmodule MishkaGervaz.Table.Web.Live do
   @spec reload_and_insert(Phoenix.LiveView.Socket.t(), State.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   defp reload_and_insert(socket, state, record) do
-    if DataLoader.in_view?(state, record.id),
-      do: load_and_insert(socket, state, record),
-      else: leave_view(socket, state, record)
+    case DataLoader.rows_in_view(state, [record.id]) do
+      {:ok, [row]} -> insert_row(socket, state, row)
+      {:ok, _left_out} -> leave_view(socket, state, record)
+      :error -> load_and_insert(socket, state, record)
+    end
   end
 
   @spec leave_view(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
@@ -457,16 +459,18 @@ defmodule MishkaGervaz.Table.Web.Live do
       end
 
     case Ash.get(state.static.resource, record.id, opts) do
-      {:ok, loaded_record} ->
-        loaded_record = Helpers.inject_preload_aliases(loaded_record, state.preload_aliases)
-
-        socket
-        |> stream_insert(state.static.stream_name, loaded_record, at: 0)
-        |> keep_row(loaded_record)
-
-      _ ->
-        socket
+      {:ok, loaded_record} -> insert_row(socket, state, loaded_record)
+      _ -> socket
     end
+  end
+
+  @spec insert_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp insert_row(socket, state, row) do
+    row = Helpers.inject_preload_aliases(row, state.preload_aliases)
+
+    socket
+    |> stream_insert(state.static.stream_name, row, at: 0)
+    |> keep_row(row)
   end
 
   @spec delete_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
