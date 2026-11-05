@@ -90,9 +90,10 @@ Add `:template` to `url_sync.params` to make the choice bookmarkable.
 
 ## `keep_loaded_records`
 
-Off by default. On, every loaded page accumulates in `state.loaded_records`. Each load reads every
-row loaded so far, in as many reads as the read action's `max_page_size` needs, so load-more goes on
-past that size without raising it.
+Off by default. On, every loaded page accumulates in `state.loaded_records`. Load more reads one
+page, after the rows kept, so a row removed from them or added over realtime moves no row past it. A
+load that starts the list afresh at page N — opened at page N, or reloaded after a bulk action that
+changed rows — reads the first N pages, in as many reads as the read action's `max_page_size` needs.
 
 Turn it on **only** for a template that *groups* rows — section headings, date buckets, category
 bands. A LiveView stream is one flat appending container and cannot express a heading, so such a

@@ -1132,18 +1132,19 @@ defmodule MishkaGervaz.Table.Web.Events do
   end
 
   @doc false
-  @spec drop_from_total(State.t()) :: State.t()
-  defp drop_from_total(%{total_count: nil} = state), do: state
+  @spec drop_from_total(State.t(), non_neg_integer()) :: State.t()
+  def drop_from_total(state, count \\ 1)
 
-  defp drop_from_total(%{total_count: total} = state) when is_integer(total) and total > 0 do
-    total = total - 1
+  def drop_from_total(%{total_count: total} = state, count)
+      when is_integer(total) and total > 0 do
+    total = max(total - count, 0)
     page_size = state.current_page_size || state.static.page_size
 
     %{state | total_count: total}
     |> maybe_put_total_pages(total, page_size)
   end
 
-  defp drop_from_total(state), do: state
+  def drop_from_total(state, _count), do: state
 
   defp maybe_put_total_pages(%{total_pages: _pages} = state, total, page_size)
        when is_integer(page_size) and page_size > 0,

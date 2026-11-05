@@ -61,8 +61,10 @@ table scoped to one site, and a picked id it does not find is left alone. A func
 reads rows itself can start from the same `read_query(state)`.
 
 After a built-in bulk action, or a function handler that returns `:reload`, the table loads its
-first page again; a table with `keep_loaded_records true` loads every page it had loaded, so the
-rows the reader loaded stay.
+first page again. A table with `keep_loaded_records true` takes the rows a destroy, an archive or a
+restore removed out of the rows it keeps and reads none, while a kept row stays or no more rows are
+left to load; after any other action it loads every page it had loaded, so the rows the reader
+loaded stay.
 
 ## Messaging the result
 

@@ -57,6 +57,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       smaller returns at most that many rows a read, so the rest are read after them, as many reads
       as it takes, until the page is full or the read has no more rows. Each read stays within the
       action's `max_page_size`.
+
+      A table with `keep_loaded_records true` adds a page to the rows it keeps: Load more reads one
+      page, after the rows kept, so a row taken out of them or put in over realtime moves no row
+      past it. A load of such a table that starts its list afresh at page N of a list that grows
+      (Load more and infinite), such as one opened at page N or reloaded after a bulk action, reads
+      the first N pages, so the rows the reader had stay.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
               {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
@@ -76,7 +82,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           pagination_type = get_pagination_type(state)
           count? = count_requested?(state, pagination_type)
           keep? = state.static.keep_loaded_records == true
-          page_opts = build_page_opts(page, page_size, pagination_type, count?, keep?)
+          more? = state.loading_type == :more and not reset_stream?(pagination_type, page)
+
+          page_opts =
+            keep_page_opts(state, page, page_size, pagination_type, count?, keep?, more?)
 
           read_query =
             Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
@@ -88,9 +97,29 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
 
           pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
 
-          {page, page_result, keep? or reset_stream?(pagination_type, page), pagination_info}
+          {page, page_result, reset_stream?(pagination_type, page) or (keep? and not more?),
+           pagination_info}
         end
       end
+
+      @spec keep_page_opts(
+              State.t(),
+              pos_integer(),
+              pos_integer(),
+              atom(),
+              boolean(),
+              boolean(),
+              boolean()
+            ) :: keyword()
+      defp keep_page_opts(state, page, page_size, type, count?, true, true) do
+        page
+        |> build_page_opts(page_size, type, count?)
+        |> Keyword.put(:offset, length(state.loaded_records))
+      end
+
+      defp keep_page_opts(_state, page, page_size, type, count?, keep?, _more?),
+        do:
+          build_page_opts(page, page_size, type, count?, keep? and not reset_stream?(type, page))
 
       @spec read_rest(Ash.Page.Offset.t(), Ash.Query.t(), non_neg_integer(), pos_integer()) ::
               Ash.Page.Offset.t()
@@ -227,16 +256,15 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       @doc """
       Page options for one read.
 
-      Normally page N is the Nth slice — `offset: (N-1) * size`. For a table that declared
-      `keep_loaded_records true` it is the first N slices instead, read from offset 0. Those tables
-      render the whole loaded list from state rather than appending to a stream, so the load must
-      return everything the reader already had. `load_page/5` reads it in as many reads as the read
-      action's `max_page_size` needs.
+      Page N is the Nth slice — `offset: (N-1) * size`. With `from_start?` it is the first N slices
+      instead, read from offset 0: `load_page/5` asks for that when a table with
+      `keep_loaded_records true` starts its growing list afresh at page N, so the rows the reader
+      had stay, and reads it in as many reads as the read action's `max_page_size` needs.
       """
       @spec build_page_opts(integer(), integer(), atom(), boolean(), boolean()) :: keyword()
-      def build_page_opts(page, page_size, _pagination_type, count?, keep_loaded_records?) do
+      def build_page_opts(page, page_size, _pagination_type, count?, from_start?) do
         opts =
-          if keep_loaded_records?,
+          if from_start?,
             do: [offset: 0, limit: page * page_size],
             else: [offset: (page - 1) * page_size, limit: page_size]
 

@@ -4,9 +4,11 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
   drives it, in the stock `MishkaGervaz.Table.Templates.Table` and in
   `MishkaGervaz.Test.Web.KeptRows`, a template drawn from those kept rows.
 
-  Load more adds the next page to every row loaded before, page after page, past the most rows
-  the resource's read takes at once (`max_page_size`), until the last row. A page larger than that
-  holds every row it asks for on a table that keeps no rows too. A bulk action reloads every page
+  Load more reads only the page after the rows the table keeps and adds it to them, page after
+  page, past the most rows the resource's read takes at once (`max_page_size`), until the last row;
+  a row taken out of the kept rows moves no row past the next Load more. A page larger than that
+  holds every row it asks for on a table that keeps no rows too. A bulk action whose rows leave the
+  list takes them out of the kept rows and reads none; any other bulk action reloads every page
   loaded before it.
   """
   use ExUnit.Case, async: false
@@ -16,6 +18,7 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
   alias MishkaGervaz.Table.Web.{DataLoader, State}
   alias MishkaGervaz.Table.Web.DataLoader.PaginationHandler
+  alias MishkaGervaz.Test.Queries
   alias MishkaGervaz.Test.Web.KeptItem
 
   @endpoint MishkaGervaz.Test.Web.Endpoint
@@ -71,6 +74,22 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
   defp retitle!(item, title), do: Ash.update!(item, %{title: title})
 
+  defp pick(view, item) do
+    view
+    |> element(~s|#items [phx-click="toggle_select"][phx-value-id="#{item.id}"]|)
+    |> render_click()
+  end
+
+  defp bulk(view, action) do
+    view
+    |> element(~s|#items [phx-click="bulk_action"][phx-value-action="#{action}"]|)
+    |> render_click()
+
+    render_async(view, @await)
+  end
+
+  defp in_order?(kept, titles), do: kept == Enum.take(titles, length(kept))
+
   describe "a realtime update of a row the table shows" do
     test "draws it again in its place, in the rows the table keeps", %{items: [a, b | _]} do
       view = open("/kept?template=kept_rows")
@@ -116,25 +135,65 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
   end
 
   describe "a bulk action" do
-    test "reloads every page loaded before it, so the rows loaded stay", %{
+    test "whose rows leave the list takes them out of the rows kept", %{
       items: [_a, b | _] = items
     } do
       view = open("/kept?template=table")
       load_more(view)
       load_more(view)
 
-      view
-      |> element(~s|#items [phx-click="toggle_select"][phx-value-id="#{b.id}"]|)
-      |> render_click()
+      pick(view, b)
+      bulk(view, :wipe)
 
-      view
-      |> element(~s|#items [phx-click="bulk_action"][phx-value-action="wipe"]|)
-      |> render_click()
+      assert listed(view, items) == ~w(a c d e f)
+      assert more?(view)
+    end
 
-      render_async(view, @await)
+    test "whose rows leave the list reads no row, however many pages are loaded", %{
+      items: [a, b | _] = items
+    } do
+      one_page = open("/kept?template=table")
+      pick(one_page, a)
+      {_view, on_one_page} = Queries.count(fn -> bulk(one_page, :wipe) end)
 
+      three_pages = open("/kept?template=table")
+      for _page <- 1..2, do: load_more(three_pages)
+      pick(three_pages, b)
+      {_view, on_three_pages} = Queries.count(fn -> bulk(three_pages, :wipe) end)
+
+      assert on_three_pages == on_one_page
+      assert listed(three_pages, items) == ~w(c d e f g)
+    end
+
+    test "after it, Load more goes on from the rows kept and passes no row", %{
+      items: [_a, b | _] = items
+    } do
+      view = open("/kept?template=table")
+      load_more(view)
+
+      pick(view, b)
+      bulk(view, :wipe)
+      assert listed(view, items) == ~w(a c d)
+
+      load_more(view)
+      assert listed(view, items) == ~w(a c d e f)
+
+      load_more(view)
       assert listed(view, items) == ~w(a c d e f g)
       refute more?(view)
+    end
+
+    test "that changes rows reloads every page loaded before it, so the rows loaded stay", %{
+      items: [_a, b | _] = items
+    } do
+      view = open("/kept?template=table")
+      load_more(view)
+
+      pick(view, b)
+      bulk(view, :finish)
+
+      assert listed(view, items) == ~w(a b c d)
+      assert Ash.get!(KeptItem, b.id).done
     end
   end
 
@@ -162,6 +221,37 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
       assert listed(view, items) == @titles
       refute more?(view)
+    end
+
+    test "reads only the next page, however many pages are kept" do
+      view = open("/kept?template=kept_rows")
+
+      queries =
+        for _page <- 1..3, do: view |> then(&Queries.count(fn -> load_more(&1) end)) |> elem(1)
+
+      assert kept(view) == @titles
+      assert Enum.uniq(queries) == [hd(queries)]
+    end
+
+    test "after a row destroyed elsewhere left the rows kept, passes no row", %{
+      items: [_a, b | _]
+    } do
+      view = open("/kept?template=kept_rows")
+      load_more(view)
+
+      Ash.destroy!(b)
+      notify(view, :destroy, b)
+      load_more(view)
+
+      assert in_order?(kept(view), ~w(a c d e f g))
+      assert kept(view) == ~w(a c d e f)
+    end
+
+    test "opened at a later page reads every page up to it" do
+      view = open("/kept?template=kept_rows&page=3")
+
+      assert kept(view) == ~w(a b c d e f)
+      assert more?(view)
     end
   end
 

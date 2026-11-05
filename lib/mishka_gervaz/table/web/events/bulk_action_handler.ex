@@ -26,10 +26,13 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
        summary whose `:skipped_count` / `:skipped_record_ids` describe the
        skipped rows; default flash is `"X unarchived, Y skipped — a record
        with the same name already exists."`. Skipped rows stay selected.
-    4. The table then loads its first page again, or, with
-       `keep_loaded_records true`, every page it had loaded, so the rows the
-       reader loaded stay. A function handler that returns `:reload` reloads
-       the same way.
+    4. The table then loads its first page again. A table with
+       `keep_loaded_records true` takes the rows a destroy, an archive or a
+       restore removed out of the rows it keeps and reads none, while some
+       kept row stays or no more rows are left to load; after any other
+       action it loads every page it had loaded, so the rows the reader
+       loaded stay. A function handler that returns `:reload` reloads the
+       same way.
 
   See `MishkaGervaz.Table.Web.Events.BulkActionResult` for the summary
   shape; `MishkaGervaz.Table.Web.Events.BulkActionHooks` for `silence/1`
@@ -565,7 +568,7 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
       defp finish_bulk_success(action, %BulkActionResult{} = summary, state, socket) do
         state
         |> apply_lifecycle_socket(:on_bulk_action_success, action, [summary, state], socket)
-        |> reload_after_bulk(action, state)
+        |> reload_after_bulk(action, state, summary)
       end
 
       defp finish_bulk_partial(action, %BulkActionResult{} = summary, state, socket) do
@@ -577,10 +580,10 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           socket,
           &default_partial_flash(&1, summary)
         )
-        |> reload_after_bulk(action, state)
+        |> reload_after_bulk(action, state, summary)
       end
 
-      defp reload_after_bulk(socket, action, state) do
+      defp reload_after_bulk(socket, action, state, summary) do
         new_state =
           if builtin_enabled?(state, :clear_selection_after_bulk) do
             State.update(state,
@@ -593,14 +596,65 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           end
 
         socket =
-          DataLoader.load_async(socket, new_state,
-            page: reload_page(state),
-            reset: true,
-            sync_url: false
-          )
+          case rows_left(new_state, action, summary) do
+            {:drop, gone, kept} ->
+              socket
+              |> drop_rows(new_state, gone, kept, summary)
+              |> MishkaGervaz.Table.Web.AutoState.after_bulk_action(new_state, action)
+              |> then(&MishkaGervaz.Table.Web.AutoState.after_load(&1, &1.assigns.table_state))
 
-        socket = MishkaGervaz.Table.Web.AutoState.after_bulk_action(socket, new_state, action)
+            :reload ->
+              socket
+              |> DataLoader.load_async(new_state,
+                page: reload_page(state),
+                reset: true,
+                sync_url: false
+              )
+              |> MishkaGervaz.Table.Web.AutoState.after_bulk_action(new_state, action)
+          end
+
         {:noreply, socket}
+      end
+
+      @spec rows_left(State.t(), map(), BulkActionResult.t()) ::
+              {:drop, [map()], [map()]} | :reload
+      defp rows_left(
+             %State{static: %{keep_loaded_records: true}} = state,
+             action,
+             %BulkActionResult{succeeded_records: records, succeeded_count: count} = summary
+           )
+           when length(records) == count do
+        ids = MapSet.new(records, & &1.id)
+        {gone, kept} = Enum.split_with(state.loaded_records, &MapSet.member?(ids, &1.id))
+
+        if leaves_view?(action, summary.action_type) and (kept != [] or not state.has_more?),
+          do: {:drop, gone, kept},
+          else: :reload
+      end
+
+      defp rows_left(_state, _action, _summary), do: :reload
+
+      @spec leaves_view?(map(), atom()) :: boolean()
+      defp leaves_view?(%{handler: {:type, :unarchive}}, _action_type), do: true
+      defp leaves_view?(_action, action_type), do: action_type in [:destroy, :soft_delete]
+
+      @spec drop_rows(
+              Phoenix.LiveView.Socket.t(),
+              State.t(),
+              [map()],
+              [map()],
+              BulkActionResult.t()
+            ) ::
+              Phoenix.LiveView.Socket.t()
+      defp drop_rows(socket, state, gone, kept, summary) do
+        state =
+          state
+          |> MishkaGervaz.Table.Web.Events.drop_from_total(summary.succeeded_count)
+          |> State.update(loaded_records: kept)
+
+        gone
+        |> Enum.reduce(socket, &Phoenix.LiveView.stream_delete(&2, state.static.stream_name, &1))
+        |> Phoenix.Component.assign(:table_state, state)
       end
 
       @spec reload_page(State.t()) :: pos_integer()
@@ -749,11 +803,17 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           )
 
         socket =
-          DataLoader.load_async(socket, new_state,
-            page: reload_page(state),
-            reset: true,
-            sync_url: false
-          )
+          case rows_left(new_state, action, summary) do
+            {:drop, gone, kept} ->
+              drop_rows(socket, new_state, gone, kept, summary)
+
+            :reload ->
+              DataLoader.load_async(socket, new_state,
+                page: reload_page(state),
+                reset: true,
+                sync_url: false
+              )
+          end
 
         {:noreply, socket}
       end

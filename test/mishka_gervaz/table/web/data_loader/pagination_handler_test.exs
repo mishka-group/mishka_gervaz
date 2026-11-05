@@ -47,10 +47,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandlerTest do
       assert Handler.build_page_opts(3, 30, :load_more, false) == [offset: 60, limit: 30]
     end
 
-    test "for a table that keeps its loaded records, page N is the FIRST N slices" do
-      # Those tables render the whole list from state rather than appending to a stream, so a reload
-      # has to return everything the reader had — reading only the newest slice would shrink a
-      # 90-row list back to 30.
+    test "read from the start, page N is the FIRST N slices" do
+      # A table that keeps its loaded records asks for this when it starts its list afresh at page
+      # N — reading only the newest slice would shrink a 90-row list back to 30.
       assert Handler.build_page_opts(1, 30, :load_more, false, true) == [offset: 0, limit: 30]
       assert Handler.build_page_opts(3, 30, :load_more, false, true) == [offset: 0, limit: 90]
     end

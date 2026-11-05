@@ -533,7 +533,15 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       defp accumulate_records(%State{static: %{keep_loaded_records: false}}, _records, _reset),
         do: []
 
-      defp accumulate_records(_state, records, _reset), do: records
+      defp accumulate_records(_state, records, true), do: records
+
+      defp accumulate_records(%State{loaded_records: kept}, records, false) do
+        fresh = Map.new(records, &{&1.id, &1})
+        kept = Enum.map(kept, &Map.get(fresh, &1.id, &1))
+        kept_ids = MapSet.new(kept, & &1.id)
+
+        kept ++ Enum.reject(records, &MapSet.member?(kept_ids, &1.id))
+      end
 
       @doc """
       Apply new filters and reload.
