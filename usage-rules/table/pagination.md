@@ -48,6 +48,25 @@ it to its last page, and a table that keeps no count opens it when the database 
 not a positive whole number is ignored. A custom `events do sanitization … end` handler's
 `sanitize_page/1` returns the number, or `nil` for anything else.
 
+## Load more reads after the last row
+
+Load more and infinite scroll read the page after the last row the table read, by its keyset
+(`state.after_keyset`), when the table's read action allows keyset pagination:
+
+```elixir
+read :master_read do
+  pagination offset?: true, keyset?: true, countable: true
+end
+```
+
+A row added or removed anywhere in the list, by this view, another one or realtime, then moves no
+row past Load more and takes no row from its page, in the same one read. Keep `offset?: true` too:
+a numbered page and a page opened from the URL are read by offset.
+
+Without `keyset?: true`, or when Ash refuses the keyset as invalid, Load more reads the page's offset
+(after the rows kept, with `keep_loaded_records true`), and a row removed elsewhere moves the next row
+past it.
+
 ## `show_total` costs a COUNT
 
 `show_total` defaults to **true** and issues a count query. Turn it off for a data layer that
@@ -68,6 +87,7 @@ end
 - [ ] `show_total false` when the data layer cannot count
 - [ ] `:load_more` / `:infinite` chosen for lists that are scrolled, `:numbered` for lists that are paged
 - [ ] A grouped custom template also sets `presentation.keep_loaded_records true`
+- [ ] The read action of a `:load_more` / `:infinite` table allows `keyset?: true`
 
 ## DSL reference
 

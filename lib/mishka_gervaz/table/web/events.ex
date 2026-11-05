@@ -1123,7 +1123,7 @@ defmodule MishkaGervaz.Table.Web.Events do
     |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
     |> Phoenix.Component.assign(
       :table_state,
-      drop_shown_row(socket.assigns.table_state, record.id, :self)
+      drop_kept_row(socket.assigns.table_state, record.id)
     )
   end
 
@@ -1132,7 +1132,7 @@ defmodule MishkaGervaz.Table.Web.Events do
     state =
       socket.assigns.table_state
       |> drop_from_total()
-      |> drop_shown_row(record.id, :self)
+      |> drop_kept_row(record.id)
 
     socket
     |> Phoenix.Component.assign(:table_state, state)
@@ -1140,30 +1140,18 @@ defmodule MishkaGervaz.Table.Web.Events do
   end
 
   @doc """
-  Takes the row `id` out of what the view shows, so the next Load more reads after the rows still
-  shown.
+  Takes the row `id` out of the rows a table with `keep_loaded_records true` keeps, so a template
+  drawn from them no longer shows it and an offset Load more reads after the rows still kept. Taking
+  it out twice, by the view and by its realtime removal, changes nothing more.
 
-  A table with `keep_loaded_records true` drops it from `loaded_records`. Any other table moves
-  `next_offset` back by one. A row the view removes itself (`:self`) is held by its id in
-  `removed_ids` until its own realtime removal (`:realtime`) arrives, which then moves nothing, so
-  the row is counted once whether realtime is on or off.
+  Any other table keeps no rows and is returned as it is: its Load more reads after the last row's
+  keyset, which a removed row does not move.
   """
-  @spec drop_shown_row(State.t(), term(), :self | :realtime) :: State.t()
-  def drop_shown_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
+  @spec drop_kept_row(State.t(), term()) :: State.t()
+  def drop_kept_row(%State{static: %{keep_loaded_records: true}} = state, id),
     do: %{state | loaded_records: Enum.reject(state.loaded_records, &(&1.id == id))}
 
-  def drop_shown_row(%State{} = state, id, :self),
-    do: %{
-      state
-      | next_offset: max(state.next_offset - 1, 0),
-        removed_ids: MapSet.put(state.removed_ids, id)
-    }
-
-  def drop_shown_row(%State{removed_ids: removed} = state, id, :realtime) do
-    if MapSet.member?(removed, id),
-      do: %{state | removed_ids: MapSet.delete(removed, id)},
-      else: %{state | next_offset: max(state.next_offset - 1, 0)}
-  end
+  def drop_kept_row(%State{} = state, _id), do: state
 
   @doc false
   @spec drop_from_total(State.t(), non_neg_integer()) :: State.t()

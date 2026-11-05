@@ -73,16 +73,15 @@ A row the list already shows is drawn again in its place; a new one goes first. 
 `keep_loaded_records true` does the same to `state.loaded_records`, so a template drawn from them
 shows the change too, and a row that leaves the list leaves them.
 
-Load more reads after the rows the list shows, so a row that leaves the list moves no row past it.
-A table that keeps no rows holds where it reads from in `state.next_offset`, one less for each row
-that leaves. A row that arrives is not counted, since it may sort after the rows shown, and a row
-that leaves may not have been shown, so Load more may read again a row the list shows; it is drawn
-once, in its place.
+Load more reads after the keyset of the last row the list read (`state.after_keyset`) when the read
+action allows keyset pagination (see [pagination.md](pagination.md)), so a row that arrives or
+leaves anywhere in the list, shown or not, moves no row past it and takes no row from the page. A
+row that arrived over realtime and sorts after the rows shown is read again by a later Load more and
+drawn once, in its place.
 
 A row the view deletes, destroys, restores or destroys for good itself, or one an
-`override_row_action` answers `{:ok, :stream_delete, row}` for, leaves `next_offset` or
-`state.loaded_records` at once, with realtime on or off. `state.removed_ids` holds its id until its
-own realtime removal arrives, which then counts it no second time.
+`override_row_action` answers `{:ok, :stream_delete, row}` for, leaves `state.loaded_records` at
+once, with realtime on or off; its realtime removal later changes nothing more.
 
 Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
 default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor

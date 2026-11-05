@@ -58,19 +58,21 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       as it takes, until the page is full or the read has no more rows. Each read stays within the
       action's `max_page_size`.
 
-      A table with `keep_loaded_records true` adds a page to the rows it keeps: Load more reads one
-      page, after the rows kept, so a row taken out of them or put in over realtime moves no row
-      past it. A load of such a table that starts its list afresh at page N of a list that grows
-      (Load more and infinite), such as one opened at page N or reloaded after a bulk action, reads
-      the first N pages, so the rows the reader had stay.
+      Load more (and infinite scroll) reads the page after the last row the view read. When the
+      read action allows keyset pagination (`pagination keyset?: true`), it reads after that row's
+      keyset, the state's `after_keyset`, so a row realtime puts in or takes out anywhere in the
+      list moves no row past it, and one read is all it costs. It reads from an offset instead when
+      the action has no keyset pagination, when the rows carry no keyset, or when Ash refuses the
+      keyset as invalid: after the rows kept for a table with `keep_loaded_records true`, and the
+      Nth slice for any other table, where a row removed elsewhere moves the next row past Load
+      more. A numbered page is always the Nth slice.
 
-      A table that keeps no rows reads Load more's page from the state's `next_offset`, after the
-      rows the view shows, so a row realtime took out of the list moves no row past it. A row put
-      in over realtime is not counted: it may sort after the rows shown, and a row read again is
-      drawn once, in its place. A numbered page is always the Nth slice.
+      A load of a table with `keep_loaded_records true` that starts its list afresh at page N of a
+      list that grows (Load more and infinite), such as one opened at page N or reloaded after a
+      bulk action, reads the first N pages, so the rows the reader had stay.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
-              {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
+              {integer(), Ash.Page.page() | map(), boolean(), map()}
       def load_page(state, query, page, action, tenant) do
         page_size = state.current_page_size || state.static.page_size
 
@@ -95,9 +97,11 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
             Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
 
           page_result =
-            read_query
-            |> Ash.read!(page: page_opts)
-            |> read_rest(read_query, page_opts[:offset] || 0, page_opts[:limit])
+            read_page(
+              read_query,
+              keyset_opts(state, read_query, page_size, count?, more?),
+              page_opts
+            )
 
           pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
 
@@ -115,36 +119,67 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
               boolean(),
               boolean()
             ) :: keyword()
-      defp page_opts(state, page, page_size, type, count?, keep?, true) do
+      defp page_opts(state, page, page_size, type, count?, true, true) do
         page
         |> build_page_opts(page_size, type, count?)
-        |> Keyword.put(:offset, more_offset(state, keep?))
+        |> Keyword.put(:offset, length(state.loaded_records))
       end
 
-      defp page_opts(_state, page, page_size, type, count?, keep?, false),
+      defp page_opts(_state, page, page_size, type, count?, keep?, more?),
         do:
-          build_page_opts(page, page_size, type, count?, keep? and not reset_stream?(type, page))
+          build_page_opts(
+            page,
+            page_size,
+            type,
+            count?,
+            keep? and not more? and not reset_stream?(type, page)
+          )
 
-      @spec more_offset(State.t(), boolean()) :: non_neg_integer()
-      defp more_offset(state, true), do: length(state.loaded_records)
-      defp more_offset(state, false), do: state.next_offset
-
-      @spec read_rest(Ash.Page.Offset.t(), Ash.Query.t(), non_neg_integer(), pos_integer()) ::
-              Ash.Page.Offset.t()
-      defp read_rest(%{more?: true, results: [_ | _] = rows} = page, query, offset, limit)
-           when length(rows) < limit do
-        read = length(rows)
-        rest = Ash.read!(query, page: [offset: offset + read, limit: limit - read])
-
-        read_rest(
-          %{page | results: rows ++ rest.results, more?: rest.more?},
-          query,
-          offset,
-          limit
-        )
+      @spec keyset_opts(State.t(), Ash.Query.t(), pos_integer(), boolean(), boolean()) ::
+              keyword() | nil
+      defp keyset_opts(
+             %State{after_keyset: keyset},
+             %Ash.Query{action: %{pagination: %{keyset?: true}}},
+             page_size,
+             count?,
+             true
+           )
+           when is_binary(keyset) do
+        opts = [after: keyset, limit: page_size]
+        if count?, do: Keyword.put(opts, :count, true), else: opts
       end
 
-      defp read_rest(page, _query, _offset, _limit), do: page
+      defp keyset_opts(_state, _query, _page_size, _count?, _more?), do: nil
+
+      @spec read_page(Ash.Query.t(), keyword() | nil, keyword()) :: Ash.Page.page()
+      defp read_page(query, nil, page_opts),
+        do: query |> Ash.read!(page: page_opts) |> read_rest(query, page_opts)
+
+      defp read_page(query, keyset_opts, page_opts) do
+        case Ash.read(query, page: keyset_opts) do
+          {:ok, page} -> read_rest(page, query, keyset_opts)
+          {:error, %Ash.Error.Invalid{}} -> read_page(query, nil, page_opts)
+          {:error, error} -> raise Ash.Error.to_error_class(error)
+        end
+      end
+
+      @spec read_rest(Ash.Page.page(), Ash.Query.t(), keyword()) :: Ash.Page.page()
+      defp read_rest(page, query, opts), do: read_rest(page, query, opts, opts[:limit])
+
+      defp read_rest(%{more?: true, results: [_ | _] = rows} = page, query, opts, limit)
+           when length(rows) < limit do
+        rest = Ash.read!(query, page: rest_opts(opts, rows, limit - length(rows)))
+        read_rest(%{page | results: rows ++ rest.results, more?: rest.more?}, query, opts, limit)
+      end
+
+      defp read_rest(page, _query, _opts, _limit), do: page
+
+      @spec rest_opts(keyword(), [Ash.Resource.record()], pos_integer()) :: keyword()
+      defp rest_opts(opts, rows, limit) do
+        if Keyword.has_key?(opts, :after),
+          do: [after: List.last(rows).__metadata__.keyset, limit: limit],
+          else: [offset: Keyword.get(opts, :offset, 0) + length(rows), limit: limit]
+      end
 
       @doc """
       The table's total as `load_page/5` would report it, without loading a page.

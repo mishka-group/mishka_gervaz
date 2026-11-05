@@ -533,8 +533,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             records_result:
               AsyncResult.ok(state.records_result, %{page: page, empty?: records == []}),
             loaded_records: accumulate_records(state, records, reset),
-            next_offset: next_offset(state, page_result, records),
-            removed_ids: removed_ids(state)
+            after_keyset: last_keyset(state, page_result.results)
           )
 
         socket
@@ -593,16 +592,13 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       def load_more(socket, _state), do: socket
 
-      @spec next_offset(State.t(), map(), list()) :: non_neg_integer()
-      defp next_offset(%State{loading_type: :more, next_offset: offset}, _page_result, records),
-        do: offset + length(records)
+      @spec last_keyset(State.t(), list()) :: String.t() | nil
+      defp last_keyset(%State{loading_type: :more, after_keyset: keyset}, []), do: keyset
+      defp last_keyset(_state, rows), do: keyset(List.last(rows))
 
-      defp next_offset(_state, page_result, records),
-        do: (Map.get(page_result, :offset) || 0) + length(records)
-
-      @spec removed_ids(State.t()) :: MapSet.t()
-      defp removed_ids(%State{loading_type: :more, removed_ids: ids}), do: ids
-      defp removed_ids(_state), do: MapSet.new()
+      @spec keyset(Ash.Resource.record() | nil) :: String.t() | nil
+      defp keyset(%{__metadata__: %{keyset: keyset}}) when is_binary(keyset), do: keyset
+      defp keyset(_row), do: nil
 
       @spec accumulate_records(State.t(), list(), boolean()) :: list()
       defp accumulate_records(%State{static: %{keep_loaded_records: false}}, _records, _reset),

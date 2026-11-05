@@ -528,10 +528,7 @@ defmodule MishkaGervaz.Table.Web.Live do
   defp delete_row(socket, state, record) do
     socket
     |> stream_delete(state.static.stream_name, record)
-    |> assign(
-      :table_state,
-      Events.drop_shown_row(socket.assigns.table_state, record.id, :realtime)
-    )
+    |> assign(:table_state, Events.drop_kept_row(socket.assigns.table_state, record.id))
   end
 
   @spec keep_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
