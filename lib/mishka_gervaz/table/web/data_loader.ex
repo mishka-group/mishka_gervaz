@@ -469,7 +469,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             total_count: total_count,
             total_pages: pagination_info[:total_pages],
             records_result:
-              AsyncResult.ok(state.records_result, %{page: page, data: page_result}),
+              AsyncResult.ok(state.records_result, %{page: page, empty?: records == []}),
             loaded_records: accumulate_records(state, records, reset)
           )
 

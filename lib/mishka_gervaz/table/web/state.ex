@@ -15,6 +15,11 @@ defmodule MishkaGervaz.Table.Web.State do
   This separation allows LiveView to skip re-rendering static parts (columns, filters, etc.)
   when only dynamic state (page, filter_values, etc.) changes.
 
+  The state holds no rows. A load's rows reach the page through the table's stream, and
+  `records_result` is the `Phoenix.LiveView.AsyncResult` of the last load: `%{page: page,
+  empty?: boolean}` once it succeeds, failed with the error once it fails. Only a table with
+  `keep_loaded_records true` keeps its loaded rows, in `loaded_records`.
+
   ## Sub-builders
 
   State initialization is composed of sub-builders that can be overridden:
@@ -217,7 +222,7 @@ defmodule MishkaGervaz.Table.Web.State do
           loading: loading_status(),
           loading_type: loading_type(),
           has_initial_data?: boolean(),
-          records_result: struct(),
+          records_result: Phoenix.LiveView.AsyncResult.t(),
           page: integer(),
           has_more?: boolean(),
           total_count: integer() | nil,

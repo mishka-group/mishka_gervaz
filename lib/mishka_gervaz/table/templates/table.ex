@@ -500,16 +500,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
   defp bind_to_active?(_, _, _), do: true
 
-  defp result_empty?(%{ok?: true, result: %{data: %{results: results}}})
-       when is_list(results),
-       do: results == []
-
-  defp result_empty?(%{ok?: true, result: %{results: results}}) when is_list(results),
-    do: results == []
-
-  defp result_empty?(%{ok?: true, result: results}) when is_list(results),
-    do: results == []
-
+  defp result_empty?(%{ok?: true, result: %{empty?: empty?}}), do: empty?
   defp result_empty?(_), do: false
 
   @impl true
