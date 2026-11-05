@@ -111,6 +111,7 @@ most:
 | `render_cell/1` | one cell, honouring `format`, `render` and the column type |
 | `render_row_actions/1` | the action strip, with `visible` already applied |
 | `non_accordion_actions/1` | actions minus `:accordion` — keeps the expander out of the strip |
+| `expandable_rows?/2`, `expandable?/3` | whether to draw a caret column, and a caret on this row, from the `:accordion` action's `visible` and `restricted` |
 | `has_user_visible_actions?/2` | whether to draw an action area at all |
 | `action_visible?/3` | the `:active` / `:archived` / `fn record, state` rule |
 | `render_filters/1`, `render_pagination/1`, `render_bulk_actions/1` | the standard bars |

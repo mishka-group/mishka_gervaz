@@ -93,9 +93,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     show_template_switcher =
       static.switchable_templates != nil and static.switchable_templates != []
 
-    has_accordion_action = Enum.any?(static.row_actions, &(&1[:type] == :accordion))
-
-    show_expand = :expand in features and has_accordion_action
+    show_expand = :expand in features and Shared.expandable_rows?(static.row_actions, state)
 
     show_actions =
       Shared.has_user_visible_actions?(static.row_actions, static.row_action_dropdowns, state)
@@ -689,11 +687,16 @@ defmodule MishkaGervaz.Table.Templates.Table do
   end
 
   defp render_default_row(assigns) do
-    is_expanded = assigns.show_expand && assigns.state.expanded_id == to_string(assigns.record.id)
+    expandable? =
+      assigns.show_expand and
+        Shared.expandable?(assigns.static.row_actions, assigns.record, assigns.state)
+
+    is_expanded = expandable? and assigns.state.expanded_id == to_string(assigns.record.id)
     filtered_row_actions = Shared.non_accordion_actions(assigns.static.row_actions)
 
     assigns =
       assigns
+      |> assign(:expandable?, expandable?)
       |> assign(:is_expanded, is_expanded)
       |> assign(:filtered_row_actions, filtered_row_actions)
 
@@ -727,6 +730,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           class="flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:end-[12px]"
         >
           <button
+            :if={@expandable?}
             phx-click="expand_row"
             phx-value-id={@record.id}
             phx-target={@myself}

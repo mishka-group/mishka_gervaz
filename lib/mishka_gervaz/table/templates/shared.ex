@@ -1718,6 +1718,38 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     Enum.reject(row_actions, &(&1[:type] == :accordion))
   end
 
+  @doc """
+  Whether some row of the table may expand for the reader: an `:accordion` action that is not
+  `restricted` from them and whose `visible` is not `false`, nor the other archive view's
+  (`:active` / `:archived`). A `visible fn record, state` is asked per row, by `expandable?/3`.
+
+  A template draws its caret column when this is true, so a row without a caret keeps the
+  table's columns.
+  """
+  @spec expandable_rows?([map()], map()) :: boolean()
+  def expandable_rows?(row_actions, state) do
+    Enum.any?(row_actions, &(&1[:type] == :accordion and may_show?(&1, state)))
+  end
+
+  @doc """
+  Whether this row expands: one of the table's `:accordion` actions is visible for the record, as
+  `action_visible?/3` answers for every row action, and is not `restricted` from the reader. A
+  template draws the row's caret, and its expanded details, only then.
+  """
+  @spec expandable?([map()], map(), map()) :: boolean()
+  def expandable?(row_actions, record, state) do
+    Enum.any?(row_actions, fn action ->
+      action[:type] == :accordion and action_visible?(action, record, state) and
+        action_authorized?(action, record, state)
+    end)
+  end
+
+  defp may_show?(%{visible: visible} = action, state) when is_function(visible, 2),
+    do: action_authorized?(action, nil, state)
+
+  defp may_show?(action, state),
+    do: action_visible?(action, nil, state) and action_authorized?(action, nil, state)
+
   defp action_authorized?(%{restricted: true}, _record, %{master_user?: master?}), do: master?
 
   defp action_authorized?(_, _record, _state), do: true
