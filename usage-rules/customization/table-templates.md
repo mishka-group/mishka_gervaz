@@ -94,7 +94,7 @@ end
 |---|---|
 | `@static` | `MishkaGervaz.Table.Web.State.Static` — id, columns, filters, row_actions, bulk_actions, ui_adapter, features, theme, header/footer/notices, template_options, … **same reference always**, so LiveView skips re-render |
 | `@state` | the dynamic state — page, filter_values, selected_ids, archive_status, loading, records_result, loaded_records, path_params, … |
-| `@stream` | the LiveView stream for `static.stream_name` |
+| `@stream` | the LiveView stream for `static.stream_name` — the only place a load's rows reach the template; `records_result` holds the last load's `%{page:, empty?:}`, not its rows |
 | `@empty?` | whether the table has nothing to show |
 | `@failed?` | whether no read has succeeded and the last one failed; draw `render_error/1` in place of the rows, and keep the filters |
 | `@myself` | the LiveComponent target for `phx-target` |
@@ -111,6 +111,7 @@ most:
 | `render_cell/1` | one cell, honouring `format`, `render` and the column type |
 | `render_row_actions/1` | the action strip, with `visible` already applied |
 | `non_accordion_actions/1` | actions minus `:accordion` — keeps the expander out of the strip |
+| `expandable_rows?/2`, `expandable?/3` | whether to draw a caret column, and a caret on this row, from the `:accordion` action's `visible` and `restricted` |
 | `has_user_visible_actions?/2` | whether to draw an action area at all |
 | `action_visible?/3` | the `:active` / `:archived` / `fn record, state` rule |
 | `render_filters/1`, `render_pagination/1`, `render_bulk_actions/1` | the standard bars |

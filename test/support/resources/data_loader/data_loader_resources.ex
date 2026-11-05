@@ -518,6 +518,7 @@ defmodule MishkaGervaz.Test.DataLoader.ArchivableResource do
   archive do
     archive_related([])
     exclude_read_actions([:archived, :get_archived, :master_archived, :master_get_archived])
+    exclude_destroy_actions([:master_permanent_destroy, :permanent_destroy])
   end
 
   mishka_gervaz do
@@ -591,15 +592,22 @@ defmodule MishkaGervaz.Test.DataLoader.ArchivableResource do
     update :master_unarchive do
       accept []
       change set_attribute(:archived_at, nil)
+      atomic_upgrade_with :master_get_archived
     end
 
     update :unarchive do
       accept []
       change set_attribute(:archived_at, nil)
+      atomic_upgrade_with :get_archived
     end
 
-    destroy :master_permanent_destroy
-    destroy :permanent_destroy
+    destroy :master_permanent_destroy do
+      atomic_upgrade_with :master_get_archived
+    end
+
+    destroy :permanent_destroy do
+      atomic_upgrade_with :get_archived
+    end
   end
 
   attributes do

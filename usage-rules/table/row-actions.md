@@ -80,6 +80,10 @@ caret; a card template renders its own footer. Pair it with the `on_expand` hook
 panel back with `send_update(..., expanded_html: html)` — see
 [../mounting.md](../mounting.md).
 
+`visible` and `restricted` decide which rows expand, as they decide which rows show any other
+action: the caret is drawn only on a row whose accordion is visible for that record. The caret
+column stays while some row may expand, so the other rows keep their columns.
+
 ## `dropdown`
 
 Contains `action` and `separator` entities. `separator label: "Permanent"` draws a labelled

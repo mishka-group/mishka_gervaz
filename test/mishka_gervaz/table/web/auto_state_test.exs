@@ -123,29 +123,29 @@ defmodule MishkaGervaz.Table.Web.AutoStateTest do
     end
   end
 
-  describe "after_row_action/3 — arming behavior" do
-    test "arms socket when any post-load rule is enabled" do
-      state = build_state(builtins: %{switch_to_active_on_empty_archive: true})
-      result = AutoState.after_row_action(socket(), state, :unarchive)
+  describe "after_row_action/3 — rules answered at once from the total the action left" do
+    test "a rule that holds acts now, and leaves nothing armed for a later load" do
+      state = build_state(builtins: %{redirect_on_empty: "/x"}, total_count: 0)
+      result = AutoState.after_row_action(socket(), state, :delete)
 
-      assert is_struct(result, Phoenix.LiveView.Socket)
-      armed = result.assigns[:__auto_state_armed__]
-      assert armed == %{action: :unarchive, kind: :row}
+      assert result.redirected == {:live, :redirect, %{kind: :push, to: "/x"}}
+      assert result.assigns[:__auto_state_armed__] == nil
     end
 
-    test "does NOT arm or reload when no post-load rule is enabled" do
-      state = build_state(builtins: %{clear_selection_after_bulk: true})
+    test "a rule that does not hold leaves the table as it is, with no load started" do
+      state = build_state(builtins: %{switch_to_active_on_empty_archive: true}, total_count: 3)
+      result = AutoState.after_row_action(socket(), state, :unarchive)
+
+      assert result.redirected == nil
+      assert result.assigns[:__auto_state_armed__] == nil
+      assert result.assigns[:table_state] == nil
+    end
+
+    test "does nothing when no post-load rule is enabled" do
+      state = build_state(builtins: %{clear_selection_after_bulk: true}, total_count: 0)
       result = AutoState.after_row_action(socket(), state, :delete)
 
       assert result == socket()
-    end
-
-    test "arms even when only redirect_on_empty is configured" do
-      state = build_state(builtins: %{redirect_on_empty: "/x"})
-      result = AutoState.after_row_action(socket(), state, :delete)
-
-      armed = result.assigns[:__auto_state_armed__]
-      assert armed.action == :delete
     end
   end
 

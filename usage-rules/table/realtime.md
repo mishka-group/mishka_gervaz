@@ -56,14 +56,33 @@ delivered twice counts once. The count runs as a task, one per burst of notifica
 table counts at once, so its first row arrives with its total. A numbered table left past its last
 page loads the last page.
 
-A row that arrives or changes over realtime is checked against the same read before it is shown:
-one that does not match the filters, search or `path_params` is not inserted, and one edited out of
-them leaves the list, closing its expanded row if it had one. A manual read, which cannot be asked about one row, shows every row as it
-arrives.
+A row that arrives or changes over realtime is read with the same read, filtered to that row, before
+it is shown (`DataLoader.rows_in_view/2`): one read, with its preloads, both says whether the row is
+in the view and draws it. One that does not match the filters, search or `path_params` is not
+inserted, and one edited out of them leaves the list, closing its expanded row if it had one. A
+manual read, which cannot be asked about one row, or a read that returns an error, shows every row
+as it arrives.
+
+A burst of notifications is read together. The table answers the first with a message to itself,
+so the rest of the burst, such as one notification per row of a bulk action, arrives first, and one
+read, `max_page_size` rows at a time, places every row of it. While the table loads its rows afresh
+— the reload after its own bulk action, a filter, a sort — a burst reads nothing: that load draws
+the rows, and the total is counted once it lands.
 
 A row the list already shows is drawn again in its place; a new one goes first. A table with
 `keep_loaded_records true` does the same to `state.loaded_records`, so a template drawn from them
 shows the change too, and a row that leaves the list leaves them.
+
+Load more reads after the rows the list shows, so a row that leaves the list moves no row past it.
+A table that keeps no rows holds where it reads from in `state.next_offset`, one less for each row
+that leaves. A row that arrives is not counted, since it may sort after the rows shown, and a row
+that leaves may not have been shown, so Load more may read again a row the list shows; it is drawn
+once, in its place.
+
+A row the view deletes, destroys, restores or destroys for good itself, or one an
+`override_row_action` answers `{:ok, :stream_delete, row}` for, leaves `next_offset` or
+`state.loaded_records` at once, with realtime on or off. `state.removed_ids` holds its id until its
+own realtime removal arrives, which then counts it no second time.
 
 Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
 default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor

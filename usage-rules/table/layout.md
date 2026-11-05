@@ -54,7 +54,7 @@ declared column.
 
 | `bind_to` | Renders while |
 |---|---|
-| `:no_results` | the stream is empty after a load |
+| `:no_results` | the page the last load read came back empty |
 | `:has_filters` | any filter has a non-empty value |
 | `:has_selection` | any row is selected |
 | `:loading` | the table is loading |

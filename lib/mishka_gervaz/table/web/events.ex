@@ -518,12 +518,10 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-
-          socket =
-            MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :unarchive)
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
+           |> leave_list(record, :unarchive)}
 
         {:error, reason} ->
           error =
@@ -562,16 +560,10 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-
-          socket =
-            MishkaGervaz.Table.Web.AutoState.after_row_action(
-              socket,
-              state,
-              :permanent_destroy
-            )
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
+           |> leave_list(record, :permanent_destroy)}
 
         {:error, reason} ->
           error =
@@ -623,8 +615,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_delete, record} ->
-        socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-        {:noreply, socket}
+        {:noreply, remove_row(socket, state, record)}
 
       {:ok, :stream_update, record} ->
         socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
@@ -693,8 +684,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_delete, record} ->
-        socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-        {:noreply, socket}
+        {:noreply, remove_row(socket, state, record)}
 
       {:ok, :stream_update, record} ->
         socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
@@ -1092,15 +1082,11 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket =
-            socket
-            |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-            |> hide_row(state, record.id)
-
-          socket =
-            MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, action_name)
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+           |> hide_row(state, record.id)
+           |> leave_list(record, action_name)}
 
         {:error, reason} ->
           error =
@@ -1131,19 +1117,68 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
-  @doc false
-  @spec drop_from_total(State.t()) :: State.t()
-  defp drop_from_total(%{total_count: nil} = state), do: state
+  @spec remove_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp remove_row(socket, state, record) do
+    socket
+    |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
+    |> Phoenix.Component.assign(
+      :table_state,
+      drop_shown_row(socket.assigns.table_state, record.id, :self)
+    )
+  end
 
-  defp drop_from_total(%{total_count: total} = state) when is_integer(total) and total > 0 do
-    total = total - 1
+  @spec leave_list(Phoenix.LiveView.Socket.t(), map(), atom()) :: Phoenix.LiveView.Socket.t()
+  defp leave_list(socket, record, action_name) do
+    state =
+      socket.assigns.table_state
+      |> drop_from_total()
+      |> drop_shown_row(record.id, :self)
+
+    socket
+    |> Phoenix.Component.assign(:table_state, state)
+    |> MishkaGervaz.Table.Web.AutoState.after_row_action(state, action_name)
+  end
+
+  @doc """
+  Takes the row `id` out of what the view shows, so the next Load more reads after the rows still
+  shown.
+
+  A table with `keep_loaded_records true` drops it from `loaded_records`. Any other table moves
+  `next_offset` back by one. A row the view removes itself (`:self`) is held by its id in
+  `removed_ids` until its own realtime removal (`:realtime`) arrives, which then moves nothing, so
+  the row is counted once whether realtime is on or off.
+  """
+  @spec drop_shown_row(State.t(), term(), :self | :realtime) :: State.t()
+  def drop_shown_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
+    do: %{state | loaded_records: Enum.reject(state.loaded_records, &(&1.id == id))}
+
+  def drop_shown_row(%State{} = state, id, :self),
+    do: %{
+      state
+      | next_offset: max(state.next_offset - 1, 0),
+        removed_ids: MapSet.put(state.removed_ids, id)
+    }
+
+  def drop_shown_row(%State{removed_ids: removed} = state, id, :realtime) do
+    if MapSet.member?(removed, id),
+      do: %{state | removed_ids: MapSet.delete(removed, id)},
+      else: %{state | next_offset: max(state.next_offset - 1, 0)}
+  end
+
+  @doc false
+  @spec drop_from_total(State.t(), non_neg_integer()) :: State.t()
+  def drop_from_total(state, count \\ 1)
+
+  def drop_from_total(%{total_count: total} = state, count)
+      when is_integer(total) and total > 0 do
+    total = max(total - count, 0)
     page_size = state.current_page_size || state.static.page_size
 
     %{state | total_count: total}
     |> maybe_put_total_pages(total, page_size)
   end
 
-  defp drop_from_total(state), do: state
+  def drop_from_total(state, _count), do: state
 
   defp maybe_put_total_pages(%{total_pages: _pages} = state, total, page_size)
        when is_integer(page_size) and page_size > 0,
@@ -1180,17 +1215,11 @@ defmodule MishkaGervaz.Table.Web.Events do
             socket
           )
 
-        socket =
-          socket
-          |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-          |> hide_row(state, record.id)
-
-        socket =
-          socket
-          |> Phoenix.Component.assign(:table_state, drop_from_total(state))
-          |> MishkaGervaz.Table.Web.AutoState.after_row_action(state, :delete)
-
-        {:noreply, socket}
+        {:noreply,
+         socket
+         |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+         |> hide_row(state, record.id)
+         |> leave_list(record, :delete)}
 
       {:error, reason} ->
         error =

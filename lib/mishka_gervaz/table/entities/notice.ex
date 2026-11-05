@@ -23,7 +23,7 @@ defmodule MishkaGervaz.Table.Entities.Notice do
 
   ## Bind to (dynamic activation)
 
-  - `:no_results` - active when the stream is empty after a load
+  - `:no_results` - active when the page the last load read came back empty
   - `:has_filters` - active when any filter has a non-empty value
   - `:has_selection` - active when any row is selected
   - `:loading` - active when the table is in `:loading` state

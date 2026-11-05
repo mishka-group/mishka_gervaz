@@ -9,7 +9,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   - Stream management
   - Async result handling
   - The total after realtime changes (`refresh_total/1`)
-  - Whether a realtime row belongs in the view (`in_view?/2`)
+  - The realtime rows that belong in the view, read as the table reads (`rows_in_view/2`), and
+    whether one row does (`in_view?/2`)
   - The query the table reads its rows with (`read_query/1`)
 
   ## Sub-builders
@@ -99,6 +100,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
   @spec in_view?(State.t(), term()) :: boolean()
   defdelegate in_view?(state, id), to: __MODULE__.Default
+
+  @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.record()]} | :error
+  defdelegate rows_in_view(state, ids), to: __MODULE__.Default
 
   @spec read_query(State.t()) :: Ash.Query.t()
   defdelegate read_query(state), to: __MODULE__.Default
@@ -282,12 +286,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       @doc """
       Whether the row `id` is one the table's read returns now — its filters, search,
-      `path_params`, the `on_load` hook, the view's read action and the tenant.
+      `path_params`, the `on_load` hook, the view's read action and the tenant — in one query.
 
-      The table asks before it shows a row that arrived or changed over realtime: a row that does
-      not match is not inserted, and one edited out of the view leaves it. `true` when the read
-      cannot answer — a manual read, or a read that returns an error — so such a row is shown as it
-      arrives. A hook or read that raises raises here too, as it does when the table loads.
+      For code that only needs the answer. Code that draws the row too reads it with
+      `rows_in_view/2`, which answers both in one read. `true` when the read cannot answer — a
+      manual read, or a read that returns an error. A hook or read that raises raises here too, as
+      it does when the table loads.
       """
       @spec in_view?(State.t(), term()) :: boolean()
       def in_view?(state, id) do
@@ -309,6 +313,64 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           _cannot_tell -> true
         end
       end
+
+      @doc """
+      The rows `ids` as the table's read returns them now — its filters, search, `path_params`,
+      the `on_load` hook, its preloads, the view's read action and the tenant. A row the read
+      leaves out is not in the view.
+
+      The table reads with it the rows that arrive or change over realtime: what it returns is
+      drawn, and the rest leave the list. It is one read, and one more for each preload; a read
+      action that paginates reads up to its `max_page_size` ids at a time.
+
+      Returns `{:ok, rows}`, or `:error` when the read cannot answer: a manual read, or a read that
+      returns an error. A hook or read that raises raises here too, as it does when the table loads.
+      """
+      @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.record()]} | :error
+      def rows_in_view(_state, []), do: {:ok, []}
+
+      def rows_in_view(state, ids) do
+        tenant_mod = resolve_tenant_resolver(state.static.resource)
+        action_name = tenant_mod.get_read_action(state)
+
+        case Ash.Resource.Info.action(state.static.resource, action_name) do
+          %{manual: manual} when not is_nil(manual) ->
+            :error
+
+          action ->
+            opts = [actor: state.current_user, tenant: tenant_mod.get_tenant(state)]
+            read_rows(read_query(state), action, opts, ids)
+        end
+      end
+
+      @spec read_rows(Ash.Query.t(), map(), keyword(), [term()]) :: {:ok, list()} | :error
+      defp read_rows(query, action, opts, ids) do
+        ids
+        |> Enum.chunk_every(rows_per_read(action, ids))
+        |> Enum.reduce_while({:ok, []}, fn chunk, {:ok, rows} ->
+          query
+          |> Ash.Query.do_filter(%{id: %{in: chunk}})
+          |> Ash.Query.for_read(action.name, %{}, opts)
+          |> Ash.read(rows_page(action, chunk))
+          |> case do
+            {:ok, read} ->
+              {:cont,
+               {:ok,
+                rows ++ MishkaGervaz.Table.Web.DataLoader.PaginationHandler.extract_results(read)}}
+
+            {:error, _error} ->
+              {:halt, :error}
+          end
+        end)
+      end
+
+      @spec rows_per_read(map(), [term()]) :: pos_integer()
+      defp rows_per_read(%{pagination: %{max_page_size: max}}, _ids) when is_integer(max), do: max
+      defp rows_per_read(_action, ids), do: length(ids)
+
+      @spec rows_page(map(), [term()]) :: keyword()
+      defp rows_page(%{pagination: %{}}, chunk), do: [page: [limit: length(chunk), count: false]]
+      defp rows_page(_action, _chunk), do: []
 
       @doc """
       Brings the table's total — "Showing N", the page count, the empty state — up to date with
@@ -469,8 +531,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             total_count: total_count,
             total_pages: pagination_info[:total_pages],
             records_result:
-              AsyncResult.ok(state.records_result, %{page: page, data: page_result}),
-            loaded_records: accumulate_records(state, records, reset)
+              AsyncResult.ok(state.records_result, %{page: page, empty?: records == []}),
+            loaded_records: accumulate_records(state, records, reset),
+            next_offset: next_offset(state, page_result, records),
+            removed_ids: removed_ids(state)
           )
 
         socket
@@ -529,11 +593,30 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       def load_more(socket, _state), do: socket
 
+      @spec next_offset(State.t(), map(), list()) :: non_neg_integer()
+      defp next_offset(%State{loading_type: :more, next_offset: offset}, _page_result, records),
+        do: offset + length(records)
+
+      defp next_offset(_state, page_result, records),
+        do: (Map.get(page_result, :offset) || 0) + length(records)
+
+      @spec removed_ids(State.t()) :: MapSet.t()
+      defp removed_ids(%State{loading_type: :more, removed_ids: ids}), do: ids
+      defp removed_ids(_state), do: MapSet.new()
+
       @spec accumulate_records(State.t(), list(), boolean()) :: list()
       defp accumulate_records(%State{static: %{keep_loaded_records: false}}, _records, _reset),
         do: []
 
-      defp accumulate_records(_state, records, _reset), do: records
+      defp accumulate_records(_state, records, true), do: records
+
+      defp accumulate_records(%State{loaded_records: kept}, records, false) do
+        fresh = Map.new(records, &{&1.id, &1})
+        kept = Enum.map(kept, &Map.get(fresh, &1.id, &1))
+        kept_ids = MapSet.new(kept, & &1.id)
+
+        kept ++ Enum.reject(records, &MapSet.member?(kept_ids, &1.id))
+      end
 
       @doc """
       Apply new filters and reload.
@@ -733,6 +816,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_async: 3,
                      load_total: 1,
                      in_view?: 2,
+                     rows_in_view: 2,
                      read_query: 1,
                      refresh_total: 1,
                      handle_async: 3,
