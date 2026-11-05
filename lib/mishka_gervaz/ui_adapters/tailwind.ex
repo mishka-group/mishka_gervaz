@@ -1356,12 +1356,19 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
-  Render a dropdown menu: a 30px trigger that shows and hides the menu below it, and a click
-  anywhere else that hides it.
+  Render a dropdown menu: a 30px trigger that shows and hides the menu below it.
 
-  The trigger carries `aria-expanded`, `"true"` while the menu is shown. A table's sticky Actions
-  cell is drawn above the rows after it while a control inside it has `aria-expanded="true"`, so a
-  custom adapter's `dropdown/1` sets it too for its menu to open over those rows.
+  The menu is a native popover (`popover="auto"`, opened by the trigger's `popovertarget`), so it is
+  drawn in the browser's top layer: no ancestor's `overflow`, such as the table's scrolling frame or
+  a card, clips it, and nothing in the page is drawn over it. CSS anchor positioning places it below
+  the trigger, its end edge on the trigger's, and above it when the space below is short; a browser
+  without anchor positioning centres it on the screen. It comes right after the trigger in the
+  page, so Tab moves from the trigger into its items. A click outside it or Escape hides it, as the
+  popover does itself, and so does a click on one of its items, through the trigger's
+  `phx-click-away`.
+
+  A custom adapter's menu that stays inside the page sets `aria-expanded` on its trigger, `"true"`
+  while the menu is shown: a table's sticky Actions cell is then drawn above the rows after it.
 
   ## Assigns
     * `:icon` - The trigger's icon (default: "hero-ellipsis-vertical")
@@ -1375,37 +1382,27 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign(:menu_id, "dropdown-#{System.unique_integer([:positive])}")
 
     ~H"""
-    <div
-      class="relative inline-block text-start"
-      phx-click-away={
-        JS.hide(
-          to: "##{@menu_id}",
-          transition: {"ease-in duration-75", "opacity-100 scale-100", "opacity-0 scale-95"}
-        )
-        |> JS.set_attribute({"aria-expanded", "false"}, to: "##{@menu_id}-trigger")
-      }
-    >
+    <div class="relative inline-block text-start">
       <button
         id={"#{@menu_id}-trigger"}
         type="button"
-        aria-haspopup="true"
-        aria-expanded="false"
+        aria-haspopup="menu"
         aria-controls={@menu_id}
+        popovertarget={@menu_id}
+        style={"anchor-name: --#{@menu_id}"}
         class="grid size-[30px] place-items-center rounded-[8px] text-[#8a877f] transition-colors hover:text-[#3a382f]"
-        phx-click={
-          JS.toggle(
-            to: "##{@menu_id}",
-            in: {"ease-out duration-100", "opacity-0 scale-95", "opacity-100 scale-100"},
-            out: {"ease-in duration-75", "opacity-100 scale-100", "opacity-0 scale-95"}
-          )
-          |> JS.toggle_attribute({"aria-expanded", "true", "false"})
+        phx-click-away={
+          JS.remove_attribute("popover", to: "##{@menu_id}")
+          |> JS.set_attribute({"popover", "auto"}, to: "##{@menu_id}")
         }
       >
         <.render_icon name={@icon} class="size-4" />
       </button>
       <div
         id={@menu_id}
-        class="absolute end-0 z-[60] mt-2 hidden w-[210px] overflow-hidden rounded-[14px] border border-[#ecebe6] bg-white p-1.5 shadow-[0_18px_44px_rgba(30,28,24,0.16)]"
+        popover="auto"
+        style={"position-anchor: --#{@menu_id}; position-area: block-end span-inline-start; position-try-fallbacks: flip-block"}
+        class="w-[210px] overflow-hidden rounded-[14px] border border-[#ecebe6] bg-white p-1.5 text-inherit shadow-[0_18px_44px_rgba(30,28,24,0.16)] supports-[position-area:block-end]:m-0 supports-[position-area:block-end]:mt-2"
       >
         <div class="flex flex-col gap-0.5">
           {render_slot(@inner_block)}

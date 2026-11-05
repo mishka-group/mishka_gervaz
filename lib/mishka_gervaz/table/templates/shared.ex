@@ -1663,7 +1663,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       end)
 
     has_visible? = Enum.any?(visible_items, fn item -> item[:type] != :separator end)
-    total = length(visible_items)
 
     dropdown_ui = assigns.dropdown[:ui] || %{}
     icon = dropdown_ui[:icon] || "hero-ellipsis-vertical"
@@ -1672,7 +1671,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       assigns
       |> Phoenix.Component.assign(:visible_items, visible_items)
       |> Phoenix.Component.assign(:has_visible?, has_visible?)
-      |> Phoenix.Component.assign(:total, total)
       |> Phoenix.Component.assign(:icon, icon)
 
     ~H"""
@@ -1680,7 +1678,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       <.dynamic_component module={@static.ui_adapter} function={:dropdown} icon={@icon}>
         <.render_dropdown_item
           :for={{item, idx} <- Enum.with_index(@visible_items)}
-          :if={item[:type] != :separator or render_separator?(@visible_items, @total, idx)}
+          :if={item[:type] != :separator or render_separator?(@visible_items, idx)}
           item={item}
           record={@record}
           static={@static}
@@ -1739,10 +1737,13 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     end
   end
 
-  defp render_separator?(items, total, index) do
-    index > 0 and index < total - 1 and
-      not match?(%{type: :separator}, Enum.at(items, index - 1))
+  defp render_separator?(items, index) do
+    {before, [_separator | below]} = Enum.split(items, index)
+    Enum.any?(before, &menu_item?/1) and menu_item?(List.first(below))
   end
+
+  defp menu_item?(%{type: :separator}), do: false
+  defp menu_item?(item), do: is_map(item)
 
   @doc """
   Checks if a row action is visible for a given record and state.
