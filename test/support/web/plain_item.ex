@@ -4,7 +4,7 @@ defmodule MishkaGervaz.Test.Web.PlainItem do
   that loads more four rows at a time and keeps no rows it has loaded, so its rows live only in the
   stream. Its read allows keyset pagination, so Load more reads after the last row's keyset. Each row has a Delete action and a Drop action, whose `override_row_action` destroys the
   row itself and answers `{:ok, :stream_delete, row}`; its rows can be picked, and its Wipe bulk
-  action destroys the picked ones. Its page is synced to the URL in `:bidirectional` mode.
+  action destroys the picked ones. A search filters its rows by title. Its page is synced to the URL in `:bidirectional` mode.
   """
 
   use Ash.Resource,
@@ -24,6 +24,13 @@ defmodule MishkaGervaz.Test.Web.PlainItem do
         default_sort title: :asc
 
         column :title
+      end
+
+      filters do
+        filter :search, :text do
+          fields [:title]
+          min_chars 1
+        end
       end
 
       pagination do

@@ -24,6 +24,11 @@ defmodule MishkaGervaz.Table.Web.State do
   keyset pagination; it is `nil` when the rows carry no keyset, and Load more then reads from an
   offset.
 
+  `hidden_ids` holds the picked rows, of `selected_ids`, that the table's read no longer finds, such
+  as rows a search hides. A bulk action reaches only the rows the read finds, so the bulk bar counts
+  the picked rows without them and says how many the filters hide. A load that starts the list
+  afresh while rows are picked finds them in one read of their ids.
+
   `page` is the last page the view shows, the one the URL holds. `first_page` is the first: a
   `:load_more` or `:infinite` table opened at page N, as a reload after Load more opens it, shows
   page N alone, and Load earlier reads the page before it, one page a click, after the keyset of
@@ -205,6 +210,7 @@ defmodule MishkaGervaz.Table.Web.State do
     :relation_filter_state,
     :selected_ids,
     :excluded_ids,
+    :hidden_ids,
     :select_all?,
     :expanded_id,
     :expanded_data,
@@ -246,6 +252,7 @@ defmodule MishkaGervaz.Table.Web.State do
           relation_filter_state: %{atom() => map()},
           selected_ids: MapSet.t(any()),
           excluded_ids: MapSet.t(any()),
+          hidden_ids: MapSet.t(any()),
           select_all?: boolean(),
           expanded_id: String.t() | nil,
           expanded_data: struct() | nil,
@@ -455,6 +462,7 @@ defmodule MishkaGervaz.Table.Web.State do
           relation_filter_state: %{},
           selected_ids: MapSet.new(),
           excluded_ids: MapSet.new(),
+          hidden_ids: MapSet.new(),
           select_all?: false,
           expanded_id: nil,
           expanded_data: nil,

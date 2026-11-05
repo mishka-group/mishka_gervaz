@@ -1000,9 +1000,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     static = assigns.static
     state = assigns.state
 
-    selected_count = MapSet.size(state.selected_ids)
+    hidden_count = hidden_count(state)
+    selected_count = MapSet.size(state.selected_ids) - hidden_count
     excluded_count = MapSet.size(state.excluded_ids)
-    has_selection = state.select_all? or selected_count > 0
+    has_selection = state.select_all? or selected_count + hidden_count > 0
 
     visible_bulk_actions =
       filter_visible_bulk_actions(static.bulk_actions, state.archive_status, state)
@@ -1018,6 +1019,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:excluded_count, excluded_count)
       |> assign(:selected_count, selected_count)
       |> assign(:selection_count, bulk_selection_count(state))
+      |> assign(:selected_label, selected_label(selected_count, hidden_count))
       |> assign(:visible_bulk_actions, visible_bulk_actions)
       |> assign(:ui_adapter, static.ui_adapter)
 
@@ -1035,7 +1037,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       all_except_label={
         dgettext("mishka_gervaz", "All except %{count} selected", count: @excluded_count)
       }
-      selected_label={dgettext("mishka_gervaz", "%{count} selected", count: @selected_count)}
+      selected_label={@selected_label}
       clear_label={dgettext("mishka_gervaz", "Clear selection")}
     >
       <.dynamic_component
@@ -1053,9 +1055,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc """
   The number of rows a bulk action runs on, or `nil` when the table cannot tell.
 
-  Checked rows are counted. With select all, the count is the table's total minus the unchecked
-  rows, and the table can tell only when it holds every row or counts its rows (`:numbered`
-  pagination, or `show_total true` in the pagination `ui` block).
+  Checked rows the table's read still finds are counted; the ones it hides, such as rows a search
+  left out (`hidden_ids`), are not, since the action reaches only rows the read finds. With select
+  all, the count is the table's total minus the unchecked rows, and the table can tell only when it
+  holds every row or counts its rows (`:numbered` pagination, or `show_total true` in the pagination
+  `ui` block).
   """
   @spec bulk_selection_count(map()) :: non_neg_integer() | nil
   def bulk_selection_count(%{select_all?: true} = state) do
@@ -1064,7 +1068,23 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       else: nil
   end
 
-  def bulk_selection_count(state), do: MapSet.size(state.selected_ids)
+  def bulk_selection_count(state), do: MapSet.size(state.selected_ids) - hidden_count(state)
+
+  @spec hidden_count(map()) :: non_neg_integer()
+  defp hidden_count(%{hidden_ids: %MapSet{} = hidden, selected_ids: picked}),
+    do: picked |> MapSet.intersection(hidden) |> MapSet.size()
+
+  defp hidden_count(_state), do: 0
+
+  @spec selected_label(non_neg_integer(), non_neg_integer()) :: String.t()
+  defp selected_label(count, 0), do: dgettext("mishka_gervaz", "%{count} selected", count: count)
+
+  defp selected_label(count, hidden),
+    do:
+      dgettext("mishka_gervaz", "%{count} selected, %{hidden} hidden by the filters",
+        count: count,
+        hidden: hidden
+      )
 
   defp total_known?(%{total_count: total, total_pages: pages})
        when is_integer(total) and is_integer(pages),

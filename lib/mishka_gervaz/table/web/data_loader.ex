@@ -240,7 +240,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       end
 
       @spec execute_load(State.t(), Ash.Query.t(), pos_integer()) ::
-              {pos_integer(), map(), boolean(), keyword()}
+              {pos_integer(), map(), boolean(), map()}
       defp execute_load(state, query, page) do
         pagination_mod = resolve_pagination_handler(state.static.resource)
         tenant_mod = resolve_tenant_resolver(state.static.resource)
@@ -248,7 +248,43 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         action = tenant_mod.get_read_action(state)
         tenant = tenant_mod.get_tenant(state)
 
-        pagination_mod.load_page(state, query, page, action, tenant)
+        {page, page_result, reset, pagination_info} =
+          pagination_mod.load_page(state, query, page, action, tenant)
+
+        {page, page_result, reset, put_hidden_ids(pagination_info, state, query, action, tenant)}
+      end
+
+      @spec put_hidden_ids(map(), State.t(), Ash.Query.t(), atom(), term()) :: map()
+      defp put_hidden_ids(info, %State{loading_type: :reset} = state, query, action, tenant)
+           when is_map(info),
+           do: Map.put(info, :hidden_ids, hidden_ids(state, query, action, tenant))
+
+      defp put_hidden_ids(info, _state, _query, _action, _tenant), do: info
+
+      @spec hidden_ids(State.t(), Ash.Query.t(), atom(), term()) :: MapSet.t()
+      defp hidden_ids(%State{select_all?: false} = state, query, action, tenant) do
+        with [_ | _] = picked <- MapSet.to_list(state.selected_ids),
+             {:ok, found} <- read_ids(state, query, action, tenant, picked) do
+          MapSet.difference(MapSet.new(picked), MapSet.new(found, & &1.id))
+        else
+          _none_or_cannot_tell -> MapSet.new()
+        end
+      end
+
+      defp hidden_ids(_state, _query, _action, _tenant), do: MapSet.new()
+
+      @spec read_ids(State.t(), Ash.Query.t(), atom(), term(), [term()]) :: {:ok, list()} | :error
+      defp read_ids(state, query, action_name, tenant, ids) do
+        case Ash.Resource.Info.action(state.static.resource, action_name) do
+          %{manual: manual} when not is_nil(manual) ->
+            :error
+
+          action ->
+            query
+            |> Ash.Query.unset([:load, :sort])
+            |> Ash.Query.select([:id])
+            |> read_rows(action, [actor: state.current_user, tenant: tenant], ids)
+        end
       end
 
       @doc """
@@ -543,7 +579,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
               has_initial_data?: true,
               total_count: total_count,
               total_pages: pagination_info[:total_pages],
-              loaded_records: accumulate_records(state, records, reset)
+              loaded_records: accumulate_records(state, records, reset),
+              hidden_ids: pagination_info[:hidden_ids] || state.hidden_ids
             ] ++ page_state(state, page, page_result)
           )
 
