@@ -615,8 +615,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_delete, record} ->
-        socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-        {:noreply, socket}
+        {:noreply, remove_row(socket, state, record)}
 
       {:ok, :stream_update, record} ->
         socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
@@ -685,8 +684,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_delete, record} ->
-        socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-        {:noreply, socket}
+        {:noreply, remove_row(socket, state, record)}
 
       {:ok, :stream_update, record} ->
         socket = Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record)
@@ -1117,6 +1115,16 @@ defmodule MishkaGervaz.Table.Web.Events do
     else
       socket
     end
+  end
+
+  @spec remove_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp remove_row(socket, state, record) do
+    socket
+    |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
+    |> Phoenix.Component.assign(
+      :table_state,
+      drop_shown_row(socket.assigns.table_state, record.id, :self)
+    )
   end
 
   @spec leave_list(Phoenix.LiveView.Socket.t(), map(), atom()) :: Phoenix.LiveView.Socket.t()

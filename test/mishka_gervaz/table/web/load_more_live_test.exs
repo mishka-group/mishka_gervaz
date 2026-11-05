@@ -8,7 +8,7 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
   waits for both, then for any task the read started, before the test looks.
 
   Load more reads after the rows the view shows, so a row another view removed, or one the view
-  deleted itself, moves no row past it, and a row drawn again is drawn once, in its place.
+  deleted itself or with a custom action, moves no row past it, and a row drawn again is drawn once, in its place.
   """
   use ExUnit.Case, async: false
 
@@ -132,6 +132,19 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
       view = open("/plain")
 
       delete_row(view, b)
+      assert listed(view, items) == ~w(a c d)
+
+      load_more(view)
+      assert listed(view, items) == ~w(a c d e f g h)
+    end
+
+    test "passes no row when a custom action removed it", %{items: [_a, b | _] = items} do
+      view = open("/plain")
+
+      view
+      |> element(~s|#items [phx-value-event="drop"][phx-value-values*="#{b.id}"]|)
+      |> render_click()
+
       assert listed(view, items) == ~w(a c d)
 
       load_more(view)

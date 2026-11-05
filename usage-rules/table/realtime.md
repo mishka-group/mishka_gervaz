@@ -79,7 +79,8 @@ that leaves. A row that arrives is not counted, since it may sort after the rows
 that leaves may not have been shown, so Load more may read again a row the list shows; it is drawn
 once, in its place.
 
-A row the view deletes, destroys, restores or destroys for good itself leaves `next_offset` or
+A row the view deletes, destroys, restores or destroys for good itself, or one an
+`override_row_action` answers `{:ok, :stream_delete, row}` for, leaves `next_offset` or
 `state.loaded_records` at once, with realtime on or off. `state.removed_ids` holds its id until its
 own realtime removal arrives, which then counts it no second time.
 
