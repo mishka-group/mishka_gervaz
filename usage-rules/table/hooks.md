@@ -159,6 +159,11 @@ These cover the transitions people otherwise hand-write in three hooks: after th
 row is restored, show the active list again; after a bulk action, drop the selection; if a page
 became empty, reload page 1.
 
+After a bulk action they are answered when its reload lands. After a row action that takes its row
+out of the list (delete, destroy, restore, permanent destroy) the row comes off the total and they
+are answered from it at once, with no rows read again; a rule that moves the table loads what it
+moves to.
+
 ## TODO
 - [ ] The weakest layer that works: built-in flag → observer → override
 - [ ] `before_*` returns `:ok` / `{:ok, state}` / `{:halt, {:error, msg}}` and nothing else

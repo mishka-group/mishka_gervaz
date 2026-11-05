@@ -518,12 +518,10 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-
-          socket =
-            MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, :unarchive)
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
+           |> leave_total(:unarchive)}
 
         {:error, reason} ->
           error =
@@ -562,16 +560,10 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket = Phoenix.LiveView.stream_delete(socket, state.static.stream_name, record)
-
-          socket =
-            MishkaGervaz.Table.Web.AutoState.after_row_action(
-              socket,
-              state,
-              :permanent_destroy
-            )
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
+           |> leave_total(:permanent_destroy)}
 
         {:error, reason} ->
           error =
@@ -1092,15 +1084,11 @@ defmodule MishkaGervaz.Table.Web.Events do
               socket
             )
 
-          socket =
-            socket
-            |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-            |> hide_row(state, record.id)
-
-          socket =
-            MishkaGervaz.Table.Web.AutoState.after_row_action(socket, state, action_name)
-
-          {:noreply, socket}
+          {:noreply,
+           socket
+           |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+           |> hide_row(state, record.id)
+           |> leave_total(action_name)}
 
         {:error, reason} ->
           error =
@@ -1129,6 +1117,15 @@ defmodule MishkaGervaz.Table.Web.Events do
     else
       socket
     end
+  end
+
+  @spec leave_total(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  defp leave_total(socket, action_name) do
+    state = drop_from_total(socket.assigns.table_state)
+
+    socket
+    |> Phoenix.Component.assign(:table_state, state)
+    |> MishkaGervaz.Table.Web.AutoState.after_row_action(state, action_name)
   end
 
   @doc false
@@ -1181,17 +1178,11 @@ defmodule MishkaGervaz.Table.Web.Events do
             socket
           )
 
-        socket =
-          socket
-          |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
-          |> hide_row(state, record.id)
-
-        socket =
-          socket
-          |> Phoenix.Component.assign(:table_state, drop_from_total(state))
-          |> MishkaGervaz.Table.Web.AutoState.after_row_action(state, :delete)
-
-        {:noreply, socket}
+        {:noreply,
+         socket
+         |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
+         |> hide_row(state, record.id)
+         |> leave_total(:delete)}
 
       {:error, reason} ->
         error =

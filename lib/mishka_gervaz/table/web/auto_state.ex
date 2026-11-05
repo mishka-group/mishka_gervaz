@@ -19,11 +19,11 @@ defmodule MishkaGervaz.Table.Web.AutoState do
 
   ## Flow
 
-  Row actions don't normally reload, so `after_row_action/3` triggers a reload
-  when any rule is enabled and stores `:armed_action` on the socket assigns.
-  Bulk actions already reload; `after_bulk_action/3` just arms the flag.
-  `after_load/2` (called from `DataLoader.handle_async`) reads the armed flag,
-  applies the relevant rule, and clears the flag.
+  A row action that takes its row out of the view takes it off the total too,
+  so `after_row_action/3` answers the rules at once from that total, reading
+  no rows. Bulk actions reload; `after_bulk_action/3` arms the flag on the
+  socket assigns. `after_load/2` (called from `DataLoader.handle_async`) reads
+  the armed flag, applies the relevant rule, and clears the flag.
 
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.DataLoader`,
@@ -65,20 +65,18 @@ defmodule MishkaGervaz.Table.Web.AutoState do
   def value(state, key), do: Map.get(config(state), key)
 
   @doc """
-  Apply rules after a row action completed.
+  Apply rules after a row action took its row out of the view.
 
-  If any rule is enabled, arm the socket and trigger a fresh load so
-  `after_load/2` can react to the new `total_count`.
+  `state` carries the total the action left, its row already taken off, and
+  the rules are answered from it at once, as `after_load/2` answers them after
+  a load: no rows are read to learn it. A rule that moves the table, such as
+  switching to the active view, loads what it moves to.
   """
   @spec after_row_action(socket(), State.t(), atom()) :: socket()
   def after_row_action(socket, state, action_name) do
-    if any_post_load_rule_enabled?(state) do
-      socket
-      |> arm(action_name, :row)
-      |> DataLoader.load_async(state, page: state.page, reset: true)
-    else
-      socket
-    end
+    if any_post_load_rule_enabled?(state),
+      do: socket |> arm(action_name, :row) |> after_load(state),
+      else: socket
   end
 
   @doc """
