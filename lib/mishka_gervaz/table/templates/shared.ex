@@ -1369,6 +1369,39 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     """
   end
 
+  @doc """
+  Renders the Load earlier button that goes above the rows of a `:load_more` or `:infinite` table
+  opened past its first page, as a reload after Load more opens it. A click sends `"load_earlier"`,
+  which reads the page before the first one shown and puts its rows above them, one page a click,
+  until the first page. Nothing is drawn while a load runs, nor on a table that shows its first
+  page.
+
+      <Shared.render_load_earlier static={@static} state={@state} myself={@myself} />
+  """
+  @spec render_load_earlier(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_load_earlier(assigns) do
+    assigns = assign(assigns, :earlier?, earlier?(assigns.static, assigns.state))
+
+    ~H"""
+    <div :if={@earlier?} class="mb-[14px] flex items-center justify-center">
+      <button
+        type="button"
+        phx-click="load_earlier"
+        phx-target={@myself}
+        class="h-[42px] rounded-[12px] border border-[#dcdbf5] bg-[#f2f1fc] px-[22px] text-[12.5px] font-bold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+      >
+        {dgettext("mishka_gervaz", "Load earlier")}
+      </button>
+    </div>
+    """
+  end
+
+  @spec earlier?(map(), map()) :: boolean()
+  defp earlier?(static, state) do
+    pagination_type(static) in [:load_more, :infinite] and state.first_page > 1 and
+      state.loading != :loading
+  end
+
   defp render_numbered_pagination(assigns) do
     ~H"""
     <div class="mt-[22px] grid grid-cols-[1fr_auto_1fr] items-center gap-3">

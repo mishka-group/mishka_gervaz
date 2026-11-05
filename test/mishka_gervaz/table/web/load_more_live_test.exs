@@ -11,6 +11,9 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
   another view removed or added, shown or not, or one the view deleted itself or with a custom
   action, moves no row past it and takes no row from the page, and a row drawn again is drawn once,
   in its place. A read without keyset, or a keyset Ash refuses, reads the page's offset instead.
+
+  Opened past its first page, as a reload after Load more opens it, the table shows that page alone,
+  and Load earlier reads the page before the first row shown, by its keyset, and puts it above.
   """
   use ExUnit.Case, async: false
 
@@ -240,7 +243,72 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
     refute more?(view)
   end
 
-  describe "the read Load more makes" do
+  describe "opened past its first page" do
+    defp earlier?(view), do: has_element?(view, "#items button[phx-click=load_earlier]")
+
+    defp load_earlier(view) do
+      view |> element("#items button[phx-click=load_earlier]") |> render_click()
+      render_async(view, @await)
+    end
+
+    test "shows that page alone, and Load earlier brings the pages before it one at a time", %{
+      items: items
+    } do
+      view = open("/plain?page=3")
+      assert listed(view, items) == ~w(i j)
+      assert earlier?(view)
+
+      load_earlier(view)
+      assert listed(view, items) == ~w(e f g h i j)
+      assert earlier?(view)
+
+      load_earlier(view)
+      assert listed(view, items) == ~w(a b c d e f g h i j)
+      refute earlier?(view)
+    end
+
+    test "Load more still goes on after the last row", %{items: items} do
+      view = open("/plain?page=2")
+      load_earlier(view)
+      assert listed(view, items) == ~w(a b c d e f g h)
+      assert more?(view)
+
+      load_more(view)
+      assert listed(view, items) == ~w(a b c d e f g h i j)
+      refute more?(view)
+      refute earlier?(view)
+    end
+
+    test "after a row before it was removed elsewhere, still brings a full page", %{
+      items: [_a, _b, c | _] = items
+    } do
+      view = open("/plain?page=3")
+      Ash.destroy!(c)
+
+      load_earlier(view)
+      assert listed(view, items) == ~w(e f g h i j)
+
+      load_earlier(view)
+      assert listed(view, items) == ~w(a b d e f g h i j)
+      refute earlier?(view)
+    end
+
+    test "reads one page in one read", %{items: items} do
+      view = open("/plain?page=3")
+
+      {_view, queries} = Queries.count(fn -> load_earlier(view) end)
+
+      assert queries == 1
+      assert listed(view, items) == ~w(e f g h i j)
+    end
+
+    test "a page past the last offers no Load earlier" do
+      view = open("/plain?page=9")
+      refute earlier?(view)
+    end
+  end
+
+  describe "the read Load more and Load earlier make" do
     defp more_state(resource, page_size, updates) do
       "items"
       |> State.init(resource, %{id: "master-1", site_id: nil, role: :admin})
@@ -249,7 +317,7 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
 
     defp no_kept_rows(state), do: %{state | static: %{state.static | keep_loaded_records: false}}
 
-    defp more_titles(state, page) do
+    defp read_titles(state, page) do
       {^page, result, false, _info} =
         PaginationHandler.Default.load_page(
           state,
@@ -278,12 +346,12 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
 
     test "reads after the keyset of the last row when the action allows keyset" do
       state = more_state(PlainItem, 4, after_keyset: keyset_of(PlainItem, "b"))
-      assert more_titles(state, 2) == ~w(c d e f)
+      assert read_titles(state, 2) == ~w(c d e f)
     end
 
     test "reads the page's offset when Ash refuses the keyset" do
       state = more_state(PlainItem, 4, after_keyset: "not-a-keyset")
-      assert more_titles(state, 2) == ~w(e f g h)
+      assert read_titles(state, 2) == ~w(e f g h)
     end
 
     test "reads the page's offset when the action has no keyset pagination" do
@@ -296,21 +364,52 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
           sort_fields: [title: :asc]
         )
 
-      assert more_titles(state, 2) == ~w(c d)
+      assert read_titles(state, 2) == ~w(c d)
     end
 
     test "on a table that keeps its rows, reads after them when no keyset is known" do
       [a, b | _] = created(KeptItem, ~w(a b c d e))
 
       state = more_state(KeptItem, 2, loaded_records: [a, b], after_keyset: nil)
-      assert more_titles(state, 2) == ~w(c d)
+      assert read_titles(state, 2) == ~w(c d)
     end
 
     test "fills a page larger than the read's max_page_size after the keyset" do
       created(KeptItem, ~w(a b c d e f g h))
 
       state = more_state(KeptItem, 5, after_keyset: keyset_of(KeptItem, "b")) |> no_kept_rows()
-      assert more_titles(state, 2) == ~w(c d e f g)
+      assert read_titles(state, 2) == ~w(c d e f g)
+    end
+
+    test "Load earlier reads before the keyset of the first row when the action allows keyset" do
+      state =
+        more_state(PlainItem, 2, loading_type: :earlier, before_keyset: keyset_of(PlainItem, "e"))
+
+      assert read_titles(state, 1) == ~w(c d)
+    end
+
+    test "Load earlier fills a page larger than the read's max_page_size before the keyset" do
+      created(KeptItem, ~w(a b c d e f g h))
+
+      state =
+        KeptItem
+        |> more_state(5, loading_type: :earlier, before_keyset: keyset_of(KeptItem, "h"))
+        |> no_kept_rows()
+
+      assert read_titles(state, 1) == ~w(c d e f g)
+    end
+
+    test "Load earlier reads the page's offset when the action has no keyset pagination" do
+      created(FeedItem, ~w(a b c d e))
+
+      state =
+        more_state(FeedItem, 2,
+          loading_type: :earlier,
+          before_keyset: keyset_of(FeedItem, "e"),
+          sort_fields: [title: :asc]
+        )
+
+      assert read_titles(state, 1) == ~w(a b)
     end
   end
 

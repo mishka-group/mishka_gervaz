@@ -140,6 +140,13 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
         myself={@myself}
       />
 
+      <Shared.render_load_earlier
+        :if={@show_pagination and not @empty? and not @failed?}
+        static={@static}
+        state={@state}
+        myself={@myself}
+      />
+
       <div :if={not @failed?} class="relative isolate">
         <.render_loading_overlay
           :if={

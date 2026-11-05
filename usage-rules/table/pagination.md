@@ -67,6 +67,15 @@ Without `keyset?: true`, or when Ash refuses the keyset as invalid, Load more re
 (after the rows kept, with `keep_loaded_records true`), and a row removed elsewhere moves the next row
 past it.
 
+## Load earlier
+
+A `:load_more` / `:infinite` table keeps its last page in the URL (`?<prefix>_page=N`), so a reload
+after Load more opens page N alone, never pages 1..N. A Load earlier button above the rows then
+reads the page before the first row shown, by its keyset (`state.before_keyset`), and puts it
+above: one page and one read a click, until the first page. `state.first_page` is the first page
+shown; `state.page` stays the last. Without keyset it reads the page's offset. A table with
+`keep_loaded_records true` reads pages 1..N on open, so it never offers one.
+
 ## `show_total` costs a COUNT
 
 `show_total` defaults to **true** and issues a count query. Turn it off for a data layer that

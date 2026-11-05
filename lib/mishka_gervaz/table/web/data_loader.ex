@@ -4,7 +4,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
   This module manages:
   - Initial data loading
-  - Pagination (load more)
+  - Pagination (load more, and load earlier above a page opened past the first)
   - Filtering and sorting
   - Stream management
   - Async result handling
@@ -113,6 +113,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec load_more(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate load_more(socket, state), to: __MODULE__.Default
 
+  @spec load_earlier(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
+  defdelegate load_earlier(socket, state), to: __MODULE__.Default
+
   @spec apply_filters(Phoenix.LiveView.Socket.t(), State.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   defdelegate apply_filters(socket, state, new_filters), to: __MODULE__.Default
@@ -205,14 +208,15 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       - `:page` - Page number to load (default: 1)
       - `:reset` - Whether to reset the stream (default: false)
+      - `:earlier` - Whether the page goes above the rows shown, as Load earlier reads it
+        (default: false)
       """
       @spec load_async(Phoenix.LiveView.Socket.t(), State.t(), keyword()) ::
               Phoenix.LiveView.Socket.t()
       def load_async(socket, state, opts \\ []) do
         page = Keyword.get(opts, :page, 1)
-        reset = Keyword.get(opts, :reset, false)
         sync_url? = Keyword.get(opts, :sync_url, true)
-        loading_type = if reset, do: :reset, else: :more
+        loading_type = loading_type(opts)
 
         query = read_query(state)
 
@@ -224,6 +228,15 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> MishkaGervaz.Messages.start_async(:load_data, fn ->
           execute_load(state, query, page)
         end)
+      end
+
+      @spec loading_type(keyword()) :: State.loading_type()
+      defp loading_type(opts) do
+        cond do
+          Keyword.get(opts, :reset, false) -> :reset
+          Keyword.get(opts, :earlier, false) -> :earlier
+          true -> :more
+        end
       end
 
       @spec execute_load(State.t(), Ash.Query.t(), pos_integer()) ::
@@ -522,27 +535,25 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             true -> (state.total_count || 0) + length(records)
           end
 
-        state =
-          State.update(state,
-            loading: :loaded,
-            has_initial_data?: true,
-            page: page,
-            has_more?: page_result.more?,
-            total_count: total_count,
-            total_pages: pagination_info[:total_pages],
-            records_result:
-              AsyncResult.ok(state.records_result, %{page: page, empty?: records == []}),
-            loaded_records: accumulate_records(state, records, reset),
-            after_keyset: last_keyset(state, page_result.results)
+        loaded =
+          State.update(
+            state,
+            [
+              loading: :loaded,
+              has_initial_data?: true,
+              total_count: total_count,
+              total_pages: pagination_info[:total_pages],
+              loaded_records: accumulate_records(state, records, reset)
+            ] ++ page_state(state, page, page_result)
           )
 
         socket
-        |> Phoenix.Component.assign(:table_state, state)
+        |> Phoenix.Component.assign(:table_state, loaded)
         |> Phoenix.Component.assign(:skip_next_url_sync?, false)
-        |> Phoenix.LiveView.stream(state.static.stream_name, records, reset: reset)
-        |> then(fn s -> if skip_url_sync?, do: s, else: maybe_sync_url(s, state) end)
+        |> stream_rows(state, records, reset)
+        |> then(fn s -> if skip_url_sync?, do: s, else: maybe_sync_url(s, loaded) end)
         |> bump_total_seq()
-        |> MishkaGervaz.Table.Web.AutoState.after_load(state)
+        |> MishkaGervaz.Table.Web.AutoState.after_load(loaded)
         |> refresh_total_after_load()
       end
 
@@ -573,6 +584,56 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       def handle_async(:refresh_total, {:exit, _reason}, socket),
         do: refresh_total_done(socket, nil, :skip)
 
+      @spec page_state(State.t(), pos_integer(), map()) :: keyword()
+      defp page_state(
+             %State{loading_type: :earlier} = state,
+             page,
+             %{results: rows} = page_result
+           ),
+           do: [
+             first_page: earlier_page(page_result, page),
+             before_keyset: keyset(List.first(rows)) || state.before_keyset
+           ]
+
+      defp page_state(%State{loading_type: :more} = state, page, %{results: rows} = page_result),
+        do: [
+          page: page,
+          has_more?: page_result.more?,
+          records_result: AsyncResult.ok(state.records_result, %{page: page, empty?: rows == []}),
+          after_keyset: keyset(List.last(rows)) || state.after_keyset
+        ]
+
+      defp page_state(state, page, %{results: rows} = page_result),
+        do: [
+          page: page,
+          has_more?: page_result.more?,
+          records_result: AsyncResult.ok(state.records_result, %{page: page, empty?: rows == []}),
+          first_page: first_page(state, page, rows),
+          before_keyset: keyset(List.first(rows)),
+          after_keyset: keyset(List.last(rows))
+        ]
+
+      @spec first_page(State.t(), pos_integer(), list()) :: pos_integer()
+      defp first_page(%State{static: %{keep_loaded_records: true}}, _page, _rows), do: 1
+      defp first_page(_state, _page, []), do: 1
+      defp first_page(_state, page, _rows), do: page
+
+      @spec earlier_page(map(), pos_integer()) :: pos_integer()
+      defp earlier_page(%Ash.Page.Keyset{before: before, more?: true}, page)
+           when is_binary(before),
+           do: max(page, 2)
+
+      defp earlier_page(%Ash.Page.Keyset{before: before}, _page) when is_binary(before), do: 1
+      defp earlier_page(_page_result, page), do: page
+
+      @spec stream_rows(Phoenix.LiveView.Socket.t(), State.t(), list(), boolean()) ::
+              Phoenix.LiveView.Socket.t()
+      defp stream_rows(socket, %State{loading_type: :earlier} = state, rows, _reset),
+        do: Phoenix.LiveView.stream(socket, state.static.stream_name, Enum.reverse(rows), at: 0)
+
+      defp stream_rows(socket, state, rows, reset),
+        do: Phoenix.LiveView.stream(socket, state.static.stream_name, rows, reset: reset)
+
       @doc """
       Reload data with current filters/sort (for refresh after changes). The error state's Retry
       calls it, through the table's `"reload"` event.
@@ -592,9 +653,19 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       def load_more(socket, _state), do: socket
 
-      @spec last_keyset(State.t(), list()) :: String.t() | nil
-      defp last_keyset(%State{loading_type: :more, after_keyset: keyset}, []), do: keyset
-      defp last_keyset(_state, rows), do: keyset(List.last(rows))
+      @doc """
+      Load the page before the first page the view shows and put its rows above the rows shown
+      (Load earlier).
+
+      A `:load_more` or `:infinite` table opened at page N shows page N alone; each call reads one
+      page more before it, until the first page. It does nothing on a table that shows its first
+      page. The URL keeps the last page shown.
+      """
+      @spec load_earlier(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
+      def load_earlier(socket, %State{first_page: first_page} = state) when first_page > 1,
+        do: load_async(socket, state, page: first_page - 1, earlier: true, sync_url: false)
+
+      def load_earlier(socket, _state), do: socket
 
       @spec keyset(Ash.Resource.record() | nil) :: String.t() | nil
       defp keyset(%{__metadata__: %{keyset: keyset}}) when is_binary(keyset), do: keyset
@@ -818,6 +889,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      handle_async: 3,
                      reload: 2,
                      load_more: 2,
+                     load_earlier: 2,
                      apply_filters: 3,
                      apply_sort: 3,
                      set_sort: 4,

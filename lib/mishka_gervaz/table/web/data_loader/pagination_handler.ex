@@ -67,6 +67,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       Nth slice for any other table, where a row removed elsewhere moves the next row past Load
       more. A numbered page is always the Nth slice.
 
+      Load earlier (`loading_type: :earlier`) reads the page before the first row the view shows, by
+      that row's keyset, the state's `before_keyset`, the same way, or the page's slice by offset
+      without keyset. Its rows go above the rows shown, so it never clears them.
+
       A load of a table with `keep_loaded_records true` that starts its list afresh at page N of a
       list that grows (Load more and infinite), such as one opened at page N or reloaded after a
       bulk action, reads the first N pages, so the rows the reader had stay.
@@ -89,9 +93,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           pagination_type = get_pagination_type(state)
           count? = count_requested?(state, pagination_type)
           keep? = state.static.keep_loaded_records == true
-          more? = state.loading_type == :more and not reset_stream?(pagination_type, page)
-
-          page_opts = page_opts(state, page, page_size, pagination_type, count?, keep?, more?)
+          kind = read_kind(state.loading_type, pagination_type, page)
 
           read_query =
             Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
@@ -99,57 +101,76 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           page_result =
             read_page(
               read_query,
-              keyset_opts(state, read_query, page_size, count?, more?),
-              page_opts
+              keyset_opts(state, kind, read_query, page_size, count?),
+              page_opts(state, kind, page, page_size, pagination_type, count?, keep?)
             )
 
           pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
 
-          {page, page_result, reset_stream?(pagination_type, page) or (keep? and not more?),
+          {page, page_result, kind == :reset and (reset_stream?(pagination_type, page) or keep?),
            pagination_info}
         end
       end
 
+      @spec read_kind(atom(), atom(), pos_integer()) :: :reset | :more | :earlier
+      defp read_kind(:earlier, _type, _page), do: :earlier
+
+      defp read_kind(:more, type, page),
+        do: if(reset_stream?(type, page), do: :reset, else: :more)
+
+      defp read_kind(_loading_type, _type, _page), do: :reset
+
       @spec page_opts(
               State.t(),
+              :reset | :more | :earlier,
               pos_integer(),
               pos_integer(),
               atom(),
               boolean(),
-              boolean(),
               boolean()
             ) :: keyword()
-      defp page_opts(state, page, page_size, type, count?, true, true) do
+      defp page_opts(state, :more, page, page_size, type, count?, true) do
         page
         |> build_page_opts(page_size, type, count?)
         |> Keyword.put(:offset, length(state.loaded_records))
       end
 
-      defp page_opts(_state, page, page_size, type, count?, keep?, more?),
+      defp page_opts(_state, :reset, page, page_size, type, count?, keep?),
         do:
-          build_page_opts(
-            page,
-            page_size,
-            type,
-            count?,
-            keep? and not more? and not reset_stream?(type, page)
-          )
+          build_page_opts(page, page_size, type, count?, keep? and not reset_stream?(type, page))
 
-      @spec keyset_opts(State.t(), Ash.Query.t(), pos_integer(), boolean(), boolean()) ::
-              keyword() | nil
+      defp page_opts(_state, _kind, page, page_size, type, count?, _keep?),
+        do: build_page_opts(page, page_size, type, count?)
+
+      @spec keyset_opts(
+              State.t(),
+              :reset | :more | :earlier,
+              Ash.Query.t(),
+              pos_integer(),
+              boolean()
+            ) :: keyword() | nil
       defp keyset_opts(
-             %State{after_keyset: keyset},
+             state,
+             kind,
              %Ash.Query{action: %{pagination: %{keyset?: true}}},
              page_size,
-             count?,
-             true
-           )
-           when is_binary(keyset) do
-        opts = [after: keyset, limit: page_size]
-        if count?, do: Keyword.put(opts, :count, true), else: opts
+             count?
+           ) do
+        case cursor(state, kind) do
+          {direction, keyset} when is_binary(keyset) ->
+            [{direction, keyset}, limit: page_size] ++ if(count?, do: [count: true], else: [])
+
+          _no_cursor ->
+            nil
+        end
       end
 
-      defp keyset_opts(_state, _query, _page_size, _count?, _more?), do: nil
+      defp keyset_opts(_state, _kind, _query, _page_size, _count?), do: nil
+
+      @spec cursor(State.t(), :reset | :more | :earlier) :: {:after | :before, term()} | nil
+      defp cursor(%State{after_keyset: keyset}, :more), do: {:after, keyset}
+      defp cursor(%State{before_keyset: keyset}, :earlier), do: {:before, keyset}
+      defp cursor(_state, :reset), do: nil
 
       @spec read_page(Ash.Query.t(), keyword() | nil, keyword()) :: Ash.Page.page()
       defp read_page(query, nil, page_opts),
@@ -164,22 +185,46 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       end
 
       @spec read_rest(Ash.Page.page(), Ash.Query.t(), keyword()) :: Ash.Page.page()
-      defp read_rest(page, query, opts), do: read_rest(page, query, opts, opts[:limit])
+      defp read_rest(page, query, opts),
+        do: read_rest(page, query, opts, direction(opts), opts[:limit])
 
-      defp read_rest(%{more?: true, results: [_ | _] = rows} = page, query, opts, limit)
+      defp read_rest(
+             %{more?: true, results: [_ | _] = rows} = page,
+             query,
+             opts,
+             direction,
+             limit
+           )
            when length(rows) < limit do
-        rest = Ash.read!(query, page: rest_opts(opts, rows, limit - length(rows)))
-        read_rest(%{page | results: rows ++ rest.results, more?: rest.more?}, query, opts, limit)
+        rest = Ash.read!(query, page: rest_opts(direction, rows, opts, limit - length(rows)))
+        rows = join_rows(direction, rows, rest.results)
+        read_rest(%{page | results: rows, more?: rest.more?}, query, opts, direction, limit)
       end
 
-      defp read_rest(page, _query, _opts, _limit), do: page
+      defp read_rest(page, _query, _opts, _direction, _limit), do: page
 
-      @spec rest_opts(keyword(), [Ash.Resource.record()], pos_integer()) :: keyword()
-      defp rest_opts(opts, rows, limit) do
-        if Keyword.has_key?(opts, :after),
-          do: [after: List.last(rows).__metadata__.keyset, limit: limit],
-          else: [offset: Keyword.get(opts, :offset, 0) + length(rows), limit: limit]
+      @spec direction(keyword()) :: :after | :before | :offset
+      defp direction(opts) do
+        cond do
+          Keyword.has_key?(opts, :after) -> :after
+          Keyword.has_key?(opts, :before) -> :before
+          true -> :offset
+        end
       end
+
+      @spec rest_opts(:after | :before | :offset, list(), keyword(), pos_integer()) :: keyword()
+      defp rest_opts(:after, rows, _opts, limit),
+        do: [after: List.last(rows).__metadata__.keyset, limit: limit]
+
+      defp rest_opts(:before, [first | _rows], _opts, limit),
+        do: [before: first.__metadata__.keyset, limit: limit]
+
+      defp rest_opts(:offset, rows, opts, limit),
+        do: [offset: Keyword.get(opts, :offset, 0) + length(rows), limit: limit]
+
+      @spec join_rows(:after | :before | :offset, list(), list()) :: list()
+      defp join_rows(:before, rows, rest), do: rest ++ rows
+      defp join_rows(_direction, rows, rest), do: rows ++ rest
 
       @doc """
       The table's total as `load_page/5` would report it, without loading a page.

@@ -23,6 +23,12 @@ defmodule MishkaGervaz.Table.Web.State do
   keyset pagination; it is `nil` when the rows carry no keyset, and Load more then reads from an
   offset.
 
+  `page` is the last page the view shows, the one the URL holds. `first_page` is the first: a
+  `:load_more` or `:infinite` table opened at page N, as a reload after Load more opens it, shows
+  page N alone, and Load earlier reads the page before it, one page a click, after the keyset of
+  the first row shown, `before_keyset`. A table that keeps its rows reads from the first page, so
+  its `first_page` is 1.
+
   ## Sub-builders
 
   State initialization is composed of sub-builders that can be overridden:
@@ -209,11 +215,13 @@ defmodule MishkaGervaz.Table.Web.State do
     :current_page_size,
     :dismissed_notices,
     :loaded_records,
-    :after_keyset
+    :after_keyset,
+    :before_keyset,
+    :first_page
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error
-  @type loading_type :: :initial | :reset | :more
+  @type loading_type :: :initial | :reset | :more | :earlier
   @type archive_status :: :active | :archived
 
   @type t :: %__MODULE__{
@@ -248,7 +256,9 @@ defmodule MishkaGervaz.Table.Web.State do
           current_page_size: pos_integer() | nil,
           dismissed_notices: MapSet.t(),
           loaded_records: list(),
-          after_keyset: String.t() | nil
+          after_keyset: String.t() | nil,
+          before_keyset: String.t() | nil,
+          first_page: pos_integer()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -455,7 +465,9 @@ defmodule MishkaGervaz.Table.Web.State do
           current_page_size: nil,
           dismissed_notices: MapSet.new(),
           loaded_records: [],
-          after_keyset: nil
+          after_keyset: nil,
+          before_keyset: nil,
+          first_page: 1
         }
       end
 
