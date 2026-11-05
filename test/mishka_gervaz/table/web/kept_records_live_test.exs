@@ -4,6 +4,10 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
   drives it, in the stock `MishkaGervaz.Table.Templates.Table` and in
   `MishkaGervaz.Test.Web.KeptRows`, a template drawn from those kept rows.
 
+  A realtime notification reaches the table in two hand-offs: the page passes it on with
+  `send_update`, and the table reads a burst of them in one message it sends itself. `settle/1`
+  waits for both, then for any task the read started, before the test looks.
+
   Load more reads only the page after the rows the table keeps and adds it to them, page after
   page, past the most rows the resource's read takes at once (`max_page_size`), until the last row;
   a row taken out of the kept rows moves no row past the next Load more. A page larger than that
@@ -61,14 +65,22 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
     |> Enum.map(& &1.title)
   end
 
-  defp notify(view, action_name, record) do
-    notification = %Ash.Notifier.Notification{
+  defp notification(action_name, record) do
+    %Ash.Notifier.Notification{
       resource: KeptItem,
       action: Ash.Resource.Info.action(KeptItem, action_name),
       data: record
     }
+  end
 
-    send(view.pid, {:notify, notification})
+  defp notify(view, action_name, record) do
+    send(view.pid, {:notify, notification(action_name, record)})
+    settle(view)
+  end
+
+  defp settle(view) do
+    render(view)
+    render(view)
     render_async(view, @await)
   end
 
@@ -112,6 +124,28 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
       notify(view, :update, retitle!(a, "a2"))
       assert listed(view, Enum.map(items, &Ash.get!(KeptItem, &1.id))) == ~w(a2 b2 c d)
+    end
+  end
+
+  describe "a burst of realtime updates" do
+    test "is read once, and draws every row it changed", %{items: [a, b, c | _]} do
+      view = open("/kept?template=kept_rows")
+      load_more(view)
+
+      {_view, queries} =
+        Queries.count(fn ->
+          :sys.suspend(view.pid)
+
+          for {item, title} <- [{a, "a2"}, {b, "b2"}, {c, "c2"}] do
+            send(view.pid, {:notify, notification(:update, retitle!(item, title))})
+          end
+
+          :sys.resume(view.pid)
+          settle(view)
+        end)
+
+      assert kept(view) == ~w(a2 b2 c2 d)
+      assert queries == 2, "one read of the rows and one count of the total"
     end
   end
 

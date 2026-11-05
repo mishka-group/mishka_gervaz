@@ -23,6 +23,7 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
   alias MishkaGervaz.Test.Queries
   alias MishkaGervaz.Test.Resources.PaginationScenarios.Scenario7Resource
   alias MishkaGervaz.Test.Resources.{Post, User}
+  alias MishkaGervaz.Test.Web.KeptItem
 
   alias MishkaGervaz.Test.DataLoader.{
     ArchivableResource,
@@ -43,6 +44,7 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
             FilterableResource,
             HooksResource,
             InfinitePaginationResource,
+            KeptItem,
             MultiTenantResource,
             Scenario7Resource
           ] do
@@ -111,6 +113,11 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
 
   defp notify(socket, notification) do
     {:ok, socket} = Live.update(%{pubsub_notification: notification}, socket)
+    socket
+  end
+
+  defp flush(socket) do
+    {:ok, socket} = Live.update(%{id: socket.assigns.id, realtime_flush: true}, socket)
     socket
   end
 
@@ -943,6 +950,84 @@ defmodule MishkaGervaz.Table.Web.RealtimeTotalTest do
       socket = state |> socket() |> notify(notification(BasicResource, :update, row))
 
       assert inserted_ids(socket, state) == [row.id]
+    end
+  end
+
+  describe "a burst of notifications on a connected socket" do
+    test "waits, then draws every row it changed from one read" do
+      rows =
+        create!(FilterableResource, 3, fn i ->
+          %{title: "Article #{i}", category: "tech", status: "published"}
+        end)
+
+      state = loaded(FilterableResource, master_user(), nil)
+
+      {socket, while_waiting} =
+        Queries.count(fn ->
+          rows
+          |> Enum.reduce(connected(socket(state)), fn row, socket ->
+            notify(socket, notification(FilterableResource, :update, row))
+          end)
+        end)
+
+      assert while_waiting == 0
+      assert inserted_ids(socket, state) == []
+
+      {socket, on_flush} = Queries.count(fn -> flush(socket) end)
+
+      assert on_flush == 1
+      assert inserted_ids(socket, state) == rows |> Enum.map(& &1.id) |> Enum.reverse()
+    end
+
+    test "reads at most the read action's max_page_size rows a read" do
+      rows = Enum.map(~w(a b c d e), &Ash.create!(KeptItem, %{title: &1}))
+      state = loaded(KeptItem, master_user(), nil)
+
+      socket =
+        Enum.reduce(rows, connected(socket(state)), fn row, socket ->
+          notify(socket, notification(KeptItem, :update, row))
+        end)
+
+      {socket, on_flush} = Queries.count(fn -> flush(socket) end)
+
+      assert on_flush == 2
+      assert length(inserted_ids(socket, state)) == 5
+    end
+
+    test "a row destroyed after it changed, in the same burst, is not drawn back" do
+      [row | _rest] = create!(BasicResource, 3)
+      state = loaded(BasicResource, master_user(), nil)
+
+      socket =
+        state |> socket() |> connected() |> notify(notification(BasicResource, :update, row))
+
+      Ash.destroy!(row)
+
+      socket =
+        socket
+        |> notify(notification(BasicResource, :destroy, row))
+        |> flush()
+
+      assert inserted_ids(socket, state) == []
+      assert length(deleted_dom_ids(socket, state)) >= 1
+    end
+
+    test "while the table loads its rows afresh, reads nothing and leaves the rows to the load" do
+      [row | _rest] = create!(BasicResource, 3)
+      state = loaded(BasicResource, master_user(), 3, loading: :loading, loading_type: :reset)
+
+      {socket, queries} =
+        Queries.count(fn ->
+          state
+          |> socket()
+          |> connected()
+          |> notify(notification(BasicResource, :update, row))
+          |> flush()
+        end)
+
+      assert queries == 0
+      assert inserted_ids(socket, state) == []
+      assert socket.assigns.refresh_total_after_load
     end
   end
 

@@ -60,6 +60,11 @@ defmodule MishkaGervaz.Table.Web.Live do
         {:noreply, socket}
       end
 
+  The table reads a burst of notifications once: the first one sends the table a
+  `realtime_flush` update, which arrives after the rest of the burst, and one
+  `MishkaGervaz.Table.Web.DataLoader.rows_in_view/2` read places every row of it. A burst that
+  arrives while the table loads its rows afresh is left to that load.
+
   ## Expanded Row Content
 
   When a row is expanded via `:raw_accordion` action, send content back:
@@ -150,6 +155,8 @@ defmodule MishkaGervaz.Table.Web.Live do
     socket = handle_pubsub_notification(notification, socket)
     {:ok, socket}
   end
+
+  def update(%{realtime_flush: true}, socket), do: {:ok, flush_realtime(socket)}
 
   def update(%{gervaz_refresh: true}, socket) do
     state = socket.assigns.table_state
@@ -367,11 +374,15 @@ defmodule MishkaGervaz.Table.Web.Live do
 
       socket
       |> apply_notification_action(action, record, state, supports_archive)
-      |> DataLoader.refresh_total()
+      |> refresh_total_unless_waiting()
     else
       socket
     end
   end
+
+  @spec refresh_total_unless_waiting(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp refresh_total_unless_waiting(%{assigns: %{realtime_pending: [_ | _]}} = socket), do: socket
+  defp refresh_total_unless_waiting(socket), do: DataLoader.refresh_total(socket)
 
   @spec apply_notification_action(
           Phoenix.LiveView.Socket.t(),
@@ -384,7 +395,7 @@ defmodule MishkaGervaz.Table.Web.Live do
     case action.type do
       :create ->
         if state.archive_status == :active do
-          reload_and_insert(socket, state, record)
+          place_row(socket, state, record)
         else
           socket
         end
@@ -397,7 +408,7 @@ defmodule MishkaGervaz.Table.Web.Live do
             (state.archive_status == :archived and record_archived?)
 
         if matches_view? do
-          reload_and_insert(socket, state, record)
+          place_row(socket, state, record)
         else
           delete_row(socket, state, record)
         end
@@ -410,7 +421,7 @@ defmodule MishkaGervaz.Table.Web.Live do
 
         if supports_archive and not is_permanent_delete do
           if state.archive_status == :archived do
-            reload_and_insert(socket, state, record)
+            place_row(socket, state, record)
           else
             delete_row(socket, state, record)
           end
@@ -420,15 +431,55 @@ defmodule MishkaGervaz.Table.Web.Live do
     end
   end
 
-  @spec reload_and_insert(Phoenix.LiveView.Socket.t(), State.t(), map()) ::
+  @spec place_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp place_row(socket, state, record) do
+    if connected?(socket),
+      do: queue_row(socket, record),
+      else: place_rows(socket, state, [record])
+  end
+
+  @spec queue_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  defp queue_row(socket, record) do
+    pending = socket.assigns[:realtime_pending] || []
+
+    if pending == [],
+      do: send_update(self(), __MODULE__, id: socket.assigns.id, realtime_flush: true)
+
+    assign(socket, :realtime_pending, [record | Enum.reject(pending, &(&1.id == record.id))])
+  end
+
+  @spec flush_realtime(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp flush_realtime(%{assigns: %{realtime_pending: [_ | _] = pending}} = socket) do
+    socket
+    |> assign(:realtime_pending, [])
+    |> place_rows(socket.assigns.table_state, Enum.reverse(pending))
+    |> DataLoader.refresh_total()
+  end
+
+  defp flush_realtime(socket), do: socket
+
+  @spec place_rows(Phoenix.LiveView.Socket.t(), State.t(), [map()]) ::
           Phoenix.LiveView.Socket.t()
-  defp reload_and_insert(socket, state, record) do
-    case DataLoader.rows_in_view(state, [record.id]) do
-      {:ok, [row]} -> insert_row(socket, state, row)
-      {:ok, _left_out} -> leave_view(socket, state, record)
-      :error -> load_and_insert(socket, state, record)
+  defp place_rows(socket, %State{loading: :loading, loading_type: :reset}, _records), do: socket
+
+  defp place_rows(socket, state, records) do
+    case DataLoader.rows_in_view(state, Enum.map(records, & &1.id)) do
+      {:ok, rows} ->
+        shown = Map.new(rows, &{&1.id, &1})
+        Enum.reduce(records, socket, &place_read_row(&2, &1, Map.fetch(shown, &1.id)))
+
+      :error ->
+        Enum.reduce(records, socket, &load_and_insert(&2, &2.assigns.table_state, &1))
     end
   end
+
+  @spec place_read_row(Phoenix.LiveView.Socket.t(), map(), {:ok, map()} | :error) ::
+          Phoenix.LiveView.Socket.t()
+  defp place_read_row(socket, _record, {:ok, row}),
+    do: insert_row(socket, socket.assigns.table_state, row)
+
+  defp place_read_row(socket, record, :error),
+    do: leave_view(socket, socket.assigns.table_state, record)
 
   @spec leave_view(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
   defp leave_view(socket, %State{expanded_id: id} = state, %{id: id} = record) do

@@ -63,6 +63,12 @@ inserted, and one edited out of them leaves the list, closing its expanded row i
 manual read, which cannot be asked about one row, or a read that returns an error, shows every row
 as it arrives.
 
+A burst of notifications is read together. The table answers the first with a message to itself,
+so the rest of the burst, such as one notification per row of a bulk action, arrives first, and one
+read, `max_page_size` rows at a time, places every row of it. While the table loads its rows afresh
+— the reload after its own bulk action, a filter, a sort — a burst reads nothing: that load draws
+the rows, and the total is counted once it lands.
+
 A row the list already shows is drawn again in its place; a new one goes first. A table with
 `keep_loaded_records true` does the same to `state.loaded_records`, so a template drawn from them
 shows the change too, and a row that leaves the list leaves them.
