@@ -79,6 +79,10 @@ that leaves. A row that arrives is not counted, since it may sort after the rows
 that leaves may not have been shown, so Load more may read again a row the list shows; it is drawn
 once, in its place.
 
+A row the view deletes, destroys, restores or destroys for good itself leaves `next_offset` or
+`state.loaded_records` at once, with realtime on or off. `state.removed_ids` holds its id until its
+own realtime removal arrives, which then counts it no second time.
+
 Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
 default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor
 its empty state over realtime — use `show_total true` where rows arrive live.

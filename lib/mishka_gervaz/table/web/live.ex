@@ -528,7 +528,10 @@ defmodule MishkaGervaz.Table.Web.Live do
   defp delete_row(socket, state, record) do
     socket
     |> stream_delete(state.static.stream_name, record)
-    |> drop_shown_row(record)
+    |> assign(
+      :table_state,
+      Events.drop_shown_row(socket.assigns.table_state, record.id, :realtime)
+    )
   end
 
   @spec keep_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
@@ -548,25 +551,6 @@ defmodule MishkaGervaz.Table.Web.Live do
   end
 
   defp keep_row(socket, _record), do: socket
-
-  @spec drop_shown_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  defp drop_shown_row(
-         %{assigns: %{table_state: %State{static: %{keep_loaded_records: true}}}} = socket,
-         %{id: id}
-       ) do
-    state = socket.assigns.table_state
-    rows = Enum.reject(state.loaded_records, &(&1.id == id))
-    assign(socket, :table_state, State.update(state, loaded_records: rows))
-  end
-
-  defp drop_shown_row(
-         %{assigns: %{table_state: %State{next_offset: offset} = state}} = socket,
-         _record
-       )
-       when offset > 0,
-       do: assign(socket, :table_state, State.update(state, next_offset: offset - 1))
-
-  defp drop_shown_row(socket, _record), do: socket
 
   @spec reinsert_expanded_record(Phoenix.LiveView.Socket.t(), State.t()) ::
           Phoenix.LiveView.Socket.t()

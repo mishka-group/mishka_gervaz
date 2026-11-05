@@ -100,6 +100,12 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
     render_async(view, @await)
   end
 
+  defp delete_row(view, item) do
+    view
+    |> element(~s|#items [phx-click="delete"][phx-value-id="#{item.id}"]|)
+    |> render_click()
+  end
+
   defp in_order?(kept, titles), do: kept == Enum.take(titles, length(kept))
 
   describe "a realtime update of a row the table shows" do
@@ -279,6 +285,19 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
 
       assert in_order?(kept(view), ~w(a c d e f g))
       assert kept(view) == ~w(a c d e f)
+    end
+
+    test "after a row deleted in the view left the rows kept, passes no row", %{
+      items: [_a, b | _] = items
+    } do
+      view = open("/kept?template=table")
+      load_more(view)
+
+      delete_row(view, b)
+      assert listed(view, items) == ~w(a c d)
+
+      load_more(view)
+      assert listed(view, items) == ~w(a c d e f)
     end
 
     test "opened at a later page reads every page up to it" do

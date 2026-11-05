@@ -521,7 +521,7 @@ defmodule MishkaGervaz.Table.Web.Events do
           {:noreply,
            socket
            |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
-           |> leave_total(:unarchive)}
+           |> leave_list(record, :unarchive)}
 
         {:error, reason} ->
           error =
@@ -563,7 +563,7 @@ defmodule MishkaGervaz.Table.Web.Events do
           {:noreply,
            socket
            |> Phoenix.LiveView.stream_delete(state.static.stream_name, record)
-           |> leave_total(:permanent_destroy)}
+           |> leave_list(record, :permanent_destroy)}
 
         {:error, reason} ->
           error =
@@ -1088,7 +1088,7 @@ defmodule MishkaGervaz.Table.Web.Events do
            socket
            |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
            |> hide_row(state, record.id)
-           |> leave_total(action_name)}
+           |> leave_list(record, action_name)}
 
         {:error, reason} ->
           error =
@@ -1119,13 +1119,42 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
-  @spec leave_total(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
-  defp leave_total(socket, action_name) do
-    state = drop_from_total(socket.assigns.table_state)
+  @spec leave_list(Phoenix.LiveView.Socket.t(), map(), atom()) :: Phoenix.LiveView.Socket.t()
+  defp leave_list(socket, record, action_name) do
+    state =
+      socket.assigns.table_state
+      |> drop_from_total()
+      |> drop_shown_row(record.id, :self)
 
     socket
     |> Phoenix.Component.assign(:table_state, state)
     |> MishkaGervaz.Table.Web.AutoState.after_row_action(state, action_name)
+  end
+
+  @doc """
+  Takes the row `id` out of what the view shows, so the next Load more reads after the rows still
+  shown.
+
+  A table with `keep_loaded_records true` drops it from `loaded_records`. Any other table moves
+  `next_offset` back by one. A row the view removes itself (`:self`) is held by its id in
+  `removed_ids` until its own realtime removal (`:realtime`) arrives, which then moves nothing, so
+  the row is counted once whether realtime is on or off.
+  """
+  @spec drop_shown_row(State.t(), term(), :self | :realtime) :: State.t()
+  def drop_shown_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
+    do: %{state | loaded_records: Enum.reject(state.loaded_records, &(&1.id == id))}
+
+  def drop_shown_row(%State{} = state, id, :self),
+    do: %{
+      state
+      | next_offset: max(state.next_offset - 1, 0),
+        removed_ids: MapSet.put(state.removed_ids, id)
+    }
+
+  def drop_shown_row(%State{removed_ids: removed} = state, id, :realtime) do
+    if MapSet.member?(removed, id),
+      do: %{state | removed_ids: MapSet.delete(removed, id)},
+      else: %{state | next_offset: max(state.next_offset - 1, 0)}
   end
 
   @doc false
@@ -1182,7 +1211,7 @@ defmodule MishkaGervaz.Table.Web.Events do
          socket
          |> Phoenix.LiveView.stream_delete(state.static.stream_name, deleted)
          |> hide_row(state, record.id)
-         |> leave_total(:delete)}
+         |> leave_list(record, :delete)}
 
       {:error, reason} ->
         error =

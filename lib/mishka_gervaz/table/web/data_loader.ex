@@ -533,7 +533,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             records_result:
               AsyncResult.ok(state.records_result, %{page: page, empty?: records == []}),
             loaded_records: accumulate_records(state, records, reset),
-            next_offset: next_offset(state, page_result, records)
+            next_offset: next_offset(state, page_result, records),
+            removed_ids: removed_ids(state)
           )
 
         socket
@@ -598,6 +599,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       defp next_offset(_state, page_result, records),
         do: (Map.get(page_result, :offset) || 0) + length(records)
+
+      @spec removed_ids(State.t()) :: MapSet.t()
+      defp removed_ids(%State{loading_type: :more, removed_ids: ids}), do: ids
+      defp removed_ids(_state), do: MapSet.new()
 
       @spec accumulate_records(State.t(), list(), boolean()) :: list()
       defp accumulate_records(%State{static: %{keep_loaded_records: false}}, _records, _reset),

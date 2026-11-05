@@ -2,8 +2,8 @@ defmodule MishkaGervaz.Test.Web.PlainItem do
   @moduledoc """
   The resource of `MishkaGervaz.Test.Web.TablePageLive`'s `/plain` table: a list sorted by title
   that loads more four rows at a time and keeps no rows it has loaded, so its rows live only in the
-  stream. Its rows can be picked, and its Wipe bulk action destroys the picked ones. Its page is
-  synced to the URL in `:bidirectional` mode.
+  stream. Each row has a Delete action; its rows can be picked, and its Wipe bulk action destroys
+  the picked ones. Its page is synced to the URL in `:bidirectional` mode.
   """
 
   use Ash.Resource,
@@ -32,6 +32,10 @@ defmodule MishkaGervaz.Test.Web.PlainItem do
 
       row do
         selectable true
+      end
+
+      row_actions do
+        action :delete, type: :destroy
       end
 
       bulk_actions do

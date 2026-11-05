@@ -7,8 +7,8 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
   `send_update`, and the table reads a burst of them in one message it sends itself. `settle/1`
   waits for both, then for any task the read started, before the test looks.
 
-  Load more reads after the rows the view shows, so a row another view removed moves no row past
-  it, and a row drawn again is drawn once, in its place.
+  Load more reads after the rows the view shows, so a row another view removed, or one the view
+  deleted itself, moves no row past it, and a row drawn again is drawn once, in its place.
   """
   use ExUnit.Case, async: false
 
@@ -77,6 +77,12 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
     |> render_click()
   end
 
+  defp delete_row(view, item) do
+    view
+    |> element(~s|#items [phx-click="delete"][phx-value-id="#{item.id}"]|)
+    |> render_click()
+  end
+
   defp wipe(view) do
     view
     |> element(~s|#items [phx-click="bulk_action"][phx-value-action="wipe"]|)
@@ -118,6 +124,31 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
       load_more(view)
       assert listed(view, items) == ~w(a b c d e f g i j)
       refute more?(view)
+    end
+  end
+
+  describe "after a row it deletes itself" do
+    test "passes no row with realtime off", %{items: [_a, b | _] = items} do
+      view = open("/plain")
+
+      delete_row(view, b)
+      assert listed(view, items) == ~w(a c d)
+
+      load_more(view)
+      assert listed(view, items) == ~w(a c d e f g h)
+    end
+
+    test "counts it once when its own realtime removal arrives too", %{
+      items: [_a, b | _] = items
+    } do
+      view = open("/plain")
+
+      delete_row(view, b)
+      notify(view, :destroy, b)
+      assert listed(view, items) == ~w(a c d)
+
+      load_more(view)
+      assert listed(view, items) == ~w(a c d e f g h)
     end
   end
 
