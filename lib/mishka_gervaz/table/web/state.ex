@@ -21,8 +21,10 @@ defmodule MishkaGervaz.Table.Web.State do
   earlier keep, failed with the error once a load fails. Only a table with
   `keep_loaded_records true` keeps its loaded rows, in `loaded_records`. `after_keyset` is the keyset
   of the last row a load read, the one string Load more reads after when the read action allows
-  keyset pagination; it is `nil` when the rows carry no keyset, and Load more then reads from an
-  offset.
+  keyset pagination. On a read action without keyset, Load more on a table that keeps no rows
+  reads from `next_offset` instead: the end of the rows the view shows, one less for each row taken
+  out of the list. `removed_ids` holds the ids of the rows the view took out itself until their own
+  realtime removal arrives, so each is counted once.
 
   `hidden_ids` holds the picked rows, of `selected_ids`, that the table's read no longer finds, such
   as rows a search hides. A bulk action reaches only the rows the read finds, so the bulk bar counts
@@ -222,6 +224,8 @@ defmodule MishkaGervaz.Table.Web.State do
     :current_page_size,
     :dismissed_notices,
     :loaded_records,
+    :next_offset,
+    :removed_ids,
     :after_keyset,
     :before_keyset,
     :first_page
@@ -264,6 +268,8 @@ defmodule MishkaGervaz.Table.Web.State do
           current_page_size: pos_integer() | nil,
           dismissed_notices: MapSet.t(),
           loaded_records: list(),
+          next_offset: non_neg_integer(),
+          removed_ids: MapSet.t(),
           after_keyset: String.t() | nil,
           before_keyset: String.t() | nil,
           first_page: pos_integer()
@@ -474,6 +480,8 @@ defmodule MishkaGervaz.Table.Web.State do
           current_page_size: nil,
           dismissed_notices: MapSet.new(),
           loaded_records: [],
+          next_offset: 0,
+          removed_ids: MapSet.new(),
           after_keyset: nil,
           before_keyset: nil,
           first_page: 1

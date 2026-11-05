@@ -63,9 +63,12 @@ A row added or removed anywhere in the list, by this view, another one or realti
 row past Load more and takes no row from its page, in the same one read. Keep `offset?: true` too:
 a numbered page and a page opened from the URL are read by offset.
 
-Without `keyset?: true`, or when Ash refuses the keyset as invalid, Load more reads the page's offset
-(after the rows kept, with `keep_loaded_records true`), and a row removed elsewhere moves the next row
-past it.
+Keyset is optional. Without `keyset?: true`, or when Ash refuses the keyset as invalid, Load more
+reads from the offset of the rows the view shows: `state.next_offset`, one less for each row
+realtime, the view or a custom action takes out of the list (after the rows kept, with
+`keep_loaded_records true`). No row is skipped there either; a row that leaves without having been
+shown, or one that arrives, only makes that click read a row already shown again, so it adds fewer
+new rows.
 
 ## Load earlier
 
@@ -73,7 +76,7 @@ A `:load_more` / `:infinite` table keeps its last page in the URL (`?<prefix>_pa
 after Load more opens page N alone, never pages 1..N. A Load earlier button above the rows then
 reads the page before the first row shown, by its keyset (`state.before_keyset`), and puts it
 above: one page and one read a click, until the first page. `state.first_page` is the first page
-shown; `state.page` stays the last. Without keyset it reads the page's offset. A table with
+shown; `state.page` stays the last. Without keyset it reads that page's slice by offset. A table with
 `keep_loaded_records true` reads pages 1..N on open, so it never offers one.
 
 ## `show_total` costs a COUNT
@@ -96,7 +99,8 @@ end
 - [ ] `show_total false` when the data layer cannot count
 - [ ] `:load_more` / `:infinite` chosen for lists that are scrolled, `:numbered` for lists that are paged
 - [ ] A grouped custom template also sets `presentation.keep_loaded_records true`
-- [ ] The read action of a `:load_more` / `:infinite` table allows `keyset?: true`
+- [ ] The read action of a `:load_more` / `:infinite` table allows `keyset?: true` where rows change
+  live, so every Load more adds a full page
 
 ## DSL reference
 

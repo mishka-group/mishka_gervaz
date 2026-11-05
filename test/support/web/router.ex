@@ -10,6 +10,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       count, writing its page into the URL.
     * `/kept` — the same page with a table of `MishkaGervaz.Test.Web.KeptItem`, which keeps the rows
       it has loaded, writing its template and page into the URL.
+    * `/offset` — the same page with a table of `MishkaGervaz.Test.Web.OffsetItem`, whose read has no
+      keyset pagination, so Load more reads from an offset.
   """
 
   use Phoenix.Router
@@ -27,6 +29,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/items/fixed", MishkaGervaz.Test.Web.TablePageLive, :keeps_url
     live "/feed", MishkaGervaz.Test.Web.TablePageLive, :feed
     live "/plain", MishkaGervaz.Test.Web.TablePageLive, :plain
+    live "/offset", MishkaGervaz.Test.Web.TablePageLive, :offset
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
   end
 end

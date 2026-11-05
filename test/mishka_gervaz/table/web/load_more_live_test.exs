@@ -10,7 +10,8 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
   Its read allows keyset pagination, so Load more reads the page after the last row's keyset: a row
   another view removed or added, shown or not, or one the view deleted itself or with a custom
   action, moves no row past it and takes no row from the page, and a row drawn again is drawn once,
-  in its place. A read without keyset, or a keyset Ash refuses, reads the page's offset instead.
+  in its place. A read without keyset, or a keyset Ash refuses, reads from the offset of the rows
+  shown instead (`MishkaGervaz.Table.Web.LoadMoreOffsetLiveTest`).
 
   Opened past its first page, as a reload after Load more opens it, the table shows that page alone,
   and Load earlier reads the page before the first row shown, by its keyset, and puts it above.
@@ -349,22 +350,23 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
       assert read_titles(state, 2) == ~w(c d e f)
     end
 
-    test "reads the page's offset when Ash refuses the keyset" do
-      state = more_state(PlainItem, 4, after_keyset: "not-a-keyset")
-      assert read_titles(state, 2) == ~w(e f g h)
+    test "reads from the offset of the rows shown when Ash refuses the keyset" do
+      state = more_state(PlainItem, 4, after_keyset: "not-a-keyset", next_offset: 3)
+      assert read_titles(state, 2) == ~w(d e f g)
     end
 
-    test "reads the page's offset when the action has no keyset pagination" do
+    test "reads from the offset of the rows shown when the action has no keyset pagination" do
       created(FeedItem, ~w(a b c d e))
       refute Ash.Resource.Info.action(FeedItem, :master_read).pagination.keyset?
 
       state =
         more_state(FeedItem, 2,
           after_keyset: keyset_of(FeedItem, "a"),
+          next_offset: 1,
           sort_fields: [title: :asc]
         )
 
-      assert read_titles(state, 2) == ~w(c d)
+      assert read_titles(state, 2) == ~w(b c)
     end
 
     test "on a table that keeps its rows, reads after them when no keyset is known" do

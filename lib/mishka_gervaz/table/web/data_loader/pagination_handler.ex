@@ -63,9 +63,11 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       keyset, the state's `after_keyset`, so a row realtime puts in or takes out anywhere in the
       list moves no row past it, and one read is all it costs. It reads from an offset instead when
       the action has no keyset pagination, when the rows carry no keyset, or when Ash refuses the
-      keyset as invalid: after the rows kept for a table with `keep_loaded_records true`, and the
-      Nth slice for any other table, where a row removed elsewhere moves the next row past Load
-      more. A numbered page is always the Nth slice.
+      keyset as invalid: after the rows kept for a table with `keep_loaded_records true`, and from
+      the state's `next_offset` for any other table, after the rows the view shows, so a row
+      realtime or the view took out of the list moves no row past it. A row put in over realtime is
+      not counted there: it may sort after the rows shown, and a row read again is drawn once, in
+      its place. A numbered page is always the Nth slice.
 
       Load earlier (`loading_type: :earlier`) reads the page before the first row the view shows, by
       that row's keyset, the state's `before_keyset`, the same way, or the page's slice by offset
@@ -129,10 +131,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
               boolean(),
               boolean()
             ) :: keyword()
-      defp page_opts(state, :more, page, page_size, type, count?, true) do
+      defp page_opts(state, :more, page, page_size, type, count?, keep?) do
         page
         |> build_page_opts(page_size, type, count?)
-        |> Keyword.put(:offset, length(state.loaded_records))
+        |> Keyword.put(:offset, more_offset(state, keep?))
       end
 
       defp page_opts(_state, :reset, page, page_size, type, count?, keep?),
@@ -141,6 +143,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
 
       defp page_opts(_state, _kind, page, page_size, type, count?, _keep?),
         do: build_page_opts(page, page_size, type, count?)
+
+      @spec more_offset(State.t(), boolean()) :: non_neg_integer()
+      defp more_offset(state, true), do: length(state.loaded_records)
+      defp more_offset(state, false), do: state.next_offset
 
       @spec keyset_opts(
               State.t(),
