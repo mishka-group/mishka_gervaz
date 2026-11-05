@@ -63,6 +63,11 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       past it. A load of such a table that starts its list afresh at page N of a list that grows
       (Load more and infinite), such as one opened at page N or reloaded after a bulk action, reads
       the first N pages, so the rows the reader had stay.
+
+      A table that keeps no rows reads Load more's page from the state's `next_offset`, after the
+      rows the view shows, so a row realtime took out of the list moves no row past it. A row put
+      in over realtime is not counted: it may sort after the rows shown, and a row read again is
+      drawn once, in its place. A numbered page is always the Nth slice.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
               {integer(), Ash.Page.Offset.t() | map(), boolean(), map()}
@@ -84,8 +89,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           keep? = state.static.keep_loaded_records == true
           more? = state.loading_type == :more and not reset_stream?(pagination_type, page)
 
-          page_opts =
-            keep_page_opts(state, page, page_size, pagination_type, count?, keep?, more?)
+          page_opts = page_opts(state, page, page_size, pagination_type, count?, keep?, more?)
 
           read_query =
             Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
@@ -102,7 +106,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
         end
       end
 
-      @spec keep_page_opts(
+      @spec page_opts(
               State.t(),
               pos_integer(),
               pos_integer(),
@@ -111,15 +115,19 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
               boolean(),
               boolean()
             ) :: keyword()
-      defp keep_page_opts(state, page, page_size, type, count?, true, true) do
+      defp page_opts(state, page, page_size, type, count?, keep?, true) do
         page
         |> build_page_opts(page_size, type, count?)
-        |> Keyword.put(:offset, length(state.loaded_records))
+        |> Keyword.put(:offset, more_offset(state, keep?))
       end
 
-      defp keep_page_opts(_state, page, page_size, type, count?, keep?, _more?),
+      defp page_opts(_state, page, page_size, type, count?, keep?, false),
         do:
           build_page_opts(page, page_size, type, count?, keep? and not reset_stream?(type, page))
+
+      @spec more_offset(State.t(), boolean()) :: non_neg_integer()
+      defp more_offset(state, true), do: length(state.loaded_records)
+      defp more_offset(state, false), do: state.next_offset
 
       @spec read_rest(Ash.Page.Offset.t(), Ash.Query.t(), non_neg_integer(), pos_integer()) ::
               Ash.Page.Offset.t()

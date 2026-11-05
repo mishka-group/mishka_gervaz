@@ -532,7 +532,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
             total_pages: pagination_info[:total_pages],
             records_result:
               AsyncResult.ok(state.records_result, %{page: page, empty?: records == []}),
-            loaded_records: accumulate_records(state, records, reset)
+            loaded_records: accumulate_records(state, records, reset),
+            next_offset: next_offset(state, page_result, records)
           )
 
         socket
@@ -590,6 +591,13 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       end
 
       def load_more(socket, _state), do: socket
+
+      @spec next_offset(State.t(), map(), list()) :: non_neg_integer()
+      defp next_offset(%State{loading_type: :more, next_offset: offset}, _page_result, records),
+        do: offset + length(records)
+
+      defp next_offset(_state, page_result, records),
+        do: (Map.get(page_result, :offset) || 0) + length(records)
 
       @spec accumulate_records(State.t(), list(), boolean()) :: list()
       defp accumulate_records(%State{static: %{keep_loaded_records: false}}, _records, _reset),

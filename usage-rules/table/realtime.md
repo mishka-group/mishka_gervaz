@@ -73,6 +73,12 @@ A row the list already shows is drawn again in its place; a new one goes first. 
 `keep_loaded_records true` does the same to `state.loaded_records`, so a template drawn from them
 shows the change too, and a row that leaves the list leaves them.
 
+Load more reads after the rows the list shows, so a row that leaves the list moves no row past it.
+A table that keeps no rows holds where it reads from in `state.next_offset`, one less for each row
+that leaves. A row that arrives is not counted, since it may sort after the rows shown, and a row
+that leaves may not have been shown, so Load more may read again a row the list shows; it is drawn
+once, in its place.
+
 Only a table that keeps a count follows: `:numbered`, or any type with `show_total true` (the
 default). A `:load_more` / `:infinite` table with `show_total false` changes neither its total nor
 its empty state over realtime — use `show_total true` where rows arrive live.

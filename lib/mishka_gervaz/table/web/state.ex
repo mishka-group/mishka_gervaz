@@ -18,7 +18,9 @@ defmodule MishkaGervaz.Table.Web.State do
   The state holds no rows. A load's rows reach the page through the table's stream, and
   `records_result` is the `Phoenix.LiveView.AsyncResult` of the last load: `%{page: page,
   empty?: boolean}` once it succeeds, failed with the error once it fails. Only a table with
-  `keep_loaded_records true` keeps its loaded rows, in `loaded_records`.
+  `keep_loaded_records true` keeps its loaded rows, in `loaded_records`. A table that keeps none
+  holds in `next_offset` where its next Load more reads from: the end of the rows the view shows,
+  one less for each row realtime takes out of the list.
 
   ## Sub-builders
 
@@ -205,7 +207,8 @@ defmodule MishkaGervaz.Table.Web.State do
     :saved_archived_state,
     :current_page_size,
     :dismissed_notices,
-    :loaded_records
+    :loaded_records,
+    :next_offset
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error
@@ -243,7 +246,8 @@ defmodule MishkaGervaz.Table.Web.State do
           saved_archived_state: map() | nil,
           current_page_size: pos_integer() | nil,
           dismissed_notices: MapSet.t(),
-          loaded_records: list()
+          loaded_records: list(),
+          next_offset: non_neg_integer()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -449,7 +453,8 @@ defmodule MishkaGervaz.Table.Web.State do
           saved_archived_state: nil,
           current_page_size: nil,
           dismissed_notices: MapSet.new(),
-          loaded_records: []
+          loaded_records: [],
+          next_offset: 0
         }
       end
 

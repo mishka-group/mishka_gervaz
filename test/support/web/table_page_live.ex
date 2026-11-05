@@ -3,8 +3,8 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   A page with one `MishkaGervaz.Table.Web.Live` table, mounted the way an admin page mounts one:
   `handle_params/3` decodes the URL into `url_state`, and the table gets it together with an
   activity rail of the page's own. The table is of `MishkaGervaz.Test.Web.FeedItem` on `/feed`, of
-  `MishkaGervaz.Test.Web.KeptItem` on `/kept`, and of `MishkaGervaz.Test.Web.GatedItem` everywhere
-  else.
+  `MishkaGervaz.Test.Web.KeptItem` on `/kept`, of `MishkaGervaz.Test.Web.PlainItem` on `/plain`,
+  and of `MishkaGervaz.Test.Web.GatedItem` everywhere else.
 
   `send(view.pid, :activity)` stands for a live event of the page, such as a PubSub broadcast: it
   redraws the rail, so the page renders the table again with the `url_state` it already holds.
@@ -15,7 +15,7 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   use Phoenix.LiveView
 
   alias MishkaGervaz.Table.Web.UrlSync
-  alias MishkaGervaz.Test.Web.{FeedItem, GatedItem, KeptItem}
+  alias MishkaGervaz.Test.Web.{FeedItem, GatedItem, KeptItem, PlainItem}
 
   @master %{id: "master-1", site_id: nil, role: :admin}
 
@@ -58,5 +58,6 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
 
   defp resource(:feed), do: FeedItem
   defp resource(:kept), do: KeptItem
+  defp resource(:plain), do: PlainItem
   defp resource(_items), do: GatedItem
 end

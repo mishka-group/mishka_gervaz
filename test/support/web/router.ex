@@ -26,6 +26,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/items", MishkaGervaz.Test.Web.TablePageLive, :writes_url
     live "/items/fixed", MishkaGervaz.Test.Web.TablePageLive, :keeps_url
     live "/feed", MishkaGervaz.Test.Web.TablePageLive, :feed
+    live "/plain", MishkaGervaz.Test.Web.TablePageLive, :plain
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
   end
 end
