@@ -1822,6 +1822,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   @doc """
   Renders the empty state with configurable message, icon, and action.
+
+  On a page past the table's last one (`MishkaGervaz.Table.Web.Renderer.past_last_page?/1`) it
+  says the page has no rows and its action is a button that opens page 1, in place of the
+  configured message and action.
   """
   @spec render_empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def render_empty_state(assigns) do
@@ -1840,7 +1844,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:action_label, translate_text(get_in(empty_state, [:action, :label])))
       |> assign(:action_path, get_in(empty_state, [:action, :path]))
       |> assign(:action_icon, get_in(empty_state, [:action, :icon]))
+      |> assign(:action_click, nil)
       |> assign(:ui_adapter, ui_adapter)
+      |> assign_past_last_page()
 
     ~H"""
     <.dynamic_component
@@ -1851,9 +1857,29 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       action_label={@action_label}
       action_path={@action_path}
       action_icon={@action_icon}
+      action_click={@action_click}
     />
     """
   end
+
+  @spec assign_past_last_page(map()) :: map()
+  defp assign_past_last_page(%{state: %{} = state} = assigns) do
+    if MishkaGervaz.Table.Web.Renderer.past_last_page?(state) do
+      assigns
+      |> assign(:message, dgettext("mishka_gervaz", "No rows on this page"))
+      |> assign(:action_label, dgettext("mishka_gervaz", "Go to page 1"))
+      |> assign(:action_path, nil)
+      |> assign(:action_icon, "hero-arrow-uturn-left")
+      |> assign(
+        :action_click,
+        JS.push("go_to_page", value: %{page: 1}, target: assigns[:myself])
+      )
+    else
+      assigns
+    end
+  end
+
+  defp assign_past_last_page(assigns), do: assigns
 
   @doc """
   Renders the error state with configurable message, icon, and retry button.

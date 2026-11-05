@@ -591,6 +591,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
              %{results: rows} = page_result
            ),
            do: [
+             records_result: AsyncResult.ok(state.records_result, state.records_result.result),
              first_page: earlier_page(page_result, page),
              before_keyset: keyset(List.first(rows)) || state.before_keyset
            ]
@@ -599,7 +600,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         do: [
           page: page,
           has_more?: page_result.more?,
-          records_result: AsyncResult.ok(state.records_result, %{page: page, empty?: rows == []}),
+          records_result: AsyncResult.ok(state.records_result, state.records_result.result),
           after_keyset: keyset(List.last(rows)) || state.after_keyset
         ]
 

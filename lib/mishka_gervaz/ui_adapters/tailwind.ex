@@ -1151,6 +1151,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  Render the table's empty state: an icon, a message and an optional action.
+
+  ## Assigns
+    * `:message`, `:icon` - What the state says, and its icon.
+    * `:action_label`, `:action_icon` - The action's label and icon; no action without a label.
+    * `:action_path` - Where the action links to.
+    * `:action_click` - A `Phoenix.LiveView.JS` command the action runs as a button, in place of
+      a link to `:action_path`, such as the push that opens page 1 from a page past the last.
+  """
   @impl true
   def empty_state(assigns) do
     assigns =
@@ -1160,6 +1170,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:action_label, fn -> nil end)
       |> assign_new(:action_path, fn -> nil end)
       |> assign_new(:action_icon, fn -> nil end)
+      |> assign_new(:action_click, fn -> nil end)
 
     ~H"""
     <div class="flex flex-col items-center justify-center gap-3 rounded-[16px] border border-[#ecebe6] bg-white px-4 py-14 text-center">
@@ -1170,8 +1181,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <.render_icon name={@icon} class="size-6" />
       </span>
       <div class="font-['Space_Grotesk'] text-[14px] font-bold text-[#17161a]">{@message}</div>
+      <button
+        :if={@action_click && @action_label}
+        type="button"
+        phx-click={@action_click}
+        class="mt-1 inline-flex items-center gap-2 rounded-xl bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] px-[15px] py-[9px] text-[12.5px] font-bold text-white transition-opacity hover:opacity-95"
+      >
+        <.render_icon :if={@action_icon} name={@action_icon} class="size-4" />
+        {@action_label}
+      </button>
       <a
-        :if={@action_path && @action_label}
+        :if={is_nil(@action_click) && @action_path && @action_label}
         href={@action_path}
         class="mt-1 inline-flex items-center gap-2 rounded-xl bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] px-[15px] py-[9px] text-[12.5px] font-bold text-white transition-opacity hover:opacity-95"
       >

@@ -17,7 +17,8 @@ defmodule MishkaGervaz.Table.Web.State do
 
   The state holds no rows. A load's rows reach the page through the table's stream, and
   `records_result` is the `Phoenix.LiveView.AsyncResult` of the last load: `%{page: page,
-  empty?: boolean}` once it succeeds, failed with the error once it fails. Only a table with
+  empty?: boolean}` of the load that started the list once it succeeds, which Load more and Load
+  earlier keep, failed with the error once a load fails. Only a table with
   `keep_loaded_records true` keeps its loaded rows, in `loaded_records`. `after_keyset` is the keyset
   of the last row a load read, the one string Load more reads after when the read action allows
   keyset pagination; it is `nil` when the rows carry no keyset, and Load more then reads from an
