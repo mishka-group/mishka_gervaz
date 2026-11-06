@@ -307,6 +307,34 @@ defmodule MishkaGervaz.Table.Web.LoadMoreLiveTest do
       view = open("/plain?page=9")
       refute earlier?(view)
     end
+
+    test "the footer says which rows it shows as Load earlier and Load more bring pages" do
+      view = open("/plain?page=2")
+      assert shown(view) == "Showing 5–8 of 10"
+
+      load_earlier(view)
+      assert shown(view) == "Showing 1–8 of 10"
+
+      load_more(view)
+      assert shown(view) == "Showing 1–10 of 10"
+    end
+  end
+
+  test "the footer grows its range with each Load more" do
+    view = open("/plain")
+    assert shown(view) == "Showing 1–4 of 10"
+
+    load_more(view)
+    assert shown(view) == "Showing 1–8 of 10"
+  end
+
+  defp shown(view) do
+    view
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("#items [data-role='gervaz-pagination-trailing']")
+    |> LazyHTML.text()
+    |> String.trim()
   end
 
   describe "the read Load more and Load earlier make" do

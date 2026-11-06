@@ -79,6 +79,15 @@ above: one page and one read a click, until the first page. `state.first_page` i
 shown; `state.page` stays the last. Without keyset it reads that page's slice by offset. A table with
 `keep_loaded_records true` reads pages 1..N on open, so it never offers one.
 
+## The footer
+
+Every pager is one row (`Shared.render_pagination_row/1`): the page size selector first, the page
+buttons or Load More in the middle, and last where the reader is. A numbered table shows its
+`page_info_format` there, a `:load_more` / `:infinite` table the rows it shows of its total,
+`Showing 1–40 of 136` (`Shared.range_label/1`): from the first row shown, so a list opened at page
+3 starts at 41, to `state.next_offset`. Both need `show_total`, and read only the state, so the
+footer adds no query. Below 640px the three parts stack, each centred.
+
 ## `show_total` costs a COUNT
 
 `show_total` defaults to **true** and issues a count query. Turn it off for a data layer that
