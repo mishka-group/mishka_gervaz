@@ -2526,7 +2526,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     ~H"""
     <nav class={@class} aria-label={dgettext("mishka_gervaz", "Progress")}>
-      <ol class="flex items-center space-x-2">
+      <ol class="flex flex-wrap items-center justify-center gap-y-2 space-x-2">
         <%= for {step, index} <- Enum.with_index(@steps) do %>
           <li
             class="flex items-center"

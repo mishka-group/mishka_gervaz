@@ -700,7 +700,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp global_col_class(_), do: "grid grid-cols-1 gap-4"
 
   # Draws one control per declared key through the UI adapter, reading each held value under
-  # either a string or an atom key.
+  # either a string or an atom key: one column on a narrow screen, two from `sm` up, so a select's
+  # longest option is not cut short on a phone.
   defp key_map_inputs(assigns) do
     assigns =
       assigns
@@ -708,8 +709,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign_new(:drawn, fn -> opened(assigns) end)
 
     ~H"""
-    <div class="grid grid-cols-2 gap-2.5" role={@label_id && "group"} aria-labelledby={@label_id}>
-      <div :for={key <- @keys} class={(key.type == :textarea && "col-span-2") || ""}>
+    <div
+      class="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+      role={@label_id && "group"}
+      aria-labelledby={@label_id}
+    >
+      <div :for={key <- @keys} class={(key.type == :textarea && "sm:col-span-2") || ""}>
         <label
           class="mb-[5px] block text-[10px] font-bold text-[#8a877f]"
           for={"#{@input_id}_#{key.name}"}
@@ -982,7 +987,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     ~H"""
     <div class="mt-6 flex items-center justify-end">
-      <div class="flex items-center gap-[14px]">
+      <div class="flex flex-wrap items-center justify-end gap-[14px]">
         <.dynamic_component
           :if={@show_cancel}
           module={@ui}
