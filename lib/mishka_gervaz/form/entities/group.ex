@@ -70,7 +70,8 @@ defmodule MishkaGervaz.Form.Entities.Group do
                 collapsed: [
                   type: :boolean,
                   default: false,
-                  doc: "Start collapsed."
+                  doc:
+                    "Start collapsed. A collapsed group is drawn collapsible, and opens by itself when one of its fields shows an error."
                 ],
                 collapsible: [
                   type: :boolean,

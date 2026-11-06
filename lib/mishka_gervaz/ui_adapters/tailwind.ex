@@ -2453,6 +2453,19 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A group of fields in a fieldset, under its label and description.
+
+  ## Assigns
+    * `:label` - the group's label
+    * `:description` - help text under the label
+    * `:collapsible` - draw the group as a `<details>` the reader opens and closes by its label
+    * `:collapsed` - a collapsible group starts closed
+    * `:class` - the fieldset's classes
+
+  A collapsible group keeps the reader's open or closed choice while the form redraws: its
+  `<details>` ignores the server's `open` attribute once mounted (`Phoenix.LiveView.JS.ignore_attributes/1`).
+  """
   @impl true
   def field_group(assigns) do
     assigns =
@@ -2466,19 +2479,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     ~H"""
     <fieldset class={["min-w-0", @class]}>
       <%= if @collapsible do %>
-        <legend class="px-2">
-          <details open={!@collapsed}>
-            <summary class="cursor-pointer select-none text-[13px] font-bold text-[#17161a]">
-              {@label}
-            </summary>
-            <p :if={@description} class="mt-1 text-[12px] font-medium text-[#8a877f]">
-              {@description}
-            </p>
-            <div class="mt-4 space-y-4">
-              {render_slot(@inner_block)}
-            </div>
-          </details>
-        </legend>
+        <details open={!@collapsed} phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="cursor-pointer select-none px-2 text-[13px] font-bold text-[#17161a]">
+            {@label}
+          </summary>
+          <p :if={@description} class="mt-1 text-[12px] font-medium text-[#8a877f]">
+            {@description}
+          </p>
+          <div class="mt-4 space-y-4">
+            {render_slot(@inner_block)}
+          </div>
+        </details>
       <% else %>
         <legend :if={@label} class="px-2 text-[13px] font-bold text-[#17161a]">
           {@label}

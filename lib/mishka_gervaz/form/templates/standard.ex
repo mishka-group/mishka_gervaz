@@ -188,6 +188,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     render_field_by_type(assigns)
   end
 
+  @doc """
+  One group through the UI adapter's `field_group`, or nothing when none of its fields is shown.
+
+  A group declared `collapsed true` is drawn collapsible and closed, whether or not it also says
+  `collapsible true`: a group that starts closed can always be opened. A collapsed group opens
+  when one of its fields shows an error, so a failed save never hides the error inside it.
+  """
   @impl true
   def render_group(assigns) do
     group = assigns.group
@@ -204,18 +211,22 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     else
       group_class = get_in(group, [:ui, :class])
 
+      collapsed = Map.get(group, :collapsed, false)
+
       assigns =
         assigns
         |> assign(:group_label, translate_text(Map.get(group, :resolved_label)))
         |> assign(:group_fields, group_fields)
         |> assign(:group_columns, get_in(group, [:ui, :columns]))
         |> assign(:ui, assigns.static.ui_adapter)
-        |> assign(:collapsible, Map.get(group, :collapsible, false))
+        |> assign(:collapsible, collapsed or Map.get(group, :collapsible, false))
+        |> assign(:collapsed, collapsed)
+        |> assign(:open_on_error, collapsed and group_has_errors?(visible_fields, assigns.state))
         |> assign(:has_group_class, not is_nil(group_class))
         |> assign(:group_class, group_class || "")
 
       ~H"""
-      <div>
+      <div data-group={@group.name}>
         <%= if @has_group_class do %>
           <.dynamic_component
             module={@ui}
@@ -223,8 +234,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             label={@group_label}
             class={@group_class}
             collapsible={@collapsible}
-            open={true}
+            collapsed={@collapsed}
           >
+            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% else %>
@@ -233,8 +245,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             function={:field_group}
             label={@group_label}
             collapsible={@collapsible}
-            open={true}
+            collapsed={@collapsed}
           >
+            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% end %>
@@ -242,6 +255,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       """
     end
   end
+
+  defp group_has_errors?(fields, %{errors: errors}) when is_map(errors) and errors != %{},
+    do: Enum.any?(fields, &(Map.get(errors, &1.name, []) not in [[], nil, ""]))
+
+  defp group_has_errors?(_fields, _state), do: false
+
+  defp open_group, do: JS.set_attribute({"open", ""}, to: {:closest, "details"})
 
   @impl true
   def render_step_indicator(assigns) do

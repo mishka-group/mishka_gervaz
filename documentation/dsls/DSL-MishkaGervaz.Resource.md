@@ -2710,7 +2710,7 @@ Define a field group.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`fields`](#mishka_gervaz-form-groups-group-fields){: #mishka_gervaz-form-groups-group-fields .spark-required} | `list(atom)` |  | Field names belonging to this group. |
-| [`collapsed`](#mishka_gervaz-form-groups-group-collapsed){: #mishka_gervaz-form-groups-group-collapsed } | `boolean` | `false` | Start collapsed. |
+| [`collapsed`](#mishka_gervaz-form-groups-group-collapsed){: #mishka_gervaz-form-groups-group-collapsed } | `boolean` | `false` | Start collapsed. A collapsed group is drawn collapsible, and opens by itself when one of its fields shows an error. |
 | [`collapsible`](#mishka_gervaz-form-groups-group-collapsible){: #mishka_gervaz-form-groups-group-collapsible } | `boolean` | `false` | Can be collapsed by user. |
 | [`position`](#mishka_gervaz-form-groups-group-position){: #mishka_gervaz-form-groups-group-position } | `any` |  | Group position (integer, :first, :last). |
 | [`visible`](#mishka_gervaz-form-groups-group-visible){: #mishka_gervaz-form-groups-group-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
