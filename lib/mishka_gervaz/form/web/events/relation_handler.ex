@@ -8,7 +8,8 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
 
   - `search` - Search options by term (debounced)
   - `focus` - Open dropdown and load initial options
-  - `close_dropdown` - Close dropdown on click-away
+  - `close_dropdown` - Close dropdown on click-away; the search box is drawn anew (`:drawn`), so
+    text typed into it and not picked is dropped and the box shows what the field holds
   - `select` - Single select (for :search mode)
   - `toggle` - Toggle selection (for :search_multi mode)
   - `clear` - Clear all selections
@@ -152,7 +153,8 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
           has_more?: false,
           page: 1,
           selected_options: selected_options,
-          dropdown_open?: false
+          dropdown_open?: false,
+          drawn: Map.get(current_opts, :drawn, 0) + 1
         })
 
       state = State.update(state, relation_options: relation_options)
@@ -496,7 +498,8 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         page: result.page,
         selected_options: selected_options,
         dropdown_open?: dropdown_open?,
-        search_term: search_term
+        search_term: search_term,
+        drawn: Map.get(current_opts, :drawn, 0)
       })
 
     state = State.update(state, relation_options: relation_options)

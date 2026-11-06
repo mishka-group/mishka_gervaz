@@ -406,6 +406,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
   defp button_to_map(%Submit.Button{} = btn) do
     %{
       label: btn.label,
+      loading_label: btn.loading_label,
       active: btn.active,
       disabled: btn.disabled,
       restricted: btn.restricted,

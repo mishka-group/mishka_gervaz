@@ -1799,10 +1799,14 @@ defmodule MishkaGervaz.Test.Resources.SubmitOptionsForm do
       end
 
       submit do
-        create label: "Create Item", disabled: false, restricted: true
+        create label: "Create Item",
+               loading_label: "Creating the item…",
+               disabled: false,
+               restricted: true
 
         update do
           label "Save Item"
+          loading_label(fn -> "Saving the item…" end)
           disabled fn _state -> false end
           restricted fn _state -> false end
           visible fn _state -> true end

@@ -21,8 +21,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   Mode selection is read from `@state.static.layout_mode`. The render
   pipeline (`render/1`) dispatches notices (`render_notices_at/2`),
   the form header / footer chrome, the body (`render_groups/1` or
-  `render_current_step_groups/1`), upload sections, and submit buttons
+  `render_steps/1`), upload sections, and submit buttons
   in a fixed order so notice positioning stays predictable.
+
+  ## Steps
+
+  A `:wizard` or `:tabs` form draws the groups of every step, each step in a `data-step` container
+  that is `hidden` unless it is the current one. Every input stays in the form, so a step left
+  keeps what was typed into it, a password and a picked file included, and the save sends them all.
+  The form is `novalidate`, as the browser cannot point at a hidden input.
+
+  The submit row holds Cancel, the UI adapter's `step_navigation` (Back on every step but the first,
+  Next on every step but the last) and, on the last step only, the submit button. Next is a submit
+  button, so Enter in a field presses it: see `MishkaGervaz.Form.Web.Events.StepHandler` for what
+  a submit does on each step.
 
   ## Two-axis composition
 
@@ -122,6 +134,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-submit="save"
             phx-target={@myself}
             multipart={has_uploads?(@static)}
+            novalidate={@state.static.layout_mode in [:wizard, :tabs]}
           >
             {render_notices_at(assigns, :form_top)}
             {render_notices_at(assigns, :before_header)}
@@ -132,7 +145,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             <%= if @state.static.layout_mode == :standard do %>
               {render_groups(assigns)}
             <% else %>
-              {render_current_step_groups(assigns)}
+              {render_steps(assigns)}
             <% end %>
 
             {render_uploads_section(assigns)}
@@ -188,6 +201,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     render_field_by_type(assigns)
   end
 
+  @doc """
+  One group through the UI adapter's `field_group`, or nothing when none of its fields is shown.
+
+  A group declared `collapsed true` is drawn collapsible and closed, whether or not it also says
+  `collapsible true`: a group that starts closed can always be opened. A collapsed group opens
+  when one of its fields shows an error, so a failed save never hides the error inside it.
+  """
   @impl true
   def render_group(assigns) do
     group = assigns.group
@@ -204,18 +224,22 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     else
       group_class = get_in(group, [:ui, :class])
 
+      collapsed = Map.get(group, :collapsed, false)
+
       assigns =
         assigns
         |> assign(:group_label, translate_text(Map.get(group, :resolved_label)))
         |> assign(:group_fields, group_fields)
         |> assign(:group_columns, get_in(group, [:ui, :columns]))
         |> assign(:ui, assigns.static.ui_adapter)
-        |> assign(:collapsible, Map.get(group, :collapsible, false))
+        |> assign(:collapsible, collapsed or Map.get(group, :collapsible, false))
+        |> assign(:collapsed, collapsed)
+        |> assign(:open_on_error, collapsed and group_has_errors?(visible_fields, assigns.state))
         |> assign(:has_group_class, not is_nil(group_class))
         |> assign(:group_class, group_class || "")
 
       ~H"""
-      <div>
+      <div data-group={@group.name}>
         <%= if @has_group_class do %>
           <.dynamic_component
             module={@ui}
@@ -223,8 +247,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             label={@group_label}
             class={@group_class}
             collapsible={@collapsible}
-            open={true}
+            collapsed={@collapsed}
           >
+            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% else %>
@@ -233,8 +258,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             function={:field_group}
             label={@group_label}
             collapsible={@collapsible}
-            open={true}
+            collapsed={@collapsed}
           >
+            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% end %>
@@ -242,6 +268,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       """
     end
   end
+
+  defp group_has_errors?(fields, %{errors: errors}) when is_map(errors) and errors != %{},
+    do: Enum.any?(fields, &(Map.get(errors, &1.name, []) not in [[], nil, ""]))
+
+  defp group_has_errors?(_fields, _state), do: false
+
+  defp open_group, do: JS.set_attribute({"open", ""}, to: {:closest, "details"})
 
   @impl true
   def render_step_indicator(assigns) do
@@ -268,7 +301,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:step_indicator}
         steps={@step_data}
-        current={@current_step}
+        current_step={@current_step}
       />
     </div>
     """
@@ -317,30 +350,35 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     end
   end
 
-  defp render_current_step_groups(assigns) do
-    current_step = assigns.state.current_step
-    steps = assigns.static.steps
-    groups = assigns.static.groups
+  # A wizard or tabs form draws every step's groups and hides all but the current step, so the
+  # inputs of the other steps stay in the form: what was typed into them, a password key included,
+  # is kept and sent with each change and with the save, and a file picked on an earlier step is
+  # still uploaded by the save.
+  defp render_steps(%{static: %{steps: []}} = assigns), do: render_groups(assigns)
 
-    step_groups =
-      case Enum.find(steps, &(&1.name == current_step)) do
-        %{groups: group_names} when is_list(group_names) ->
-          Enum.filter(groups, &(&1.name in group_names and accessible?(&1, assigns.state)))
+  defp render_steps(assigns) do
+    groups = Enum.filter(assigns.static.groups, &accessible?(&1, assigns.state))
 
-        _ ->
-          Enum.filter(groups, &accessible?(&1, assigns.state))
-      end
+    steps =
+      for step <- assigns.static.steps,
+          do: {step, State.Helpers.groups_for_step(groups, assigns.static.steps, step.name)}
 
-    assigns = assign(assigns, :step_groups, step_groups)
+    assigns = assign(assigns, :steps, steps)
 
     ~H"""
     <div>
-      <%= for group <- @step_groups do %>
-        <% ga = assign(assigns, :group, group) %>
-        {render_notices_at(assigns, {:before_group, group.name})}
-        {render_group(ga)}
-        {render_notices_at(assigns, {:after_group, group.name})}
-      <% end %>
+      <div
+        :for={{step, groups} <- @steps}
+        data-step={step.name}
+        hidden={step.name != @state.current_step}
+      >
+        <%= for group <- groups do %>
+          <% ga = assign(assigns, :group, group) %>
+          {render_notices_at(assigns, {:before_group, group.name})}
+          {render_group(ga)}
+          {render_notices_at(assigns, {:after_group, group.name})}
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -662,7 +700,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp global_col_class(_), do: "grid grid-cols-1 gap-4"
 
   # Draws one control per declared key through the UI adapter, reading each held value under
-  # either a string or an atom key.
+  # either a string or an atom key: one column on a narrow screen, two from `sm` up, so a select's
+  # longest option is not cut short on a phone.
   defp key_map_inputs(assigns) do
     assigns =
       assigns
@@ -670,8 +709,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign_new(:drawn, fn -> opened(assigns) end)
 
     ~H"""
-    <div class="grid grid-cols-2 gap-2.5" role={@label_id && "group"} aria-labelledby={@label_id}>
-      <div :for={key <- @keys} class={(key.type == :textarea && "col-span-2") || ""}>
+    <div
+      class="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+      role={@label_id && "group"}
+      aria-labelledby={@label_id}
+    >
+      <div :for={key <- @keys} class={(key.type == :textarea && "sm:col-span-2") || ""}>
         <label
           class="mb-[5px] block text-[10px] font-bold text-[#8a877f]"
           for={"#{@input_id}_#{key.name}"}
@@ -870,8 +913,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp busy_label(button, static) do
     cond do
-      is_map(button) and is_binary(button[:loading_label]) ->
-        translate_text(button[:loading_label])
+      is_map(button) and not is_nil(button[:loading_label]) ->
+        resolve_label(button[:loading_label])
 
       static.uploads not in [nil, []] ->
         dgettext("mishka_gervaz", "Uploading…")
@@ -935,26 +978,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:submit_disabled, submit_disabled)
       |> assign(:cancel_disabled, cancel_disabled)
       |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
+      |> assign(:last_step?, last_step?(assigns))
+      |> assign(:first_step?, first_step?(assigns))
       |> assign(:alternatives, alternatives_for(assigns.static, state, submit_disabled))
       |> assign(:alt_menu_id, assigns.static.id <> "-submit-alternatives")
       |> assign(:ui, assigns.static.ui_adapter)
       |> assign(:cancel_js, cancel_js)
 
     ~H"""
-    <div class="mt-6 flex items-center justify-between">
-      <div class="flex gap-2">
-        <.dynamic_component
-          :if={@show_step_nav}
-          module={@ui}
-          function={:step_navigation}
-          current_step={@state.current_step}
-          steps={@static.steps}
-          step_states={@state.step_states}
-          myself={@myself}
-        />
-      </div>
-
-      <div class="flex items-center gap-[14px]">
+    <div class="mt-6 flex items-center justify-end">
+      <div class="flex flex-wrap items-center justify-end gap-[14px]">
         <.dynamic_component
           :if={@show_cancel}
           module={@ui}
@@ -967,7 +1000,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           phx_target={@myself}
         />
 
-        <span :if={@show_submit and (not @show_step_nav or last_step?(assigns))} class="relative flex">
+        <.dynamic_component
+          :if={@show_step_nav}
+          module={@ui}
+          function={:step_navigation}
+          can_go_back={not @first_step?}
+          is_last_step={@last_step?}
+          phx_target={@myself}
+        />
+
+        <span :if={@show_submit and (not @show_step_nav or @last_step?)} class="relative flex">
           <button
             type="submit"
             disabled={@submit_disabled}
@@ -1358,7 +1400,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :select ->
-        options = resolve_field_options(field)
+        options = resolve_field_options(field, assigns.state)
 
         base
         |> assign(:function, :select)
@@ -1367,7 +1409,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :multi_select ->
-        options = resolve_field_options(field)
+        options = resolve_field_options(field, assigns.state)
 
         base
         |> assign(:function, :multi_select)
@@ -2185,7 +2227,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp resolve_callable(f) when is_function(f, 0), do: f.()
   defp resolve_callable(v), do: translate_text(v)
 
-  defp resolve_field_options(field), do: resolve_translated_options(Map.get(field, :options))
+  defp resolve_field_options(%{options: options}, state) when is_function(options, 1),
+    do: options.(state)
+
+  defp resolve_field_options(field, _state),
+    do: resolve_translated_options(Map.get(field, :options))
 
   defp evaluate_readonly(field, state), do: State.Helpers.field_readonly?(field, state)
 
@@ -2381,6 +2427,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  defp first_step?(%{static: %{steps: [%{name: first} | _]}, state: %{current_step: current}}),
+    do: first == current
+
+  defp first_step?(_assigns), do: true
 
   defp last_step?(assigns) do
     steps = assigns.static.steps

@@ -12,6 +12,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       it has loaded, writing its template and page into the URL.
     * `/offset` — the same page with a table of `MishkaGervaz.Test.Web.OffsetItem`, whose read has no
       keyset pagination, so Load more reads from an offset.
+    * `/wizard` — `MishkaGervaz.Test.Web.FormPageLive`, a page with the wizard form of
+      `MishkaGervaz.Test.Web.WizardItem`.
   """
 
   use Phoenix.Router
@@ -31,5 +33,6 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/plain", MishkaGervaz.Test.Web.TablePageLive, :plain
     live "/offset", MishkaGervaz.Test.Web.TablePageLive, :offset
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
+    live "/wizard", MishkaGervaz.Test.Web.FormPageLive
   end
 end

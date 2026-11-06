@@ -153,6 +153,19 @@ defmodule MishkaGervaz.Form.Templates.StandardKeyFieldRenderTest do
       assert html =~ "Compact"
     end
 
+    test "stacks its keys in one column on a narrow screen, two from sm up", %{field: field} do
+      [grid] =
+        field
+        |> render_form()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s|[role="group"], div.grid:has(> div > label[for^="form_settings_"])|)
+        |> LazyHTML.attribute("class")
+        |> Enum.take(1)
+
+      assert grid =~ ~r/(^| )grid-cols-1( |$)/
+      assert grid =~ "sm:grid-cols-2"
+    end
+
     # There is nothing to add or remove — the keys are the declaration — so neither button is drawn
     # and neither marker is needed.
     test "and nothing to add or remove", %{field: field} do

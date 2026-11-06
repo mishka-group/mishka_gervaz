@@ -469,6 +469,7 @@ create button configuration.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`label`](#mishka_gervaz-form-submit-create-label){: #mishka_gervaz-form-submit-create-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`loading_label`](#mishka_gervaz-form-submit-create-loading_label){: #mishka_gervaz-form-submit-create-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
 | [`active`](#mishka_gervaz-form-submit-create-active){: #mishka_gervaz-form-submit-create-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-create-disabled){: #mishka_gervaz-form-submit-create-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-create-visible){: #mishka_gervaz-form-submit-create-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
@@ -497,6 +498,7 @@ update button configuration.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`label`](#mishka_gervaz-form-submit-update-label){: #mishka_gervaz-form-submit-update-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`loading_label`](#mishka_gervaz-form-submit-update-loading_label){: #mishka_gervaz-form-submit-update-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
 | [`active`](#mishka_gervaz-form-submit-update-active){: #mishka_gervaz-form-submit-update-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-update-disabled){: #mishka_gervaz-form-submit-update-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-update-visible){: #mishka_gervaz-form-submit-update-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
@@ -525,6 +527,7 @@ cancel button configuration.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`label`](#mishka_gervaz-form-submit-cancel-label){: #mishka_gervaz-form-submit-cancel-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`loading_label`](#mishka_gervaz-form-submit-cancel-loading_label){: #mishka_gervaz-form-submit-cancel-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
 | [`active`](#mishka_gervaz-form-submit-cancel-active){: #mishka_gervaz-form-submit-cancel-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-cancel-disabled){: #mishka_gervaz-form-submit-cancel-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-cancel-visible){: #mishka_gervaz-form-submit-cancel-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |

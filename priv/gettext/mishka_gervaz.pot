@@ -818,3 +818,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "We"
 msgstr ""
+
+#: lib/mishka_gervaz/form/web/events/step_handler.ex
+#, elixir-autogen, elixir-format
+msgid "%{message} Check it on step %{number}, %{step}."
+msgstr ""

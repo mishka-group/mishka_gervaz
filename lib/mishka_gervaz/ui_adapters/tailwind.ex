@@ -363,6 +363,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   The input carries `aria-expanded`, `"true"` while the list is open.
 
+  `:drawn`, a count a form raises each time the list closes, keys the box around the input
+  (`…-box-<drawn>`), so the browser draws it anew: text typed and not picked is dropped and the box
+  shows the picked option's label, or nothing. Only a picked option is ever the field's value.
+
   The input is a combobox over a listbox: it names the list it controls, and the list is named by
   the field's label, the `<id>-label` a form's field wrapper writes. Each option says whether it is
   the picked one, and a group is named by its heading. Tab reaches the options, Enter or Space picks
@@ -413,6 +417,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:myself, fn -> nil end)
       |> assign_new(:search_term, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:drawn, fn -> nil end)
 
     assigns =
       assign(assigns, :listbox, "search-select-#{assigns.table_id}-#{assigns.filter_name}-list")
@@ -425,7 +430,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
-      <div class="relative">
+      <div
+        class="relative"
+        id={@drawn && "search-select-#{@table_id}-#{@filter_name}-box-#{@drawn}"}
+      >
         <.render_icon
           :if={@icon}
           name={@icon}
@@ -2453,6 +2461,19 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A group of fields in a fieldset, under its label and description.
+
+  ## Assigns
+    * `:label` - the group's label
+    * `:description` - help text under the label
+    * `:collapsible` - draw the group as a `<details>` the reader opens and closes by its label
+    * `:collapsed` - a collapsible group starts closed
+    * `:class` - the fieldset's classes
+
+  A collapsible group keeps the reader's open or closed choice while the form redraws: its
+  `<details>` ignores the server's `open` attribute once mounted (`Phoenix.LiveView.JS.ignore_attributes/1`).
+  """
   @impl true
   def field_group(assigns) do
     assigns =
@@ -2466,19 +2487,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     ~H"""
     <fieldset class={["min-w-0", @class]}>
       <%= if @collapsible do %>
-        <legend class="px-2">
-          <details open={!@collapsed}>
-            <summary class="cursor-pointer select-none text-[13px] font-bold text-[#17161a]">
-              {@label}
-            </summary>
-            <p :if={@description} class="mt-1 text-[12px] font-medium text-[#8a877f]">
-              {@description}
-            </p>
-            <div class="mt-4 space-y-4">
-              {render_slot(@inner_block)}
-            </div>
-          </details>
-        </legend>
+        <details open={!@collapsed} phx-mounted={JS.ignore_attributes("open")}>
+          <summary class="cursor-pointer select-none px-2 text-[13px] font-bold text-[#17161a]">
+            {@label}
+          </summary>
+          <p :if={@description} class="mt-1 text-[12px] font-medium text-[#8a877f]">
+            {@description}
+          </p>
+          <div class="mt-4 space-y-4">
+            {render_slot(@inner_block)}
+          </div>
+        </details>
       <% else %>
         <legend :if={@label} class="px-2 text-[13px] font-bold text-[#17161a]">
           {@label}
@@ -2494,6 +2513,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  The steps of a wizard or tabs form as numbered circles joined by lines.
+
+  ## Assigns
+    * `:steps` - each step as `%{name: atom, label: String.t(), status: status}`, with an optional
+      `:icon`; `status` is `:pending`, `:active`, `:completed` or `:error`
+    * `:current_step` - the name of the step shown, marked `aria-current="step"`
+    * `:class` - the `<nav>`'s classes
+
+  A completed step shows a check, a step with an error is drawn in the error colour.
+  """
   @impl true
   def step_indicator(assigns) do
     assigns =
@@ -2504,9 +2534,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     ~H"""
     <nav class={@class} aria-label={dgettext("mishka_gervaz", "Progress")}>
-      <ol class="flex items-center space-x-2">
+      <ol class="flex flex-wrap items-center justify-center gap-y-2 space-x-2">
         <%= for {step, index} <- Enum.with_index(@steps) do %>
-          <li class="flex items-center">
+          <li
+            class="flex items-center"
+            data-step={step.name}
+            data-status={step.status}
+            aria-current={step.name == @current_step && "step"}
+          >
             <div
               :if={index > 0}
               class={[
@@ -2520,7 +2555,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 step_circle_class(step.status, step.name == @current_step)
               ]}>
                 <%= cond do %>
-                  <% step.status == :complete -> %>
+                  <% step.status == :completed -> %>
                     <.render_icon name="hero-check" class="w-4 h-4" />
                   <% step[:icon] -> %>
                     <.render_icon name={step.icon} class="w-4 h-4" />
@@ -2542,6 +2577,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  The Back and Next buttons of a wizard or tabs form.
+
+  ## Assigns
+    * `:can_go_back` - draw Back, which sends `prev_step`
+    * `:is_last_step` - draw no Next: the form's own submit button follows on the last step
+    * `:can_advance` - Next is enabled
+    * `:prev_label`, `:next_label` - the buttons' labels, "Back" and "Next" by default
+    * `:phx_target` - the form's LiveComponent, which Back's `prev_step` is sent to; given through
+      `MishkaGervaz.Helpers.dynamic_component/1`, it arrives as `:"phx-target"`
+    * `:class` - the container's classes
+
+  Next is the form's submit button, so Enter in a field presses it, and the form's `phx-submit`
+  moves a step that is not the last one on rather than saving: see
+  `MishkaGervaz.Form.Web.Events.StepHandler`.
+  """
   @impl true
   def step_navigation(assigns) do
     assigns =
@@ -2551,17 +2602,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:is_last_step, fn -> false end)
       |> assign_new(:prev_label, fn -> dgettext("mishka_gervaz", "Back") end)
       |> assign_new(:next_label, fn -> dgettext("mishka_gervaz", "Next") end)
-      |> assign_new(:submit_label, fn -> dgettext("mishka_gervaz", "Submit") end)
-      |> assign_new(:phx_target, fn -> nil end)
-      |> assign_new(:class, fn ->
-        "flex items-center justify-between border-t border-[#ecebe6] pt-6"
-      end)
+      |> assign(:phx_target, assigns[:"phx-target"] || assigns[:phx_target])
+      |> assign_new(:class, fn -> "flex items-center gap-2" end)
 
     ~H"""
-    <div class={@class}>
+    <div class={@class} data-role="gervaz-step-navigation">
       <button
         :if={@can_go_back}
         type="button"
+        data-role="gervaz-step-back"
         phx-click="prev_step"
         phx-target={@phx_target}
         class={secondary_button_class()}
@@ -2569,25 +2618,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <.render_icon name="hero-arrow-left" class="size-4 rtl:rotate-180" />
         {@prev_label}
       </button>
-      <div :if={!@can_go_back} />
 
-      <%= if @is_last_step do %>
-        <button type="submit" class={primary_button_class(true)}>
-          {@submit_label}
-          <.render_icon name="hero-check" class="size-4" />
-        </button>
-      <% else %>
-        <button
-          type="button"
-          phx-click="next_step"
-          phx-target={@phx_target}
-          disabled={!@can_advance}
-          class={primary_button_class(@can_advance)}
-        >
-          {@next_label}
-          <.render_icon name="hero-arrow-right" class="size-4 rtl:rotate-180" />
-        </button>
-      <% end %>
+      <button
+        :if={!@is_last_step}
+        type="submit"
+        data-role="gervaz-step-next"
+        disabled={!@can_advance}
+        class={primary_button_class(@can_advance)}
+      >
+        {@next_label}
+        <.render_icon name="hero-arrow-right" class="size-4 rtl:rotate-180" />
+      </button>
     </div>
     """
   end
@@ -3524,7 +3565,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     |> String.replace("{count}", to_string(total_count || ""))
   end
 
-  defp step_circle_class(:complete, _current),
+  defp step_circle_class(:completed, _current),
     do: "border-[#5b57d6] bg-[#5b57d6] text-white"
 
   defp step_circle_class(_status, true),
@@ -3536,10 +3577,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp step_circle_class(_status, false),
     do: "border-[#e0ded7] bg-white text-[#a8a5a0]"
 
-  defp step_connector_class(:complete), do: "bg-[#5b57d6]"
+  defp step_connector_class(:completed), do: "bg-[#5b57d6]"
   defp step_connector_class(_), do: "bg-[#e0ded7]"
 
-  defp step_label_class(:complete, _current), do: "font-semibold text-[#4f4bcc]"
+  defp step_label_class(:completed, _current), do: "font-semibold text-[#4f4bcc]"
   defp step_label_class(_status, true), do: "font-semibold text-[#4f4bcc]"
   defp step_label_class(:error, _current), do: "font-semibold text-[#c0392b]"
   defp step_label_class(_, _), do: "font-medium text-[#8a877f]"

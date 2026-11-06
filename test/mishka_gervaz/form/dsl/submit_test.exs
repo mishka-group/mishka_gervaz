@@ -82,6 +82,16 @@ defmodule MishkaGervaz.Form.DSL.SubmitTest do
       submit = FormInfo.submit(SubmitOptionsForm)
       assert submit.position == :top
     end
+
+    test "a button's loading_label is a string or a function, what it reads while it saves" do
+      for submit <- [
+            FormInfo.submit(SubmitOptionsForm),
+            FormInfo.config(SubmitOptionsForm).submit
+          ] do
+        assert submit.create.loading_label == "Creating the item…"
+        assert submit.update.loading_label.() == "Saving the item…"
+      end
+    end
   end
 
   describe "NoButtonsForm — empty submit inherits from domain" do

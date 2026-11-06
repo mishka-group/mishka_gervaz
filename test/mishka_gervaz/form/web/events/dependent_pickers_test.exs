@@ -417,6 +417,53 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
 
       assert options.workspace_id.options == []
     end
+
+    test "text typed into a search picker and left with a click away is dropped: the box shows what it holds",
+         ctx do
+      socket = edit_form(ctx.entry)
+
+      {:noreply, socket} =
+        Events.handle(
+          "relation_search",
+          %{"filter" => "workspace_id", "_search_workspace_id" => "W1 and more typed"},
+          socket
+        )
+
+      assert {"W1 and more typed", typed} = typed_box(socket)
+
+      {:noreply, socket} =
+        Events.handle("relation_close_dropdown", %{"filter" => "workspace_id"}, socket)
+
+      {shown, box} = typed_box(socket)
+      assert shown == "W1"
+      assert box != typed, "the box is drawn anew, so the browser drops the typed text"
+
+      {:noreply, socket} =
+        Events.handle("relation_close_dropdown", %{"filter" => "workspace_id"}, socket)
+
+      assert {"W1", other} = typed_box(socket)
+      assert other != box
+    end
+  end
+
+  # What the workspace picker's search box shows, and the id of the box drawn around it.
+  defp typed_box(socket) do
+    state = socket.assigns.form_state
+    field = Enum.find(state.static.fields, &(&1.name == :workspace_id))
+
+    doc =
+      field
+      |> MishkaGervaz.Form.Types.Field.Relation.render_input(
+        state.relation_options.workspace_id,
+        %{field_values: state.field_values, form_id: state.static.id},
+        MishkaGervaz.UIAdapters.Tailwind
+      )
+      |> Phoenix.LiveViewTest.rendered_to_string()
+      |> LazyHTML.from_fragment()
+
+    [shown] = doc |> LazyHTML.query(~s|input[type="text"]|) |> LazyHTML.attribute("value")
+    box = doc |> LazyHTML.query(~s|div[id$="-box"], div[id*="-box-"]|) |> LazyHTML.attribute("id")
+    {shown, List.first(box)}
   end
 
   describe "a parent the user may not change" do

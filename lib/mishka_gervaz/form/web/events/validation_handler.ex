@@ -77,7 +77,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
 
             validated =
               form.source
-              |> AshPhoenix.Form.validate(form_params, target: target)
+              |> AshPhoenix.Form.validate(form_params, target: target || [])
               |> Phoenix.Component.to_form()
               |> merge_field_type_errors(field_type_errors)
 
@@ -90,7 +90,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
                   build_errors(validated)
 
                 true ->
-                  %{}
+                  refused_step_errors(state, validated)
               end
 
             state = State.update(state, form: validated, errors: errors, dirty?: true)
@@ -107,6 +107,20 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       def build_errors(form) do
         MishkaGervaz.Form.Web.Events.SubmitHandler.format_form_errors(form)
       end
+
+      # A create form shows no error before its first save, but a wizard step Next refused keeps
+      # showing its own fields' errors, as they are now, until it moves on.
+      defp refused_step_errors(%{current_step: step, step_states: %{} = states} = state, form) do
+        case states do
+          %{^step => :error} ->
+            MishkaGervaz.Form.Web.Events.StepHandler.step_errors(%{state | form: form}, step)
+
+          _not_refused ->
+            %{}
+        end
+      end
+
+      defp refused_step_errors(_state, _form), do: %{}
 
       defp merge_field_type_errors(form, []), do: form
 

@@ -220,6 +220,12 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   A `:key_map` or `:key_list` field may take `fn state -> keys end`: it is read with
                   the form state each time the field is drawn and each time its params are read, so
                   the keys can follow `state.defaults`. See `MishkaGervaz.Form.Types.Field.KeyMap`.
+
+                  A `:select` or `:multi_select` field may take `fn state -> options end`: it is
+                  read with the form state each time the field is drawn, so the options can follow
+                  what the form holds (`state.form`, `state.defaults`, `state.current_user`). It
+                  runs on every draw, so read what it needs from the state or a cache rather than
+                  querying. Its options are returned as it gives them, labels untranslated.
                   """
                 ],
                 display_field: [
