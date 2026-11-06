@@ -6,7 +6,10 @@ defmodule MishkaGervaz.Form.Dsl.Layout do
   Three modes drive the rendering shape:
 
     * `:standard` — single page, all groups visible.
-    * `:wizard` — step-by-step, only the current step renders.
+    * `:wizard` — step-by-step: every step is in the form, only the current one is shown. Next
+      checks the step's fields first, Enter in a field presses Next, and only the last step saves;
+      a save that fails on an earlier step's field goes back to that step. See
+      `MishkaGervaz.Form.Web.Events.StepHandler`.
     * `:tabs` — every step rendered as a tab/accordion.
 
   `:wizard` and `:tabs` require one or more `step` entities. Step flow is

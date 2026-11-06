@@ -21,8 +21,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   Mode selection is read from `@state.static.layout_mode`. The render
   pipeline (`render/1`) dispatches notices (`render_notices_at/2`),
   the form header / footer chrome, the body (`render_groups/1` or
-  `render_current_step_groups/1`), upload sections, and submit buttons
+  `render_steps/1`), upload sections, and submit buttons
   in a fixed order so notice positioning stays predictable.
+
+  ## Steps
+
+  A `:wizard` or `:tabs` form draws the groups of every step, each step in a `data-step` container
+  that is `hidden` unless it is the current one. Every input stays in the form, so a step left
+  keeps what was typed into it, a password and a picked file included, and the save sends them all.
+  The form is `novalidate`, as the browser cannot point at a hidden input.
+
+  The submit row holds Cancel, the UI adapter's `step_navigation` (Back on every step but the first,
+  Next on every step but the last) and, on the last step only, the submit button. Next is a submit
+  button, so Enter in a field presses it: see `MishkaGervaz.Form.Web.Events.StepHandler` for what
+  a submit does on each step.
 
   ## Two-axis composition
 
@@ -122,6 +134,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-submit="save"
             phx-target={@myself}
             multipart={has_uploads?(@static)}
+            novalidate={@state.static.layout_mode in [:wizard, :tabs]}
           >
             {render_notices_at(assigns, :form_top)}
             {render_notices_at(assigns, :before_header)}
@@ -132,7 +145,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             <%= if @state.static.layout_mode == :standard do %>
               {render_groups(assigns)}
             <% else %>
-              {render_current_step_groups(assigns)}
+              {render_steps(assigns)}
             <% end %>
 
             {render_uploads_section(assigns)}
@@ -288,7 +301,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         module={@ui}
         function={:step_indicator}
         steps={@step_data}
-        current={@current_step}
+        current_step={@current_step}
       />
     </div>
     """
@@ -337,30 +350,35 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     end
   end
 
-  defp render_current_step_groups(assigns) do
-    current_step = assigns.state.current_step
-    steps = assigns.static.steps
-    groups = assigns.static.groups
+  # A wizard or tabs form draws every step's groups and hides all but the current step, so the
+  # inputs of the other steps stay in the form: what was typed into them, a password key included,
+  # is kept and sent with each change and with the save, and a file picked on an earlier step is
+  # still uploaded by the save.
+  defp render_steps(%{static: %{steps: []}} = assigns), do: render_groups(assigns)
 
-    step_groups =
-      case Enum.find(steps, &(&1.name == current_step)) do
-        %{groups: group_names} when is_list(group_names) ->
-          Enum.filter(groups, &(&1.name in group_names and accessible?(&1, assigns.state)))
+  defp render_steps(assigns) do
+    groups = Enum.filter(assigns.static.groups, &accessible?(&1, assigns.state))
 
-        _ ->
-          Enum.filter(groups, &accessible?(&1, assigns.state))
-      end
+    steps =
+      for step <- assigns.static.steps,
+          do: {step, State.Helpers.groups_for_step(groups, assigns.static.steps, step.name)}
 
-    assigns = assign(assigns, :step_groups, step_groups)
+    assigns = assign(assigns, :steps, steps)
 
     ~H"""
     <div>
-      <%= for group <- @step_groups do %>
-        <% ga = assign(assigns, :group, group) %>
-        {render_notices_at(assigns, {:before_group, group.name})}
-        {render_group(ga)}
-        {render_notices_at(assigns, {:after_group, group.name})}
-      <% end %>
+      <div
+        :for={{step, groups} <- @steps}
+        data-step={step.name}
+        hidden={step.name != @state.current_step}
+      >
+        <%= for group <- groups do %>
+          <% ga = assign(assigns, :group, group) %>
+          {render_notices_at(assigns, {:before_group, group.name})}
+          {render_group(ga)}
+          {render_notices_at(assigns, {:after_group, group.name})}
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -955,25 +973,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:submit_disabled, submit_disabled)
       |> assign(:cancel_disabled, cancel_disabled)
       |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
+      |> assign(:last_step?, last_step?(assigns))
+      |> assign(:first_step?, first_step?(assigns))
       |> assign(:alternatives, alternatives_for(assigns.static, state, submit_disabled))
       |> assign(:alt_menu_id, assigns.static.id <> "-submit-alternatives")
       |> assign(:ui, assigns.static.ui_adapter)
       |> assign(:cancel_js, cancel_js)
 
     ~H"""
-    <div class="mt-6 flex items-center justify-between">
-      <div class="flex gap-2">
-        <.dynamic_component
-          :if={@show_step_nav}
-          module={@ui}
-          function={:step_navigation}
-          current_step={@state.current_step}
-          steps={@static.steps}
-          step_states={@state.step_states}
-          myself={@myself}
-        />
-      </div>
-
+    <div class="mt-6 flex items-center justify-end">
       <div class="flex items-center gap-[14px]">
         <.dynamic_component
           :if={@show_cancel}
@@ -987,7 +995,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           phx_target={@myself}
         />
 
-        <span :if={@show_submit and (not @show_step_nav or last_step?(assigns))} class="relative flex">
+        <.dynamic_component
+          :if={@show_step_nav}
+          module={@ui}
+          function={:step_navigation}
+          can_go_back={not @first_step?}
+          is_last_step={@last_step?}
+          phx_target={@myself}
+        />
+
+        <span :if={@show_submit and (not @show_step_nav or @last_step?)} class="relative flex">
           <button
             type="submit"
             disabled={@submit_disabled}
@@ -2405,6 +2422,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  defp first_step?(%{static: %{steps: [%{name: first} | _]}, state: %{current_step: current}}),
+    do: first == current
+
+  defp first_step?(_assigns), do: true
 
   defp last_step?(assigns) do
     steps = assigns.static.steps

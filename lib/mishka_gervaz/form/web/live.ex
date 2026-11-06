@@ -80,6 +80,11 @@ defmodule MishkaGervaz.Form.Web.Live do
       def handle_info({:form_event, event, params}, socket), do: ...
       def handle_info({:add_nested_field, field_name}, socket), do: ...
       def handle_info({:remove_nested_field, field_name, index}, socket), do: ...
+      def handle_info({:put_flash, kind, message}, socket), do: ...
+
+  A wizard or tabs form whose save failed on a field of an earlier step sends `{:put_flash, :error,
+  message}`, naming the step to check (see `MishkaGervaz.Form.Web.Events.StepHandler`); the page
+  puts it with `Phoenix.LiveView.put_flash/3`.
 
   See `MishkaGervaz.Form.Web.State` (state shape + override surface),
   `MishkaGervaz.Form.Web.DataLoader` (record + relation loading),
@@ -93,6 +98,7 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
   alias MishkaGervaz.Form.Web.UploadHelpers
+  alias MishkaGervaz.Resource.Info.Form, as: Info
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -201,20 +207,38 @@ defmodule MishkaGervaz.Form.Web.Live do
   @doc false
   @spec fresh_state(State.t()) :: State.t()
   def fresh_state(%State{} = state) do
-    State.update(state,
-      form: nil,
-      loading: :initial,
-      errors: %{},
-      form_errors: [],
-      dirty?: false,
-      existing_files: %{},
-      field_values: %{},
-      relation_options: static_relation_options(state),
-      upload_state: %{},
-      pickers: %{},
-      opened: (state.opened || 0) + 1
+    State.update(
+      state,
+      [
+        form: nil,
+        loading: :initial,
+        errors: %{},
+        form_errors: [],
+        dirty?: false,
+        existing_files: %{},
+        field_values: %{},
+        relation_options: static_relation_options(state),
+        upload_state: %{},
+        pickers: %{},
+        opened: (state.opened || 0) + 1
+      ] ++ first_step(state)
     )
   end
+
+  # A wizard or tabs form starts over on its first step, as the resource's step builder names it.
+  defp first_step(%{static: %{layout_mode: mode, steps: steps, resource: resource}})
+       when mode in [:wizard, :tabs] do
+    builder = Map.get(Info.state(resource), :step, State.StepBuilder.Default)
+    current = builder.initial_step(steps)
+
+    [
+      current_step: current,
+      step_states: builder.initial_step_states(steps),
+      wizard_history: List.wrap(current)
+    ]
+  end
+
+  defp first_step(_state), do: []
 
   defp static_relation_options(%{static: %{fields: fields}, relation_options: options}) do
     names =

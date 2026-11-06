@@ -2505,6 +2505,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  The steps of a wizard or tabs form as numbered circles joined by lines.
+
+  ## Assigns
+    * `:steps` - each step as `%{name: atom, label: String.t(), status: status}`, with an optional
+      `:icon`; `status` is `:pending`, `:active`, `:completed` or `:error`
+    * `:current_step` - the name of the step shown, marked `aria-current="step"`
+    * `:class` - the `<nav>`'s classes
+
+  A completed step shows a check, a step with an error is drawn in the error colour.
+  """
   @impl true
   def step_indicator(assigns) do
     assigns =
@@ -2517,7 +2528,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <nav class={@class} aria-label={dgettext("mishka_gervaz", "Progress")}>
       <ol class="flex items-center space-x-2">
         <%= for {step, index} <- Enum.with_index(@steps) do %>
-          <li class="flex items-center">
+          <li
+            class="flex items-center"
+            data-step={step.name}
+            data-status={step.status}
+            aria-current={step.name == @current_step && "step"}
+          >
             <div
               :if={index > 0}
               class={[
@@ -2531,7 +2547,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 step_circle_class(step.status, step.name == @current_step)
               ]}>
                 <%= cond do %>
-                  <% step.status == :complete -> %>
+                  <% step.status == :completed -> %>
                     <.render_icon name="hero-check" class="w-4 h-4" />
                   <% step[:icon] -> %>
                     <.render_icon name={step.icon} class="w-4 h-4" />
@@ -2553,6 +2569,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  The Back and Next buttons of a wizard or tabs form.
+
+  ## Assigns
+    * `:can_go_back` - draw Back, which sends `prev_step`
+    * `:is_last_step` - draw no Next: the form's own submit button follows on the last step
+    * `:can_advance` - Next is enabled
+    * `:prev_label`, `:next_label` - the buttons' labels, "Back" and "Next" by default
+    * `:phx_target` - the form's LiveComponent, which Back's `prev_step` is sent to; given through
+      `MishkaGervaz.Helpers.dynamic_component/1`, it arrives as `:"phx-target"`
+    * `:class` - the container's classes
+
+  Next is the form's submit button, so Enter in a field presses it, and the form's `phx-submit`
+  moves a step that is not the last one on rather than saving: see
+  `MishkaGervaz.Form.Web.Events.StepHandler`.
+  """
   @impl true
   def step_navigation(assigns) do
     assigns =
@@ -2562,17 +2594,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:is_last_step, fn -> false end)
       |> assign_new(:prev_label, fn -> dgettext("mishka_gervaz", "Back") end)
       |> assign_new(:next_label, fn -> dgettext("mishka_gervaz", "Next") end)
-      |> assign_new(:submit_label, fn -> dgettext("mishka_gervaz", "Submit") end)
-      |> assign_new(:phx_target, fn -> nil end)
-      |> assign_new(:class, fn ->
-        "flex items-center justify-between border-t border-[#ecebe6] pt-6"
-      end)
+      |> assign(:phx_target, assigns[:"phx-target"] || assigns[:phx_target])
+      |> assign_new(:class, fn -> "flex items-center gap-2" end)
 
     ~H"""
-    <div class={@class}>
+    <div class={@class} data-role="gervaz-step-navigation">
       <button
         :if={@can_go_back}
         type="button"
+        data-role="gervaz-step-back"
         phx-click="prev_step"
         phx-target={@phx_target}
         class={secondary_button_class()}
@@ -2580,25 +2610,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <.render_icon name="hero-arrow-left" class="size-4 rtl:rotate-180" />
         {@prev_label}
       </button>
-      <div :if={!@can_go_back} />
 
-      <%= if @is_last_step do %>
-        <button type="submit" class={primary_button_class(true)}>
-          {@submit_label}
-          <.render_icon name="hero-check" class="size-4" />
-        </button>
-      <% else %>
-        <button
-          type="button"
-          phx-click="next_step"
-          phx-target={@phx_target}
-          disabled={!@can_advance}
-          class={primary_button_class(@can_advance)}
-        >
-          {@next_label}
-          <.render_icon name="hero-arrow-right" class="size-4 rtl:rotate-180" />
-        </button>
-      <% end %>
+      <button
+        :if={!@is_last_step}
+        type="submit"
+        data-role="gervaz-step-next"
+        disabled={!@can_advance}
+        class={primary_button_class(@can_advance)}
+      >
+        {@next_label}
+        <.render_icon name="hero-arrow-right" class="size-4 rtl:rotate-180" />
+      </button>
     </div>
     """
   end
@@ -3535,7 +3557,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     |> String.replace("{count}", to_string(total_count || ""))
   end
 
-  defp step_circle_class(:complete, _current),
+  defp step_circle_class(:completed, _current),
     do: "border-[#5b57d6] bg-[#5b57d6] text-white"
 
   defp step_circle_class(_status, true),
@@ -3547,10 +3569,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp step_circle_class(_status, false),
     do: "border-[#e0ded7] bg-white text-[#a8a5a0]"
 
-  defp step_connector_class(:complete), do: "bg-[#5b57d6]"
+  defp step_connector_class(:completed), do: "bg-[#5b57d6]"
   defp step_connector_class(_), do: "bg-[#e0ded7]"
 
-  defp step_label_class(:complete, _current), do: "font-semibold text-[#4f4bcc]"
+  defp step_label_class(:completed, _current), do: "font-semibold text-[#4f4bcc]"
   defp step_label_class(_status, true), do: "font-semibold text-[#4f4bcc]"
   defp step_label_class(:error, _current), do: "font-semibold text-[#c0392b]"
   defp step_label_class(_, _), do: "font-medium text-[#8a877f]"

@@ -181,35 +181,9 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def do_handle("save", params, state, socket) do
-    submit_button =
-      if state.mode == :create,
-        do: state.static.submit[:create],
-        else: state.static.submit[:update]
-
-    if submit_button_allowed?(submit_button, state) do
-      params =
-        params
-        |> sanitize_params(state.static.fields, state)
-        |> strip_empty_list_values()
-        |> decode_constrained_map_params(state.static.fields)
-        |> strip_empty_constrained_entries(state.static.fields)
-
-      case run_hook(state, :before_save, [params, state]) do
-        {:halt, _reason} ->
-          {:noreply, socket}
-
-        {:cont, modified_params} ->
-          {:noreply, submit_with_picks(state, modified_params, socket)}
-
-        modified_params when is_map(modified_params) and not is_struct(modified_params) ->
-          {:noreply, submit_with_picks(state, modified_params, socket)}
-
-        _ ->
-          {:noreply, submit_with_picks(state, params, socket)}
-      end
-    else
-      {:noreply, socket}
-    end
+    if before_last_step?(state),
+      do: {:noreply, next_step(params, state, socket)},
+      else: {:noreply, save(params, state, socket)}
   end
 
   def do_handle("cancel", _params, state, socket) do
@@ -231,10 +205,8 @@ defmodule MishkaGervaz.Form.Web.Events do
   def do_handle("reset", _params, _state, socket),
     do: {:noreply, MishkaGervaz.Form.Web.Live.start_over(socket, nil)}
 
-  def do_handle("next_step", _params, state, socket) do
-    socket = step_handler(state).advance(state, socket)
-    {:noreply, socket}
-  end
+  def do_handle("next_step", _params, state, socket),
+    do: {:noreply, next_step(%{}, state, socket)}
 
   def do_handle("prev_step", _params, state, socket) do
     socket = step_handler(state).go_back(state, socket)
@@ -789,10 +761,65 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   defp settable_field?(_name, _state), do: false
 
+  defp save(params, state, socket) do
+    submit_button =
+      if state.mode == :create,
+        do: state.static.submit[:create],
+        else: state.static.submit[:update]
+
+    if submit_button_allowed?(submit_button, state) do
+      params =
+        params
+        |> sanitize_params(state.static.fields, state)
+        |> strip_empty_list_values()
+        |> decode_constrained_map_params(state.static.fields)
+        |> strip_empty_constrained_entries(state.static.fields)
+
+      case run_hook(state, :before_save, [params, state]) do
+        {:halt, _reason} ->
+          socket
+
+        {:cont, modified_params} ->
+          submit_with_picks(state, modified_params, socket)
+
+        modified when is_map(modified) and not is_struct(modified) ->
+          submit_with_picks(state, modified, socket)
+
+        _ ->
+          submit_with_picks(state, params, socket)
+      end
+    else
+      socket
+    end
+  end
+
+  # Next, pressed or the form's submit on a step before the last: what the form holds is validated,
+  # then the step handler moves on or shows the step's errors.
+  defp next_step(params, state, socket) do
+    {:noreply, socket} = do_handle("validate", params, state, socket)
+    validated = socket.assigns.form_state
+    step_handler(validated).advance(validated, socket)
+  end
+
+  defp before_last_step?(%{static: %{layout_mode: mode, steps: [_ | _] = steps}} = state)
+       when mode in [:wizard, :tabs],
+       do: List.last(steps).name != state.current_step
+
+  defp before_last_step?(_state), do: false
+
   defp submit_with_picks(state, params, socket) do
     {state, _picked} = put_select_picks(state, params)
-    submit_handler(state).submit(state, params, socket)
+    socket = submit_handler(state).submit(state, params, socket)
+    to_failed_step(socket, socket.assigns.form_state)
   end
+
+  # A wizard or tabs save that failed moves to the step holding the error, see
+  # `MishkaGervaz.Form.Web.Events.StepHandler.goto_errors/2`.
+  defp to_failed_step(socket, %{static: %{layout_mode: mode}, errors: errors} = state)
+       when mode in [:wizard, :tabs] and is_map(errors) and errors != %{},
+       do: step_handler(state).goto_errors(state, socket)
+
+  defp to_failed_step(socket, _state), do: socket
 
   defp reload_dependents_of(socket, names) do
     Enum.reduce(names, socket, fn name, acc ->
