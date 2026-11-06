@@ -1358,7 +1358,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :select ->
-        options = resolve_field_options(field)
+        options = resolve_field_options(field, assigns.state)
 
         base
         |> assign(:function, :select)
@@ -1367,7 +1367,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :multi_select ->
-        options = resolve_field_options(field)
+        options = resolve_field_options(field, assigns.state)
 
         base
         |> assign(:function, :multi_select)
@@ -2185,7 +2185,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp resolve_callable(f) when is_function(f, 0), do: f.()
   defp resolve_callable(v), do: translate_text(v)
 
-  defp resolve_field_options(field), do: resolve_translated_options(Map.get(field, :options))
+  defp resolve_field_options(%{options: options}, state) when is_function(options, 1),
+    do: options.(state)
+
+  defp resolve_field_options(field, _state),
+    do: resolve_translated_options(Map.get(field, :options))
 
   defp evaluate_readonly(field, state), do: State.Helpers.field_readonly?(field, state)
 
