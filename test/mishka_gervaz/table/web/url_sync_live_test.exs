@@ -119,7 +119,7 @@ defmodule MishkaGervaz.Table.Web.UrlSyncLiveTest do
       view = open("/items?page=#{page}")
 
       assert shown(view) == []
-      assert has_element?(view, "[data-role=gervaz-table-frame]")
+      assert has_element?(view, "#items button", "Go to page 1")
     end
 
     test "with a sort by a field the table does not sort by opens with its own sort" do

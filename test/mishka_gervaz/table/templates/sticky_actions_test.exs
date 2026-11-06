@@ -236,36 +236,93 @@ defmodule MishkaGervaz.Table.Templates.StickyActionsTest do
 
   describe "the row actions' dropdown" do
     defp dropdown(html) do
-      [_, wrapper, trigger] =
+      [_, trigger, menu_id, menu, items] =
         Regex.run(
-          ~r/<div class="relative inline-block text-start"([^>]*)>\s*<button([^>]*)>/s,
+          ~r/<div class="relative inline-block text-start">\s*<button([^>]*)>.*?<\/button>\s*<div id="([^"]*)"([^>]*)>(.*?)<\/div>\s*<\/div>\s*<\/div>/s,
           html
         )
 
-      {wrapper, trigger}
+      %{trigger: trigger, menu_id: menu_id, menu: menu, items: items}
     end
 
-    test "its trigger says whether the menu is shown" do
-      {_wrapper, trigger} = table_state() |> render_table() |> dropdown()
-
-      [_, menu_id] = Regex.run(~r/aria-controls="([^"]*)"/, trigger)
-
-      assert trigger =~ ~s(id="#{menu_id}-trigger")
-      assert trigger =~ ~s(aria-haspopup="true")
-      assert trigger =~ ~s(aria-expanded="false")
-      assert trigger =~ "toggle_attr"
-      assert trigger =~ "aria-expanded"
+    defp with_dropdown_items(state, items) do
+      [more] = state.static.row_action_dropdowns
+      with_static(state, row_action_dropdowns: [%{more | items: items}])
     end
 
-    test "a click outside it hides the menu and marks the trigger collapsed" do
-      {wrapper, trigger} = table_state() |> render_table() |> dropdown()
+    defp headings(html),
+      do: Regex.scan(~r/>\s*(Danger zone|Permanent)\s*</, html, capture: :all_but_first)
 
-      [_, menu_id] = Regex.run(~r/aria-controls="([^"]*)"/, trigger)
+    test "its menu is a popover the trigger opens, drawn in the top layer, not in the scrolling frame" do
+      html = table_state() |> render_table()
+      %{trigger: trigger, menu_id: menu_id, menu: menu} = dropdown(html)
 
-      assert wrapper =~ "phx-click-away"
-      assert wrapper =~ "hide"
-      assert wrapper =~ "set_attr"
-      assert wrapper =~ "#{menu_id}-trigger"
+      assert html =~ ~s(data-role="gervaz-table-frame")
+      assert trigger =~ ~s(popovertarget="#{menu_id}")
+      assert trigger =~ ~s(aria-controls="#{menu_id}")
+      assert menu =~ ~s(popover="auto")
+      refute menu =~ ~r/class="[^"]*\babsolute\b/
+    end
+
+    test "its menu is anchored to its trigger, below it, and above it when the space below is short" do
+      %{trigger: trigger, menu_id: menu_id, menu: menu} =
+        table_state() |> render_table() |> dropdown()
+
+      assert trigger =~ "anchor-name: --#{menu_id}"
+      assert menu =~ "position-anchor: --#{menu_id}"
+      assert menu =~ "position-area: block-end span-inline-start"
+      assert menu =~ "position-try-fallbacks: flip-block"
+    end
+
+    test "its items come right after its trigger, so Tab moves from the trigger into them" do
+      %{items: items} = table_state() |> render_table() |> dropdown()
+
+      assert items =~ ~s(phx-value-event="duplicate")
+      assert items =~ ~s(phx-value-event="discard")
+    end
+
+    test "a click on one of its items, or anywhere off the trigger, hides the menu" do
+      %{trigger: trigger, menu_id: menu_id} = table_state() |> render_table() |> dropdown()
+
+      assert trigger =~ "phx-click-away"
+      assert trigger =~ "remove_attr"
+      assert trigger =~ "set_attr"
+      assert trigger =~ "##{menu_id}"
+    end
+
+    test "a heading shows above the items after it" do
+      html = table_state() |> render_table()
+      assert headings(html) |> Enum.uniq() == [["Danger zone"]]
+    end
+
+    test "a heading with no item left under it is not drawn" do
+      [duplicate, danger, discard] = hd(table_state().static.row_action_dropdowns).items
+
+      html =
+        table_state()
+        |> with_dropdown_items([duplicate, danger, %{discard | visible: false}])
+        |> render_table()
+
+      assert headings(html) == []
+      assert dropdown(html).items =~ ~s(phx-value-event="duplicate")
+    end
+
+    test "of two headings in a row, only the one above the items after it is drawn" do
+      [duplicate, danger, discard] = hd(table_state().static.row_action_dropdowns).items
+      permanent = %{type: :separator, label: "Permanent"}
+
+      html =
+        table_state()
+        |> with_dropdown_items([
+          duplicate,
+          danger,
+          %{discard | visible: false},
+          permanent,
+          discard
+        ])
+        |> render_table()
+
+      assert headings(html) |> Enum.uniq() == [["Permanent"]]
     end
   end
 

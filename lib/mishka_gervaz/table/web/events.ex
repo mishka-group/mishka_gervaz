@@ -9,7 +9,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   - Bulk actions
   - Row expansion
   - Archive status changes
-  - Pagination
+  - Pagination, Load more and Load earlier
   - Reloading, the error state's Retry (`"reload"`)
 
   ## Sub-builders
@@ -434,6 +434,9 @@ defmodule MishkaGervaz.Table.Web.Events do
     socket = DataLoader.load_more(socket, state)
     {:noreply, socket}
   end
+
+  def do_handle("load_earlier", _params, state, socket),
+    do: {:noreply, DataLoader.load_earlier(socket, state)}
 
   def do_handle("reload", _params, state, socket),
     do: {:noreply, DataLoader.reload(socket, state)}
@@ -1144,9 +1147,11 @@ defmodule MishkaGervaz.Table.Web.Events do
   shown.
 
   A table with `keep_loaded_records true` drops it from `loaded_records`. Any other table moves
-  `next_offset` back by one. A row the view removes itself (`:self`) is held by its id in
-  `removed_ids` until its own realtime removal (`:realtime`) arrives, which then moves nothing, so
-  the row is counted once whether realtime is on or off.
+  `next_offset` back by one, the offset Load more reads from when its read action has no keyset
+  pagination; a Load more by keyset reads after the last row's keyset and does not use it. A row
+  the view removes itself (`:self`) is held by its id in `removed_ids` until its own realtime
+  removal (`:realtime`) arrives, which then moves nothing, so the row is counted once whether
+  realtime is on or off.
   """
   @spec drop_shown_row(State.t(), term(), :self | :realtime) :: State.t()
   def drop_shown_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),

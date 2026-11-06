@@ -48,6 +48,46 @@ it to its last page, and a table that keeps no count opens it when the database 
 not a positive whole number is ignored. A custom `events do sanitization … end` handler's
 `sanitize_page/1` returns the number, or `nil` for anything else.
 
+## Load more reads after the last row
+
+Load more and infinite scroll read the page after the last row the table read, by its keyset
+(`state.after_keyset`), when the table's read action allows keyset pagination:
+
+```elixir
+read :master_read do
+  pagination offset?: true, keyset?: true, countable: true
+end
+```
+
+A row added or removed anywhere in the list, by this view, another one or realtime, then moves no
+row past Load more and takes no row from its page, in the same one read. Keep `offset?: true` too:
+a numbered page and a page opened from the URL are read by offset.
+
+Keyset is optional. Without `keyset?: true`, or when Ash refuses the keyset as invalid, Load more
+reads from the offset of the rows the view shows: `state.next_offset`, one less for each row
+realtime, the view or a custom action takes out of the list (after the rows kept, with
+`keep_loaded_records true`). No row is skipped there either; a row that leaves without having been
+shown, or one that arrives, only makes that click read a row already shown again, so it adds fewer
+new rows.
+
+## Load earlier
+
+A `:load_more` / `:infinite` table keeps its last page in the URL (`?<prefix>_page=N`), so a reload
+after Load more opens page N alone, never pages 1..N. A Load earlier button above the rows then
+reads the page before the first row shown, by its keyset (`state.before_keyset`), and puts it
+above: one page and one read a click, until the first page. `state.first_page` is the first page
+shown; `state.page` stays the last. Without keyset it reads that page's slice by offset. A table with
+`keep_loaded_records true` reads pages 1..N on open, so it never offers one.
+
+## The footer
+
+Every pager is one row (`Shared.render_pagination_row/1`): the page size selector first, the page
+buttons or Load More in the middle, and last where the reader is. A numbered table shows its
+`page_info_format` there, a `:load_more` / `:infinite` table the rows it shows of its total,
+`Showing 1–40 of 136` (`Shared.range_label/1`): from the first row shown, so a list opened at page
+3 starts at 41, to `state.next_offset`. Both need `show_total`, and read only the state, so the
+footer adds no query. Below 640px the three parts stack, each centred.
+
 ## `show_total` costs a COUNT
 
 `show_total` defaults to **true** and issues a count query. Turn it off for a data layer that
@@ -68,6 +108,8 @@ end
 - [ ] `show_total false` when the data layer cannot count
 - [ ] `:load_more` / `:infinite` chosen for lists that are scrolled, `:numbered` for lists that are paged
 - [ ] A grouped custom template also sets `presentation.keep_loaded_records true`
+- [ ] The read action of a `:load_more` / `:infinite` table allows `keyset?: true` where rows change
+  live, so every Load more adds a full page
 
 ## DSL reference
 

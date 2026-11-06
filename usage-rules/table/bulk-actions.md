@@ -60,6 +60,12 @@ row that read finds, never a row the table would not show, such as another site'
 table scoped to one site, and a picked id it does not find is left alone. A function handler that
 reads rows itself can start from the same `read_query(state)`.
 
+The bulk bar counts the picked rows that read still finds. A picked row a search or filter hides,
+or one realtime moves out of the view, stays picked in `state.selected_ids` and is held in
+`state.hidden_ids`: the bar reads "1 selected, 1 hidden by the filters", and `{count}` in a
+`confirm` is the 1. A load that starts the list afresh while rows are picked finds them in one more
+read, of their ids only; with no row picked it reads nothing more.
+
 After a built-in bulk action, or a function handler that returns `:reload`, the table loads its
 first page again. A table with `keep_loaded_records true` takes the rows a destroy, an archive or a
 restore removed out of the rows it keeps and reads none, while a kept row stays or no more rows are

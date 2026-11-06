@@ -17,11 +17,25 @@ defmodule MishkaGervaz.Table.Web.State do
 
   The state holds no rows. A load's rows reach the page through the table's stream, and
   `records_result` is the `Phoenix.LiveView.AsyncResult` of the last load: `%{page: page,
-  empty?: boolean}` once it succeeds, failed with the error once it fails. Only a table with
-  `keep_loaded_records true` keeps its loaded rows, in `loaded_records`. A table that keeps none
-  holds in `next_offset` where its next Load more reads from: the end of the rows the view shows,
-  one less for each row taken out of the list. `removed_ids` holds the ids of the rows the view took
-  out itself until their own realtime removal arrives, so each is counted once.
+  empty?: boolean}` of the load that started the list once it succeeds, which Load more and Load
+  earlier keep, failed with the error once a load fails. Only a table with
+  `keep_loaded_records true` keeps its loaded rows, in `loaded_records`. `after_keyset` is the keyset
+  of the last row a load read, the one string Load more reads after when the read action allows
+  keyset pagination. On a read action without keyset, Load more on a table that keeps no rows
+  reads from `next_offset` instead: the end of the rows the view shows, one less for each row taken
+  out of the list. `removed_ids` holds the ids of the rows the view took out itself until their own
+  realtime removal arrives, so each is counted once.
+
+  `hidden_ids` holds the picked rows, of `selected_ids`, that the table's read no longer finds, such
+  as rows a search hides. A bulk action reaches only the rows the read finds, so the bulk bar counts
+  the picked rows without them and says how many the filters hide. A load that starts the list
+  afresh while rows are picked finds them in one read of their ids.
+
+  `page` is the last page the view shows, the one the URL holds. `first_page` is the first: a
+  `:load_more` or `:infinite` table opened at page N, as a reload after Load more opens it, shows
+  page N alone, and Load earlier reads the page before it, one page a click, after the keyset of
+  the first row shown, `before_keyset`. A table that keeps its rows reads from the first page, so
+  its `first_page` is 1.
 
   ## Sub-builders
 
@@ -198,6 +212,7 @@ defmodule MishkaGervaz.Table.Web.State do
     :relation_filter_state,
     :selected_ids,
     :excluded_ids,
+    :hidden_ids,
     :select_all?,
     :expanded_id,
     :expanded_data,
@@ -210,11 +225,14 @@ defmodule MishkaGervaz.Table.Web.State do
     :dismissed_notices,
     :loaded_records,
     :next_offset,
-    :removed_ids
+    :removed_ids,
+    :after_keyset,
+    :before_keyset,
+    :first_page
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error
-  @type loading_type :: :initial | :reset | :more
+  @type loading_type :: :initial | :reset | :more | :earlier
   @type archive_status :: :active | :archived
 
   @type t :: %__MODULE__{
@@ -238,6 +256,7 @@ defmodule MishkaGervaz.Table.Web.State do
           relation_filter_state: %{atom() => map()},
           selected_ids: MapSet.t(any()),
           excluded_ids: MapSet.t(any()),
+          hidden_ids: MapSet.t(any()),
           select_all?: boolean(),
           expanded_id: String.t() | nil,
           expanded_data: struct() | nil,
@@ -250,7 +269,10 @@ defmodule MishkaGervaz.Table.Web.State do
           dismissed_notices: MapSet.t(),
           loaded_records: list(),
           next_offset: non_neg_integer(),
-          removed_ids: MapSet.t()
+          removed_ids: MapSet.t(),
+          after_keyset: String.t() | nil,
+          before_keyset: String.t() | nil,
+          first_page: pos_integer()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -446,6 +468,7 @@ defmodule MishkaGervaz.Table.Web.State do
           relation_filter_state: %{},
           selected_ids: MapSet.new(),
           excluded_ids: MapSet.new(),
+          hidden_ids: MapSet.new(),
           select_all?: false,
           expanded_id: nil,
           expanded_data: nil,
@@ -458,7 +481,10 @@ defmodule MishkaGervaz.Table.Web.State do
           dismissed_notices: MapSet.new(),
           loaded_records: [],
           next_offset: 0,
-          removed_ids: MapSet.new()
+          removed_ids: MapSet.new(),
+          after_keyset: nil,
+          before_keyset: nil,
+          first_page: 1
         }
       end
 

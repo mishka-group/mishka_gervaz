@@ -306,6 +306,15 @@ defmodule MishkaGervaz.Table.Web.KeptRecordsLiveTest do
       assert kept(view) == ~w(a b c d e f)
       assert more?(view)
     end
+
+    test "opened at a later page offers no Load earlier, since it shows the first page", %{
+      items: items
+    } do
+      view = open("/kept?template=table&page=2")
+
+      assert listed(view, items) == ~w(a b c d)
+      refute has_element?(view, "#items button[phx-click=load_earlier]")
+    end
   end
 
   test "a page larger than the read's max_page_size holds every row it asks for" do

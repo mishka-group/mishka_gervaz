@@ -176,6 +176,13 @@ defmodule MishkaGervaz.Table.Templates.Table do
             {render_slot(@before_table)}
           <% end %>
 
+          <Shared.render_load_earlier
+            :if={@show_pagination and not @empty? and not @failed?}
+            static={@static}
+            state={@state}
+            myself={@myself}
+          />
+
           <div
             :if={not @empty? and not @failed?}
             data-role="gervaz-table-frame"

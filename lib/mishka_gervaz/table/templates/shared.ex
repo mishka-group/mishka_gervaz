@@ -1000,9 +1000,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     static = assigns.static
     state = assigns.state
 
-    selected_count = MapSet.size(state.selected_ids)
+    hidden_count = hidden_count(state)
+    selected_count = MapSet.size(state.selected_ids) - hidden_count
     excluded_count = MapSet.size(state.excluded_ids)
-    has_selection = state.select_all? or selected_count > 0
+    has_selection = state.select_all? or selected_count + hidden_count > 0
 
     visible_bulk_actions =
       filter_visible_bulk_actions(static.bulk_actions, state.archive_status, state)
@@ -1018,6 +1019,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:excluded_count, excluded_count)
       |> assign(:selected_count, selected_count)
       |> assign(:selection_count, bulk_selection_count(state))
+      |> assign(:selected_label, selected_label(selected_count, hidden_count))
       |> assign(:visible_bulk_actions, visible_bulk_actions)
       |> assign(:ui_adapter, static.ui_adapter)
 
@@ -1035,7 +1037,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       all_except_label={
         dgettext("mishka_gervaz", "All except %{count} selected", count: @excluded_count)
       }
-      selected_label={dgettext("mishka_gervaz", "%{count} selected", count: @selected_count)}
+      selected_label={@selected_label}
       clear_label={dgettext("mishka_gervaz", "Clear selection")}
     >
       <.dynamic_component
@@ -1053,9 +1055,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   @doc """
   The number of rows a bulk action runs on, or `nil` when the table cannot tell.
 
-  Checked rows are counted. With select all, the count is the table's total minus the unchecked
-  rows, and the table can tell only when it holds every row or counts its rows (`:numbered`
-  pagination, or `show_total true` in the pagination `ui` block).
+  Checked rows the table's read still finds are counted; the ones it hides, such as rows a search
+  left out (`hidden_ids`), are not, since the action reaches only rows the read finds. With select
+  all, the count is the table's total minus the unchecked rows, and the table can tell only when it
+  holds every row or counts its rows (`:numbered` pagination, or `show_total true` in the pagination
+  `ui` block).
   """
   @spec bulk_selection_count(map()) :: non_neg_integer() | nil
   def bulk_selection_count(%{select_all?: true} = state) do
@@ -1064,7 +1068,23 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       else: nil
   end
 
-  def bulk_selection_count(state), do: MapSet.size(state.selected_ids)
+  def bulk_selection_count(state), do: MapSet.size(state.selected_ids) - hidden_count(state)
+
+  @spec hidden_count(map()) :: non_neg_integer()
+  defp hidden_count(%{hidden_ids: %MapSet{} = hidden, selected_ids: picked}),
+    do: picked |> MapSet.intersection(hidden) |> MapSet.size()
+
+  defp hidden_count(_state), do: 0
+
+  @spec selected_label(non_neg_integer(), non_neg_integer()) :: String.t()
+  defp selected_label(count, 0), do: dgettext("mishka_gervaz", "%{count} selected", count: count)
+
+  defp selected_label(count, hidden),
+    do:
+      dgettext("mishka_gervaz", "%{count} selected, %{hidden} hidden by the filters",
+        count: count,
+        hidden: hidden
+      )
 
   defp total_known?(%{total_count: total, total_pages: pages})
        when is_integer(total) and is_integer(pages),
@@ -1212,6 +1232,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   Renders the pagination control — numbered pages, a load-more button or the infinite-scroll
   sentinel, whichever the resource configured.
 
+  Numbered, `:load_more` and `:infinite` tables share one row, `render_pagination_row/1`: the page
+  size selector first, the page buttons or Load More in the middle, and last the page info of a
+  numbered table or the `range_label/1` of a growing list.
+
   Reads its labels from `static.pagination_ui`, so `pagination do ui do … end end` on the
   resource is honoured without the template knowing about it.
   """
@@ -1244,6 +1268,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         translate_text(pagination_ui.load_more_label) || dgettext("mishka_gervaz", "Load More")
       )
       |> assign(:show_total, pagination_ui.show_total)
+      |> assign(:range_label, range_label(state))
       |> assign(
         :prev_label,
         translate_text(pagination_ui.prev_label) || dgettext("mishka_gervaz", "Previous")
@@ -1288,22 +1313,17 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       {dgettext("mishka_gervaz", "End of results")}
     </div>
 
-    <div
-      :if={@pagination_type in [:load_more, :infinite]}
-      class="mt-[22px] grid grid-cols-[1fr_auto_1fr] items-center gap-3"
-    >
-      <div class="flex items-center">
+    <.render_pagination_row :if={@pagination_type in [:load_more, :infinite]}>
+      <:leading :if={@show_page_size_selector}>
         <.render_page_size_selector
-          :if={@show_page_size_selector}
           static_id={@static_id}
           page_size_options={@page_size_options}
           current_page_size={@current_page_size}
           myself={@myself}
         />
-      </div>
-      <div class="flex items-center justify-center">
+      </:leading>
+      <:center :if={@pagination_type == :load_more and @has_more? and @loading != :loading}>
         <button
-          :if={@pagination_type == :load_more and @has_more? and @loading != :loading}
           type="button"
           phx-click="load_more"
           phx-target={@myself}
@@ -1311,9 +1331,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         >
           {@load_more_label}
         </button>
-      </div>
-      <span></span>
-    </div>
+      </:center>
+      <:trailing :if={@range_label}>{@range_label}</:trailing>
+    </.render_pagination_row>
 
     <.render_numbered_pagination
       :if={@pagination_type == :numbered and @total_pages}
@@ -1369,53 +1389,183 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     """
   end
 
+  @doc """
+  Renders the Load earlier button that goes above the rows of a `:load_more` or `:infinite` table
+  opened past its first page, as a reload after Load more opens it. A click sends `"load_earlier"`,
+  which reads the page before the first one shown and puts its rows above them, one page a click,
+  until the first page. Nothing is drawn while a load runs, nor on a table that shows its first
+  page.
+
+      <Shared.render_load_earlier static={@static} state={@state} myself={@myself} />
+  """
+  @spec render_load_earlier(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_load_earlier(assigns) do
+    assigns = assign(assigns, :earlier?, earlier?(assigns.static, assigns.state))
+
+    ~H"""
+    <div :if={@earlier?} class="mb-[14px] flex items-center justify-center">
+      <button
+        type="button"
+        phx-click="load_earlier"
+        phx-target={@myself}
+        class="h-[42px] rounded-[12px] border border-[#dcdbf5] bg-[#f2f1fc] px-[22px] text-[12.5px] font-bold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+      >
+        {dgettext("mishka_gervaz", "Load earlier")}
+      </button>
+    </div>
+    """
+  end
+
+  @spec earlier?(map(), map()) :: boolean()
+  defp earlier?(static, state) do
+    pagination_type(static) in [:load_more, :infinite] and state.first_page > 1 and
+      state.loading != :loading
+  end
+
   defp render_numbered_pagination(assigns) do
     ~H"""
-    <div class="mt-[22px] grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-      <div class="flex items-center">
+    <.render_pagination_row>
+      <:leading :if={@show_page_size_selector}>
         <.render_page_size_selector
-          :if={@show_page_size_selector}
           static_id={@static_id}
           page_size_options={@page_size_options}
           current_page_size={@current_page_size}
           myself={@myself}
         />
-      </div>
-      <div class="flex items-center justify-center gap-1.5">
-        <%= if @total_pages && @total_pages > 1 do %>
-          <.dynamic_component
-            module={@ui_adapter}
-            function={:pagination_nav_button}
-            label={@prev_label}
-            event="prev_page"
-            myself={@myself}
-            disabled={@page <= 1 or @loading == :loading}
-          />
-          <.render_page_numbers
-            page={@page}
-            total_pages={@total_pages}
-            myself={@myself}
-            loading={@loading}
-            ui_adapter={@ui_adapter}
-          />
-          <.dynamic_component
-            module={@ui_adapter}
-            function={:pagination_nav_button}
-            label={@next_label}
-            event="next_page"
-            myself={@myself}
-            disabled={@page >= @total_pages or @loading == :loading}
-          />
-        <% end %>
-      </div>
-
-      <span :if={@show_total} class="text-end text-[12px] font-semibold text-[#a8a5a0]">
+      </:leading>
+      <:center :if={@total_pages > 1}>
+        <.dynamic_component
+          module={@ui_adapter}
+          function={:pagination_nav_button}
+          label={@prev_label}
+          event="prev_page"
+          myself={@myself}
+          disabled={@page <= 1 or @loading == :loading}
+        />
+        <.render_page_numbers
+          page={@page}
+          total_pages={@total_pages}
+          myself={@myself}
+          loading={@loading}
+          ui_adapter={@ui_adapter}
+        />
+        <.dynamic_component
+          module={@ui_adapter}
+          function={:pagination_nav_button}
+          label={@next_label}
+          event="next_page"
+          myself={@myself}
+          disabled={@page >= @total_pages or @loading == :loading}
+        />
+      </:center>
+      <:trailing :if={@show_total}>
         {format_page_info(@page_info_format, @page, @total_pages, @total_count)}
-      </span>
-      <span :if={!@show_total}></span>
+      </:trailing>
+    </.render_pagination_row>
+    """
+  end
+
+  @doc """
+  Lays out the row under a table's rows in three parts on one line: `leading` at the start,
+  `center` in the middle and `trailing` at the end. The middle part stays in the middle of the row
+  whatever the widths of the other two, and wraps its buttons when the row is too narrow for them,
+  while the last part keeps its words on one line. Below 640px the parts stack, each centred, so
+  the row never scrolls sideways. A part left out keeps its place on a wide screen and takes no
+  line on a narrow one.
+
+  `render_pagination/1` draws every pager with it: the page size selector first, Load More or the
+  page buttons in the middle, and last where the reader is (`range_label/1` on a `:load_more` or
+  `:infinite` table, the page info on a numbered one). A template that draws its own pager lays it
+  out with this to look like every other table.
+
+      <Shared.render_pagination_row>
+        <:leading>…</:leading>
+        <:center>…</:center>
+        <:trailing>{Shared.range_label(@state)}</:trailing>
+      </Shared.render_pagination_row>
+  """
+  slot :leading, doc: "the first part, such as the page size selector"
+  slot :center, doc: "the middle part, such as Load More or the page buttons"
+  slot :trailing, doc: "the last part, such as where the reader is in the list"
+
+  @spec render_pagination_row(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_pagination_row(assigns) do
+    ~H"""
+    <div
+      data-role="gervaz-pagination"
+      class="mt-[22px] grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[12px] font-semibold text-[#a8a5a0] max-[640px]:grid-cols-1 max-[640px]:justify-items-center"
+    >
+      <div
+        data-role="gervaz-pagination-leading"
+        class={["flex items-center", @leading == [] && "max-[640px]:hidden"]}
+      >
+        {render_slot(@leading)}
+      </div>
+      <div
+        data-role="gervaz-pagination-center"
+        class={[
+          "flex flex-wrap items-center justify-center gap-1.5",
+          @center == [] && "max-[640px]:hidden"
+        ]}
+      >
+        {render_slot(@center)}
+      </div>
+      <div
+        data-role="gervaz-pagination-trailing"
+        class={[
+          "flex items-center justify-end whitespace-nowrap text-end max-[640px]:justify-center max-[640px]:text-center",
+          @trailing == [] && "max-[640px]:hidden"
+        ]}
+      >
+        {render_slot(@trailing)}
+      </div>
     </div>
     """
   end
+
+  @doc """
+  Where the reader is in a `:load_more` or `:infinite` list: `Showing 1–40 of 136`, from the first
+  row shown to the last, of the table's total. A list opened at page 3 of 20-row pages starts at 41
+  until Load earlier brings the pages before it. The last row is `state.next_offset`, the end of the
+  rows the view shows, so a row the view took out is not counted. A page past the last reads
+  `Showing 0 of 136`.
+
+  `nil` when the table keeps no count (`show_total false`) or holds no rows.
+  """
+  @spec range_label(map()) :: String.t() | nil
+  def range_label(
+        %{
+          static: %{pagination_ui: %{show_total: true}},
+          total_count: total,
+          page: page,
+          first_page: first_page
+        } = state
+      )
+      when is_integer(total) and total > 0 and is_integer(page) and is_integer(first_page) do
+    page_size = state.current_page_size || state.static.page_size
+    first = (first_page - 1) * page_size + 1
+    last = min(shown_end(state, page_size), total)
+
+    case first <= last and not MishkaGervaz.Table.Web.Renderer.past_last_page?(state) do
+      true ->
+        dgettext("mishka_gervaz", "Showing %{first}–%{last} of %{total}",
+          first: first,
+          last: last,
+          total: total
+        )
+
+      false ->
+        dgettext("mishka_gervaz", "Showing 0 of %{total}", total: total)
+    end
+  end
+
+  def range_label(_state), do: nil
+
+  @spec shown_end(map(), pos_integer()) :: non_neg_integer()
+  defp shown_end(%{next_offset: offset}, _page_size) when is_integer(offset) and offset > 0,
+    do: offset
+
+  defp shown_end(%{page: page}, page_size), do: page * page_size
 
   defp render_page_size_selector(assigns) do
     ~H"""
@@ -1610,7 +1760,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       end)
 
     has_visible? = Enum.any?(visible_items, fn item -> item[:type] != :separator end)
-    total = length(visible_items)
 
     dropdown_ui = assigns.dropdown[:ui] || %{}
     icon = dropdown_ui[:icon] || "hero-ellipsis-vertical"
@@ -1619,7 +1768,6 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       assigns
       |> Phoenix.Component.assign(:visible_items, visible_items)
       |> Phoenix.Component.assign(:has_visible?, has_visible?)
-      |> Phoenix.Component.assign(:total, total)
       |> Phoenix.Component.assign(:icon, icon)
 
     ~H"""
@@ -1627,7 +1775,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       <.dynamic_component module={@static.ui_adapter} function={:dropdown} icon={@icon}>
         <.render_dropdown_item
           :for={{item, idx} <- Enum.with_index(@visible_items)}
-          :if={item[:type] != :separator or render_separator?(@visible_items, @total, idx)}
+          :if={item[:type] != :separator or render_separator?(@visible_items, idx)}
           item={item}
           record={@record}
           static={@static}
@@ -1686,10 +1834,13 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     end
   end
 
-  defp render_separator?(items, total, index) do
-    index > 0 and index < total - 1 and
-      not match?(%{type: :separator}, Enum.at(items, index - 1))
+  defp render_separator?(items, index) do
+    {before, [_separator | below]} = Enum.split(items, index)
+    Enum.any?(before, &menu_item?/1) and menu_item?(List.first(below))
   end
+
+  defp menu_item?(%{type: :separator}), do: false
+  defp menu_item?(item), do: is_map(item)
 
   @doc """
   Checks if a row action is visible for a given record and state.
@@ -1789,6 +1940,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   @doc """
   Renders the empty state with configurable message, icon, and action.
+
+  On a page past the table's last one (`MishkaGervaz.Table.Web.Renderer.past_last_page?/1`) it
+  says the page has no rows and its action is a button that opens page 1, in place of the
+  configured message and action.
   """
   @spec render_empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def render_empty_state(assigns) do
@@ -1807,7 +1962,9 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       |> assign(:action_label, translate_text(get_in(empty_state, [:action, :label])))
       |> assign(:action_path, get_in(empty_state, [:action, :path]))
       |> assign(:action_icon, get_in(empty_state, [:action, :icon]))
+      |> assign(:action_click, nil)
       |> assign(:ui_adapter, ui_adapter)
+      |> assign_past_last_page()
 
     ~H"""
     <.dynamic_component
@@ -1818,9 +1975,29 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       action_label={@action_label}
       action_path={@action_path}
       action_icon={@action_icon}
+      action_click={@action_click}
     />
     """
   end
+
+  @spec assign_past_last_page(map()) :: map()
+  defp assign_past_last_page(%{state: %{} = state} = assigns) do
+    if MishkaGervaz.Table.Web.Renderer.past_last_page?(state) do
+      assigns
+      |> assign(:message, dgettext("mishka_gervaz", "No rows on this page"))
+      |> assign(:action_label, dgettext("mishka_gervaz", "Go to page 1"))
+      |> assign(:action_path, nil)
+      |> assign(:action_icon, "hero-arrow-uturn-left")
+      |> assign(
+        :action_click,
+        JS.push("go_to_page", value: %{page: 1}, target: assigns[:myself])
+      )
+    else
+      assigns
+    end
+  end
+
+  defp assign_past_last_page(assigns), do: assigns
 
   @doc """
   Renders the error state with configurable message, icon, and retry button.

@@ -34,7 +34,9 @@ defmodule MishkaGervaz.Table.Web.Renderer do
 
   Until the first read returns, the template's `c:MishkaGervaz.Table.Behaviours.Template.render_loading/1`
   is drawn instead of its `render/1`. After that, `render/1` is passed `@static`, `@state`, the
-  `@stream` for the resource's stream name, an `@empty?` flag and a `@failed?` flag. `@failed?` is
+  `@stream` for the resource's stream name, an `@empty?` flag and a `@failed?` flag. `@empty?` is
+  true when the table holds no rows, or when the view is a page past its last one
+  (`past_last_page?/1`). `@failed?` is
   true when no read has succeeded and the last one failed: the table has no rows to show, so the
   template draws its `c:MishkaGervaz.Table.Behaviours.Template.render_error/1` in their place.
   """
@@ -104,9 +106,29 @@ defmodule MishkaGervaz.Table.Web.Renderer do
     end
   end
 
+  @doc """
+  Whether the view is a page past the table's last one: the load that opened page N, past page 1,
+  read no rows, as `?<prefix>_page=999` or a stale link opens it on a numbered or a Load more table.
+
+  The renderer then passes `@empty?` true, and the default empty state says the page has no rows and
+  offers a button back to page 1 in place of the table's own empty message.
+  """
+  @spec past_last_page?(MishkaGervaz.Table.Web.State.t()) :: boolean()
+  def past_last_page?(%{
+        loading: :loaded,
+        records_result: %Phoenix.LiveView.AsyncResult{
+          ok?: true,
+          result: %{page: page, empty?: true}
+        }
+      })
+      when page > 1,
+      do: true
+
+  def past_last_page?(_state), do: false
+
   @spec table_empty?(MishkaGervaz.Table.Web.State.t()) :: boolean()
   defp table_empty?(state) do
-    state.loading == :loaded and state.total_count == 0
+    (state.loading == :loaded and state.total_count == 0) or past_last_page?(state)
   end
 
   @spec first_read_failed?(MishkaGervaz.Table.Web.State.t()) :: boolean()

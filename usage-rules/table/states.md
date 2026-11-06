@@ -36,6 +36,13 @@ end
 
 The three `action_*` options draw one call-to-action link. Give all three or none.
 
+A page past the table's last one, as `?<prefix>_page=999` or a stale link opens it on a numbered or
+a Load more table, draws the empty state too, saying "No rows on this page" with a "Go to page 1"
+button in place of the message and action above
+(`MishkaGervaz.Table.Web.Renderer.past_last_page?/1`). An adapter's `empty_state` draws that button
+from its `action_click` assign, a `Phoenix.LiveView.JS` command; a template that draws its own empty
+state asks `past_last_page?/1` itself.
+
 ## `error_state`
 
 | Option | Type | Default |

@@ -475,11 +475,29 @@ defmodule MishkaGervaz.Table.Web.Live do
 
   @spec place_read_row(Phoenix.LiveView.Socket.t(), map(), {:ok, map()} | :error) ::
           Phoenix.LiveView.Socket.t()
-  defp place_read_row(socket, _record, {:ok, row}),
-    do: insert_row(socket, socket.assigns.table_state, row)
+  defp place_read_row(socket, _record, {:ok, row}) do
+    socket
+    |> insert_row(socket.assigns.table_state, row)
+    |> mark_picked(row.id, :shown)
+  end
 
-  defp place_read_row(socket, record, :error),
-    do: leave_view(socket, socket.assigns.table_state, record)
+  defp place_read_row(socket, record, :error) do
+    socket
+    |> leave_view(socket.assigns.table_state, record)
+    |> mark_picked(record.id, :hidden)
+  end
+
+  @spec mark_picked(Phoenix.LiveView.Socket.t(), term(), :shown | :hidden) ::
+          Phoenix.LiveView.Socket.t()
+  defp mark_picked(%{assigns: %{table_state: %State{} = state}} = socket, id, view) do
+    if MapSet.member?(state.selected_ids, id),
+      do: assign(socket, :table_state, %{state | hidden_ids: hidden(state.hidden_ids, id, view)}),
+      else: socket
+  end
+
+  @spec hidden(MapSet.t(), term(), :shown | :hidden) :: MapSet.t()
+  defp hidden(hidden_ids, id, :shown), do: MapSet.delete(hidden_ids, id)
+  defp hidden(hidden_ids, id, :hidden), do: MapSet.put(hidden_ids, id)
 
   @spec leave_view(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
   defp leave_view(socket, %State{expanded_id: id} = state, %{id: id} = record) do

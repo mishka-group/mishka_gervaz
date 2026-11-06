@@ -87,7 +87,17 @@ column stays while some row may expand, so the other rows keep their columns.
 ## `dropdown`
 
 Contains `action` and `separator` entities. `separator label: "Permanent"` draws a labelled
-divider. `ui` on the dropdown itself styles the trigger.
+divider, and only above an action the reader can see, with one before it: a separator whose
+actions are all hidden for the row (`visible`, `restricted`) is not drawn. `ui` on the dropdown
+itself styles the trigger.
+
+The Tailwind adapter draws the menu as a native popover (`popover`, opened by the trigger's
+`popovertarget`), in the browser's top layer, so the table's scrolling frame or a card never clips
+it. CSS anchor positioning puts it under its trigger, or above it near the bottom of the screen.
+Tab moves from the trigger into its items; a click on an item, a click elsewhere or Escape closes
+it. A template that puts the menu inside its own markup inherits none of that markup's clipping,
+but CSS it aims at the menu's descendants (such as `[&_button]:…` on a wrapper) still reaches the
+menu's items.
 
 ## `actions_layout`
 

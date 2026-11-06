@@ -1,3 +1,55 @@
+# Changelog for MishkaGervaz 0.0.5
+
+### Features:
+- Load more reads after the last row shown when the read action has `keyset?: true`. The table keeps
+  the keyset of that row (`state.after_keyset`), so a row removed or added elsewhere in the list
+  moves no row past it and every click adds a full page. A table without keyset keeps the offset
+  (`state.next_offset`), which skips no row after removals; so does a keyset Ash refuses
+- A table opened at page N, by `?<prefix>_page=4` after a reload or a shared link, shows a
+  "Load earlier" button above its rows. Each click reads the page before the first row shown and
+  puts it above, until page 1. Load more still continues after the last row. A template that draws
+  its own Load more pager uses `Shared.render_load_earlier/1`, or `phx-click="load_earlier"` while
+  `state.first_page > 1`
+- Every pager is one row, `Shared.render_pagination_row/1`: the page size selector on the left, Load
+  More or the pages in the centre, and on the right "Showing a–b of N" for a Load more or infinite
+  table (`Shared.range_label/1`) or the page info on a numbered one. Below 640px the parts stack,
+  centred, so a numbered pager no longer runs off a phone
+- The accordion row action respects `visible`. The caret and the expanded details show only on rows
+  whose accordion is visible and not `restricted`, and the caret column goes when no row can expand
+
+### Bug fixes:
+- A page past the last, such as `?<prefix>_page=999`, says "No rows on this page" with a "Go to
+  page 1" button that reads page 1 and clears the URL, where a numbered table showed "Page 999 of
+  2" over an empty body and a Load more table showed nothing to click
+  (`Renderer.past_last_page?/1`; the Tailwind `empty_state` takes `action_click`)
+- The bulk bar counts only the picked rows the table still finds. Pick a row, search it away, pick
+  another: it reads "1 selected, 1 hidden by the filters", and a confirm's `{count}` is 1. A hidden
+  pick stays picked and counts again once the search shows it. A picked row that realtime moves out
+  of the view counts as hidden
+- The row-actions menu of the Tailwind adapter is a native popover drawn in the top layer, so the
+  table's scrolling frame or a card never clips it. It sits under its trigger, or above it near the
+  bottom of the screen, and Tab reaches its items. Escape, a click elsewhere or on an item closes
+  it. A heading such as "Danger Zone" shows only above a visible item
+- Load more on a table without `keep_loaded_records` skips no row after rows another view removed.
+  A row deleted, destroyed or restored in the view itself, or taken out by an `override_row_action`
+  that answers `{:ok, :stream_delete, row}`, leaves the offset at once (`Events.drop_shown_row/3`)
+  and is not counted a second time when its own realtime removal arrives
+
+### Refactors:
+- A load no longer holds the page's rows in the state: `records_result` is `%{page:, empty?:}` or the
+  failure, and the rows reach the page through the stream. Code that read
+  `records_result.result.data.results` needs another source
+- Fewer queries. A realtime row costs one read through the table's own read
+  (`DataLoader.rows_in_view/2`) in place of an `exists` and a `get`. A burst of notifications, such
+  as a bulk action's, waits for one `realtime_flush` message and is read in one `id in ^ids` read,
+  and none while the table reloads afresh. Load more on a `keep_loaded_records` table reads one
+  page, and a bulk destroy, archive or restore reads none. A built-in `hooks` rule after a row
+  action answers from the total without reloading the page
+- `Shared.bulk_selection_count/1` subtracts the rows hidden by the filters.
+  `DataLoader.PaginationHandler.build_page_opts/5` takes `from_start?` as its fifth argument;
+  a load that starts the list afresh with rows picked adds one read of the picked
+  ids
+
 # Changelog for MishkaGervaz 0.0.4
 
 ### Features:

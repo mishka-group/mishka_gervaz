@@ -5,8 +5,8 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
   `MishkaGervaz.Table.Templates.Table` or by `MishkaGervaz.Test.Web.KeptRows`, which draws those
   kept rows. Its template and page are synced to the URL in `:bidirectional` mode.
 
-  Its read reads at most three rows at a time (`max_page_size 3`), fewer than a table that has
-  loaded two pages keeps. Each row has a Delete action. Its rows can be picked: its Wipe bulk action destroys the picked ones, and
+  Its read allows keyset pagination and reads at most three rows at a time (`max_page_size 3`),
+  fewer than a table that has loaded two pages keeps. Each row has a Delete action. Its rows can be picked: its Wipe bulk action destroys the picked ones, and
   its Mark done one runs `:master_finish` (`:finish` for a site's user) on them, which sets `done`.
   """
 
@@ -77,7 +77,7 @@ defmodule MishkaGervaz.Test.Web.KeptItem do
     defaults [:read, :destroy, create: :*, update: :*]
 
     read :master_read do
-      pagination offset?: true, countable: true, max_page_size: 3
+      pagination offset?: true, keyset?: true, countable: true, max_page_size: 3
     end
 
     read :master_get
