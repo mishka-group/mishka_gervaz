@@ -375,6 +375,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
   input, and its answer redraws the list between the press and the release.
+
+  `:search_event` is the event a keyup sends, `"relation_search"` by default. A form passes `nil`:
+  its search box sits inside the form, whose change searches for whatever enters the box, typed,
+  pasted or filled in, so a keyup would search a second time.
   """
   @impl true
   def search_select(assigns) do
@@ -418,6 +422,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:search_term, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:drawn, fn -> nil end)
+      |> assign_new(:search_event, fn -> "relation_search" end)
 
     assigns =
       assign(assigns, :listbox, "search-select-#{assigns.table_id}-#{assigns.filter_name}-list")
@@ -459,7 +464,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-controls={@listbox}
           aria-expanded={to_string(@dropdown_open? && !@disabled)}
           phx-debounce={if !@disabled and !@dropdown_open?, do: @debounce}
-          phx-keyup={if !@disabled, do: "relation_search"}
+          phx-keyup={if !@disabled, do: @search_event}
           phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
           phx-value-filter={@filter_name}
@@ -673,7 +678,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   label from `:selected_options`, or the value when its label is not known.
 
   The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
-  while the list is shut, for the reason `search_select/1` gives.
+  while the list is shut, for the reason `search_select/1` gives. `:search_event` is the event a
+  keyup sends, as `search_select/1` says.
   """
   @impl true
   def multi_select(assigns) do
@@ -697,6 +703,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:min_chars, fn -> 2 end)
       |> assign_new(:debounce, fn -> 300 end)
       |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:search_event, fn -> "relation_search" end)
       |> assign_new(:filter_name, fn -> assigns[:name] end)
       |> assign_new(:table_id, fn -> nil end)
       |> assign_new(:myself, fn -> nil end)
@@ -729,7 +736,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", "w-full"]}
           aria-expanded={to_string(@dropdown_open?)}
           phx-debounce={if !@dropdown_open?, do: @debounce}
-          phx-keyup="relation_search"
+          phx-keyup={@search_event}
           phx-focus="relation_focus"
           phx-target={@myself}
           phx-value-filter={@filter_name}

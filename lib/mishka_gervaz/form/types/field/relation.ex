@@ -110,6 +110,7 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
             selected: normalize_selected(state_assigns[:field_values], field.name),
             selected_options: Map.get(rel_data, :selected_options, []),
             show_selected: true,
+            search_event: nil,
             min_chars: Map.get(field, :min_chars, 1),
             debounce: get_ui(field, :debounce, 300),
             search_term: Map.get(rel_data, :search_term)
@@ -119,6 +120,7 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
           Map.merge(base, %{
             value: Map.get(state_assigns[:field_values] || %{}, field.name, ""),
             selected_options: Map.get(rel_data, :selected_options, []),
+            search_event: nil,
             min_chars: Map.get(field, :min_chars, 1),
             debounce: get_ui(field, :debounce, 300),
             search_term: Map.get(rel_data, :search_term),
