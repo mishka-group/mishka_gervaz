@@ -55,7 +55,7 @@ msgstr ""
 msgid "must be valid JSON"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1969
+#: lib/mishka_gervaz/form/templates/standard.ex:2096
 #, elixir-autogen, elixir-format
 msgid "is required"
 msgstr ""
