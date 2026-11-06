@@ -177,7 +177,7 @@ defmodule MishkaGervaz.Form.Web.Events do
     socket =
       validation_handler(state).validate(state, params, socket, forced_errors, target)
 
-    {:noreply, reload_dependents_of(socket, picked)}
+    {:noreply, socket |> reload_dependents_of(picked) |> search_typed(target, params)}
   end
 
   def do_handle("save", params, state, socket) do
@@ -820,6 +820,35 @@ defmodule MishkaGervaz.Form.Web.Events do
        do: step_handler(state).goto_errors(state, socket)
 
   defp to_failed_step(socket, _state), do: socket
+
+  # A change sent from a relation picker's search box searches its list for the text in it, so
+  # text that enters the box without a key press, pasted or filled in, narrows the list too.
+  defp search_typed(socket, ["_search_" <> name], params) do
+    state = socket.assigns.form_state
+
+    case Enum.find(state.static.fields, &searched_relation?(&1, name)) do
+      nil ->
+        socket
+
+      field ->
+        search = %{
+          "filter" => name,
+          ("_search_" <> name) => params["_search_" <> name] || "",
+          "min-chars" => to_string(Map.get(field, :min_chars) || 1)
+        }
+
+        {:noreply, socket} = relation_handler(state).handle("search", search, state, socket)
+        socket
+    end
+  end
+
+  defp search_typed(socket, _target, _params), do: socket
+
+  defp searched_relation?(%{type: :relation, mode: mode, name: name}, typed)
+       when mode in [:search, :search_multi],
+       do: to_string(name) == typed
+
+  defp searched_relation?(_field, _typed), do: false
 
   defp reload_dependents_of(socket, names) do
     Enum.reduce(names, socket, fn name, acc ->
