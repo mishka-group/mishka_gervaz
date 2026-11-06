@@ -121,7 +121,8 @@ defmodule MishkaGervaz.Form.Types.Field.Relation do
             selected_options: Map.get(rel_data, :selected_options, []),
             min_chars: Map.get(field, :min_chars, 1),
             debounce: get_ui(field, :debounce, 300),
-            search_term: Map.get(rel_data, :search_term)
+            search_term: Map.get(rel_data, :search_term),
+            drawn: Map.get(rel_data, :drawn, 0)
           })
 
         _ ->

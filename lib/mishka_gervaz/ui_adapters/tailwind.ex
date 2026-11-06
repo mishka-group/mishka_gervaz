@@ -363,6 +363,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   The input carries `aria-expanded`, `"true"` while the list is open.
 
+  `:drawn`, a count a form raises each time the list closes, keys the box around the input
+  (`…-box-<drawn>`), so the browser draws it anew: text typed and not picked is dropped and the box
+  shows the picked option's label, or nothing. Only a picked option is ever the field's value.
+
   The input is a combobox over a listbox: it names the list it controls, and the list is named by
   the field's label, the `<id>-label` a form's field wrapper writes. Each option says whether it is
   the picked one, and a group is named by its heading. Tab reaches the options, Enter or Space picks
@@ -413,6 +417,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:myself, fn -> nil end)
       |> assign_new(:search_term, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:drawn, fn -> nil end)
 
     assigns =
       assign(assigns, :listbox, "search-select-#{assigns.table_id}-#{assigns.filter_name}-list")
@@ -425,7 +430,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
-      <div class="relative">
+      <div
+        class="relative"
+        id={@drawn && "search-select-#{@table_id}-#{@filter_name}-box-#{@drawn}"}
+      >
         <.render_icon
           :if={@icon}
           name={@icon}
