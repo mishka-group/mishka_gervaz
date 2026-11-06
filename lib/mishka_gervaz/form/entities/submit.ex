@@ -3,8 +3,8 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
   Single submit / cancel button configuration.
 
   Each button (create / update / cancel) is an independent entity with
-  its own `label`, `active`, `disabled`, `restricted`, and `visible`
-  options. Every option except `label` accepts a boolean or a
+  its own `label`, `loading_label`, `active`, `disabled`, `restricted`, and `visible`
+  options. Every option except the two labels accepts a boolean or a
   `fn state -> boolean() end` predicate.
 
   The `active` option is intended for resources: setting `active: false`
@@ -20,6 +20,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
 
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
+          loading_label: String.t() | (-> String.t()) | nil,
           active: boolean() | (map() -> boolean()),
           disabled: boolean() | (map() -> boolean()),
           restricted: boolean() | (map() -> boolean()),
@@ -28,6 +29,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
         }
 
   defstruct label: nil,
+            loading_label: nil,
             active: true,
             disabled: false,
             restricted: false,
@@ -38,6 +40,11 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
                 label: [
                   type: {:or, [:string, {:fun, 0}]},
                   doc: "Button label. String or zero-arity function."
+                ],
+                loading_label: [
+                  type: {:or, [:string, {:fun, 0}]},
+                  doc:
+                    "What the submit button reads while its save runs, such as \"Checking the connection…\". String or zero-arity function. Without it the button reads \"Uploading…\" on a form with uploads and \"Saving…\" on any other."
                 ],
                 active: [
                   type: {:or, [:boolean, {:fun, 1}]},

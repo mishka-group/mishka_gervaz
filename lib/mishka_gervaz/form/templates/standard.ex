@@ -890,8 +890,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp busy_label(button, static) do
     cond do
-      is_map(button) and is_binary(button[:loading_label]) ->
-        translate_text(button[:loading_label])
+      is_map(button) and not is_nil(button[:loading_label]) ->
+        resolve_label(button[:loading_label])
 
       static.uploads not in [nil, []] ->
         dgettext("mishka_gervaz", "Uploading…")

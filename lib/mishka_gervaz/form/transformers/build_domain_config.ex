@@ -119,6 +119,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
   defp button_to_map(%Submit.Button{} = btn) do
     %{
       label: btn.label,
+      loading_label: btn.loading_label,
       disabled: btn.disabled,
       restricted: btn.restricted,
       visible: btn.visible
