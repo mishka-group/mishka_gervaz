@@ -13,6 +13,8 @@
   filled in
 - A field that holds one value draws empty when its params carry a map or a list
 - Gettext template references carry line numbers
+- Picking a related record runs the form's `on_validate` hook like a typed change, so dependent
+  fields refresh, and builds its errors with the form's validation handler
 
 # Changelog for MishkaGervaz 0.0.5
 
