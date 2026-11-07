@@ -60,6 +60,24 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandlerTest do
       assert Phoenix.HTML.Form.input_value(state.form, :slug) == "made-from-pick"
       assert state.errors == %{title: ["from the hook"]}
     end
+
+    test "builds the errors with the form's validation handler, as a typed change does" do
+      alias MishkaGervaz.Test.FormEventsDsl.{CustomValidationHandler, ValidationOverrideResource}
+
+      record = Ash.create!(ValidationOverrideResource, %{title: "A post"})
+
+      form =
+        record
+        |> AshPhoenix.Form.for_update(:update)
+        |> Phoenix.Component.to_form()
+
+      state =
+        [mode: :update, form: form, static_opts: [resource: ValidationOverrideResource]]
+        |> MishkaGervaz.Test.FormWebHelpers.build_state()
+        |> RelationHandler.revalidate_form(%{title: "Picked"})
+
+      assert state.errors[:built_by] == [CustomValidationHandler]
+    end
   end
 
   describe "get_search_term/2" do

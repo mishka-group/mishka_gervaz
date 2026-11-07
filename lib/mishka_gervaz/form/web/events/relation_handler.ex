@@ -445,7 +445,8 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
   Validates the form with the relation `values` picked, after the form's `on_validate` hook, as a
   typed change is: the hook gets the form's params with the picks in them, and `_target` naming the
   first one, so a value made from a picked relation (a slug made with the picked site's languages)
-  follows the pick. Errors the hook returns are the ones shown.
+  follows the pick. Errors the hook returns are the ones shown; otherwise the form's validation
+  handler builds them, as it does for a typed change.
   """
   @spec revalidate_form(MishkaGervaz.Form.Web.State.t(), map()) ::
           MishkaGervaz.Form.Web.State.t()
@@ -475,7 +476,7 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
               hook_errors
 
             show_errors? ->
-              MishkaGervaz.Form.Web.Events.SubmitHandler.format_form_errors(validated)
+              MishkaGervaz.Form.Web.Events.validation_handler(state).build_errors(validated)
 
             true ->
               %{}
