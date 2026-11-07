@@ -712,7 +712,7 @@ defmodule MishkaGervaz.Form.Web.Events do
       _ ->
         new_field_values = Map.put(state.field_values, field_atom, value)
         state = State.update(state, field_values: new_field_values, dirty?: true)
-        state = revalidate_combobox(state, field_atom, value)
+        state = RelationHandler.revalidate_form(state, field_atom, value)
 
         socket
         |> Phoenix.Component.assign(:form_state, state)
@@ -1228,34 +1228,6 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def blank_value?(_), do: false
-
-  @doc false
-  def revalidate_combobox(state, field_atom, value) do
-    case state.form do
-      nil ->
-        state
-
-      form ->
-        form_params =
-          form.source
-          |> AshPhoenix.Form.params()
-          |> Map.put(to_string(field_atom), value)
-
-        validated =
-          form.source
-          |> AshPhoenix.Form.validate(form_params)
-          |> Phoenix.Component.to_form()
-
-        show_errors? = form.source.submitted_once? or form.source.type != :create
-
-        errors =
-          if show_errors?,
-            do: validation_handler(state).build_errors(validated),
-            else: %{}
-
-        State.update(state, form: validated, errors: errors)
-    end
-  end
 
   defmacro __using__(_opts) do
     quote do

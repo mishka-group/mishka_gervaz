@@ -1,3 +1,9 @@
+# Changelog for MishkaGervaz 0.0.7
+
+### Bug fixes:
+- Picking a related record runs the form's `on_validate` hook like a typed change, so dependent
+  fields refresh, and builds its errors with the form's validation handler
+
 # Changelog for MishkaGervaz 0.0.6
 
 ### Features:

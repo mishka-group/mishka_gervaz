@@ -29,6 +29,55 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandlerTest do
 
       assert state.errors[:title] == ["[fa:errors] is required"]
     end
+
+    test "runs the form's on_validate hook with the pick, as a typed change does" do
+      test_pid = self()
+
+      hook = fn params, _state ->
+        send(test_pid, {:on_validate, params})
+        {put_in(params, ["form", "slug"], "made-from-pick"), %{title: ["from the hook"]}}
+      end
+
+      form =
+        TranslatedLabels
+        |> AshPhoenix.Form.for_create(:create)
+        |> AshPhoenix.Form.validate(%{"title" => "A post"})
+        |> Phoenix.Component.to_form()
+
+      category = Ash.UUID.generate()
+
+      state =
+        [mode: :create, form: form, static_opts: [hooks: %{on_validate: hook}]]
+        |> MishkaGervaz.Test.FormWebHelpers.build_state()
+        |> RelationHandler.revalidate_form(:category_id, category)
+
+      assert_received {:on_validate,
+                       %{
+                         "_target" => ["form", "category_id"],
+                         "form" => %{"title" => "A post", "category_id" => ^category}
+                       }}
+
+      assert Phoenix.HTML.Form.input_value(state.form, :slug) == "made-from-pick"
+      assert state.errors == %{title: ["from the hook"]}
+    end
+
+    test "builds the errors with the form's validation handler, as a typed change does" do
+      alias MishkaGervaz.Test.FormEventsDsl.{CustomValidationHandler, ValidationOverrideResource}
+
+      record = Ash.create!(ValidationOverrideResource, %{title: "A post"})
+
+      form =
+        record
+        |> AshPhoenix.Form.for_update(:update)
+        |> Phoenix.Component.to_form()
+
+      state =
+        [mode: :update, form: form, static_opts: [resource: ValidationOverrideResource]]
+        |> MishkaGervaz.Test.FormWebHelpers.build_state()
+        |> RelationHandler.revalidate_form(%{title: "Picked"})
+
+      assert state.errors[:built_by] == [CustomValidationHandler]
+    end
   end
 
   describe "get_search_term/2" do

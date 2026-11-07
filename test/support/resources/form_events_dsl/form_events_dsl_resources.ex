@@ -17,6 +17,8 @@ defmodule MishkaGervaz.Test.FormEventsDsl do
   defmodule CustomValidationHandler do
     @moduledoc false
     use MishkaGervaz.Form.Web.Events.ValidationHandler
+
+    def build_errors(form), do: Map.put(super(form), :built_by, [__MODULE__])
   end
 
   defmodule CustomSubmitHandler do
