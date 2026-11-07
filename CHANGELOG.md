@@ -1,3 +1,19 @@
+# Changelog for MishkaGervaz 0.0.6
+
+### Features:
+- A submit button's `loading_label` is what it reads while its save runs
+- A `:select` field takes `fn state -> options end`, drawn with the form state
+
+### Bug fixes:
+- A group declared collapsed starts closed, and opens when a field inside it has an error
+- The wizard's Next and Back move the form's own steps, one step at a time
+- A key map stacks its keys on a phone, and the submit row and the steps wrap
+- A search picker drops text that was typed and not picked once its list closes
+- A search picker narrows its list from the form's change, whether the text is typed, pasted or
+  filled in
+- A field that holds one value draws empty when its params carry a map or a list
+- Gettext template references carry line numbers
+
 # Changelog for MishkaGervaz 0.0.5
 
 ### Features:
