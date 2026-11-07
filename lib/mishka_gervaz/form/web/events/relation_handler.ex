@@ -441,17 +441,26 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
   def revalidate_form(state, field_atom, value),
     do: revalidate_form(state, %{field_atom => value})
 
-  @doc false
+  @doc """
+  Validates the form with the relation `values` picked, after the form's `on_validate` hook, as a
+  typed change is: the hook gets the form's params with the picks in them, and `_target` naming the
+  first one, so a value made from a picked relation (a slug made with the picked site's languages)
+  follows the pick. Errors the hook returns are the ones shown.
+  """
+  @spec revalidate_form(MishkaGervaz.Form.Web.State.t(), map()) ::
+          MishkaGervaz.Form.Web.State.t()
   def revalidate_form(state, values) when is_map(values) do
     case state.form do
       nil ->
         state
 
       form ->
-        form_params =
+        picked =
           Enum.reduce(values, AshPhoenix.Form.params(form.source), fn {field_atom, value}, acc ->
             Map.put(acc, to_string(field_atom), if(value == "__nil__", do: nil, else: value))
           end)
+
+        {form_params, hook_errors} = run_on_validate(state, picked, Map.keys(values))
 
         validated =
           form.source
@@ -461,15 +470,32 @@ defmodule MishkaGervaz.Form.Web.Events.RelationHandler do
         show_errors? = form.source.submitted_once? or form.source.type != :create
 
         errors =
-          if show_errors? do
-            MishkaGervaz.Form.Web.Events.SubmitHandler.format_form_errors(validated)
-          else
-            %{}
+          cond do
+            is_map(hook_errors) ->
+              hook_errors
+
+            show_errors? ->
+              MishkaGervaz.Form.Web.Events.SubmitHandler.format_form_errors(validated)
+
+            true ->
+              %{}
           end
 
         State.update(state, form: validated, errors: errors)
     end
   end
+
+  defp run_on_validate(state, form_params, [field_atom | _rest]) do
+    params = %{"_target" => ["form", to_string(field_atom)], "form" => form_params}
+
+    case MishkaGervaz.Form.Web.Events.run_hook(state, :on_validate, [params, state]) do
+      {%{"form" => %{} = result}, errors} when is_map(errors) -> {result, errors}
+      %{"form" => %{} = result} -> {result, nil}
+      _no_hook -> {form_params, nil}
+    end
+  end
+
+  defp run_on_validate(_state, form_params, []), do: {form_params, nil}
 
   @doc false
   def update_relation_state(socket, state, field_atom, result, opts \\ []) do
