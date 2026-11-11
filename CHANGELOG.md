@@ -1,3 +1,12 @@
+# Changelog for MishkaGervaz 0.0.8
+
+### Bug fixes:
+- The table state and the accordion helpers spec `records_result` as `%Phoenix.LiveView.AsyncResult{}`,
+  since Phoenix LiveView defines no `AsyncResult.t/0` type and dialyzer reported it as unknown
+
+### Dependencies:
+- ash 3.37.2 => 3.37.4, spark 2.7.9 => 2.7.10, websock_adapter 0.7.0 => 0.7.2
+
 # Changelog for MishkaGervaz 0.0.7
 
 ### Bug fixes:
