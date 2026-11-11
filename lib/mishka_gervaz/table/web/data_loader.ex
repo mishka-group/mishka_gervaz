@@ -101,7 +101,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec in_view?(State.t(), term()) :: boolean()
   defdelegate in_view?(state, id), to: __MODULE__.Default
 
-  @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.record()]} | :error
+  @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.Record.t()]} | :error
   defdelegate rows_in_view(state, ids), to: __MODULE__.Default
 
   @spec read_query(State.t()) :: Ash.Query.t()
@@ -375,7 +375,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       Returns `{:ok, rows}`, or `:error` when the read cannot answer: a manual read, or a read that
       returns an error. A hook or read that raises raises here too, as it does when the table loads.
       """
-      @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.record()]} | :error
+      @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.Record.t()]} | :error
       def rows_in_view(_state, []), do: {:ok, []}
 
       def rows_in_view(state, ids) do
@@ -724,7 +724,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       defp removed_ids(_state), do: MapSet.new()
 
-      @spec keyset(Ash.Resource.record() | nil) :: String.t() | nil
+      @spec keyset(Ash.Resource.Record.t() | nil) :: String.t() | nil
       defp keyset(%{__metadata__: %{keyset: keyset}}) when is_binary(keyset), do: keyset
       defp keyset(_row), do: nil
 
