@@ -298,11 +298,11 @@ defmodule MishkaGervaz.Table.Web.Live do
   defp seen_url?({path, query}, %{path: path, query: query}), do: true
   defp seen_url?(_seen, _url_state), do: false
 
-  @spec expanded_result(AsyncResult.t() | nil, term()) :: AsyncResult.t()
+  @spec expanded_result(%AsyncResult{} | nil, term()) :: %AsyncResult{}
   defp expanded_result(%AsyncResult{} = current, html), do: AsyncResult.ok(current, html)
   defp expanded_result(_collapsed, html), do: AsyncResult.ok(html)
 
-  @spec expanded_failure(AsyncResult.t() | nil, term()) :: AsyncResult.t()
+  @spec expanded_failure(%AsyncResult{} | nil, term()) :: %AsyncResult{}
   defp expanded_failure(%AsyncResult{} = current, reason), do: AsyncResult.failed(current, reason)
 
   defp expanded_failure(_collapsed, reason),

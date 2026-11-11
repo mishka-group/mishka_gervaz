@@ -245,7 +245,7 @@ defmodule MishkaGervaz.Table.Web.State do
           loading: loading_status(),
           loading_type: loading_type(),
           has_initial_data?: boolean(),
-          records_result: Phoenix.LiveView.AsyncResult.t(),
+          records_result: %Phoenix.LiveView.AsyncResult{},
           page: integer(),
           has_more?: boolean(),
           total_count: integer() | nil,
