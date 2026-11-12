@@ -2,7 +2,7 @@ defmodule MishkaGervaz.Table.Templates.BulkConfirmCountTest do
   @moduledoc """
   `{count}` in a bulk action's `confirm` becomes the number of rows the action runs on: the checked
   rows, or with select all the table's total minus the unchecked rows. A table that cannot tell
-  the total leaves `{count}` as written.
+  the total leaves `{count}` as written. The bar's label names the same number.
   """
   use ExUnit.Case, async: true
 
@@ -52,6 +52,11 @@ defmodule MishkaGervaz.Table.Templates.BulkConfirmCountTest do
       [text] -> text
       nil -> nil
     end
+  end
+
+  defp label_of(html) do
+    [text] = Regex.run(~r/<span[^>]*>\s*([^<]*?)\s*<\/span>/, html, capture: :all_but_first)
+    text
   end
 
   describe "bulk_selection_count/1" do
@@ -117,6 +122,38 @@ defmodule MishkaGervaz.Table.Templates.BulkConfirmCountTest do
 
     test "draws no confirm when the action has none" do
       refute render_bar(%{selected_ids: ids(2)}, nil) =~ "data-confirm"
+    end
+  end
+
+  describe "the bar's label" do
+    test "names every row with select all on a counted total" do
+      html = render_bar(%{select_all?: true, total_count: 99, total_pages: 5})
+
+      assert label_of(html) == "All 99 selected"
+    end
+
+    test "names the rows left once some are unchecked with select all" do
+      html =
+        render_bar(%{select_all?: true, total_count: 99, total_pages: 5, excluded_ids: ids(3)})
+
+      assert label_of(html) == "96 selected"
+    end
+
+    test "reads all selected while the total is unknown" do
+      assert label_of(render_bar(%{select_all?: true, total_count: 20, has_more?: true})) ==
+               "All selected"
+
+      assert label_of(render_bar(%{select_all?: true})) == "All selected"
+    end
+
+    test "names the unchecked rows while the total is unknown" do
+      html = render_bar(%{select_all?: true, has_more?: true, excluded_ids: ids(3)})
+
+      assert label_of(html) == "All except 3 selected"
+    end
+
+    test "names the checked rows without select all" do
+      assert label_of(render_bar(%{selected_ids: ids(2)})) == "2 selected"
     end
   end
 end
