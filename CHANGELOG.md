@@ -1,3 +1,10 @@
+# Changelog for MishkaGervaz 0.0.9
+
+### Bug fixes:
+- With select all, the bulk bar names the rows a bulk action reaches ("All 99 selected", or
+  "96 selected" once rows are unchecked) when the table knows its total, and keeps "All selected"
+  when it does not
+
 # Changelog for MishkaGervaz 0.0.8
 
 ### Bug fixes:
