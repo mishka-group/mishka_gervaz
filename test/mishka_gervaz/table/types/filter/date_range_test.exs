@@ -36,6 +36,11 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
       assert result == %{to: ~D[2024-01-31]}
     end
 
+    test "parses one side given without the other key" do
+      assert DateRange.parse_value(%{from: "2024-01-01"}, %{}) == %{from: ~D[2024-01-01]}
+      assert DateRange.parse_value(%{to: "2024-01-31"}, %{}) == %{to: ~D[2024-01-31]}
+    end
+
     test "returns nil when both dates are nil" do
       filter = %{name: :date_range}
       value = %{from: nil, to: nil}

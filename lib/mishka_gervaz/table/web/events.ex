@@ -74,6 +74,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Errors
+  alias MishkaGervaz.Table.Types.Filter.DateRange
 
   @type socket :: Phoenix.LiveView.Socket.t()
   @type state :: State.t()
@@ -342,14 +343,13 @@ defmodule MishkaGervaz.Table.Web.Events do
         value =
           case filter.type do
             :date_range ->
-              from_val = sanitize(state, Map.get(params, "#{field_name}_from", ""))
-              to_val = sanitize(state, Map.get(params, "#{field_name}_to", ""))
-
-              if from_val != "" and to_val != "" do
-                %{from: from_val, to: to_val}
-              else
-                nil
-              end
+              DateRange.parse_value(
+                %{
+                  from: sanitize(state, Map.get(params, "#{field_name}_from", "")),
+                  to: sanitize(state, Map.get(params, "#{field_name}_to", ""))
+                },
+                filter
+              )
 
             _ ->
               sanitize(state, Map.get(params, field_name, ""))

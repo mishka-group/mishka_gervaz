@@ -237,6 +237,29 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
   end
 
   describe "filter event" do
+    test "a date range takes one side alone" do
+      state =
+        "test-id"
+        |> State.init(MishkaGervaz.Test.Resources.ComplexTestResource, master_user())
+        |> State.update(loading: :loaded, has_initial_data?: true)
+
+      socket = create_socket(state, with_stream: true)
+
+      for {from, to, value} <- [
+            {"2024-01-05", "", %{from: ~D[2024-01-05]}},
+            {"", "2024-01-20", %{to: ~D[2024-01-20]}}
+          ] do
+        params = %{"date_range_from" => from, "date_range_to" => to}
+        {:noreply, updated} = Events.handle("filter", params, socket)
+
+        assert updated.assigns.table_state.filter_values[:date_range] == value
+      end
+
+      params = %{"date_range_from" => "", "date_range_to" => ""}
+      {:noreply, cleared} = Events.handle("filter", params, socket)
+      refute Map.has_key?(cleared.assigns.table_state.filter_values, :date_range)
+    end
+
     test "applies filter values from params" do
       create_test_data(FilterableResource, 5, fn i ->
         %{title: "Article #{i}", category: "tech", status: "published"}

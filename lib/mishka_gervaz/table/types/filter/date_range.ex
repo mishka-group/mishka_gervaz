@@ -2,7 +2,8 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   @moduledoc """
   Date range filter type.
 
-  Renders two date inputs for filtering records within a date range.
+  Renders two date inputs for filtering records within a date range. Either side alone filters
+  from or up to its day.
 
   ## Example
 
@@ -38,13 +39,15 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
     extra = filter[:ui][:extra] || %{}
     from_label = dgettext("mishka_gervaz", "From")
     to_label = dgettext("mishka_gervaz", "To")
+    from = format_date(Map.get(range, :from))
+    to = format_date(Map.get(range, :to))
 
     from_input =
       ui.date_input(
         Map.merge(extra, %{
           __changed__: %{},
           name: "#{filter.name}_from",
-          value: format_date(Map.get(range, :from)),
+          value: from,
           placeholder: from_label,
           aria_label: from_label,
           icon: filter[:ui][:icon],
@@ -58,7 +61,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
         Map.merge(extra, %{
           __changed__: %{},
           name: "#{filter.name}_to",
-          value: format_date(Map.get(range, :to)),
+          value: to,
           placeholder: to_label,
           aria_label: to_label,
           search: true,
@@ -76,19 +79,14 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   def parse_value(_, _filter), do: nil
 
   @spec parse_range(map(), map()) :: map() | nil
-  defp parse_range(%{from: from, to: to}, _filter) do
-    parsed_from = parse_date(from)
-    parsed_to = parse_date(to)
-
-    cond do
-      parsed_from && parsed_to -> %{from: parsed_from, to: parsed_to}
-      parsed_from -> %{from: parsed_from}
-      parsed_to -> %{to: parsed_to}
-      true -> nil
+  defp parse_range(range, _filter) do
+    case {parse_date(Map.get(range, :from)), parse_date(Map.get(range, :to))} do
+      {nil, nil} -> nil
+      {from, nil} -> %{from: from}
+      {nil, to} -> %{to: to}
+      {from, to} -> %{from: from, to: to}
     end
   end
-
-  defp parse_range(_, _), do: nil
 
   @impl true
   @spec build_query(Ash.Query.t(), atom(), term(), map()) :: Ash.Query.t()
