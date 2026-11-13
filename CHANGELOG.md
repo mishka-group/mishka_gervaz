@@ -1,3 +1,22 @@
+# Changelog for MishkaGervaz 0.0.10
+
+### Features:
+- A `:date` or `:datetime` field takes `min` and `max`: a `Date`, `DateTime`, `NaiveDateTime`, or
+  a function read each time it is drawn or checked, so `min fn -> DateTime.utc_now() end` is always
+  now. The calendar greys out the days outside them, a pick outside them moves to the nearest one
+  allowed, the browser's own input carries `min` and `max`, and validate and save refuse a value
+  outside them with the field's error
+- A `:datetime` field's `ui` `step` is the minutes between the times its picker offers
+- `ui` `first_day_of_week` is the day a `:date` or `:datetime` calendar's weeks start on (Monday
+  when not set)
+
+### Bug fixes:
+- A date picker keeps its pick when a form change posted before the pick was drawn arrives after
+  it; that change carried the old, empty value and emptied the field
+
+### Dependencies:
+- dialyxir 1.4.8 => 1.4.9
+
 # Changelog for MishkaGervaz 0.0.9
 
 ### Bug fixes:
