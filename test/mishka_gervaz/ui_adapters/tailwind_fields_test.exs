@@ -590,19 +590,16 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
-    # The hook closes an open list on a click outside it, reading "open" from the list in the page
-    # rather than from an attribute a caller without change tracking would leave stale; a shut list
-    # sends nothing.
-    test "closes on a click elsewhere through the hook, which finds the open list by its role" do
-      for fun <- [:search_select, :multi_select, :load_more_select] do
-        open = relation(fun, %{dropdown_open?: true})
-        shut = relation(fun, %{dropdown_open?: false})
+    # The click-away is on every select, open or shut, so it is there even when a caller draws the
+    # select without change tracking and the root is never drawn again; a shut list's close does
+    # nothing.
+    test "asks to be closed on a click elsewhere, open or shut" do
+      for fun <- [:search_select, :multi_select, :load_more_select], open? <- [true, false] do
+        html = relation(fun, %{dropdown_open?: open?})
 
-        assert open =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect"), "#{fun}"
-        assert open =~ ~r/data-close="[^"]*relation_close_dropdown/, "#{fun}"
-        assert open =~ ~s(data-role="gervaz-relation-list"), "#{fun}"
-        refute shut =~ "gervaz-relation-list", "#{fun}"
-        refute open =~ "phx-click-away", "#{fun}"
+        assert html =~ ~s(phx-click-away="relation_close_dropdown"), "#{fun} #{open?}"
+        assert html =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect"), "#{fun}"
+        assert html =~ "gervaz-relation-list" == open?, "#{fun} #{open?}"
       end
     end
 

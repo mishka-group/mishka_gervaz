@@ -26,10 +26,9 @@
 - A search select or multi-select opens as soon as its input takes focus or a click, through the
   `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
   list to another select closed the first and left the second shut
-- A relation select's open list closes on any click outside it, through the `.SearchSelect` hook,
-  which the load-more select now carries too and which finds an open list by its
-  `data-role="gervaz-relation-list"`; a shut list sends nothing. The conditional `phx-click-away`
-  it replaces was left off a select drawn without change tracking, so its list never closed
+- A relation select's open list closes on any click outside it again: every search, multi and
+  load-more select carries `phx-click-away`, open or shut, whose handler does nothing for a shut
+  list. The load-more select carries the `.SearchSelect` hook too, for Escape
 - A table's relation filter is drawn whole each time it changes, so an open select's
   `aria-expanded` and debounce are the open ones; it was built with `__changed__: %{}`
 - A table's date range filter with only From or only To set filters from or up to that day,

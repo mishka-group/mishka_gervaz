@@ -383,10 +383,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   The hook also closes the open list on Escape and keeps that Escape from the page, so a modal
   around the form stays open; with the list shut Escape goes on to the modal. It opens a shut list
   when the input takes focus or a click, as `relation_focus`: a `phx-focus` would wait out the
-  input's `phx-debounce`, so a click moving from one open list to another select left it shut. A
-  click anywhere outside an open list closes it, as `relation_close_dropdown`. The hook reads
-  whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so it holds
-  for a caller whose assigns carry no change tracking, and a shut list sends nothing.
+  input's `phx-debounce`, so a click moving from one open list to another select left it shut. The
+  hook reads whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so
+  it holds for a caller whose assigns carry no change tracking. A click anywhere outside the select
+  sends `relation_close_dropdown` through an always-present `phx-click-away`, whose handler does
+  nothing for a shut list.
 
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
@@ -450,6 +451,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
+      phx-click-away="relation_close_dropdown"
+      phx-value-filter={@filter_name}
+      phx-target={@myself}
     >
       <div
         class="relative"
@@ -558,9 +562,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
       export default {
-        destroyed() {
-          document.removeEventListener("click", this.outside);
-        },
         mounted() {
           const open = () => this.el.querySelector("[data-role=gervaz-relation-list]");
 
@@ -574,12 +575,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
           this.el.addEventListener("focusin", show);
           this.el.addEventListener("click", show);
-
-          this.outside = (e) => {
-            if (!this.el.contains(e.target) && open()) this.js().exec(this.el.dataset.close);
-          };
-
-          document.addEventListener("click", this.outside);
 
           this.el.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && open()) {
@@ -634,8 +629,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Shows a clickable trigger that opens a dropdown with options and a
   "Load more" button for pagination.
 
-  The trigger carries `aria-expanded`, `"true"` while the list is open. The `.SearchSelect` hook
-  closes the open list on a click outside it and on Escape, as `search_select/1` says.
+  The trigger carries `aria-expanded`, `"true"` while the list is open. A click outside closes the
+  list through `phx-click-away`, and the `.SearchSelect` hook closes it on Escape.
   """
   @impl true
   def load_more_select(assigns) do
@@ -691,6 +686,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
+      phx-click-away="relation_close_dropdown"
+      phx-value-filter={@filter_name}
+      phx-target={@myself}
     >
       <button
         type="button"
@@ -809,6 +807,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
+      phx-click-away="relation_close_dropdown"
+      phx-value-filter={@filter_name}
+      phx-target={@myself}
     >
       <div class="relative">
         <.render_icon
