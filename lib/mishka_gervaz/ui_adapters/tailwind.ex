@@ -391,7 +391,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   hook reads whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so
   it holds for a caller whose assigns carry no change tracking. A click anywhere outside the select
   sends `relation_close_dropdown` through an always-present `phx-click-away`, whose handler does
-  nothing for a shut list, and Tab moving the focus out of the select closes its list.
+  nothing for a shut list, and Tab moving the focus out of the select closes its list. An Escape
+  pressed while a list it asked to open is still on its way, or while a keyup's search waits out
+  the debounce, still closes it: the hook sends that search first, then the close.
 
   The combobox and the form's calendar carry the same hook, so Escape closes just their list (a
   modal around the form stays open) and Tab out of them closes it.
@@ -569,14 +571,26 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
       export default {
+        updated() {
+          if (this.isOpen()) this.opening = false;
+        },
         mounted() {
-          const open = () => {
+          this.isOpen = () => {
             const list = this.el.querySelector("[data-role=gervaz-relation-list]");
             return !!list && list.getClientRects().length > 0;
           };
 
-          const opens = () => this.js().exec(this.el.dataset.open);
-          const closes = () => this.js().exec(this.el.dataset.close);
+          const open = this.isOpen;
+
+          const opens = () => {
+            this.opening = true;
+            this.js().exec(this.el.dataset.open);
+          };
+
+          const closes = () => {
+            this.opening = false;
+            this.js().exec(this.el.dataset.close);
+          };
 
           const show = (e) => {
             const input = e.target;
@@ -587,7 +601,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           this.el.addEventListener("click", show);
 
           this.el.addEventListener("focusout", (e) => {
-            if (e.relatedTarget && !this.el.contains(e.relatedTarget) && open()) closes();
+            if (e.relatedTarget && !this.el.contains(e.relatedTarget) && (open() || this.opening)) closes();
           });
 
           const typing = ["Backspace", "Delete", "Process", "Unidentified"];
@@ -598,8 +612,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           });
 
           this.el.addEventListener("keydown", (e) => {
-            if (e.key === "Escape" && open()) {
+            if (e.key === "Escape" && (open() || this.opening)) {
               e.stopPropagation();
+              if (e.target.tagName === "INPUT") e.target.dispatchEvent(new FocusEvent("blur"));
               closes();
               return;
             }

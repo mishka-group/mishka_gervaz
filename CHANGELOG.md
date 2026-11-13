@@ -30,6 +30,9 @@
   keeps the keyup of a key that types nothing (Escape, Enter, Tab, an arrow) from the input's
   search, and a table's relation filter searches nothing for one, so the Escape's keyup no longer
   searched and opened the list again
+- An Escape pressed right after a relation select was opened or typed in closes its list: the
+  hook sends the search still waiting out the debounce before the close, and closes a list whose
+  opening is still on its way, so neither reopened it
 - Escape in an open combobox or form calendar closes just its list, leaving a modal around the
   form open, and Tab out of one closes it, as it does a relation select's list now: they carry
   the `.SearchSelect` hook, which finds an open list by its `data-role="gervaz-relation-list"`
