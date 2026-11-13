@@ -498,7 +498,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
-        class="absolute z-50 mt-1 max-h-80 w-max min-w-full max-w-[min(20rem,90vw)] overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
         phx-window-keydown="relation_close_dropdown"
         phx-key="Escape"
         phx-value-filter={@filter_name}
@@ -698,7 +698,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-max min-w-full max-w-[min(20rem,90vw)] overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -855,7 +855,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-max min-w-full max-w-[min(20rem,90vw)] overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}

@@ -23,8 +23,8 @@
   with "is too small" or "is too large"
 - A search select, multi-select or load-more select sends `relation_close_dropdown` on a click
   elsewhere only while its list is open, instead of once per select on the page for every click
-- A relation select's open list grows to a long name (up to 20rem) and wraps it at its spaces,
-  breaking a word only when one alone is wider, instead of scrolling sideways and cutting it
+- A relation select's open list, as wide as its input, wraps a long name at its spaces, breaking a
+  word only when one alone is wider, instead of scrolling sideways and cutting it
 - A search select or multi-select opens as soon as its input takes focus, through the
   `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
   list to another select closed the first and left the second shut

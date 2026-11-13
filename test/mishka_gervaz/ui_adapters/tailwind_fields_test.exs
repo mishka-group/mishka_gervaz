@@ -614,9 +614,12 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
-    test "widens its open list to a long name before it breaks a word" do
+    test "keeps its open list as wide as its input, so it never covers the filter beside it" do
       for fun <- [:search_select, :multi_select, :load_more_select] do
-        assert relation(fun, %{dropdown_open?: true}) =~ "w-max min-w-full", "#{fun}"
+        html = relation(fun, %{dropdown_open?: true})
+
+        assert html =~ "max-h-80 w-full overflow-x-hidden", "#{fun}"
+        refute html =~ "w-max", "#{fun}"
       end
     end
 
