@@ -117,6 +117,19 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
   describe "render_input/3" do
     @filter %{name: :created_at, ui: %{label: "Created at"}}
 
+    defp tracked(%Phoenix.LiveView.Rendered{static: static, dynamic: dynamic}) do
+      parts = Enum.map(dynamic.(true), &tracked/1)
+
+      static
+      |> Enum.zip(parts ++ [""])
+      |> Enum.map_join(fn {text, part} -> text <> part end)
+    end
+
+    defp tracked(nil), do: ""
+    defp tracked(text) when is_binary(text), do: text
+    defp tracked(iodata) when is_list(iodata), do: IO.iodata_to_binary(iodata)
+    defp tracked(other), do: other |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+
     defp draw(value, filter \\ @filter) do
       filter
       |> DateRange.render_input(value, MishkaGervaz.UIAdapters.Tailwind)
@@ -169,6 +182,22 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
       alone = draw(%{from: ~D[2026-09-10]})
       refute alone =~ ~r/<input[^>]*name="created_at_from"[^>]*max=/
       assert alone =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
+    end
+
+    # A live page diffs the inputs against the ones it drew last, reading each part through the
+    # change tracking; a part it reads as unchanged keeps the old value, min and max on screen.
+    test "draws every part again on a live page's diff, so a new range shows without a reload" do
+      html =
+        @filter
+        |> DateRange.render_input(
+          %{from: ~D[2026-09-10], to: ~D[2026-09-24]},
+          MishkaGervaz.UIAdapters.Tailwind
+        )
+        |> tracked()
+
+      assert html =~ ~s(name="created_at_from" value="2026-09-10")
+      assert html =~ ~r/<input[^>]*name="created_at_from"[^>]*max="2026-09-24"/
+      assert html =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
     end
 
     test "draws both inputs empty for a value that is not a range" do

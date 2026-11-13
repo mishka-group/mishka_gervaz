@@ -32,6 +32,9 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   that is not a map draws both inputs empty. Each input takes the other's day as its `max` or
   `min`, so its calendar greys out the days that would leave the range empty. The filter's
   `ui.extra` is merged into both inputs' assigns, and its `ui.icon` goes on the first.
+
+  The inputs are drawn whole each time the filter's value changes, so a live page shows the value
+  the state holds, a reversed range swapped, and each side's new `min` or `max` without a reload.
   """
   @impl true
   @spec render_input(map(), term(), module()) :: Phoenix.LiveView.Rendered.t()
@@ -46,7 +49,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
     from_input =
       ui.date_input(
         Map.merge(extra, %{
-          __changed__: %{},
+          __changed__: nil,
           name: "#{filter.name}_from",
           value: from,
           max: if(to != "", do: to),
@@ -61,7 +64,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
     to_input =
       ui.date_input(
         Map.merge(extra, %{
-          __changed__: %{},
+          __changed__: nil,
           name: "#{filter.name}_to",
           value: to,
           min: if(from != "", do: from),
@@ -72,7 +75,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
         })
       )
 
-    ui.date_range_container(%{__changed__: %{}, from_input: from_input, to_input: to_input})
+    ui.date_range_container(%{__changed__: nil, from_input: from_input, to_input: to_input})
   end
 
   @impl true
