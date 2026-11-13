@@ -85,7 +85,7 @@ defmodule MishkaGervaz.Table.Types.Filter.Relation do
 
   defp build_assigns(filter, value, mode) do
     base = %{
-      __changed__: %{},
+      __changed__: nil,
       name: filter.name,
       filter_name: filter.name,
       id: filter[:input_id],

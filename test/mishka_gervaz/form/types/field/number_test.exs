@@ -52,6 +52,28 @@ defmodule MishkaGervaz.Form.Types.Field.NumberTest do
     end
   end
 
+  describe "validate/2 with min and max" do
+    test "takes the numbers from min to max, and refuses the others" do
+      config = %{min: 1, max: 10}
+
+      assert NumberField.validate(1, config) == {:ok, 1}
+      assert NumberField.validate("10", config) == {:ok, "10"}
+      assert NumberField.validate("5.5", config) == {:ok, "5.5"}
+      assert NumberField.validate(0, config) == {:error, "is too small"}
+      assert NumberField.validate("10.5", config) == {:error, "is too large"}
+    end
+
+    test "a min or max given as a function of no arguments is called" do
+      assert NumberField.validate(0, %{min: fn -> 1 end}) == {:error, "is too small"}
+      assert NumberField.validate(5, %{max: fn -> nil end}) == {:ok, 5}
+    end
+
+    test "a min or max that is not a number is not checked" do
+      assert NumberField.validate(-5, %{min: ~D[2024-01-01]}) == {:ok, -5}
+      assert NumberField.validate(500, %{max: nil}) == {:ok, 500}
+    end
+  end
+
   describe "sanitize/2" do
     test "strips HTML and trims binaries" do
       assert NumberField.sanitize(" <b>42</b> ", %{}) == "42"

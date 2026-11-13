@@ -29,7 +29,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
     quote do
       alias MishkaGervaz.Form.Web.State
 
-      import MishkaGervaz.Helpers, only: [merge_relation_field_values: 2]
+      import MishkaGervaz.Helpers, only: [merge_picked_values: 2]
 
       @doc """
       Validate form params and update the form state.
@@ -60,7 +60,7 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
               form.source
               |> AshPhoenix.Form.params()
               |> Map.merge(incoming)
-              |> merge_relation_field_values(state)
+              |> merge_picked_values(state)
               |> then(
                 &MishkaGervaz.Form.Web.Events.Helpers.parse_typed_params(
                   state.static.fields,
@@ -72,7 +72,8 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
             field_type_errors =
               MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params(
                 state.static.fields,
-                form_params
+                form_params,
+                state
               )
 
             validated =

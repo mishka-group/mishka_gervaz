@@ -294,7 +294,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       role="option"
       aria-selected={to_string(@current_value == to_string(@value))}
       class={[
-        "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3] data-[active]:bg-[#f7f6f3]",
+        "w-full break-words px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3] data-[active]:bg-[#f7f6f3]",
         @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
       ]}
       phx-click="relation_select"
@@ -381,7 +381,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   since `Phoenix.LiveView.JS` can neither stop Enter's submit nor move a highlight relative to the
   current one; the host registers it from `phoenix-colocated/mishka_gervaz` (see the README).
   The hook also closes the open list on Escape and keeps that Escape from the page, so a modal
-  around the form stays open; with the list shut Escape goes on to the modal.
+  around the form stays open; with the list shut Escape goes on to the modal. It opens a shut list
+  on a click in the input, or when Tab brings the focus to it, as `relation_focus`: a `phx-focus`
+  would wait out the input's `phx-debounce`, so a click moving from one open list to another select
+  left it shut, and any focus would also count the one LiveView gives back to a form's search box
+  drawn anew after Escape closed its list, which opened the list again. The
+  hook keeps the keyup of a key that types nothing (Escape, Enter, Tab, an arrow) from the input's
+  search, so the Escape that closed the list does not search and open it again. The
+  hook reads whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so
+  it holds for a caller whose assigns carry no change tracking. A click anywhere outside the select
+  sends `relation_close_dropdown` through an always-present `phx-click-away`, whose handler does
+  nothing for a shut list, and Tab moving the focus out of the select closes its list. An Escape
+  pressed while a list it asked to open is still on its way, or while a keyup's search waits out
+  the debounce, still closes it: the hook sends that search first, then the close.
+
+  The combobox and the form's calendar carry the same hook, so Escape closes just their list (a
+  modal around the form stays open) and Tab out of them closes it.
 
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
@@ -479,7 +494,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-expanded={to_string(@dropdown_open? && !@disabled)}
           phx-debounce={if !@disabled and !@dropdown_open?, do: @debounce}
           phx-keyup={if !@disabled, do: @search_event}
-          phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
           phx-value-filter={@filter_name}
           phx-value-min-chars={@min_chars}
@@ -497,7 +511,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        data-role="gervaz-relation-list"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
         phx-window-keydown="relation_close_dropdown"
         phx-key="Escape"
         phx-value-filter={@filter_name}
@@ -556,11 +571,51 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
       export default {
+        updated() {
+          if (this.isOpen()) this.opening = false;
+        },
         mounted() {
+          this.isOpen = () => {
+            const list = this.el.querySelector("[data-role=gervaz-relation-list]");
+            return !!list && list.getClientRects().length > 0;
+          };
+
+          const open = this.isOpen;
+
+          const opens = () => {
+            this.opening = true;
+            this.js().exec(this.el.dataset.open);
+          };
+
+          const closes = () => {
+            this.opening = false;
+            this.js().exec(this.el.dataset.close);
+          };
+
+          const show = (e) => {
+            const input = e.target;
+            if (input.tagName !== "INPUT" || input.type !== "text" || input.disabled || open()) return;
+            opens();
+          };
+
+          this.el.addEventListener("click", show);
+
+          this.el.addEventListener("focusout", (e) => {
+            if (e.relatedTarget && !this.el.contains(e.relatedTarget) && (open() || this.opening)) closes();
+          });
+
+          const typing = ["Backspace", "Delete", "Process", "Unidentified"];
+
+          this.el.addEventListener("keyup", (e) => {
+            if (e.key === "Tab") show(e);
+            if (e.key.length > 1 && !typing.includes(e.key)) e.stopPropagation();
+          });
+
           this.el.addEventListener("keydown", (e) => {
-            if (e.key === "Escape" && this.el.querySelector("[role=listbox]")) {
+            if (e.key === "Escape" && (open() || this.opening)) {
               e.stopPropagation();
-              this.js().exec(this.el.dataset.close);
+              if (e.target.tagName === "INPUT") e.target.dispatchEvent(new FocusEvent("blur"));
+              closes();
               return;
             }
 
@@ -573,7 +628,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
               input.removeAttribute("aria-activedescendant");
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
-                this.js().exec(this.el.dataset.open);
+                opens();
               }
               return;
             }
@@ -610,7 +665,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Shows a clickable trigger that opens a dropdown with options and a
   "Load more" button for pagination.
 
-  The trigger carries `aria-expanded`, `"true"` while the list is open.
+  The trigger carries `aria-expanded`, `"true"` while the list is open. A click outside closes the
+  list through `phx-click-away`, and the `.SearchSelect` hook closes it on Escape.
   """
   @impl true
   def load_more_select(assigns) do
@@ -663,6 +719,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"load-more-select-#{@table_id}-#{@filter_name}"}
+      phx-hook=".SearchSelect"
+      data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
+      data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
       phx-click-away="relation_close_dropdown"
       phx-value-filter={@filter_name}
       phx-target={@myself}
@@ -691,7 +750,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        data-role="gervaz-relation-list"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -700,7 +760,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           :for={{opt_label, opt_value} <- @display_options}
           type="button"
           class={[
-            "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+            "w-full break-words px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
             to_string(@current_value) == to_string(opt_value) && "bg-[#f2f1fc] text-[#4f4bcc]"
           ]}
           phx-click="relation_select"
@@ -742,7 +802,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
   while the list is shut, for the reason `search_select/1` gives. `:search_event` is the event a
-  keyup sends, as `search_select/1` says.
+  keyup sends, as `search_select/1` says. A click in the input, or Tab into it, opens the list
+  through the `.SearchSelect` hook, at once, as `search_select/1` says.
   """
   @impl true
   def multi_select(assigns) do
@@ -779,6 +840,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"multi-select-#{@table_id}-#{@filter_name}"}
+      phx-hook=".SearchSelect"
+      data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
+      data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
       phx-click-away="relation_close_dropdown"
       phx-value-filter={@filter_name}
       phx-target={@myself}
@@ -800,7 +864,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-expanded={to_string(@dropdown_open?)}
           phx-debounce={if !@dropdown_open?, do: @debounce}
           phx-keyup={@search_event}
-          phx-focus="relation_focus"
           phx-target={@myself}
           phx-value-filter={@filter_name}
           phx-value-min-chars={@min_chars}
@@ -845,7 +908,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        data-role="gervaz-relation-list"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -866,7 +930,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           <span class={checkbox_class(value, @selected_set)}>
             <.render_icon :if={selected?(value, @selected_set)} name="hero-check" class="w-3 h-3" />
           </span>
-          {label}
+          <span class="min-w-0 break-words">{label}</span>
         </button>
 
         <button
@@ -929,7 +993,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   browser's: a button showing the date, and under it the month and year, a step a month or a year
   either way, and the days. `:picker` is `%{month: month}`, the first day of the month shown, or
   `%{month: nil}` while it is closed; `:field_name` and `:target` name the field and the form its
-  `picker_*` events go to. The value is in a hidden input of `:name`.
+  `picker_*` events go to. The value is in a hidden input of `:name`. Days before `:min` or after
+  `:max` are greyed out and can't be picked, and each week starts on `:first_day_of_week`
+  (`:monday` when not given).
 
   ## Assigns
     * `:name`, `:value`, `:id`, `:min`, `:max` - the input's attributes
@@ -938,7 +1004,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:aria_label` - the input's accessible name, for an input without a `<label>` of its own
     * `:disabled`, `:readonly` - switch the input off
     * `:class` - replaces the input's classes
-    * `:picker`, `:field_name`, `:target` - the form's calendar, above
+    * `:picker`, `:field_name`, `:target`, `:first_day_of_week` - the form's calendar, above
   """
   @impl true
   def date_input(%{picker: %{}} = assigns), do: calendar(assign(assigns, :kind, :date))
@@ -988,6 +1054,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Given `:picker`, as a form's `:datetime` field is, it is the calendar `date_input/1` draws, with
   the hour and the minute under the days — sent as `picker_time` — and a Done that closes it.
+  `:min` and `:max` (`"2024-09-09T22:45:00"`) bound it as they do the date's, and `:step` is the
+  minutes between the minutes offered. Without `:picker` it is the browser's `datetime-local`
+  input, with `min`, `max` and `step` set from them.
   """
   @impl true
   def datetime_input(%{picker: %{}} = assigns), do: calendar(assign(assigns, :kind, :datetime))
@@ -1000,6 +1069,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:min, fn -> nil end)
+      |> assign_new(:max, fn -> nil end)
+      |> assign(:step, assigns[:step] && assigns[:step] * 60)
 
     ~H"""
     <div class="relative">
@@ -1013,6 +1085,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         id={@id}
         name={@name}
         value={Phoenix.HTML.Form.normalize_value("datetime-local", @value)}
+        min={@min}
+        max={@max}
+        step={@step}
         disabled={@disabled}
         readonly={@readonly}
         class={[
@@ -3126,7 +3201,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       )
 
     ~H"""
-    <div class="relative" phx-click-away={combobox_close(@dropdown_id)}>
+    <div
+      class="relative"
+      id={"#{@dropdown_id}-box"}
+      phx-hook=".SearchSelect"
+      data-open={combobox_open(@dropdown_id)}
+      data-close={combobox_close(@dropdown_id)}
+      phx-click-away={combobox_close(@dropdown_id)}
+    >
       <.render_icon
         :if={@icon}
         name={@icon}
@@ -3151,6 +3233,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <div
         id={@dropdown_id}
+        data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 hidden max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_rgba(23,22,26,0.08)]"
       >
         <%= for {label, value} <- @options do %>
@@ -3175,7 +3258,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   defp calendar(assigns) do
     {day, {hour, minute}} = DateTimeField.parts(assigns[:value])
+    {first_day, _time} = DateTimeField.parts(assigns[:min])
+    {last_day, _time} = DateTimeField.parts(assigns[:max])
     month = assigns.picker[:month]
+    week_start = assigns[:first_day_of_week] || :monday
 
     assigns =
       assigns
@@ -3191,7 +3277,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         month: month,
         today: Date.utc_today(),
         stored: if(day, do: DateTimeField.value(day, {hour, minute}, assigns.kind), else: ""),
-        days: month && calendar_days(month),
+        days: month && calendar_days(month, week_start),
+        weekdays: weekday_names(week_start),
+        minutes: minutes(assigns[:step], minute),
+        first_day: first_day,
+        last_day: last_day,
         off?: assigns[:disabled] == true or assigns[:readonly] == true
       )
 
@@ -3199,6 +3289,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"#{@id}-calendar"}
+      phx-hook=".SearchSelect"
+      data-close={JS.push("picker_close", value: %{field: @field_name}, target: @target)}
       phx-click-away={
         @month && JS.push("picker_close", value: %{field: @field_name}, target: @target)
       }
@@ -3226,6 +3318,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@month}
+        data-role="gervaz-relation-list"
         role="dialog"
         aria-label={month_label(@month)}
         class="absolute z-50 mt-1 w-[19.5rem] max-w-full rounded-[14px] border border-[#ecebe6] bg-white p-3 shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
@@ -3275,7 +3368,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </div>
 
         <div class="grid grid-cols-7 gap-0.5 text-center text-[10.5px] font-bold uppercase text-[#a8a5a0]">
-          <span :for={name <- weekday_names()}>{name}</span>
+          <span :for={name <- @weekdays}>{name}</span>
         </div>
         <div class="mt-1 grid grid-cols-7 gap-0.5">
           <%= for d <- @days do %>
@@ -3291,9 +3384,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 )
               }
               aria-pressed={to_string(d == @day)}
+              disabled={outside?(d, @first_day, @last_day)}
               class={[
                 "h-8 rounded-[8px] text-[12.5px] font-semibold",
-                (d == @day && "bg-[#5b57d6] text-white") || "text-[#3a382f] hover:bg-[#f2f1fc]",
+                (d == @day && "bg-[#5b57d6] text-white") ||
+                  "text-[#3a382f] hover:bg-[#f2f1fc] disabled:cursor-not-allowed disabled:text-[#d4d2cb] disabled:hover:bg-transparent",
                 d == @today && d != @day && "ring-1 ring-inset ring-[#c3c1f0]"
               ]}
             >
@@ -3309,9 +3404,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           <span class="me-1">{dgettext("mishka_gervaz", "Time")}</span>
           <div
             :for={
-              {part, top, now, label} <- [
-                {"hour", 23, @hour, dgettext("mishka_gervaz", "Hour")},
-                {"minute", 59, @minute, dgettext("mishka_gervaz", "Minute")}
+              {part, options, now, label} <- [
+                {"hour", 0..23, @hour, dgettext("mishka_gervaz", "Hour")},
+                {"minute", @minutes, @minute, dgettext("mishka_gervaz", "Minute")}
               ]
             }
             dir="ltr"
@@ -3325,7 +3420,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
               aria-label={label}
               class="h-9 cursor-pointer appearance-none rounded-[9px] border border-[#ecebe6] bg-[#faf9f6] ps-2.5 pe-7 text-[12.5px] font-semibold text-[#1b1a18] outline-none focus:border-[#c3c1f0]"
             >
-              <option :for={n <- 0..top} value={n} selected={n == now}>{two_digits(n)}</option>
+              <option :for={n <- options} value={n} selected={n == now}>{two_digits(n)}</option>
             </select>
             <.select_chevron class="end-[9px] size-3" />
           </div>
@@ -3352,10 +3447,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
-  defp calendar_days(%Date{} = month) do
+  defp calendar_days(%Date{} = month, week_start) do
     last = Date.end_of_month(month)
-    List.duplicate(nil, Date.day_of_week(month) - 1) ++ Enum.to_list(Date.range(month, last))
+
+    List.duplicate(nil, Date.day_of_week(month, week_start) - 1) ++
+      Enum.to_list(Date.range(month, last))
   end
+
+  defp outside?(day, first_day, last_day),
+    do:
+      (first_day != nil and Date.before?(day, first_day)) or
+        (last_day != nil and Date.after?(day, last_day))
+
+  defp minutes(step, minute) when is_integer(step) and step > 1,
+    do: Enum.uniq(Enum.sort([minute | Enum.to_list(0..59//step)]))
+
+  defp minutes(_step, _minute), do: Enum.to_list(0..59)
 
   defp shown_date(nil, _hour, _minute, _kind), do: nil
 
@@ -3398,8 +3505,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp month_short(11), do: dgettext("mishka_gervaz", "Nov")
   defp month_short(12), do: dgettext("mishka_gervaz", "Dec")
 
-  defp weekday_names,
-    do: [
+  defp weekday_names(week_start) do
+    names = [
       dgettext("mishka_gervaz", "Mo"),
       dgettext("mishka_gervaz", "Tu"),
       dgettext("mishka_gervaz", "We"),
@@ -3408,6 +3515,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       dgettext("mishka_gervaz", "Sa"),
       dgettext("mishka_gervaz", "Su")
     ]
+
+    {head, tail} = Enum.split(names, 7 - Date.day_of_week(~D[2024-01-01], week_start) + 1)
+    tail ++ head
+  end
 
   defp combobox_open(dropdown_id) do
     JS.show(to: "##{dropdown_id}")
@@ -3552,7 +3663,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp selected?(value, selected_set), do: to_string(value) in selected_set
 
   defp checkbox_class(value, selected_set) do
-    base = "grid size-4 place-items-center rounded-[5px] border transition-colors"
+    base = "grid size-4 shrink-0 place-items-center rounded-[5px] border transition-colors"
 
     if selected?(value, selected_set) do
       "#{base} border-[#5b57d6] bg-[#5b57d6] text-white"

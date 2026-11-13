@@ -120,7 +120,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   @doc """
   `changeset` with an error on each field whose type's `FieldType.validate/2` refused its value, as
-  `MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params/2` lists them, so the save fails and
+  `MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params/3` lists them, so the save fails and
   shows them as it shows the action's own errors.
   """
   @spec add_field_type_errors(Ash.Changeset.t(), [{atom(), String.t()}]) :: Ash.Changeset.t()
@@ -245,7 +245,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       alias MishkaGervaz.Form.Web.UploadHelpers
       alias MishkaGervaz.Form.Web.Events.Helpers, as: EventsHelpers
 
-      import MishkaGervaz.Helpers, only: [merge_relation_field_values: 2]
+      import MishkaGervaz.Helpers, only: [merge_picked_values: 2]
 
       import MishkaGervaz.Form.Web.Events.SubmitHandler,
         only: [
@@ -278,7 +278,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               form.source
               |> AshPhoenix.Form.params()
               |> Map.merge(incoming)
-              |> merge_relation_field_values(state)
+              |> merge_picked_values(state)
           end
 
         form_params = transform_params(state, form_params)
@@ -293,7 +293,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
           form ->
             type_errors =
-              EventsHelpers.validate_typed_params(state.static.fields, form_params)
+              EventsHelpers.validate_typed_params(state.static.fields, form_params, state)
 
             result =
               AshPhoenix.Form.submit(form.source,

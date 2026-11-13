@@ -36,6 +36,14 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
       assert result == %{to: ~D[2024-01-31]}
     end
 
+    test "parses one side given without the other key, and a From after the To the other way round" do
+      assert DateRange.parse_value(%{from: "2024-01-01"}, %{}) == %{from: ~D[2024-01-01]}
+      assert DateRange.parse_value(%{to: "2024-01-31"}, %{}) == %{to: ~D[2024-01-31]}
+
+      assert DateRange.parse_value(%{from: "2024-01-31", to: "2024-01-01"}, %{}) ==
+               %{from: ~D[2024-01-01], to: ~D[2024-01-31]}
+    end
+
     test "returns nil when both dates are nil" do
       filter = %{name: :date_range}
       value = %{from: nil, to: nil}
@@ -109,6 +117,19 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
   describe "render_input/3" do
     @filter %{name: :created_at, ui: %{label: "Created at"}}
 
+    defp tracked(%Phoenix.LiveView.Rendered{static: static, dynamic: dynamic}) do
+      parts = Enum.map(dynamic.(true), &tracked/1)
+
+      static
+      |> Enum.zip(parts ++ [""])
+      |> Enum.map_join(fn {text, part} -> text <> part end)
+    end
+
+    defp tracked(nil), do: ""
+    defp tracked(text) when is_binary(text), do: text
+    defp tracked(iodata) when is_list(iodata), do: IO.iodata_to_binary(iodata)
+    defp tracked(other), do: other |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+
     defp draw(value, filter \\ @filter) do
       filter
       |> DateRange.render_input(value, MishkaGervaz.UIAdapters.Tailwind)
@@ -150,6 +171,50 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
 
       assert html =~ ~s(name="created_at_from" value="2026-09-24")
       assert html =~ ~s(name="created_at_to" value="")
+    end
+
+    test "bounds each input's calendar by the other side" do
+      html = draw(%{from: ~D[2026-09-10], to: ~D[2026-09-24]})
+
+      assert html =~ ~r/<input[^>]*name="created_at_from"[^>]*max="2026-09-24"/
+      assert html =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
+
+      alone = draw(%{from: ~D[2026-09-10]})
+      refute alone =~ ~r/<input[^>]*name="created_at_from"[^>]*max=/
+      assert alone =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
+    end
+
+    # A live page diffs the inputs against the ones it drew last, reading each part through the
+    # change tracking; a part it reads as unchanged keeps the old value, min and max on screen.
+    test "draws every part again on a live page's diff, so a new range shows without a reload" do
+      html =
+        @filter
+        |> DateRange.render_input(
+          %{from: ~D[2026-09-10], to: ~D[2026-09-24]},
+          MishkaGervaz.UIAdapters.Tailwind
+        )
+        |> tracked()
+
+      assert html =~ ~s(name="created_at_from" value="2026-09-10")
+      assert html =~ ~r/<input[^>]*name="created_at_from"[^>]*max="2026-09-24"/
+      assert html =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
+    end
+
+    # The browser keeps what was typed in the focused input over the value a patch sends, so an
+    # input whose day a swap changed has to be drawn anew: its id names the other side's day.
+    test "names each input after the other side's day, so a swap draws the focused one anew" do
+      typed = draw(%{from: ~D[2026-10-20], to: ~D[2026-10-25]})
+
+      assert typed =~
+               ~s(id="created_at-from-2026-10-25" name="created_at_from" value="2026-10-20")
+
+      assert typed =~ ~s(id="created_at-to-2026-10-20" name="created_at_to" value="2026-10-25")
+
+      refute draw(%{from: ~D[2026-10-20], to: ~D[2026-10-30]}) =~
+               ~s(id="created_at-from-2026-10-25")
+
+      assert draw(%{from: ~D[2026-10-22], to: ~D[2026-10-25]}) =~
+               ~s(id="created_at-from-2026-10-25")
     end
 
     test "draws both inputs empty for a value that is not a range" do

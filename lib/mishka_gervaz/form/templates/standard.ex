@@ -102,6 +102,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
+  alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
 
@@ -1348,6 +1349,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp render_input(ui, field, form_field, assigns) do
+    field = MishkaGervaz.Form.Web.Events.Helpers.read_bounds(field, assigns.state)
     type = Map.get(field, :type, :text)
 
     debounce = get_in_map(field, [:ui, :debounce]) || assigns.static.debounce
@@ -1391,6 +1393,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :number_input)
+        |> put_present(:min, number_bound(Map.get(field, :min)))
+        |> put_present(:max, number_bound(Map.get(field, :max)))
+        |> put_present(:step, get_in_map(field, [:ui, :step]))
         |> dynamic_component()
 
       :textarea ->
@@ -1438,34 +1443,26 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
         |> boolean_box()
 
-      :date ->
+      kind when kind in [:date, :datetime] ->
         base
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
-        |> assign(:function, :date_input)
+        |> assign(:function, if(kind == :date, do: :date_input, else: :datetime_input))
         |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
         |> assign(:field_name, field.name)
         |> assign(:target, assigns[:myself])
-        |> dynamic_component()
-
-      :datetime ->
-        base
-        |> assign(:disabled, false)
-        |> assign(:readonly, is_readonly)
-        |> assign(:function, :datetime_input)
-        |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
-        |> assign(:field_name, field.name)
-        |> assign(:target, assigns[:myself])
+        |> assign(:min, DateTimeField.bound(field, :min, kind))
+        |> assign(:max, DateTimeField.bound(field, :max, kind))
+        |> put_present(:step, get_in_map(field, [:ui, :step]))
+        |> put_present(:first_day_of_week, get_in_map(field, [:ui, :first_day_of_week]))
         |> dynamic_component()
 
       :range ->
-        min = get_in_map(field, [:ui, :min]) || 0
-        max = get_in_map(field, [:ui, :max]) || 100
-
         base
         |> assign(:function, :range_input)
-        |> assign(:min, min)
-        |> assign(:max, max)
+        |> put_present(:min, number_bound(Map.get(field, :min)))
+        |> put_present(:max, number_bound(Map.get(field, :max)))
+        |> put_present(:step, get_in_map(field, [:ui, :step]))
         |> dynamic_component()
 
       :json ->
@@ -2454,6 +2451,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       steps -> List.last(steps).name == current
     end
   end
+
+  defp number_bound(bound) when is_number(bound), do: bound
+  defp number_bound(bound) when is_function(bound, 0), do: number_bound(bound.())
+  defp number_bound(_bound), do: nil
 
   defp put_present(assigns, _key, nil), do: assigns
   defp put_present(assigns, key, value), do: assign(assigns, key, value)

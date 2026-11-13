@@ -488,6 +488,17 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       refute html =~ ~s(id="f_at-month")
     end
 
+    # The hook closes the open calendar on Escape without letting it reach a modal around the form,
+    # and when Tab takes the focus out of it.
+    test "carries the select hook, which closes it with picker_close" do
+      html = calendar(:date_input, "", ~D[2024-09-01])
+      root = tag(html, ~s(id="f_at-calendar"))
+
+      assert root =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect")
+      assert root =~ ~r/data-close="[^"]*picker_close/
+      assert tag(html, ~s(role="dialog")) =~ ~s(data-role="gervaz-relation-list")
+    end
+
     test "with no value it asks for one" do
       html = calendar(:date_input, "", nil)
 
@@ -590,6 +601,52 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
+    # The click-away is on every select, open or shut, so it is there even when a caller draws the
+    # select without change tracking and the root is never drawn again; a shut list's close does
+    # nothing.
+    test "asks to be closed on a click elsewhere, open or shut" do
+      for fun <- [:search_select, :multi_select, :load_more_select], open? <- [true, false] do
+        html = relation(fun, %{dropdown_open?: open?})
+
+        assert html =~ ~s(phx-click-away="relation_close_dropdown"), "#{fun} #{open?}"
+        assert html =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect"), "#{fun}"
+        assert html =~ "gervaz-relation-list" == open?, "#{fun} #{open?}"
+      end
+    end
+
+    # LiveView holds a `phx-focus` for the input's `phx-debounce`, so a click from one open list to
+    # another select found that one still shut; the hook opens it on focus at once.
+    test "opens on focus through the hook, not a debounced phx-focus" do
+      for fun <- [:search_select, :multi_select] do
+        html = relation(fun, %{dropdown_open?: false})
+
+        refute html =~ "phx-focus", "#{fun}"
+        assert html =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect"), "#{fun}"
+        assert html =~ ~r/data-open="[^"]*relation_focus/, "#{fun}"
+      end
+    end
+
+    test "keeps its open list as wide as its input, so it never covers the filter beside it" do
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        html = relation(fun, %{dropdown_open?: true})
+
+        assert html =~ "max-h-80 w-full overflow-x-hidden", "#{fun}"
+        refute html =~ "w-max", "#{fun}"
+      end
+    end
+
+    test "wraps a long name in its open list instead of scrolling it sideways" do
+      long = String.duplicate("Averyveryverylongregionname", 4)
+
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        html = relation(fun, %{dropdown_open?: true, options: [{long, "1"}]})
+
+        assert html =~ "overflow-x-hidden overflow-y-auto", "#{fun}"
+        refute html =~ ~r/\boverflow-auto\b/, "#{fun}"
+        assert html =~ ~r/class="[^"]*break-words[^"]*"[^>]*>\s*(<[^>]*>\s*)*#{long}/, "#{fun}"
+      end
+    end
+
     test "a switched-off search select is never open" do
       assert relation(:search_select, %{dropdown_open?: true, disabled: true}) =~
                ~s(aria-expanded="false")
@@ -600,6 +657,9 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
         relation(:combobox, %{field_name: :lang, target: nil, phx_debounce: 300, value: "en"})
 
       assert html =~ ~s(aria-controls="combobox-dropdown-entry-lang")
+      assert html =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect")
+      assert html =~ ~r/data-close="[^"]*combobox-dropdown-entry-lang/
+      assert html =~ ~r/id="combobox-dropdown-entry-lang"\s+data-role="gervaz-relation-list"/
       assert html =~ ~s(aria-expanded="false")
 
       assert html =~ "[&quot;aria-expanded&quot;,&quot;true&quot;]"

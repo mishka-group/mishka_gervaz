@@ -871,7 +871,15 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         """
 
       :date_range ->
-        assigns = assign(assigns, :resolved_label, filter_label(filter))
+        base_map = if is_struct(filter), do: Map.from_struct(filter), else: filter
+
+        assigns =
+          assigns
+          |> assign(:resolved_label, filter_label(filter))
+          |> assign(
+            :filter_map,
+            Map.put(base_map, :input_id, filter_input_id(assigns.static, filter))
+          )
 
         ~H"""
         <div
@@ -883,7 +891,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           <label class="mb-1.5 block text-[10.5px] font-bold text-[#8a877f]">
             {@resolved_label}
           </label>
-          {MishkaGervaz.Table.Types.Filter.DateRange.render_input(@filter, @value, @ui_adapter)}
+          {MishkaGervaz.Table.Types.Filter.DateRange.render_input(@filter_map, @value, @ui_adapter)}
         </div>
         """
 

@@ -1,3 +1,59 @@
+# Changelog for MishkaGervaz 0.0.10
+
+### Features:
+- A `:date` or `:datetime` field takes `min` and `max`: a `Date`, `DateTime`, `NaiveDateTime`, or
+  a function read each time it is drawn or checked, so `min fn -> DateTime.utc_now() end` is always
+  now. The calendar greys out the days outside them, a pick outside them moves to the nearest one
+  allowed, the browser's own input carries `min` and `max`, and validate and save refuse a value
+  outside them with the field's error
+- `min` and `max` also take `fn state -> value end`, given the form state as `visible` is (`mode`,
+  `current_user`, `master_user?`, `form`, `field_values`), and read the same for the picker and the
+  save; `nil` is no bound. `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds a
+  new record and leaves an edited one free. Number and range fields take the same functions
+- A `:datetime` field's `ui` `step` is the minutes between the times its picker offers
+- `ui` `first_day_of_week` is the day a `:date` or `:datetime` calendar's weeks start on (Monday
+  when not set)
+
+### Bug fixes:
+- A date picker keeps its pick when a form change posted before the pick was drawn arrives after
+  it; that change carried the old, empty value and emptied the field
+- A `:range` field's slider runs from the field's `min` to its `max` (0 to 100 when not set) in its
+  `ui` `step`; it read `min` and `max` from `ui`, which has neither, so it always ran 0 to 100. A
+  `:number` input carries the same `min`, `max` and `step`, and both refuse a value outside them
+  with "is too small" or "is too large"
+- A relation select's open list, as wide as its input, wraps a long name at its spaces, breaking a
+  word only when one alone is wider, instead of scrolling sideways and cutting it
+- A search select or multi-select opens on a click in its input, or Tab into it, through the
+  `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
+  list to another select closed the first and left the second shut
+- Escape closes an open relation select's list and leaves it closed: the `.SearchSelect` hook
+  keeps the keyup of a key that types nothing (Escape, Enter, Tab, an arrow) from the input's
+  search, and a table's relation filter searches nothing for one, so the Escape's keyup no longer
+  searched and opened the list again
+- An Escape pressed right after a relation select was opened or typed in closes its list: the
+  hook sends the search still waiting out the debounce before the close, and closes a list whose
+  opening is still on its way, so neither reopened it
+- Escape in an open combobox or form calendar closes just its list, leaving a modal around the
+  form open, and Tab out of one closes it, as it does a relation select's list now: they carry
+  the `.SearchSelect` hook, which finds an open list by its `data-role="gervaz-relation-list"`
+- A relation select's open list closes on any click outside it again: every search, multi and
+  load-more select carries `phx-click-away`, open or shut, whose handler does nothing for a shut
+  list. The load-more select carries the `.SearchSelect` hook too, for Escape
+- A table's relation filter is drawn whole each time it changes, so an open select's
+  `aria-expanded` and debounce are the open ones; it was built with `__changed__: %{}`
+- A table's date range filter with only From or only To set filters from or up to that day,
+  from the filter bar and from the URL; it needed both and did nothing with one
+- A date range filter's From input stops at the To day and the To input starts at the From day,
+  and a From after the To is taken the other way round instead of filtering out every row
+- A date range filter's inputs are drawn again each time the filter changes on a live page, so a
+  typed From sets the To input's `min` (and a To the From's `max`) and a reversed range shows
+  swapped at once; they were drawn with `__changed__: %{}`, which a live diff read as unchanged, so
+  only a reload showed them. Each input's id names the other side's day, so the input a swap
+  changed is drawn anew and shows the swapped day even while it has focus
+
+### Dependencies:
+- dialyxir 1.4.8 => 1.4.9
+
 # Changelog for MishkaGervaz 0.0.9
 
 ### Bug fixes:

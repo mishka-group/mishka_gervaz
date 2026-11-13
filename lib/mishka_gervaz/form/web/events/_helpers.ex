@@ -62,10 +62,10 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
   `validate/2` (detected via the cached `:custom_validate?` flag) are
   skipped.
   """
-  @spec validate_typed_params(list(map()), map()) :: [{atom(), String.t()}]
-  def validate_typed_params(fields, params) when is_list(fields) and is_map(params) do
+  @spec validate_typed_params(list(map()), map(), map()) :: [{atom(), String.t()}]
+  def validate_typed_params(fields, params, state) when is_list(fields) and is_map(params) do
     Enum.reduce(fields, [], fn field, acc ->
-      case run_field_validate(field, params) do
+      case run_field_validate(read_bounds(field, state), params) do
         {:error, msg} -> [{field.name, msg} | acc]
         _ -> acc
       end
@@ -73,7 +73,23 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
     |> Enum.reverse()
   end
 
-  def validate_typed_params(_fields, _params), do: []
+  def validate_typed_params(_fields, _params, _state), do: []
+
+  @doc """
+  `field` with its `min` and `max` read for the form `state` when they are `fn state -> value end`,
+  as a field's `visible`, `readonly` and `options` are, so a bound can hold on create and not on
+  edit (`fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end`). A value, `nil` (no bound)
+  or a function of no arguments is left as it is, for the field type to read.
+  """
+  @spec read_bounds(map(), map()) :: map()
+  def read_bounds(field, state) do
+    Enum.reduce([:min, :max], field, fn key, acc ->
+      case Map.get(acc, key) do
+        bound when is_function(bound, 1) -> Map.put(acc, key, bound.(state))
+        _value -> acc
+      end
+    end)
+  end
 
   defp run_field_validate(field, params) do
     field_name = to_string(field.name)

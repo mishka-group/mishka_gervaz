@@ -2,7 +2,8 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   @moduledoc """
   Date range filter type.
 
-  Renders two date inputs for filtering records within a date range.
+  Renders two date inputs for filtering records within a date range. Either side alone filters
+  from or up to its day, and a From after the To is taken the other way round.
 
   ## Example
 
@@ -28,8 +29,15 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   date inputs in the filter style, each labelled "From" and "To" for assistive technology.
 
   `value` is the filter's current `%{from: _, to: _}`; either side may be missing, and anything
-  that is not a map draws both inputs empty. The filter's `ui.extra` is merged into both inputs'
-  assigns, and its `ui.icon` goes on the first.
+  that is not a map draws both inputs empty. Each input takes the other's day as its `max` or
+  `min`, so its calendar greys out the days that would leave the range empty. The filter's
+  `ui.extra` is merged into both inputs' assigns, and its `ui.icon` goes on the first.
+
+  The inputs are drawn whole each time the filter's value changes, so a live page shows the value
+  the state holds, a reversed range swapped, and each side's new `min` or `max` without a reload.
+  Each input's id is the filter's `input_id` (its name when none) with the other side's day, so an
+  input whose day a swap changed is drawn anew, since a browser keeps what was typed in the input
+  that has focus.
   """
   @impl true
   @spec render_input(map(), term(), module()) :: Phoenix.LiveView.Rendered.t()
@@ -38,13 +46,17 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
     extra = filter[:ui][:extra] || %{}
     from_label = dgettext("mishka_gervaz", "From")
     to_label = dgettext("mishka_gervaz", "To")
+    from = format_date(Map.get(range, :from))
+    to = format_date(Map.get(range, :to))
 
     from_input =
       ui.date_input(
         Map.merge(extra, %{
-          __changed__: %{},
+          __changed__: nil,
+          id: "#{filter[:input_id] || filter.name}-from-#{to}",
           name: "#{filter.name}_from",
-          value: format_date(Map.get(range, :from)),
+          value: from,
+          max: if(to != "", do: to),
           placeholder: from_label,
           aria_label: from_label,
           icon: filter[:ui][:icon],
@@ -56,9 +68,11 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
     to_input =
       ui.date_input(
         Map.merge(extra, %{
-          __changed__: %{},
+          __changed__: nil,
+          id: "#{filter[:input_id] || filter.name}-to-#{from}",
           name: "#{filter.name}_to",
-          value: format_date(Map.get(range, :to)),
+          value: to,
+          min: if(from != "", do: from),
           placeholder: to_label,
           aria_label: to_label,
           search: true,
@@ -66,7 +80,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
         })
       )
 
-    ui.date_range_container(%{__changed__: %{}, from_input: from_input, to_input: to_input})
+    ui.date_range_container(%{__changed__: nil, from_input: from_input, to_input: to_input})
   end
 
   @impl true
@@ -76,19 +90,14 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   def parse_value(_, _filter), do: nil
 
   @spec parse_range(map(), map()) :: map() | nil
-  defp parse_range(%{from: from, to: to}, _filter) do
-    parsed_from = parse_date(from)
-    parsed_to = parse_date(to)
-
-    cond do
-      parsed_from && parsed_to -> %{from: parsed_from, to: parsed_to}
-      parsed_from -> %{from: parsed_from}
-      parsed_to -> %{to: parsed_to}
-      true -> nil
+  defp parse_range(range, _filter) do
+    case {parse_date(Map.get(range, :from)), parse_date(Map.get(range, :to))} do
+      {nil, nil} -> nil
+      {from, nil} -> %{from: from}
+      {nil, to} -> %{to: to}
+      {from, to} -> %{from: Enum.min([from, to], Date), to: Enum.max([from, to], Date)}
     end
   end
-
-  defp parse_range(_, _), do: nil
 
   @impl true
   @spec build_query(Ash.Query.t(), atom(), term(), map()) :: Ash.Query.t()

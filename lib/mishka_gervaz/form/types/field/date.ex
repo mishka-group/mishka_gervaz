@@ -2,9 +2,13 @@ defmodule MishkaGervaz.Form.Types.Field.Date do
   @moduledoc """
   Date picker field type. Validates ISO-8601 date strings.
 
+  `min` and `max` bound the days the picker offers and the save takes, as they do for
+  `MishkaGervaz.Form.Types.Field.DateTime`.
+
   ## Example
 
       field :published_on, :date do
+        min fn -> Date.utc_today() end
         ui do label "Publish date" end
       end
 
@@ -14,16 +18,24 @@ defmodule MishkaGervaz.Form.Types.Field.Date do
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
   use MishkaGervaz.Messages
 
+  alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
+
   @impl true
   def render(assigns, _config), do: assigns
 
   @impl true
-  def validate(value, _config) when is_binary(value) and value != "" do
+  def validate(value, config) when is_binary(value) and value != "" do
     case Date.from_iso8601(value) do
-      {:ok, _} -> {:ok, value}
-      {:error, _} -> {:error, dgettext_noop("errors", "must be a valid date")}
+      {:ok, day} ->
+        DateTimeField.within(value, NaiveDateTime.new!(day, ~T[00:00:00]), config, :date)
+
+      {:error, _} ->
+        {:error, dgettext_noop("errors", "must be a valid date")}
     end
   end
+
+  def validate(%Date{} = day, config),
+    do: DateTimeField.within(day, NaiveDateTime.new!(day, ~T[00:00:00]), config, :date)
 
   def validate(value, _config), do: {:ok, value}
 
