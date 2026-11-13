@@ -391,7 +391,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   hook reads whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so
   it holds for a caller whose assigns carry no change tracking. A click anywhere outside the select
   sends `relation_close_dropdown` through an always-present `phx-click-away`, whose handler does
-  nothing for a shut list.
+  nothing for a shut list, and Tab moving the focus out of the select closes its list.
+
+  The combobox and the form's calendar carry the same hook, so Escape closes just their list (a
+  modal around the form stays open) and Tab out of them closes it.
 
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
@@ -567,15 +570,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
       export default {
         mounted() {
-          const open = () => this.el.querySelector("[data-role=gervaz-relation-list]");
+          const open = () => {
+            const list = this.el.querySelector("[data-role=gervaz-relation-list]");
+            return !!list && list.getClientRects().length > 0;
+          };
+
+          const opens = () => this.js().exec(this.el.dataset.open);
+          const closes = () => this.js().exec(this.el.dataset.close);
 
           const show = (e) => {
             const input = e.target;
             if (input.tagName !== "INPUT" || input.type !== "text" || input.disabled || open()) return;
-            this.js().exec(this.el.dataset.open);
+            opens();
           };
 
           this.el.addEventListener("click", show);
+
+          this.el.addEventListener("focusout", (e) => {
+            if (e.relatedTarget && !this.el.contains(e.relatedTarget) && open()) closes();
+          });
 
           const typing = ["Backspace", "Delete", "Process", "Unidentified"];
 
@@ -587,7 +600,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           this.el.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && open()) {
               e.stopPropagation();
-              this.js().exec(this.el.dataset.close);
+              closes();
               return;
             }
 
@@ -600,7 +613,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
               input.removeAttribute("aria-activedescendant");
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
-                this.js().exec(this.el.dataset.open);
+                opens();
               }
               return;
             }
@@ -3173,7 +3186,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       )
 
     ~H"""
-    <div class="relative" phx-click-away={combobox_close(@dropdown_id)}>
+    <div
+      class="relative"
+      id={"#{@dropdown_id}-box"}
+      phx-hook=".SearchSelect"
+      data-open={combobox_open(@dropdown_id)}
+      data-close={combobox_close(@dropdown_id)}
+      phx-click-away={combobox_close(@dropdown_id)}
+    >
       <.render_icon
         :if={@icon}
         name={@icon}
@@ -3198,6 +3218,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       />
       <div
         id={@dropdown_id}
+        data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 hidden max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_rgba(23,22,26,0.08)]"
       >
         <%= for {label, value} <- @options do %>
@@ -3253,6 +3274,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"#{@id}-calendar"}
+      phx-hook=".SearchSelect"
+      data-close={JS.push("picker_close", value: %{field: @field_name}, target: @target)}
       phx-click-away={
         @month && JS.push("picker_close", value: %{field: @field_name}, target: @target)
       }
@@ -3280,6 +3303,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@month}
+        data-role="gervaz-relation-list"
         role="dialog"
         aria-label={month_label(@month)}
         class="absolute z-50 mt-1 w-[19.5rem] max-w-full rounded-[14px] border border-[#ecebe6] bg-white p-3 shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"

@@ -488,6 +488,17 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       refute html =~ ~s(id="f_at-month")
     end
 
+    # The hook closes the open calendar on Escape without letting it reach a modal around the form,
+    # and when Tab takes the focus out of it.
+    test "carries the select hook, which closes it with picker_close" do
+      html = calendar(:date_input, "", ~D[2024-09-01])
+      root = tag(html, ~s(id="f_at-calendar"))
+
+      assert root =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect")
+      assert root =~ ~r/data-close="[^"]*picker_close/
+      assert tag(html, ~s(role="dialog")) =~ ~s(data-role="gervaz-relation-list")
+    end
+
     test "with no value it asks for one" do
       html = calendar(:date_input, "", nil)
 
@@ -646,6 +657,9 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
         relation(:combobox, %{field_name: :lang, target: nil, phx_debounce: 300, value: "en"})
 
       assert html =~ ~s(aria-controls="combobox-dropdown-entry-lang")
+      assert html =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect")
+      assert html =~ ~r/data-close="[^"]*combobox-dropdown-entry-lang/
+      assert html =~ ~r/id="combobox-dropdown-entry-lang"\s+data-role="gervaz-relation-list"/
       assert html =~ ~s(aria-expanded="false")
 
       assert html =~ "[&quot;aria-expanded&quot;,&quot;true&quot;]"
