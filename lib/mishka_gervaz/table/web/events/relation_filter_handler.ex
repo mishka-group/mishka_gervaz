@@ -67,11 +67,6 @@ defmodule MishkaGervaz.Table.Web.Events.RelationFilterHandler do
   @callback handle(action :: String.t(), params :: params(), state :: state(), socket :: socket()) ::
               {:noreply, socket()}
 
-  # Keys that type nothing: a keyup of one is no new search, and an Escape's would reopen the list
-  # its keydown just closed.
-  @control_keys ~w(Escape Enter Tab ArrowUp ArrowDown ArrowLeft ArrowRight Home End PageUp PageDown
-                   Shift Control Alt Meta CapsLock)
-
   @doc """
   Checks if a relation filter value should be skipped (not treated as a filter value).
 
@@ -161,9 +156,6 @@ defmodule MishkaGervaz.Table.Web.Events.RelationFilterHandler do
   def valid_relation_value?(_, _), do: false
 
   @doc false
-  def do_handle("search", %{"key" => key}, _state, socket) when key in @control_keys,
-    do: {:noreply, socket}
-
   def do_handle("search", params, state, socket) do
     with {:ok, filter_atom, filter} <- get_filter(params, state),
          {:ok, search_term} <- get_search_term(params, state, filter_atom),

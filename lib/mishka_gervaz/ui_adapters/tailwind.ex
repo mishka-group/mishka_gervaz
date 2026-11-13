@@ -384,8 +384,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   around the form stays open; with the list shut Escape goes on to the modal. It opens a shut list
   when the input takes focus or a click, as `relation_focus`: a `phx-focus` would wait out the
   input's `phx-debounce`, so a click moving from one open list to another select left it shut. The
-  hook keeps the keyup of a key that types nothing (Escape, Enter, Tab, an arrow) from the input's
-  search, so the Escape that closed the list does not search and open it again. The
   hook reads whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so
   it holds for a caller whose assigns carry no change tracking. A click anywhere outside the select
   sends `relation_close_dropdown` through an always-present `phx-click-away`, whose handler does
@@ -577,12 +575,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
           this.el.addEventListener("focusin", show);
           this.el.addEventListener("click", show);
-
-          const typing = ["Backspace", "Delete", "Process", "Unidentified"];
-
-          this.el.addEventListener("keyup", (e) => {
-            if (e.key.length > 1 && !typing.includes(e.key)) e.stopPropagation();
-          });
 
           this.el.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && open()) {
