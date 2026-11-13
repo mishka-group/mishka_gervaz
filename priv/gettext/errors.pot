@@ -39,7 +39,7 @@ msgstr ""
 msgid "must be a valid date"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/datetime.ex:38
+#: lib/mishka_gervaz/form/types/field/datetime.ex:40
 #, elixir-autogen, elixir-format
 msgid "must be a valid date and time"
 msgstr ""
@@ -55,27 +55,27 @@ msgstr ""
 msgid "must be valid JSON"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:2092
+#: lib/mishka_gervaz/form/templates/standard.ex:2093
 #, elixir-autogen, elixir-format
 msgid "is required"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/datetime.ex:123
+#: lib/mishka_gervaz/form/types/field/datetime.ex:125
 #, elixir-autogen, elixir-format
 msgid "is too early"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/datetime.ex:124
+#: lib/mishka_gervaz/form/types/field/datetime.ex:126
 #, elixir-autogen, elixir-format
 msgid "is too late"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/number.ex:65
+#: lib/mishka_gervaz/form/types/field/number.ex:66
 #, elixir-autogen, elixir-format
 msgid "is too large"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/number.ex:64
+#: lib/mishka_gervaz/form/types/field/number.ex:65
 #, elixir-autogen, elixir-format
 msgid "is too small"
 msgstr ""

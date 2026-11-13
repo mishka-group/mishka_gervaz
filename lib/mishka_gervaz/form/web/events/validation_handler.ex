@@ -72,7 +72,8 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
             field_type_errors =
               MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params(
                 state.static.fields,
-                form_params
+                form_params,
+                state
               )
 
             validated =

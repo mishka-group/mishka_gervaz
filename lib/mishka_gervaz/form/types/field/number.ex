@@ -54,7 +54,8 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
   @doc """
   `{:ok, value}` when `number`, the number `value` holds, is within the `min` and `max` of the
-  field `config`; otherwise the field's error. A bound that is not a number is not checked.
+  field `config`; otherwise the field's error. A bound given as a function of no arguments is
+  called; one that is not a number is not checked.
   """
   @spec within(term(), number(), map() | nil) :: {:ok, term()} | {:error, String.t()}
   def within(value, number, config) do
@@ -67,6 +68,8 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
     end
   end
 
+  defp below?(bound, other) when is_function(bound, 0), do: below?(bound.(), other)
+  defp below?(number, bound) when is_function(bound, 0), do: below?(number, bound.())
   defp below?(number, other) when is_number(number) and is_number(other), do: number < other
   defp below?(_number, _other), do: false
 

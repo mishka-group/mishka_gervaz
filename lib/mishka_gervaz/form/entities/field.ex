@@ -53,7 +53,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
           Date.t()
           | DateTime.t()
           | NaiveDateTime.t()
-          | (-> Date.t() | DateTime.t() | NaiveDateTime.t())
+          | (-> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | nil)
+          | (map() -> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | nil)
 
   @type t :: %__MODULE__{
           name: atom(),
@@ -292,10 +293,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
                        {:struct, Date},
                        {:struct, DateTime},
                        {:struct, NaiveDateTime},
-                       {:fun, 0}
+                       {:fun, 0},
+                       {:fun, 1}
                      ]},
                   doc:
-                    "Minimum value for number/range fields. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`, or `fn -> DateTime.utc_now() end` read each time the form draws or checks it."
+                    "Minimum value for number/range fields. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound."
                 ],
                 max: [
                   type:
@@ -305,10 +307,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
                        {:struct, Date},
                        {:struct, DateTime},
                        {:struct, NaiveDateTime},
-                       {:fun, 0}
+                       {:fun, 0},
+                       {:fun, 1}
                      ]},
                   doc:
-                    "Maximum value for number/range fields. For `:date` and `:datetime` fields, the latest day or time the picker offers and the save takes, given as `min` is. A `Date` takes in the whole day."
+                    "Maximum value for number/range fields. For `:date` and `:datetime` fields, the latest day or time the picker offers and the save takes. Given as `min` is; a `Date` takes in the whole day."
                 ],
                 min_chars: [
                   type: :integer,

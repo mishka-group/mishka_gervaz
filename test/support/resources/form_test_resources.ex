@@ -2329,7 +2329,8 @@ end
 defmodule MishkaGervaz.Test.Resources.ScheduledEntry do
   @moduledoc """
   A form whose `:publish_at` time may not be in the past, offered every 15 minutes in a calendar
-  whose weeks start on Sunday, and whose `:due_on` day lies within a fixed ten days.
+  whose weeks start on Sunday, whose `:due_on` day lies within a fixed ten days, and whose
+  `:starts_on` may not be before 2024-01-10 on a new record only.
   """
   use Ash.Resource,
     domain: MishkaGervaz.Test.Domain,
@@ -2371,6 +2372,13 @@ defmodule MishkaGervaz.Test.Resources.ScheduledEntry do
           min ~D[2024-01-10]
           max ~D[2024-01-20]
         end
+
+        field :starts_on, :date do
+          min fn
+            %{mode: :create} -> ~D[2024-01-10]
+            _state -> nil
+          end
+        end
       end
     end
   end
@@ -2380,6 +2388,7 @@ defmodule MishkaGervaz.Test.Resources.ScheduledEntry do
     attribute :title, :string, public?: true
     attribute :publish_at, :utc_datetime, public?: true
     attribute :due_on, :date, public?: true
+    attribute :starts_on, :date, public?: true
   end
 
   actions do
@@ -2387,12 +2396,12 @@ defmodule MishkaGervaz.Test.Resources.ScheduledEntry do
 
     create :create do
       primary? true
-      accept [:title, :publish_at, :due_on]
+      accept [:title, :publish_at, :due_on, :starts_on]
     end
 
     update :update do
       primary? true
-      accept [:title, :publish_at, :due_on]
+      accept [:title, :publish_at, :due_on, :starts_on]
     end
   end
 end

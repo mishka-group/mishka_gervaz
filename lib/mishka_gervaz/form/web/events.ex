@@ -724,7 +724,7 @@ defmodule MishkaGervaz.Form.Web.Events do
     with true <- settable_field?(name, state),
          %{type: type} = field when type in [:date, :datetime] <-
            Enum.find(state.static.fields, &(Atom.to_string(&1.name) == name)) do
-      field
+      MishkaGervaz.Form.Web.Events.Helpers.read_bounds(field, state)
     else
       _ -> nil
     end

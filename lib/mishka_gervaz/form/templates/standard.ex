@@ -1349,6 +1349,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp render_input(ui, field, form_field, assigns) do
+    field = MishkaGervaz.Form.Web.Events.Helpers.read_bounds(field, assigns.state)
     type = Map.get(field, :type, :text)
 
     debounce = get_in_map(field, [:ui, :debounce]) || assigns.static.debounce
@@ -2452,6 +2453,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp number_bound(bound) when is_number(bound), do: bound
+  defp number_bound(bound) when is_function(bound, 0), do: number_bound(bound.())
   defp number_bound(_bound), do: nil
 
   defp put_present(assigns, _key, nil), do: assigns

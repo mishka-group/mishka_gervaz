@@ -6,6 +6,10 @@
   now. The calendar greys out the days outside them, a pick outside them moves to the nearest one
   allowed, the browser's own input carries `min` and `max`, and validate and save refuse a value
   outside them with the field's error
+- `min` and `max` also take `fn state -> value end`, given the form state as `visible` is (`mode`,
+  `current_user`, `master_user?`, `form`, `field_values`), and read the same for the picker and the
+  save; `nil` is no bound. `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds a
+  new record and leaves an edited one free. Number and range fields take the same functions
 - A `:datetime` field's `ui` `step` is the minutes between the times its picker offers
 - `ui` `first_day_of_week` is the day a `:date` or `:datetime` calendar's weeks start on (Monday
   when not set)

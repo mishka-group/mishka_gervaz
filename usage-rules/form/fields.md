@@ -66,7 +66,7 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 | `load` | `fn query, state -> query` | — | scopes the option list |
 | `position` | int \| `:first` \| `:last` \| `{:before, f}` \| `{:after, f}` | — | |
 | `include_nil` | bool \| string \| `fn -> string` | `false` | adds a nil option; the string is its label |
-| `min` / `max` | int \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` | — | `:number` / `:range`; on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now) |
+| `min` / `max` | int \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` \| `fn state -> value` | — | `:number` / `:range`; on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now). `fn state ->` gets the form state as `visible` does, so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record; `nil` is no bound |
 | `min_chars` | int | — | before search fires |
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |

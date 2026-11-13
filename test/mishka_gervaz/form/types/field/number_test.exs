@@ -63,6 +63,11 @@ defmodule MishkaGervaz.Form.Types.Field.NumberTest do
       assert NumberField.validate("10.5", config) == {:error, "is too large"}
     end
 
+    test "a min or max given as a function of no arguments is called" do
+      assert NumberField.validate(0, %{min: fn -> 1 end}) == {:error, "is too small"}
+      assert NumberField.validate(5, %{max: fn -> nil end}) == {:ok, 5}
+    end
+
     test "a min or max that is not a number is not checked" do
       assert NumberField.validate(-5, %{min: ~D[2024-01-01]}) == {:ok, -5}
       assert NumberField.validate(500, %{max: nil}) == {:ok, 500}

@@ -6,7 +6,9 @@ defmodule MishkaGervaz.Form.Types.Field.DateTime do
 
   `min` and `max` bound the times the picker offers and the save takes: days outside them are
   greyed out, and a value outside them gets a field error. A function is read each time, so
-  `fn -> DateTime.utc_now() end` is always now. `ui` `step` sets the minutes between the times
+  `fn -> DateTime.utc_now() end` is always now; `fn state -> value end` gets the form state, so
+  `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record, and
+  `nil` is no bound. `ui` `step` sets the minutes between the times
   offered, and `first_day_of_week` the day each week of the calendar starts on.
 
   ## Example

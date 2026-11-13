@@ -15,6 +15,8 @@ defmodule MishkaGervaz.Form.Web.Events.DateRangeTest do
   import Phoenix.LiveViewTest, only: [render_component: 2]
 
   alias MishkaGervaz.Form.Web.{DataLoader, Events, Renderer, State}
+  alias MishkaGervaz.Form.Web.DataLoader.RecordLoader
+  alias MishkaGervaz.Form.Web.Events.Helpers, as: EventsHelpers
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Test.Resources.ScheduledEntry
   alias MishkaGervaz.UIAdapters.Tailwind
@@ -29,6 +31,12 @@ defmodule MishkaGervaz.Form.Web.Events.DateRangeTest do
   defp create_form do
     state = State.init("scheduled-entry", ScheduledEntry, @user)
     DataLoader.new_record(build_socket(state), state)
+  end
+
+  defp edit_form(entry) do
+    state = "scheduled-entry" |> State.init(ScheduledEntry, @user) |> State.update(mode: :update)
+    {:ok, form} = RecordLoader.Default.load_for_edit(state, entry.id, actor: @user)
+    DataLoader.Default.handle_async_result(:load_record, {:ok, {:ok, form}}, build_socket(state))
   end
 
   defp render_form(socket) do
@@ -184,6 +192,43 @@ defmodule MishkaGervaz.Form.Web.Events.DateRangeTest do
 
       save(socket, %{"title" => "Typed", "due_on" => ""})
       assert [%{due_on: ~D[2024-01-12]}] = Ash.read!(ScheduledEntry)
+    end
+  end
+
+  describe "a min or max given the form state" do
+    test "is read with the form's mode, user and form, and nil is no bound" do
+      test_pid = self()
+
+      field = %{
+        min: fn state ->
+          send(test_pid, {:read, state.mode, state.current_user})
+          nil
+        end,
+        max: ~D[2024-01-20]
+      }
+
+      state = create_form().assigns.form_state
+
+      assert EventsHelpers.read_bounds(field, state) == %{min: nil, max: ~D[2024-01-20]}
+      assert_received {:read, :create, @user}
+    end
+
+    test "bounds a new record and leaves an edited one free" do
+      created = save(create_form(), %{"title" => "New", "starts_on" => "2024-01-05"})
+      assert Map.has_key?(created.assigns.form_state.errors, :starts_on)
+      assert Ash.read!(ScheduledEntry) == []
+
+      html = create_form() |> open_on(:starts_on, ~D[2024-01-01]) |> render_form()
+      assert day_disabled?(html, :starts_on, ~D[2024-01-05])
+
+      entry = Ash.create!(ScheduledEntry, %{title: "Old", starts_on: ~D[2024-02-01]})
+      edited = edit_form(entry)
+
+      html = edited |> open_on(:starts_on, ~D[2024-01-01]) |> render_form()
+      refute day_disabled?(html, :starts_on, ~D[2024-01-05])
+
+      save(edited, %{"title" => "Old", "starts_on" => "2024-01-05"})
+      assert [%{starts_on: ~D[2024-01-05]}] = Ash.read!(ScheduledEntry)
     end
   end
 
