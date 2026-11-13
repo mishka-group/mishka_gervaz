@@ -282,6 +282,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   attr :current_value, :string, required: true
   attr :filter_name, :any, required: true
   attr :myself, :any, default: nil
+  attr :listbox, :string, required: true
 
   # One choice in the open list. It is a `<button>`, so Enter and Space pick it, and `role="option"`
   # with `aria-selected` tells a screen reader it is one of a list and whether it is the picked one.
@@ -289,10 +290,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     ~H"""
     <button
       type="button"
+      id={"#{@listbox}-#{@value}"}
       role="option"
       aria-selected={to_string(@current_value == to_string(@value))}
       class={[
-        "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+        "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3] data-[active]:bg-[#f7f6f3]",
         @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
       ]}
       phx-click="relation_select"
@@ -372,6 +374,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   the picked one, and a group is named by its heading. Tab reaches the options, Enter or Space picks
   one and Escape closes the open list.
 
+  In the input, ArrowDown and ArrowUp move a highlight through the open list (and open a shut one),
+  the input naming the highlighted option in `aria-activedescendant`. Enter picks the highlighted
+  option, or with none the first one not already picked, and never submits the form the box sits
+  in; with the list shut Enter submits as usual. This runs in the colocated hook `.SearchSelect`,
+  since `Phoenix.LiveView.JS` can neither stop Enter's submit nor move a highlight relative to the
+  current one; the host registers it from `phoenix-colocated/mishka_gervaz` (see the README).
+
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
   input, and its answer redraws the list between the press and the release.
@@ -431,6 +440,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"search-select-#{@table_id}-#{@filter_name}"}
+      phx-hook=".SearchSelect"
+      data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       phx-click-away="relation_close_dropdown"
       phx-value-filter={@filter_name}
       phx-target={@myself}
@@ -505,6 +516,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                   </div>
                   <.search_select_option
                     :for={{opt_label, opt_value} <- opts}
+                    listbox={@listbox}
                     label={opt_label}
                     picked_label={"#{group_label} · #{opt_label}"}
                     value={opt_value}
@@ -515,6 +527,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 </div>
               <% {:option, opt_label, opt_value} -> %>
                 <.search_select_option
+                  listbox={@listbox}
                   label={opt_label}
                   picked_label={opt_label}
                   value={opt_value}
@@ -538,6 +551,45 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </button>
       </div>
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
+      export default {
+        mounted() {
+          this.el.addEventListener("keydown", (e) => {
+            const input = e.target;
+            if (input.getAttribute("role") !== "combobox" || e.isComposing) return;
+
+            const list = document.getElementById(input.getAttribute("aria-controls"));
+
+            if (!list) {
+              input.removeAttribute("aria-activedescendant");
+              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                this.js().exec(this.el, this.el.dataset.open);
+              }
+              return;
+            }
+
+            const options = Array.from(list.querySelectorAll("[role=option]"));
+            const current = options.findIndex((o) => o.id === input.getAttribute("aria-activedescendant"));
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              if (options.length === 0) return;
+              const step = e.key === "ArrowDown" ? 1 : -1;
+              const next = current === -1 && step === -1 ? options.length - 1 : (current + step + options.length) % options.length;
+              options.forEach((o) => o.removeAttribute("data-active"));
+              options[next].setAttribute("data-active", "");
+              options[next].scrollIntoView({ block: "nearest" });
+              input.setAttribute("aria-activedescendant", options[next].id);
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              const pick = options[current] || options.find((o) => o.getAttribute("aria-selected") !== "true");
+              if (pick) pick.click();
+            }
+          });
+        }
+      };
+    </script>
     """
   end
 

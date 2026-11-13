@@ -146,6 +146,18 @@ mix deps.get
 mix compile
 ```
 
+Register gervaz's hooks with your `LiveSocket` in `assets/js/app.js`. The search select's keyboard
+(arrow keys, Enter picks without submitting the form) runs in one:
+
+```javascript
+import { hooks as gervazHooks } from "phoenix-colocated/mishka_gervaz";
+
+const liveSocket = new LiveSocket("/live", Socket, {
+  hooks: { ...colocatedHooks, ...gervazHooks },
+  // ...
+});
+```
+
 Add the extension to your domain — set defaults that every resource in the domain inherits:
 
 ```elixir

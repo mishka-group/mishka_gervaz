@@ -21,7 +21,8 @@ defmodule MishkaGervaz.MixProject do
         "Mishka Gervaz is a comprehensive, declarative UI library for the Ash ecosystem — define tables, forms, and data-driven interfaces entirely through DSL, with built-in sorting, filtering, real-time updates, and extensible templates.",
       source_url: @source_url,
       homepage_url: "https://mishka.tools/gervaz",
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+      compilers: [:phoenix_live_view] ++ Mix.compilers()
     ]
   end
 
