@@ -294,7 +294,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       role="option"
       aria-selected={to_string(@current_value == to_string(@value))}
       class={[
-        "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3] data-[active]:bg-[#f7f6f3]",
+        "w-full break-words px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3] data-[active]:bg-[#f7f6f3]",
         @current_value == @value && "bg-[#f2f1fc] text-[#4f4bcc]"
       ]}
       phx-click="relation_select"
@@ -497,7 +497,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
         phx-window-keydown="relation_close_dropdown"
         phx-key="Escape"
         phx-value-filter={@filter_name}
@@ -691,7 +691,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -700,7 +700,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           :for={{opt_label, opt_value} <- @display_options}
           type="button"
           class={[
-            "w-full px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
+            "w-full break-words px-3 py-2 text-start text-[12.5px] font-medium text-[#3a382f] hover:bg-[#f7f6f3]",
             to_string(@current_value) == to_string(opt_value) && "bg-[#f2f1fc] text-[#4f4bcc]"
           ]}
           phx-click="relation_select"
@@ -845,7 +845,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -866,7 +866,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           <span class={checkbox_class(value, @selected_set)}>
             <.render_icon :if={selected?(value, @selected_set)} name="hero-check" class="w-3 h-3" />
           </span>
-          {label}
+          <span class="min-w-0 break-words">{label}</span>
         </button>
 
         <button
@@ -3588,7 +3588,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp selected?(value, selected_set), do: to_string(value) in selected_set
 
   defp checkbox_class(value, selected_set) do
-    base = "grid size-4 place-items-center rounded-[5px] border transition-colors"
+    base = "grid size-4 shrink-0 place-items-center rounded-[5px] border transition-colors"
 
     if selected?(value, selected_set) do
       "#{base} border-[#5b57d6] bg-[#5b57d6] text-white"

@@ -19,6 +19,7 @@
   with "is too small" or "is too large"
 - A search select, multi-select or load-more select sends `relation_close_dropdown` on a click
   elsewhere only while its list is open, instead of once per select on the page for every click
+- A relation select's open list wraps a long name instead of scrolling sideways and cutting it
 
 ### Dependencies:
 - dialyxir 1.4.8 => 1.4.9

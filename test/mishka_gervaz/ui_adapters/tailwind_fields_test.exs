@@ -602,6 +602,18 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
+    test "wraps a long name in its open list instead of scrolling it sideways" do
+      long = String.duplicate("Averyveryverylongregionname", 4)
+
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        html = relation(fun, %{dropdown_open?: true, options: [{long, "1"}]})
+
+        assert html =~ "overflow-x-hidden overflow-y-auto", "#{fun}"
+        refute html =~ ~r/\boverflow-auto\b/, "#{fun}"
+        assert html =~ ~r/class="[^"]*break-words[^"]*"[^>]*>\s*(<[^>]*>\s*)*#{long}/, "#{fun}"
+      end
+    end
+
     test "a switched-off search select is never open" do
       assert relation(:search_select, %{dropdown_open?: true, disabled: true}) =~
                ~s(aria-expanded="false")
