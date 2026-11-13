@@ -227,6 +227,20 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
                JSON.decode!(open)
     end
 
+    test "the hook closes the list on Escape with the same event the window binding sends" do
+      html = open_select("")
+      [box] = html |> LazyHTML.query("div:has(> div > input[role=combobox])") |> Enum.to_list()
+      [close] = LazyHTML.attribute(box, "data-close")
+
+      assert [
+               [
+                 "push",
+                 %{"event" => "relation_close_dropdown", "value" => %{"filter" => "record"}}
+               ]
+             ] =
+               JSON.decode!(close)
+    end
+
     test "every option has an id the input can name as the highlighted one" do
       html = open_select("")
       ids = attrs(html, "[role=option]", "id")
@@ -262,7 +276,8 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
 
       js = File.read!(hook)
 
-      for key <- ~w(ArrowDown ArrowUp Enter aria-activedescendant preventDefault scrollIntoView) do
+      for key <-
+            ~w(ArrowDown ArrowUp Enter Escape stopPropagation aria-activedescendant preventDefault scrollIntoView) do
         assert js =~ key, "the hook does not handle #{key}"
       end
     end

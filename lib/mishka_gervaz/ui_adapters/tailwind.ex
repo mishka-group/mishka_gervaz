@@ -380,6 +380,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   in; with the list shut Enter submits as usual. This runs in the colocated hook `.SearchSelect`,
   since `Phoenix.LiveView.JS` can neither stop Enter's submit nor move a highlight relative to the
   current one; the host registers it from `phoenix-colocated/mishka_gervaz` (see the README).
+  The hook also closes the open list on Escape and keeps that Escape from the page, so a modal
+  around the form stays open; with the list shut Escape goes on to the modal.
 
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
@@ -442,6 +444,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       id={"search-select-#{@table_id}-#{@filter_name}"}
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
+      data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
       phx-click-away="relation_close_dropdown"
       phx-value-filter={@filter_name}
       phx-target={@myself}
@@ -555,6 +558,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       export default {
         mounted() {
           this.el.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.el.querySelector("[role=listbox]")) {
+              e.stopPropagation();
+              this.js().exec(this.el, this.el.dataset.close);
+              return;
+            }
+
             const input = e.target;
             if (input.getAttribute("role") !== "combobox" || e.isComposing) return;
 

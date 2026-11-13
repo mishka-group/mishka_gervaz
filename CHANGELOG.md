@@ -9,6 +9,8 @@
   the first not already picked) instead of submitting the form, and the input names the highlight in
   `aria-activedescendant`. It runs in a colocated hook, so the host adds gervaz's hooks from
   `phoenix-colocated/mishka_gervaz` to its `LiveSocket` (see the README)
+- Escape in an open search select closes only its list, so a modal holding the form stays open;
+  the next Escape closes the modal
 
 # Changelog for MishkaGervaz 0.0.8
 
