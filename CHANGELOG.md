@@ -26,6 +26,10 @@
 - A search select or multi-select opens as soon as its input takes focus or a click, through the
   `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
   list to another select closed the first and left the second shut
+- Escape closes an open relation select's list and leaves it closed: the `.SearchSelect` hook
+  keeps the keyup of a key that types nothing (Escape, Enter, Tab, an arrow) from the input's
+  search, and a table's relation filter searches nothing for one, so the Escape's keyup no longer
+  searched and opened the list again
 - A relation select's open list closes on any click outside it again: every search, multi and
   load-more select carries `phx-click-away`, open or shut, whose handler does nothing for a shut
   list. The load-more select carries the `.SearchSelect` hook too, for Escape

@@ -10,6 +10,19 @@ defmodule MishkaGervaz.Table.Web.Events.RelationFilterHandlerTest do
 
   alias MishkaGervaz.Table.Web.Events.RelationFilterHandler
 
+  describe "search on a keyup" do
+    test "a key that types nothing searches nothing, so Escape does not reopen the list" do
+      socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, table_state: :untouched}}
+
+      for key <- ~w(Escape Enter Tab ArrowDown ArrowUp Shift) do
+        params = %{"filter" => "site_id", "value" => "nor", "key" => key}
+
+        assert RelationFilterHandler.do_handle("search", params, :no_state, socket) ==
+                 {:noreply, socket}
+      end
+    end
+  end
+
   describe "skip_relation_search_term?/2" do
     test "returns true for search term in relation filter with search mode and UUID id_type" do
       filter = %{type: :relation, mode: :search, id_type: :uuid}
