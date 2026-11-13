@@ -23,7 +23,7 @@
   with "is too small" or "is too large"
 - A relation select's open list, as wide as its input, wraps a long name at its spaces, breaking a
   word only when one alone is wider, instead of scrolling sideways and cutting it
-- A search select or multi-select opens as soon as its input takes focus or a click, through the
+- A search select or multi-select opens on a click in its input, or Tab into it, through the
   `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
   list to another select closed the first and left the second shut
 - Escape closes an open relation select's list and leaves it closed: the `.SearchSelect` hook

@@ -382,8 +382,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   current one; the host registers it from `phoenix-colocated/mishka_gervaz` (see the README).
   The hook also closes the open list on Escape and keeps that Escape from the page, so a modal
   around the form stays open; with the list shut Escape goes on to the modal. It opens a shut list
-  when the input takes focus or a click, as `relation_focus`: a `phx-focus` would wait out the
-  input's `phx-debounce`, so a click moving from one open list to another select left it shut. The
+  on a click in the input, or when Tab brings the focus to it, as `relation_focus`: a `phx-focus`
+  would wait out the input's `phx-debounce`, so a click moving from one open list to another select
+  left it shut, and any focus would also count the one LiveView gives back to a form's search box
+  drawn anew after Escape closed its list, which opened the list again. The
   hook keeps the keyup of a key that types nothing (Escape, Enter, Tab, an arrow) from the input's
   search, so the Escape that closed the list does not search and open it again. The
   hook reads whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so
@@ -570,17 +572,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           const show = (e) => {
             const input = e.target;
             if (input.tagName !== "INPUT" || input.type !== "text" || input.disabled || open()) return;
-            if (Date.now() - (this.shownAt || 0) < 400) return;
-            this.shownAt = Date.now();
             this.js().exec(this.el.dataset.open);
           };
 
-          this.el.addEventListener("focusin", show);
           this.el.addEventListener("click", show);
 
           const typing = ["Backspace", "Delete", "Process", "Unidentified"];
 
           this.el.addEventListener("keyup", (e) => {
+            if (e.key === "Tab") show(e);
             if (e.key.length > 1 && !typing.includes(e.key)) e.stopPropagation();
           });
 
@@ -774,8 +774,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
   while the list is shut, for the reason `search_select/1` gives. `:search_event` is the event a
-  keyup sends, as `search_select/1` says. Focus opens the list through the `.SearchSelect` hook, at
-  once, as `search_select/1` says.
+  keyup sends, as `search_select/1` says. A click in the input, or Tab into it, opens the list
+  through the `.SearchSelect` hook, at once, as `search_select/1` says.
   """
   @impl true
   def multi_select(assigns) do
