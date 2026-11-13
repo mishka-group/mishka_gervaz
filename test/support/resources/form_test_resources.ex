@@ -2325,3 +2325,74 @@ defmodule MishkaGervaz.Test.Resources.RestrictedEntry do
     end
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.ScheduledEntry do
+  @moduledoc """
+  A form whose `:publish_at` time may not be in the past, offered every 15 minutes in a calendar
+  whose weeks start on Sunday, and whose `:due_on` day lies within a fixed ten days.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :scheduled_entry
+        route "/admin/scheduled-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :publish_at, :datetime do
+          min fn -> DateTime.utc_now() end
+
+          ui do
+            step 15
+            first_day_of_week(:sunday)
+          end
+        end
+
+        field :due_on, :date do
+          min ~D[2024-01-10]
+          max ~D[2024-01-20]
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :publish_at, :utc_datetime, public?: true
+    attribute :due_on, :date, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :publish_at, :due_on]
+    end
+
+    update :update do
+      primary? true
+      accept [:title, :publish_at, :due_on]
+    end
+  end
+end

@@ -929,7 +929,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   browser's: a button showing the date, and under it the month and year, a step a month or a year
   either way, and the days. `:picker` is `%{month: month}`, the first day of the month shown, or
   `%{month: nil}` while it is closed; `:field_name` and `:target` name the field and the form its
-  `picker_*` events go to. The value is in a hidden input of `:name`.
+  `picker_*` events go to. The value is in a hidden input of `:name`. Days before `:min` or after
+  `:max` are greyed out and can't be picked, and each week starts on `:first_day_of_week`
+  (`:monday` when not given).
 
   ## Assigns
     * `:name`, `:value`, `:id`, `:min`, `:max` - the input's attributes
@@ -938,7 +940,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:aria_label` - the input's accessible name, for an input without a `<label>` of its own
     * `:disabled`, `:readonly` - switch the input off
     * `:class` - replaces the input's classes
-    * `:picker`, `:field_name`, `:target` - the form's calendar, above
+    * `:picker`, `:field_name`, `:target`, `:first_day_of_week` - the form's calendar, above
   """
   @impl true
   def date_input(%{picker: %{}} = assigns), do: calendar(assign(assigns, :kind, :date))
@@ -988,6 +990,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   Given `:picker`, as a form's `:datetime` field is, it is the calendar `date_input/1` draws, with
   the hour and the minute under the days — sent as `picker_time` — and a Done that closes it.
+  `:min` and `:max` (`"2024-09-09T22:45:00"`) bound it as they do the date's, and `:step` is the
+  minutes between the minutes offered. Without `:picker` it is the browser's `datetime-local`
+  input, with `min`, `max` and `step` set from them.
   """
   @impl true
   def datetime_input(%{picker: %{}} = assigns), do: calendar(assign(assigns, :kind, :datetime))
@@ -1000,6 +1005,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:min, fn -> nil end)
+      |> assign_new(:max, fn -> nil end)
+      |> assign(:step, assigns[:step] && assigns[:step] * 60)
 
     ~H"""
     <div class="relative">
@@ -1013,6 +1021,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         id={@id}
         name={@name}
         value={Phoenix.HTML.Form.normalize_value("datetime-local", @value)}
+        min={@min}
+        max={@max}
+        step={@step}
         disabled={@disabled}
         readonly={@readonly}
         class={[
@@ -3175,7 +3186,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   defp calendar(assigns) do
     {day, {hour, minute}} = DateTimeField.parts(assigns[:value])
+    {first_day, _time} = DateTimeField.parts(assigns[:min])
+    {last_day, _time} = DateTimeField.parts(assigns[:max])
     month = assigns.picker[:month]
+    week_start = assigns[:first_day_of_week] || :monday
 
     assigns =
       assigns
@@ -3191,7 +3205,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         month: month,
         today: Date.utc_today(),
         stored: if(day, do: DateTimeField.value(day, {hour, minute}, assigns.kind), else: ""),
-        days: month && calendar_days(month),
+        days: month && calendar_days(month, week_start),
+        weekdays: weekday_names(week_start),
+        minutes: minutes(assigns[:step], minute),
+        first_day: first_day,
+        last_day: last_day,
         off?: assigns[:disabled] == true or assigns[:readonly] == true
       )
 
@@ -3275,7 +3293,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         </div>
 
         <div class="grid grid-cols-7 gap-0.5 text-center text-[10.5px] font-bold uppercase text-[#a8a5a0]">
-          <span :for={name <- weekday_names()}>{name}</span>
+          <span :for={name <- @weekdays}>{name}</span>
         </div>
         <div class="mt-1 grid grid-cols-7 gap-0.5">
           <%= for d <- @days do %>
@@ -3291,9 +3309,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
                 )
               }
               aria-pressed={to_string(d == @day)}
+              disabled={outside?(d, @first_day, @last_day)}
               class={[
                 "h-8 rounded-[8px] text-[12.5px] font-semibold",
-                (d == @day && "bg-[#5b57d6] text-white") || "text-[#3a382f] hover:bg-[#f2f1fc]",
+                (d == @day && "bg-[#5b57d6] text-white") ||
+                  "text-[#3a382f] hover:bg-[#f2f1fc] disabled:cursor-not-allowed disabled:text-[#d4d2cb] disabled:hover:bg-transparent",
                 d == @today && d != @day && "ring-1 ring-inset ring-[#c3c1f0]"
               ]}
             >
@@ -3309,9 +3329,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           <span class="me-1">{dgettext("mishka_gervaz", "Time")}</span>
           <div
             :for={
-              {part, top, now, label} <- [
-                {"hour", 23, @hour, dgettext("mishka_gervaz", "Hour")},
-                {"minute", 59, @minute, dgettext("mishka_gervaz", "Minute")}
+              {part, options, now, label} <- [
+                {"hour", 0..23, @hour, dgettext("mishka_gervaz", "Hour")},
+                {"minute", @minutes, @minute, dgettext("mishka_gervaz", "Minute")}
               ]
             }
             dir="ltr"
@@ -3325,7 +3345,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
               aria-label={label}
               class="h-9 cursor-pointer appearance-none rounded-[9px] border border-[#ecebe6] bg-[#faf9f6] ps-2.5 pe-7 text-[12.5px] font-semibold text-[#1b1a18] outline-none focus:border-[#c3c1f0]"
             >
-              <option :for={n <- 0..top} value={n} selected={n == now}>{two_digits(n)}</option>
+              <option :for={n <- options} value={n} selected={n == now}>{two_digits(n)}</option>
             </select>
             <.select_chevron class="end-[9px] size-3" />
           </div>
@@ -3352,10 +3372,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
-  defp calendar_days(%Date{} = month) do
+  defp calendar_days(%Date{} = month, week_start) do
     last = Date.end_of_month(month)
-    List.duplicate(nil, Date.day_of_week(month) - 1) ++ Enum.to_list(Date.range(month, last))
+
+    List.duplicate(nil, Date.day_of_week(month, week_start) - 1) ++
+      Enum.to_list(Date.range(month, last))
   end
+
+  defp outside?(day, first_day, last_day),
+    do:
+      (first_day != nil and Date.before?(day, first_day)) or
+        (last_day != nil and Date.after?(day, last_day))
+
+  defp minutes(step, minute) when is_integer(step) and step > 1,
+    do: Enum.uniq(Enum.sort([minute | Enum.to_list(0..59//step)]))
+
+  defp minutes(_step, _minute), do: Enum.to_list(0..59)
 
   defp shown_date(nil, _hour, _minute, _kind), do: nil
 
@@ -3398,8 +3430,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   defp month_short(11), do: dgettext("mishka_gervaz", "Nov")
   defp month_short(12), do: dgettext("mishka_gervaz", "Dec")
 
-  defp weekday_names,
-    do: [
+  defp weekday_names(week_start) do
+    names = [
       dgettext("mishka_gervaz", "Mo"),
       dgettext("mishka_gervaz", "Tu"),
       dgettext("mishka_gervaz", "We"),
@@ -3408,6 +3440,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       dgettext("mishka_gervaz", "Sa"),
       dgettext("mishka_gervaz", "Su")
     ]
+
+    {head, tail} = Enum.split(names, 7 - Date.day_of_week(~D[2024-01-01], week_start) + 1)
+    tail ++ head
+  end
 
   defp combobox_open(dropdown_id) do
     JS.show(to: "##{dropdown_id}")

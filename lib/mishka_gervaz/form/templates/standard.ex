@@ -102,6 +102,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
+  alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
 
@@ -1438,24 +1439,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
         |> boolean_box()
 
-      :date ->
+      kind when kind in [:date, :datetime] ->
         base
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
-        |> assign(:function, :date_input)
+        |> assign(:function, if(kind == :date, do: :date_input, else: :datetime_input))
         |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
         |> assign(:field_name, field.name)
         |> assign(:target, assigns[:myself])
-        |> dynamic_component()
-
-      :datetime ->
-        base
-        |> assign(:disabled, false)
-        |> assign(:readonly, is_readonly)
-        |> assign(:function, :datetime_input)
-        |> assign(:picker, %{month: Map.get(assigns.state.pickers || %{}, field.name)})
-        |> assign(:field_name, field.name)
-        |> assign(:target, assigns[:myself])
+        |> assign(:min, DateTimeField.bound(field, :min, kind))
+        |> assign(:max, DateTimeField.bound(field, :max, kind))
+        |> put_present(:step, get_in_map(field, [:ui, :step]))
+        |> put_present(:first_day_of_week, get_in_map(field, [:ui, :first_day_of_week]))
         |> dynamic_component()
 
       :range ->

@@ -26,6 +26,18 @@ defmodule MishkaGervaz.Form.Types.Field.DateTest do
     end
   end
 
+  describe "validate/2 with min and max" do
+    test "takes the days from min to max, and refuses the others" do
+      config = %{min: ~D[2024-01-10], max: fn -> ~U[2024-01-20 08:00:00Z] end}
+
+      assert DateField.validate("2024-01-10", config) == {:ok, "2024-01-10"}
+      assert DateField.validate("2024-01-20", config) == {:ok, "2024-01-20"}
+      assert DateField.validate(~D[2024-01-15], config) == {:ok, ~D[2024-01-15]}
+      assert DateField.validate("2024-01-09", config) == {:error, "is too early"}
+      assert DateField.validate("2024-01-21", config) == {:error, "is too late"}
+    end
+  end
+
   describe "sanitize/2" do
     test "trims binary values" do
       assert DateField.sanitize("  2025-01-15  ", %{}) == "2025-01-15"

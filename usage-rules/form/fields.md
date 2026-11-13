@@ -66,7 +66,7 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 | `load` | `fn query, state -> query` | — | scopes the option list |
 | `position` | int \| `:first` \| `:last` \| `{:before, f}` \| `{:after, f}` | — | |
 | `include_nil` | bool \| string \| `fn -> string` | `false` | adds a nil option; the string is its label |
-| `min` / `max` | int | — | `:number` / `:range` |
+| `min` / `max` | int \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` | — | `:number` / `:range`; on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now) |
 | `min_chars` | int | — | before search fires |
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |
@@ -75,8 +75,9 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 ## `ui do … end`
 
 `label` · `placeholder` · `description` · `icon` · `class` · `wrapper_class` · `debounce` ·
-`span` · `rows` · `step` · `autocomplete` · `add_label` · `remove_label` · `disabled_prompt` ·
-`extra`.
+`span` · `rows` · `step` · `first_day_of_week` · `autocomplete` · `add_label` · `remove_label` ·
+`disabled_prompt` · `extra`. On a `:datetime` field `step` is the minutes between the times its
+picker offers; `first_day_of_week` (`:monday` when not set) is the day a calendar's weeks start on.
 
 ## Relation fields — the pattern that recurs
 

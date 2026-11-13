@@ -233,13 +233,13 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def do_handle("picker_open", %{"field" => name}, state, socket) do
     case picker_field(name, state) do
-      %{name: field} ->
+      %{name: field} = config ->
         pickers = state.pickers || %{}
 
         pickers =
           case pickers do
             %{^field => _month} -> Map.delete(pickers, field)
-            _closed -> Map.put(pickers, field, first_of_month(shown_day(state, field)))
+            _closed -> Map.put(pickers, field, first_of_month(shown_day(state, config)))
           end
 
         {:noreply,
@@ -278,7 +278,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def do_handle("picker_day", %{"field" => name, "date" => day}, state, socket) do
-    with %{name: field, type: type} <- picker_field(name, state),
+    with %{name: field, type: type} = config <- picker_field(name, state),
          {:ok, date} <- Date.from_iso8601(to_string(day)) do
       {_day, time} = DateTimeField.parts(current_value(state, field))
 
@@ -287,7 +287,7 @@ defmodule MishkaGervaz.Form.Web.Events do
           do: State.update(state, pickers: Map.delete(state.pickers || %{}, field)),
           else: state
 
-      {:noreply, put_value(state, socket, field, DateTimeField.value(date, time, type))}
+      {:noreply, put_value(state, socket, field, DateTimeField.clamp(config, date, time))}
     else
       _not_a_day -> {:noreply, socket}
     end
@@ -295,14 +295,14 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def do_handle("picker_time", %{"_gvz_picker" => picked}, state, socket) when is_map(picked) do
     with [{name, %{} = parts}] <- Map.to_list(picked),
-         %{name: field, type: :datetime} <- picker_field(name, state) do
+         %{name: field, type: :datetime} = config <- picker_field(name, state) do
       {day, {hour, minute}} = DateTimeField.parts(current_value(state, field))
       hour = clock(parts["hour"], 23, hour)
       minute = clock(parts["minute"], 59, minute)
       day = day || Map.get(state.pickers || %{}, field) || Date.utc_today()
 
       {:noreply,
-       put_value(state, socket, field, DateTimeField.value(day, {hour, minute}, :datetime))}
+       put_value(state, socket, field, DateTimeField.clamp(config, day, {hour, minute}))}
     else
       _not_a_time -> {:noreply, socket}
     end
@@ -736,10 +736,14 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   defp current_value(state, field), do: Phoenix.HTML.Form.input_value(state.form, field)
 
-  defp shown_day(state, field) do
+  defp shown_day(state, %{name: field} = config) do
     case DateTimeField.parts(current_value(state, field)) do
-      {%Date{} = day, _time} -> day
-      {nil, _time} -> Date.utc_today()
+      {%Date{} = day, _time} ->
+        day
+
+      {nil, _time} ->
+        {day, _time} = DateTimeField.parts(DateTimeField.clamp(config, Date.utc_today(), {0, 0}))
+        day
     end
   end
 
