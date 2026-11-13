@@ -560,7 +560,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           this.el.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && this.el.querySelector("[role=listbox]")) {
               e.stopPropagation();
-              this.js().exec(this.el, this.el.dataset.close);
+              this.js().exec(this.el.dataset.close);
               return;
             }
 
@@ -573,7 +573,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
               input.removeAttribute("aria-activedescendant");
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
-                this.js().exec(this.el, this.el.dataset.open);
+                this.js().exec(this.el.dataset.open);
               }
               return;
             }
@@ -593,7 +593,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             } else if (e.key === "Enter") {
               e.preventDefault();
               const pick = options[current] || options.find((o) => o.getAttribute("aria-selected") !== "true");
-              if (pick) pick.click();
+              if (!pick) return;
+              input.value = pick.getAttribute("aria-selected") === "true" ? "" : pick.getAttribute("phx-value-label");
+              pick.click();
             }
           });
         }
