@@ -1114,28 +1114,38 @@ defmodule MishkaGervaz.Helpers do
   def user_tenant(_), do: nil
 
   @doc """
-  Merges form-state relation field values into a params map.
+  Merges the values the form state holds for the fields the server sets into a params map.
 
   For each relation field with a value in `state.field_values`, places the
   value at the string-keyed slot in `params`. The sentinel `"__nil__"` is
   rewritten to a real `nil` so AshPhoenix can clear the relation. Empty
   string and `nil` values are ignored.
 
-  Used by validation/submit handlers to ensure relation selections survive
+  A `:date` or `:datetime` field's calendar sets its value only through its `picker_*` events, so
+  the value they left in `state.field_values`, an empty one after Clear included, replaces the one
+  posted. A change posted before the calendar's last pick was drawn carries the hidden input's old
+  value, and would otherwise empty the field.
+
+  Used by validation/submit handlers to ensure picked values survive
   param re-merging.
   """
-  @spec merge_relation_field_values(map(), map()) :: map()
-  def merge_relation_field_values(params, state) do
-    state.static.fields
-    |> Enum.filter(&(&1.type == :relation))
-    |> Enum.reduce(params, fn field, acc ->
-      case Map.get(state.field_values, field.name) do
-        "__nil__" -> Map.put(acc, to_string(field.name), nil)
-        v when v not in [nil, ""] -> Map.put(acc, to_string(field.name), v)
-        _ -> acc
-      end
+  @spec merge_picked_values(map(), map()) :: map()
+  def merge_picked_values(params, state) do
+    Enum.reduce(state.static.fields, params, fn field, acc ->
+      picked(acc, field, Map.fetch(state.field_values, field.name))
     end)
   end
+
+  defp picked(params, %{type: :relation, name: name}, {:ok, "__nil__"}),
+    do: Map.put(params, to_string(name), nil)
+
+  defp picked(params, %{type: :relation, name: name}, {:ok, value}) when value not in [nil, ""],
+    do: Map.put(params, to_string(name), value)
+
+  defp picked(params, %{type: type, name: name}, {:ok, value}) when type in [:date, :datetime],
+    do: Map.put(params, to_string(name), value)
+
+  defp picked(params, _field, _value), do: params
 
   @doc """
   Fetch a key from a possibly-nil map, returning `default` when the key is

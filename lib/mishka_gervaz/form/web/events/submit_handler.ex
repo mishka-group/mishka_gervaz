@@ -245,7 +245,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       alias MishkaGervaz.Form.Web.UploadHelpers
       alias MishkaGervaz.Form.Web.Events.Helpers, as: EventsHelpers
 
-      import MishkaGervaz.Helpers, only: [merge_relation_field_values: 2]
+      import MishkaGervaz.Helpers, only: [merge_picked_values: 2]
 
       import MishkaGervaz.Form.Web.Events.SubmitHandler,
         only: [
@@ -278,7 +278,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
               form.source
               |> AshPhoenix.Form.params()
               |> Map.merge(incoming)
-              |> merge_relation_field_values(state)
+              |> merge_picked_values(state)
           end
 
         form_params = transform_params(state, form_params)

@@ -169,6 +169,22 @@ defmodule MishkaGervaz.Form.Web.Events.DateRangeTest do
       {:ok, at} = NaiveDateTime.from_iso8601(shown(picked, :publish_at))
       refute NaiveDateTime.before?(at, NaiveDateTime.add(NaiveDateTime.utc_now(), -60))
     end
+
+    test "a change posted before the pick was drawn keeps the pick, and the save stores it" do
+      socket =
+        create_form()
+        |> send_event("picker_day", %{"field" => "due_on", "date" => "2024-01-12"})
+        |> send_event("picker_close", %{"field" => "due_on"})
+        |> send_event("validate", %{
+          "_target" => ["form", "title"],
+          "form" => %{"title" => "Typed", "due_on" => ""}
+        })
+
+      assert shown(socket, :due_on) == "2024-01-12"
+
+      save(socket, %{"title" => "Typed", "due_on" => ""})
+      assert [%{due_on: ~D[2024-01-12]}] = Ash.read!(ScheduledEntry)
+    end
   end
 
   describe "saving" do
