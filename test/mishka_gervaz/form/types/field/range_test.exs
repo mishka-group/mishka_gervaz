@@ -38,4 +38,15 @@ defmodule MishkaGervaz.Form.Types.Field.RangeTest do
   test "default_ui/0" do
     assert RangeField.default_ui() == %{type: :range}
   end
+
+  describe "validate/2 with min and max" do
+    test "takes the numbers from min to max, and refuses the others" do
+      config = %{min: 10, max: 20}
+
+      assert RangeField.validate(15, config) == {:ok, 15}
+      assert RangeField.validate("20", config) == {:ok, "20"}
+      assert RangeField.validate("9", config) == {:error, "is too small"}
+      assert RangeField.validate(21, config) == {:error, "is too large"}
+    end
+  end
 end

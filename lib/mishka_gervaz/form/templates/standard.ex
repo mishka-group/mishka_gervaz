@@ -1392,6 +1392,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :number_input)
+        |> put_present(:min, number_bound(Map.get(field, :min)))
+        |> put_present(:max, number_bound(Map.get(field, :max)))
+        |> put_present(:step, get_in_map(field, [:ui, :step]))
         |> dynamic_component()
 
       :textarea ->
@@ -1454,13 +1457,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :range ->
-        min = get_in_map(field, [:ui, :min]) || 0
-        max = get_in_map(field, [:ui, :max]) || 100
-
         base
         |> assign(:function, :range_input)
-        |> assign(:min, min)
-        |> assign(:max, max)
+        |> put_present(:min, number_bound(Map.get(field, :min)))
+        |> put_present(:max, number_bound(Map.get(field, :max)))
+        |> put_present(:step, get_in_map(field, [:ui, :step]))
         |> dynamic_component()
 
       :json ->
@@ -2449,6 +2450,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       steps -> List.last(steps).name == current
     end
   end
+
+  defp number_bound(bound) when is_number(bound), do: bound
+  defp number_bound(_bound), do: nil
 
   defp put_present(assigns, _key, nil), do: assigns
   defp put_present(assigns, key, value), do: assign(assigns, key, value)

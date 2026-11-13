@@ -13,6 +13,10 @@
 ### Bug fixes:
 - A date picker keeps its pick when a form change posted before the pick was drawn arrives after
   it; that change carried the old, empty value and emptied the field
+- A `:range` field's slider runs from the field's `min` to its `max` (0 to 100 when not set) in its
+  `ui` `step`; it read `min` and `max` from `ui`, which has neither, so it always ran 0 to 100. A
+  `:number` input carries the same `min`, `max` and `step`, and both refuse a value outside them
+  with "is too small" or "is too large"
 
 ### Dependencies:
 - dialyxir 1.4.8 => 1.4.9
