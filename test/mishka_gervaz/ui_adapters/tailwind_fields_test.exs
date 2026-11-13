@@ -213,6 +213,75 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
+    test "the keyboard runs in the search select hook, which reopens the list with the focus event" do
+      html = open_select("")
+      [box] = html |> LazyHTML.query("div:has(> div > input[role=combobox])") |> Enum.to_list()
+
+      assert LazyHTML.attribute(box, "phx-hook") == [
+               "MishkaGervaz.UIAdapters.Tailwind.SearchSelect"
+             ]
+
+      [open] = LazyHTML.attribute(box, "data-open")
+
+      assert [["push", %{"event" => "relation_focus", "value" => %{"filter" => "record"}}]] =
+               JSON.decode!(open)
+    end
+
+    test "the hook closes the list on Escape with the same event the window binding sends" do
+      html = open_select("")
+      [box] = html |> LazyHTML.query("div:has(> div > input[role=combobox])") |> Enum.to_list()
+      [close] = LazyHTML.attribute(box, "data-close")
+
+      assert [
+               [
+                 "push",
+                 %{"event" => "relation_close_dropdown", "value" => %{"filter" => "record"}}
+               ]
+             ] =
+               JSON.decode!(close)
+    end
+
+    test "every option has an id the input can name as the highlighted one" do
+      html = open_select("")
+      ids = attrs(html, "[role=option]", "id")
+
+      assert ids ==
+               Enum.map(
+                 ~w(__nil__ blog:post blog:tag docs:page),
+                 &"search-select--record-list-#{&1}"
+               )
+
+      assert ids == Enum.uniq(ids)
+      refute attrs(html, "input[role=combobox]", "aria-activedescendant") |> Enum.any?()
+    end
+
+    test "Enter in the search box is left to the hook, not bound to the form's submit" do
+      html = open_select("")
+      input = "input[name=_search_record]"
+
+      assert attrs(html, input, "phx-keydown") == []
+      assert attrs(html, input, "type") == ["text"]
+      assert attrs(html, "[role=option]", "type") |> Enum.uniq() == ["button"]
+      assert LazyHTML.query(html, "[type=submit]") |> Enum.to_list() == []
+    end
+
+    test "the hook is shipped as colocated JavaScript the host bundles" do
+      [hook] =
+        Path.wildcard(
+          Path.join([
+            Mix.Project.build_path(),
+            "phoenix-colocated/mishka_gervaz/MishkaGervaz.UIAdapters.Tailwind/*.js"
+          ])
+        )
+
+      js = File.read!(hook)
+
+      for key <-
+            ~w(ArrowDown ArrowUp Enter Escape stopPropagation aria-activedescendant preventDefault scrollIntoView) do
+        assert js =~ key, "the hook does not handle #{key}"
+      end
+    end
+
     test "Escape closes the open list" do
       html = open_select("")
       [list] = html |> LazyHTML.query("div:has(> [role=listbox])") |> Enum.to_list()

@@ -4,6 +4,13 @@
 - With select all, the bulk bar names the rows a bulk action reaches ("All 99 selected", or
   "96 selected" once rows are unchecked) when the table knows its total, and keeps "All selected"
   when it does not
+- The search select (a relation picker in a form or a table filter) works from the keyboard:
+  ArrowDown and ArrowUp move a highlight through the list, Enter picks the highlighted option (or
+  the first not already picked) instead of submitting the form, and the input names the highlight in
+  `aria-activedescendant`. It runs in a colocated hook, so the host adds gervaz's hooks from
+  `phoenix-colocated/mishka_gervaz` to its `LiveSocket` (see the README)
+- Escape in an open search select closes only its list, so a modal holding the form stays open;
+  the next Escape closes the modal
 
 # Changelog for MishkaGervaz 0.0.8
 
