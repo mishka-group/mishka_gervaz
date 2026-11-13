@@ -36,9 +36,12 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
       assert result == %{to: ~D[2024-01-31]}
     end
 
-    test "parses one side given without the other key" do
+    test "parses one side given without the other key, and a From after the To the other way round" do
       assert DateRange.parse_value(%{from: "2024-01-01"}, %{}) == %{from: ~D[2024-01-01]}
       assert DateRange.parse_value(%{to: "2024-01-31"}, %{}) == %{to: ~D[2024-01-31]}
+
+      assert DateRange.parse_value(%{from: "2024-01-31", to: "2024-01-01"}, %{}) ==
+               %{from: ~D[2024-01-01], to: ~D[2024-01-31]}
     end
 
     test "returns nil when both dates are nil" do
@@ -155,6 +158,17 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
 
       assert html =~ ~s(name="created_at_from" value="2026-09-24")
       assert html =~ ~s(name="created_at_to" value="")
+    end
+
+    test "bounds each input's calendar by the other side" do
+      html = draw(%{from: ~D[2026-09-10], to: ~D[2026-09-24]})
+
+      assert html =~ ~r/<input[^>]*name="created_at_from"[^>]*max="2026-09-24"/
+      assert html =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
+
+      alone = draw(%{from: ~D[2026-09-10]})
+      refute alone =~ ~r/<input[^>]*name="created_at_from"[^>]*max=/
+      assert alone =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
     end
 
     test "draws both inputs empty for a value that is not a range" do

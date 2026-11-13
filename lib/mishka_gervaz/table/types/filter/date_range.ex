@@ -3,7 +3,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   Date range filter type.
 
   Renders two date inputs for filtering records within a date range. Either side alone filters
-  from or up to its day.
+  from or up to its day, and a From after the To is taken the other way round.
 
   ## Example
 
@@ -29,8 +29,9 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
   date inputs in the filter style, each labelled "From" and "To" for assistive technology.
 
   `value` is the filter's current `%{from: _, to: _}`; either side may be missing, and anything
-  that is not a map draws both inputs empty. The filter's `ui.extra` is merged into both inputs'
-  assigns, and its `ui.icon` goes on the first.
+  that is not a map draws both inputs empty. Each input takes the other's day as its `max` or
+  `min`, so its calendar greys out the days that would leave the range empty. The filter's
+  `ui.extra` is merged into both inputs' assigns, and its `ui.icon` goes on the first.
   """
   @impl true
   @spec render_input(map(), term(), module()) :: Phoenix.LiveView.Rendered.t()
@@ -48,6 +49,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
           __changed__: %{},
           name: "#{filter.name}_from",
           value: from,
+          max: if(to != "", do: to),
           placeholder: from_label,
           aria_label: from_label,
           icon: filter[:ui][:icon],
@@ -62,6 +64,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
           __changed__: %{},
           name: "#{filter.name}_to",
           value: to,
+          min: if(from != "", do: from),
           placeholder: to_label,
           aria_label: to_label,
           search: true,
@@ -84,7 +87,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
       {nil, nil} -> nil
       {from, nil} -> %{from: from}
       {nil, to} -> %{to: to}
-      {from, to} -> %{from: from, to: to}
+      {from, to} -> %{from: Enum.min([from, to], Date), to: Enum.max([from, to], Date)}
     end
   end
 

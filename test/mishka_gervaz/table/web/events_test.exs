@@ -237,7 +237,7 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
   end
 
   describe "filter event" do
-    test "a date range takes one side alone" do
+    test "a date range takes one side alone, and a From after the To the other way round" do
       state =
         "test-id"
         |> State.init(MishkaGervaz.Test.Resources.ComplexTestResource, master_user())
@@ -247,7 +247,8 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
 
       for {from, to, value} <- [
             {"2024-01-05", "", %{from: ~D[2024-01-05]}},
-            {"", "2024-01-20", %{to: ~D[2024-01-20]}}
+            {"", "2024-01-20", %{to: ~D[2024-01-20]}},
+            {"2024-01-20", "2024-01-05", %{from: ~D[2024-01-05], to: ~D[2024-01-20]}}
           ] do
         params = %{"date_range_from" => from, "date_range_to" => to}
         {:noreply, updated} = Events.handle("filter", params, socket)

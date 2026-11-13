@@ -22,6 +22,8 @@
 - A relation select's open list wraps a long name instead of scrolling sideways and cutting it
 - A table's date range filter with only From or only To set filters from or up to that day,
   from the filter bar and from the URL; it needed both and did nothing with one
+- A date range filter's From input stops at the To day and the To input starts at the From day,
+  and a From after the To is taken the other way round instead of filtering out every row
 
 ### Dependencies:
 - dialyxir 1.4.8 => 1.4.9
