@@ -994,6 +994,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   Only the actions visible in the current archive scope are drawn — see
   `has_visible_bulk_actions?/2` to decide whether to give it any room at all.
 
+  With select all, the bar names the rows a bulk action reaches ("All 99 selected", or "96 selected"
+  once rows are unchecked) when the table knows its total (see `bulk_selection_count/1`), and reads
+  "All selected" or "All except 3 selected" when it does not.
+
       <div :if={@show_bulk_actions}>{Shared.render_bulk_actions(assigns)}</div>
   """
   def render_bulk_actions(assigns) do
@@ -1033,10 +1037,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       selected_count={@selected_count}
       excluded_count={@excluded_count}
       myself={@myself}
-      all_selected_label={dgettext("mishka_gervaz", "All selected")}
-      all_except_label={
-        dgettext("mishka_gervaz", "All except %{count} selected", count: @excluded_count)
-      }
+      all_selected_label={all_selected_label(@selection_count)}
+      all_except_label={all_except_label(@selection_count, @excluded_count)}
       selected_label={@selected_label}
       clear_label={dgettext("mishka_gervaz", "Clear selection")}
     >
@@ -1085,6 +1087,19 @@ defmodule MishkaGervaz.Table.Templates.Shared do
         count: count,
         hidden: hidden
       )
+
+  @spec all_selected_label(non_neg_integer() | nil) :: String.t()
+  defp all_selected_label(nil), do: dgettext("mishka_gervaz", "All selected")
+
+  defp all_selected_label(count),
+    do: dgettext("mishka_gervaz", "All %{count} selected", count: count)
+
+  @spec all_except_label(non_neg_integer() | nil, non_neg_integer()) :: String.t()
+  defp all_except_label(nil, excluded),
+    do: dgettext("mishka_gervaz", "All except %{count} selected", count: excluded)
+
+  defp all_except_label(count, _excluded),
+    do: dgettext("mishka_gervaz", "%{count} selected", count: count)
 
   defp total_known?(%{total_count: total, total_pages: pages})
        when is_integer(total) and is_integer(pages),
