@@ -63,4 +63,41 @@ defmodule MishkaGervaz.Types.Filter.RelationTest do
       assert MishkaGervaz.Table.Behaviours.FilterType in behaviours
     end
   end
+
+  describe "render_input/3 on a live page" do
+    defp tracked(%Phoenix.LiveView.Rendered{static: static, dynamic: dynamic}) do
+      parts = Enum.map(dynamic.(true), &tracked/1)
+
+      static
+      |> Enum.zip(parts ++ [""])
+      |> Enum.map_join(fn {text, part} -> text <> part end)
+    end
+
+    defp tracked(%Phoenix.LiveView.Comprehension{} = comprehension),
+      do: comprehension |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+
+    defp tracked(nil), do: ""
+    defp tracked(text) when is_binary(text), do: text
+    defp tracked(iodata) when is_list(iodata), do: IO.iodata_to_binary(iodata)
+    defp tracked(other), do: other |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+
+    # A live page diffs the select against the one it drew last, reading each part through change
+    # tracking; a part read as unchanged would keep the shut select's attributes on the open one.
+    test "draws every part again, so the open select says it is open" do
+      filter = %{
+        name: :site_id,
+        mode: :search_multi,
+        options: [{"North", "1"}],
+        dropdown_open?: true,
+        table_id: "pages",
+        ui: %{}
+      }
+
+      html = filter |> Relation.render_input("", MishkaGervaz.UIAdapters.Tailwind) |> tracked()
+
+      assert html =~ ~s(aria-expanded="true")
+      assert html =~ "gervaz-relation-list"
+      refute html =~ "phx-debounce"
+    end
+  end
 end
