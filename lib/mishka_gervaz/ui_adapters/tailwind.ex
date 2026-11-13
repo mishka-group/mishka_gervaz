@@ -445,7 +445,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={@dropdown_open? && "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
@@ -663,7 +663,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"load-more-select-#{@table_id}-#{@filter_name}"}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={@dropdown_open? && "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >
@@ -779,7 +779,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"multi-select-#{@table_id}-#{@filter_name}"}
-      phx-click-away="relation_close_dropdown"
+      phx-click-away={@dropdown_open? && "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
     >

@@ -590,6 +590,18 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
+    # A shut list sends nothing on a click elsewhere, so a page with several of them does not send
+    # one close per list on every click.
+    test "asks to be closed on a click elsewhere only while its list is open" do
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        assert relation(fun, %{dropdown_open?: true}) =~
+                 ~s(phx-click-away="relation_close_dropdown"),
+               "#{fun}"
+
+        refute relation(fun, %{dropdown_open?: false}) =~ "phx-click-away", "#{fun}"
+      end
+    end
+
     test "a switched-off search select is never open" do
       assert relation(:search_select, %{dropdown_open?: true, disabled: true}) =~
                ~s(aria-expanded="false")

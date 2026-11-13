@@ -17,6 +17,8 @@
   `ui` `step`; it read `min` and `max` from `ui`, which has neither, so it always ran 0 to 100. A
   `:number` input carries the same `min`, `max` and `step`, and both refuse a value outside them
   with "is too small" or "is too large"
+- A search select, multi-select or load-more select sends `relation_close_dropdown` on a click
+  elsewhere only while its list is open, instead of once per select on the page for every click
 
 ### Dependencies:
 - dialyxir 1.4.8 => 1.4.9
