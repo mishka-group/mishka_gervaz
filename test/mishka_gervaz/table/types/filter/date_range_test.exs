@@ -200,6 +200,23 @@ defmodule MishkaGervaz.Types.Filter.DateRangeTest do
       assert html =~ ~r/<input[^>]*name="created_at_to"[^>]*min="2026-09-10"/
     end
 
+    # The browser keeps what was typed in the focused input over the value a patch sends, so an
+    # input whose day a swap changed has to be drawn anew: its id names the other side's day.
+    test "names each input after the other side's day, so a swap draws the focused one anew" do
+      typed = draw(%{from: ~D[2026-10-20], to: ~D[2026-10-25]})
+
+      assert typed =~
+               ~s(id="created_at-from-2026-10-25" name="created_at_from" value="2026-10-20")
+
+      assert typed =~ ~s(id="created_at-to-2026-10-20" name="created_at_to" value="2026-10-25")
+
+      refute draw(%{from: ~D[2026-10-20], to: ~D[2026-10-30]}) =~
+               ~s(id="created_at-from-2026-10-25")
+
+      assert draw(%{from: ~D[2026-10-22], to: ~D[2026-10-25]}) =~
+               ~s(id="created_at-from-2026-10-25")
+    end
+
     test "draws both inputs empty for a value that is not a range" do
       for value <- [nil, "~", ""] do
         html = draw(value)

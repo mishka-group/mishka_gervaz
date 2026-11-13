@@ -35,6 +35,9 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
 
   The inputs are drawn whole each time the filter's value changes, so a live page shows the value
   the state holds, a reversed range swapped, and each side's new `min` or `max` without a reload.
+  Each input's id is the filter's `input_id` (its name when none) with the other side's day, so an
+  input whose day a swap changed is drawn anew, since a browser keeps what was typed in the input
+  that has focus.
   """
   @impl true
   @spec render_input(map(), term(), module()) :: Phoenix.LiveView.Rendered.t()
@@ -50,6 +53,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
       ui.date_input(
         Map.merge(extra, %{
           __changed__: nil,
+          id: "#{filter[:input_id] || filter.name}-from-#{to}",
           name: "#{filter.name}_from",
           value: from,
           max: if(to != "", do: to),
@@ -65,6 +69,7 @@ defmodule MishkaGervaz.Table.Types.Filter.DateRange do
       ui.date_input(
         Map.merge(extra, %{
           __changed__: nil,
+          id: "#{filter[:input_id] || filter.name}-to-#{from}",
           name: "#{filter.name}_to",
           value: to,
           min: if(from != "", do: from),

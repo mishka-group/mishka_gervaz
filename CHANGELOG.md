@@ -39,7 +39,8 @@
 - A date range filter's inputs are drawn again each time the filter changes on a live page, so a
   typed From sets the To input's `min` (and a To the From's `max`) and a reversed range shows
   swapped at once; they were drawn with `__changed__: %{}`, which a live diff read as unchanged, so
-  only a reload showed them
+  only a reload showed them. Each input's id names the other side's day, so the input a swap
+  changed is drawn anew and shows the swapped day even while it has focus
 
 ### Dependencies:
 - dialyxir 1.4.8 => 1.4.9
