@@ -382,8 +382,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   current one; the host registers it from `phoenix-colocated/mishka_gervaz` (see the README).
   The hook also closes the open list on Escape and keeps that Escape from the page, so a modal
   around the form stays open; with the list shut Escape goes on to the modal. It opens a shut list
-  when the input takes focus, as `relation_focus`: a `phx-focus` would wait out the input's
-  `phx-debounce`, so a click moving from one open list to another select left it shut.
+  when the input takes focus or a click, as `relation_focus`: a `phx-focus` would wait out the
+  input's `phx-debounce`, so a click moving from one open list to another select left it shut. A
+  click anywhere outside an open list closes it, as `relation_close_dropdown`. The hook reads
+  whether the list is open from the list itself (`data-role="gervaz-relation-list"`), so it holds
+  for a caller whose assigns carry no change tracking, and a shut list sends nothing.
 
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
@@ -447,9 +450,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
-      phx-click-away={@dropdown_open? && "relation_close_dropdown"}
-      phx-value-filter={@filter_name}
-      phx-target={@myself}
     >
       <div
         class="relative"
@@ -498,6 +498,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
+        data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
         phx-window-keydown="relation_close_dropdown"
         phx-key="Escape"
@@ -557,15 +558,31 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
       export default {
+        destroyed() {
+          document.removeEventListener("click", this.outside);
+        },
         mounted() {
-          this.el.addEventListener("focusin", (e) => {
+          const open = () => this.el.querySelector("[data-role=gervaz-relation-list]");
+
+          const show = (e) => {
             const input = e.target;
-            if (input.tagName !== "INPUT" || input.type !== "text") return;
-            if (input.getAttribute("aria-expanded") !== "true") this.js().exec(this.el.dataset.open);
-          });
+            if (input.tagName !== "INPUT" || input.type !== "text" || input.disabled || open()) return;
+            if (Date.now() - (this.shownAt || 0) < 400) return;
+            this.shownAt = Date.now();
+            this.js().exec(this.el.dataset.open);
+          };
+
+          this.el.addEventListener("focusin", show);
+          this.el.addEventListener("click", show);
+
+          this.outside = (e) => {
+            if (!this.el.contains(e.target) && open()) this.js().exec(this.el.dataset.close);
+          };
+
+          document.addEventListener("click", this.outside);
 
           this.el.addEventListener("keydown", (e) => {
-            if (e.key === "Escape" && this.el.querySelector("[role=listbox]")) {
+            if (e.key === "Escape" && open()) {
               e.stopPropagation();
               this.js().exec(this.el.dataset.close);
               return;
@@ -617,7 +634,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   Shows a clickable trigger that opens a dropdown with options and a
   "Load more" button for pagination.
 
-  The trigger carries `aria-expanded`, `"true"` while the list is open.
+  The trigger carries `aria-expanded`, `"true"` while the list is open. The `.SearchSelect` hook
+  closes the open list on a click outside it and on Escape, as `search_select/1` says.
   """
   @impl true
   def load_more_select(assigns) do
@@ -670,9 +688,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"load-more-select-#{@table_id}-#{@filter_name}"}
-      phx-click-away={@dropdown_open? && "relation_close_dropdown"}
-      phx-value-filter={@filter_name}
-      phx-target={@myself}
+      phx-hook=".SearchSelect"
+      data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
+      data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
     >
       <button
         type="button"
@@ -698,6 +716,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
+        data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
@@ -790,9 +809,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       phx-hook=".SearchSelect"
       data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
       data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
-      phx-click-away={@dropdown_open? && "relation_close_dropdown"}
-      phx-value-filter={@filter_name}
-      phx-target={@myself}
     >
       <div class="relative">
         <.render_icon
@@ -855,6 +871,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
+        data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">

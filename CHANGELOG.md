@@ -21,13 +21,17 @@
   `ui` `step`; it read `min` and `max` from `ui`, which has neither, so it always ran 0 to 100. A
   `:number` input carries the same `min`, `max` and `step`, and both refuse a value outside them
   with "is too small" or "is too large"
-- A search select, multi-select or load-more select sends `relation_close_dropdown` on a click
-  elsewhere only while its list is open, instead of once per select on the page for every click
 - A relation select's open list, as wide as its input, wraps a long name at its spaces, breaking a
   word only when one alone is wider, instead of scrolling sideways and cutting it
-- A search select or multi-select opens as soon as its input takes focus, through the
+- A search select or multi-select opens as soon as its input takes focus or a click, through the
   `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
   list to another select closed the first and left the second shut
+- A relation select's open list closes on any click outside it, through the `.SearchSelect` hook,
+  which the load-more select now carries too and which finds an open list by its
+  `data-role="gervaz-relation-list"`; a shut list sends nothing. The conditional `phx-click-away`
+  it replaces was left off a select drawn without change tracking, so its list never closed
+- A table's relation filter is drawn whole each time it changes, so an open select's
+  `aria-expanded` and debounce are the open ones; it was built with `__changed__: %{}`
 - A table's date range filter with only From or only To set filters from or up to that day,
   from the filter bar and from the URL; it needed both and did nothing with one
 - A date range filter's From input stops at the To day and the To input starts at the From day,
