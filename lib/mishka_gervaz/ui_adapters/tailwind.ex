@@ -381,7 +381,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   since `Phoenix.LiveView.JS` can neither stop Enter's submit nor move a highlight relative to the
   current one; the host registers it from `phoenix-colocated/mishka_gervaz` (see the README).
   The hook also closes the open list on Escape and keeps that Escape from the page, so a modal
-  around the form stays open; with the list shut Escape goes on to the modal.
+  around the form stays open; with the list shut Escape goes on to the modal. It opens a shut list
+  when the input takes focus, as `relation_focus`: a `phx-focus` would wait out the input's
+  `phx-debounce`, so a click moving from one open list to another select left it shut.
 
   The input's `:debounce` holds only while the list is shut. With the list open each keyup searches
   at once, because a keyup still waiting on the debounce is sent when a press on an option blurs the
@@ -479,7 +481,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-expanded={to_string(@dropdown_open? && !@disabled)}
           phx-debounce={if !@disabled and !@dropdown_open?, do: @debounce}
           phx-keyup={if !@disabled, do: @search_event}
-          phx-focus={if !@disabled, do: "relation_focus"}
           phx-target={@myself}
           phx-value-filter={@filter_name}
           phx-value-min-chars={@min_chars}
@@ -497,7 +498,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             to that one key. --%>
       <div
         :if={@dropdown_open? && !@disabled}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-max min-w-full max-w-[min(20rem,90vw)] overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
         phx-window-keydown="relation_close_dropdown"
         phx-key="Escape"
         phx-value-filter={@filter_name}
@@ -557,6 +558,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <script :type={Phoenix.LiveView.ColocatedHook} name=".SearchSelect">
       export default {
         mounted() {
+          this.el.addEventListener("focusin", (e) => {
+            const input = e.target;
+            if (input.tagName !== "INPUT" || input.type !== "text") return;
+            if (input.getAttribute("aria-expanded") !== "true") this.js().exec(this.el.dataset.open);
+          });
+
           this.el.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && this.el.querySelector("[role=listbox]")) {
               e.stopPropagation();
@@ -691,7 +698,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-max min-w-full max-w-[min(20rem,90vw)] overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -742,7 +749,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
   while the list is shut, for the reason `search_select/1` gives. `:search_event` is the event a
-  keyup sends, as `search_select/1` says.
+  keyup sends, as `search_select/1` says. Focus opens the list through the `.SearchSelect` hook, at
+  once, as `search_select/1` says.
   """
   @impl true
   def multi_select(assigns) do
@@ -779,6 +787,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     <div
       class="relative"
       id={"multi-select-#{@table_id}-#{@filter_name}"}
+      phx-hook=".SearchSelect"
+      data-open={JS.push("relation_focus", target: @myself, value: %{filter: @filter_name})}
+      data-close={JS.push("relation_close_dropdown", target: @myself, value: %{filter: @filter_name})}
       phx-click-away={@dropdown_open? && "relation_close_dropdown"}
       phx-value-filter={@filter_name}
       phx-target={@myself}
@@ -800,7 +811,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-expanded={to_string(@dropdown_open?)}
           phx-debounce={if !@dropdown_open?, do: @debounce}
           phx-keyup={@search_event}
-          phx-focus="relation_focus"
           phx-target={@myself}
           phx-value-filter={@filter_name}
           phx-value-min-chars={@min_chars}
@@ -845,7 +855,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
       <div
         :if={@dropdown_open?}
-        class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        class="absolute z-50 mt-1 max-h-80 w-max min-w-full max-w-[min(20rem,90vw)] overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}

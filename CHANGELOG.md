@@ -23,7 +23,11 @@
   with "is too small" or "is too large"
 - A search select, multi-select or load-more select sends `relation_close_dropdown` on a click
   elsewhere only while its list is open, instead of once per select on the page for every click
-- A relation select's open list wraps a long name instead of scrolling sideways and cutting it
+- A relation select's open list grows to a long name (up to 20rem) and wraps it at its spaces,
+  breaking a word only when one alone is wider, instead of scrolling sideways and cutting it
+- A search select or multi-select opens as soon as its input takes focus, through the
+  `.SearchSelect` hook; its `phx-focus` waited out the input's debounce, so a click from one open
+  list to another select closed the first and left the second shut
 - A table's date range filter with only From or only To set filters from or up to that day,
   from the filter bar and from the URL; it needed both and did nothing with one
 - A date range filter's From input stops at the To day and the To input starts at the From day,

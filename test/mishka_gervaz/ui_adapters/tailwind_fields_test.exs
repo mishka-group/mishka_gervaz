@@ -602,6 +602,24 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       end
     end
 
+    # LiveView holds a `phx-focus` for the input's `phx-debounce`, so a click from one open list to
+    # another select found that one still shut; the hook opens it on focus at once.
+    test "opens on focus through the hook, not a debounced phx-focus" do
+      for fun <- [:search_select, :multi_select] do
+        html = relation(fun, %{dropdown_open?: false})
+
+        refute html =~ "phx-focus", "#{fun}"
+        assert html =~ ~s(phx-hook="MishkaGervaz.UIAdapters.Tailwind.SearchSelect"), "#{fun}"
+        assert html =~ ~r/data-open="[^"]*relation_focus/, "#{fun}"
+      end
+    end
+
+    test "widens its open list to a long name before it breaks a word" do
+      for fun <- [:search_select, :multi_select, :load_more_select] do
+        assert relation(fun, %{dropdown_open?: true}) =~ "w-max min-w-full", "#{fun}"
+      end
+    end
+
     test "wraps a long name in its open list instead of scrolling it sideways" do
       long = String.duplicate("Averyveryverylongregionname", 4)
 
