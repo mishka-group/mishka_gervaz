@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+# A newer push to the same branch or pull request makes the run in progress pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# No job writes to the repository, so the token can only read it.
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    # Switch to @ci-v1 once mishka-group/mishka_cms#77 is merged and tagged.
+    uses: mishka-group/mishka_cms/.github/workflows/mishka-ci.yml@ci-v1
+    with:
+      # This repository does not run Credo, Dialyzer or ExDNA in CI today (it has no Credo or ExDNA).
+      credo: false
+      dialyzer: false
+      ex_dna: false
+      test-args: --trace
