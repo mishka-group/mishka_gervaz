@@ -57,6 +57,8 @@ defmodule MishkaGervaz.Form.Web.Events do
   `StepHandler`, `UploadHandler`, `RelationHandler`, `HookRunner`.
   """
 
+  use MishkaGervaz.Messages
+
   alias MishkaGervaz.Form.Web.{State, DataLoader}
 
   alias MishkaGervaz.Form.Web.Events.{
@@ -780,8 +782,8 @@ defmodule MishkaGervaz.Form.Web.Events do
         |> strip_empty_constrained_entries(state.static.fields)
 
       case run_hook(state, :before_save, [params, state]) do
-        {:halt, _reason} ->
-          socket
+        {:halt, reason} ->
+          halt_save(state, params, reason, socket)
 
         {:cont, modified_params} ->
           submit_with_picks(state, modified_params, socket)
@@ -796,6 +798,26 @@ defmodule MishkaGervaz.Form.Web.Events do
       socket
     end
   end
+
+  # A save `before_save` halted: the form keeps what was typed and shows the reason above the
+  # submit row, through `state.form_errors`.
+  defp halt_save(state, params, reason, socket) do
+    socket = validation_handler(state).validate(state, params, socket)
+    halted = State.update(socket.assigns.form_state, form_errors: halt_messages(reason))
+
+    Phoenix.Component.assign(socket, :form_state, halted)
+  end
+
+  defp halt_messages(reason) when is_binary(reason) and reason != "", do: [reason]
+
+  defp halt_messages([_ | _] = reasons) do
+    case Enum.filter(reasons, &(is_binary(&1) and &1 != "")) do
+      [] -> halt_messages(nil)
+      messages -> messages
+    end
+  end
+
+  defp halt_messages(_reason), do: [dgettext("mishka_gervaz", "The changes were not saved.")]
 
   # Next, pressed or the form's submit on a step before the last: what the form holds is validated,
   # then the step handler moves on or shows the step's errors.

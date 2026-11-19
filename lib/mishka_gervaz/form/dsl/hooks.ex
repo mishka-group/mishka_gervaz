@@ -25,7 +25,7 @@ defmodule MishkaGervaz.Form.Dsl.Hooks do
     before_save: [
       type: {:fun, 2},
       doc:
-        "`fn params, state -> params | {:cont, params} | {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `\"form\"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save."
+        "`fn params, state -> params | {:cont, params} | {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `\"form\"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save: nothing is saved, the form keeps what was typed and shows `reason` (a string, or a list of strings) above the submit row, or says the changes were not saved when `reason` is not one."
     ],
     after_save: [
       type: {:fun, 2},

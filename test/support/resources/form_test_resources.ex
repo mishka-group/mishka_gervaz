@@ -2166,6 +2166,74 @@ defmodule MishkaGervaz.Test.Resources.HookedEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.HaltedEntry do
+  @moduledoc """
+  A form whose `before_save` refuses some saves: a title starting with "stale" is halted with a
+  sentence for the author, a title of "refuse" with a reason that is not one.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :halted_entry
+        route "/admin/halted-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+      end
+
+      hooks do
+        before_save fn
+          %{"form" => %{"title" => "stale" <> _}}, _state ->
+            {:halt, "This entry changed in another tab. Reload to see it."}
+
+          %{"form" => %{"title" => "refuse"}}, _state ->
+            {:halt, :refused}
+
+          params, _state ->
+            params
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title]
+    end
+
+    update :update do
+      primary? true
+      accept [:title]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
   @moduledoc """
   A form whose `:title` and `:status` fields declare the value a create form starts with.

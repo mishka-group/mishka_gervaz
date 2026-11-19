@@ -28,7 +28,7 @@ end
 | `on_init` | `form, state` | `form` — after initialization |
 | `on_validate` | `params, state` | `params` — on the `phx-change` event |
 | `on_change` | `field, value, state` | `state` or `{:halt, state}` — one field changed |
-| `before_save` | `params, state` | `params` or `{:cont, params}` to save them, `{:halt, reason}` to cancel |
+| `before_save` | `params, state` | `params` or `{:cont, params}` to save them, `{:halt, reason}` to cancel and show `reason` |
 | `after_save` | `record, state` | not read — runs for side effects with the saved record, then the form starts over |
 | `on_error` | `form, state` | `state` — the form a failed save left; the state returned is the one shown |
 | `on_cancel` | `state` | `state` |
@@ -37,14 +37,17 @@ end
 params it returns, bare or as `{:cont, params}`, are the ones saved. Anything else saves the params
 unchanged.
 
-`before_save` is where a refusal belongs. Return `{:halt, reason}`, telling the author yourself,
-rather than letting a doomed record reach the action:
+`before_save` is where a refusal belongs. Return `{:halt, reason}` rather than letting a doomed
+record reach the action. Nothing is saved, the form stays open with what was typed, and `reason`
+is shown above the submit row, where a failed save shows the errors no field holds
+(`state.form_errors`). Give a sentence for the author, or a list of them; any other `reason` shows
+"The changes were not saved.":
 
 ```elixir
 before_save fn params, state ->
   case refuse(params) do
     nil     -> {:cont, apply_visibility(params, state)}
-    message -> {:halt, tell_author(message)}
+    message -> {:halt, message}
   end
 end
 ```

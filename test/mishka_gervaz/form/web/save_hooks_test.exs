@@ -10,26 +10,35 @@ defmodule MishkaGervaz.Form.Web.SaveHooksTest do
 
   @moduletag :capture_log
 
-  alias MishkaGervaz.Form.Web.{Events, Live}
-  alias MishkaGervaz.Test.Resources.HookedEntry
+  import Phoenix.LiveViewTest, only: [render_component: 2]
+
+  alias MishkaGervaz.Form.Web.{Events, Live, Renderer}
+  alias MishkaGervaz.Test.Resources.{HaltedEntry, HookedEntry}
 
   @user %{id: "user-1", site_id: nil}
 
   setup do
-    HookedEntry |> Ash.read!() |> Enum.each(&Ash.destroy!/1)
+    for resource <- [HookedEntry, HaltedEntry] do
+      resource |> Ash.read!() |> Enum.each(&Ash.destroy!/1)
+    end
+
     :ok
   end
 
-  defp mount do
+  defp mount(resource \\ HookedEntry) do
     socket = %Phoenix.LiveView.Socket{
       assigns: %{__changed__: %{}, flash: %{}},
       transport_pid: self()
     }
 
     {:ok, socket} =
-      Live.update(%{id: "hooked-entry", resource: HookedEntry, current_user: @user}, socket)
+      Live.update(%{id: "hooked-entry", resource: resource, current_user: @user}, socket)
 
     socket
+  end
+
+  defp render_form(socket) do
+    render_component(&Renderer.render/1, %{form_state: socket.assigns.form_state})
   end
 
   defp save(socket, params) do
@@ -42,6 +51,45 @@ defmodule MishkaGervaz.Form.Web.SaveHooksTest do
       mount() |> save(%{"title" => "hello"})
 
       assert [%{title: "HELLO"}] = Ash.read!(HookedEntry)
+    end
+  end
+
+  describe "before_save that halts" do
+    test "shows its reason above the submit row and saves nothing" do
+      socket = mount(HaltedEntry) |> save(%{"title" => "stale copy"})
+      state = socket.assigns.form_state
+      html = render_form(socket)
+
+      assert state.form_errors == ["This entry changed in another tab. Reload to see it."]
+      assert Ash.read!(HaltedEntry) == []
+
+      [_, after_errors] = String.split(html, ~s(id="hooked-entry-form-errors"))
+      assert after_errors =~ "This entry changed in another tab. Reload to see it."
+      assert after_errors =~ ~s(type="submit")
+    end
+
+    test "keeps the form open with what the user typed" do
+      socket = mount(HaltedEntry) |> save(%{"title" => "stale copy"})
+      state = socket.assigns.form_state
+
+      assert state.mode == :create
+      assert Phoenix.HTML.Form.input_value(state.form, :title) == "stale copy"
+      assert render_form(socket) =~ ~s(value="stale copy")
+    end
+
+    test "a reason that is not a sentence says the changes were not saved" do
+      socket = mount(HaltedEntry) |> save(%{"title" => "refuse"})
+
+      assert socket.assigns.form_state.form_errors == ["The changes were not saved."]
+      assert Ash.read!(HaltedEntry) == []
+    end
+
+    test "the next save that goes through clears the message" do
+      socket =
+        mount(HaltedEntry) |> save(%{"title" => "stale copy"}) |> save(%{"title" => "fresh"})
+
+      assert socket.assigns.form_state.form_errors == []
+      assert [%{title: "fresh"}] = Ash.read!(HaltedEntry)
     end
   end
 
