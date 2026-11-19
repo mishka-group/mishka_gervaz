@@ -2234,6 +2234,78 @@ defmodule MishkaGervaz.Test.Resources.HaltedEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.PricedEntry do
+  @moduledoc """
+  A form with `:number` fields for `Decimal` values: the `:amount` attribute and the `:fee`
+  argument, which the actions save as `:fee_paid`.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :priced_entry
+        route "/admin/priced-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :amount, :number do
+          ui do
+            label "Amount"
+          end
+        end
+
+        field :fee, :number do
+          virtual true
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+    attribute :amount, :decimal, public?: true
+    attribute :fee_paid, :decimal, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :amount]
+      argument :fee, :decimal, allow_nil?: true
+      change set_attribute(:fee_paid, arg(:fee))
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+      accept [:title, :amount]
+      argument :fee, :decimal, allow_nil?: true
+      change set_attribute(:fee_paid, arg(:fee))
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
   @moduledoc """
   A form whose `:title` and `:status` fields declare the value a create form starts with.

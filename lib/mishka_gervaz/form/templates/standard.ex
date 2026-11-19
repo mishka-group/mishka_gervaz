@@ -1542,9 +1542,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   # The value a field's input shows. A field that holds one value shows none when its params carry
   # a map or a list instead, such as a page drawn by an older form that had keys under the field
-  # sends, so the input draws empty rather than crashing the form.
+  # sends, so the input draws empty rather than crashing the form. A `Decimal` is shown as its
+  # plain digits, since HTML has no way to draw the struct.
   defp shown_value(type, form, name) do
     case Phoenix.HTML.Form.input_value(form, name) do
+      %Decimal{} = value -> Decimal.to_string(value, :normal)
       value when type in @one_value_types and is_list(value) -> nil
       value when type in @one_value_types and is_map(value) and not is_struct(value) -> nil
       value -> value
