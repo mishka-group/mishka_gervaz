@@ -2306,6 +2306,92 @@ defmodule MishkaGervaz.Test.Resources.PricedEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.WebhookEntry do
+  @moduledoc """
+  A form with `:multi_select` fields: `:event_types` for an `{:array, :string}` attribute, `:kinds`
+  for an `{:array, :atom}` attribute and `:channels` for an `{:array, :string}` argument, which the
+  actions save as `:channels_saved`.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :webhook_entry
+        route "/admin/webhook-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :event_types, :multi_select do
+          options [
+            {"Order paid", "order.paid"},
+            {"Order refunded", "order.refunded"},
+            {"Dispute opened", "dispute.opened"}
+          ]
+        end
+
+        field :kinds, :multi_select do
+          options [{"Refund", :refund}, {"Dispute", :dispute}, {"Payout", :payout}]
+        end
+
+        field :channels, :multi_select do
+          virtual true
+          options [{"Email", "email"}, {"Slack", "slack"}, {"SMS", "sms"}]
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+    attribute :event_types, {:array, :string}, public?: true, default: []
+
+    attribute :kinds, {:array, :atom},
+      public?: true,
+      default: [],
+      constraints: [items: [one_of: [:refund, :dispute, :payout]]]
+
+    attribute :channels_saved, {:array, :string}, public?: true, default: []
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :event_types, :kinds]
+      argument :channels, {:array, :string}, allow_nil?: true
+      change set_attribute(:channels_saved, arg(:channels))
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+      accept [:title, :event_types, :kinds]
+      argument :channels, {:array, :string}, allow_nil?: true
+      change set_attribute(:channels_saved, arg(:channels))
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
   @moduledoc """
   A form whose `:title` and `:status` fields declare the value a create form starts with.
