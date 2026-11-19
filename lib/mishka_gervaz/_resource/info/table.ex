@@ -238,6 +238,35 @@ defmodule MishkaGervaz.Resource.Info.Table do
   end
 
   @doc """
+  The columns of the view `view` of a resource's table, in the order it draws them, or the table's
+  own columns when `view` is `nil`. An unknown view has none.
+  """
+  @spec columns(module(), atom() | nil) :: [struct()]
+  def columns(resource, nil), do: columns(resource)
+
+  def columns(resource, view) do
+    case Extension.get_persisted(resource, :mishka_gervaz_views, %{}) do
+      %{^view => %{columns: columns}} -> columns
+      _no_such_view -> []
+    end
+  end
+
+  @doc """
+  The named views of a resource's table, a map of each view's name to its runtime config:
+  `:name`, `:filter`, `:columns` (shaped as the table's `config.columns`) and
+  `:detected_preloads`. Empty when the table declares none.
+  """
+  @spec views(module()) :: %{atom() => map()}
+  def views(resource), do: map_get(raw_config(resource), :views, %{})
+
+  @doc """
+  The runtime config of the view `name` of a resource's table, or `nil` when there is none.
+  See `views/1`.
+  """
+  @spec view(module(), atom()) :: map() | nil
+  def view(resource, name), do: Map.get(views(resource), name)
+
+  @doc """
   Get the column order for a resource.
   """
   @spec column_order(module()) :: [atom()]
@@ -407,6 +436,18 @@ defmodule MishkaGervaz.Resource.Info.Table do
       {source, alias_key}, acc when source != alias_key -> Map.put(acc, alias_key, source)
       _, acc -> acc
     end)
+  end
+
+  @doc """
+  The preloads the table declares in `source.preload` for the user (`always` plus `master` or
+  `tenant`), as source atoms, without the ones detected from its columns.
+  """
+  @spec declared_preloads(module(), boolean()) :: [atom()]
+  def declared_preloads(resource, master_user?) do
+    resource
+    |> preload_entries(master_user?)
+    |> Enum.map(&extract_preload_source/1)
+    |> Enum.uniq()
   end
 
   @spec preload_entries(module(), boolean()) :: [atom() | {atom(), atom()}]

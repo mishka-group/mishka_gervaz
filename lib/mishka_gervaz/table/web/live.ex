@@ -27,6 +27,11 @@ defmodule MishkaGervaz.Table.Web.Live do
   - `resource` - Ash resource module with `MishkaGervaz.Resource` extension
   - `current_user` - Current user for authorization
 
+  ## Optional Assigns
+
+  - `view` - The name of a `view` of the resource's table, drawn instead of the table's own
+    columns, with its base filter; see `MishkaGervaz.Table.Dsl.Views`
+
   ## Parent LiveView Integration
 
   The component sends messages to the parent for certain actions:
@@ -190,6 +195,7 @@ defmodule MishkaGervaz.Table.Web.Live do
           state =
             id
             |> State.init(resource, current_user)
+            |> State.apply_view(Map.get(assigns, :view))
             |> State.apply_presentation(assigns)
             |> State.apply_url_state(url_state)
             |> State.hydrate_relation_filter_labels()

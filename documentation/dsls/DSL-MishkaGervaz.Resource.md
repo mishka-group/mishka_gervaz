@@ -89,6 +89,7 @@ The following sections live within `mishka_gervaz -> table`:
 - `state` - State-module overrides (`column`, `filter`, `action`, `presentation`, `url_sync`, `access`, `module`). See `MishkaGervaz.Table.Dsl.State`
 - `data_loader` - Data-loader sub-builder overrides (`query`, `filter_parser`, `pagination`, `tenant`, `relation`, `hooks`, `module`). See `MishkaGervaz.Table.Entities.DataLoader`
 - `events` - Event-handler sub-builder overrides (`sanitization`, `record`, `selection`, `bulk_action`, `relation_filter`, `hooks`, `module`). See `MishkaGervaz.Table.Entities.Events`
+- `view` - Named views of the table, each with its own columns and base filter. See `MishkaGervaz.Table.Dsl.Views`
 
 ## Form sections
 
@@ -138,6 +139,10 @@ MishkaGervaz admin UI DSL configuration.
    * error_state
    * data_loader
    * events
+   * view
+     * columns
+       * column
+         * ui
    * identity
    * source
      * actions
@@ -309,6 +314,10 @@ Table configuration for admin interfaces.
  * [error_state](#mishka_gervaz-table-error_state)
  * [data_loader](#mishka_gervaz-table-data_loader)
  * [events](#mishka_gervaz-table-events)
+ * [view](#mishka_gervaz-table-view)
+   * columns
+     * column
+       * ui
 
 
 
@@ -966,7 +975,7 @@ Define a per-row action.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`type`](#mishka_gervaz-table-row_actions-action-type){: #mishka_gervaz-table-row_actions-action-type .spark-required} | `:link \| :modal \| :event \| :edit \| :destroy \| :update \| :accordion \| :unarchive \| :permanent_destroy \| :row_click \| module` |  | Action type. Can be a built-in type atom or a custom module implementing ActionType behaviour. Built-in types: :link, :modal, :event, :edit, :destroy, :update, :accordion, :unarchive, :permanent_destroy, :row_click Use :row_click to make entire row clickable. Custom type example:     action :archive, type: MyApp.Table.Actions.Archive |
-| [`path`](#mishka_gervaz-table-row_actions-action-path){: #mishka_gervaz-table-row_actions-action-path } | `String.t \| (any -> any)` |  | Link path (supports {field} interpolation). |
+| [`path`](#mishka_gervaz-table-row_actions-action-path){: #mishka_gervaz-table-row_actions-action-path } | `String.t \| (any -> any)` |  | Link path (supports {field} interpolation). A `:link` named `:show`, `:show_link`, `:edit` or `:edit_link` may leave it out: its address is built from the table's route, `{route}/{id}` or `{route}/{id}/edit`. |
 | [`event`](#mishka_gervaz-table-row_actions-action-event){: #mishka_gervaz-table-row_actions-action-event } | `atom \| String.t` |  | Event name to send. |
 | [`action`](#mishka_gervaz-table-row_actions-action-action){: #mishka_gervaz-table-row_actions-action-action } | `atom \| {atom, atom}` |  | Ash action to execute for :update type. Can be an atom (single action) or tuple {master_action, tenant_action}. Example:     action :activate, type: :update, action: :activate     action :activate, type: :update, action: {:master_activate, :activate} |
 | [`payload`](#mishka_gervaz-table-row_actions-action-payload){: #mishka_gervaz-table-row_actions-action-payload } | `(any -> any)` |  | Event payload function `fn record -> payload`. |
@@ -1060,7 +1069,7 @@ Define a per-row action.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`type`](#mishka_gervaz-table-row_actions-dropdown-action-type){: #mishka_gervaz-table-row_actions-dropdown-action-type .spark-required} | `:link \| :modal \| :event \| :edit \| :destroy \| :update \| :accordion \| :unarchive \| :permanent_destroy \| :row_click \| module` |  | Action type. Can be a built-in type atom or a custom module implementing ActionType behaviour. Built-in types: :link, :modal, :event, :edit, :destroy, :update, :accordion, :unarchive, :permanent_destroy, :row_click Use :row_click to make entire row clickable. Custom type example:     action :archive, type: MyApp.Table.Actions.Archive |
-| [`path`](#mishka_gervaz-table-row_actions-dropdown-action-path){: #mishka_gervaz-table-row_actions-dropdown-action-path } | `String.t \| (any -> any)` |  | Link path (supports {field} interpolation). |
+| [`path`](#mishka_gervaz-table-row_actions-dropdown-action-path){: #mishka_gervaz-table-row_actions-dropdown-action-path } | `String.t \| (any -> any)` |  | Link path (supports {field} interpolation). A `:link` named `:show`, `:show_link`, `:edit` or `:edit_link` may leave it out: its address is built from the table's route, `{route}/{id}` or `{route}/{id}/edit`. |
 | [`event`](#mishka_gervaz-table-row_actions-dropdown-action-event){: #mishka_gervaz-table-row_actions-dropdown-action-event } | `atom \| String.t` |  | Event name to send. |
 | [`action`](#mishka_gervaz-table-row_actions-dropdown-action-action){: #mishka_gervaz-table-row_actions-dropdown-action-action } | `atom \| {atom, atom}` |  | Ash action to execute for :update type. Can be an atom (single action) or tuple {master_action, tenant_action}. Example:     action :activate, type: :update, action: :activate     action :activate, type: :update, action: {:master_activate, :activate} |
 | [`payload`](#mishka_gervaz-table-row_actions-dropdown-action-payload){: #mishka_gervaz-table-row_actions-dropdown-action-payload } | `(any -> any)` |  | Event payload function `fn record -> payload`. |
@@ -2127,6 +2136,149 @@ Override event handling modules.
 
 Target: `MishkaGervaz.Table.Entities.Events`
 
+### mishka_gervaz.table.view
+```elixir
+view name
+```
+
+
+A named table over the same resource, with its own columns and base filter.
+
+### Nested DSLs
+ * [columns](#mishka_gervaz-table-view-columns)
+   * column
+     * ui
+
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#mishka_gervaz-table-view-name){: #mishka_gervaz-table-view-name .spark-required} | `atom` |  | The view's name, the value of the mount's `view` assign. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`filter`](#mishka_gervaz-table-view-filter){: #mishka_gervaz-table-view-filter } | `any` |  | A base filter every read of the view applies, an Ash expression such as `expr(status == :refunded)` or a keyword list. The reader cannot clear it. |
+
+
+### mishka_gervaz.table.view.columns
+
+
+The view's columns, with the options of the table's `columns` section.
+
+### Nested DSLs
+ * [column](#mishka_gervaz-table-view-columns-column)
+   * ui
+
+
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`column_order`](#mishka_gervaz-table-view-columns-column_order){: #mishka_gervaz-table-view-columns-column_order } | `list(atom)` |  | Column display order. Columns not in list appear at end. |
+| [`default_sort`](#mishka_gervaz-table-view-columns-default_sort){: #mishka_gervaz-table-view-columns-default_sort } | `any` |  | Default sort. Atom, tuple, or list of tuples. |
+
+
+### mishka_gervaz.table.view.columns.column
+```elixir
+column name
+```
+
+
+Define a table column.
+
+### Nested DSLs
+ * [ui](#mishka_gervaz-table-view-columns-column-ui)
+
+
+
+
+### Arguments
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`name`](#mishka_gervaz-table-view-columns-column-name){: #mishka_gervaz-table-view-columns-column-name .spark-required} | `atom` |  | Column identifier. |
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`source`](#mishka_gervaz-table-view-columns-column-source){: #mishka_gervaz-table-view-columns-column-source } | `atom \| {atom, atom} \| {atom, list(atom)} \| list(atom \| {atom, atom})` |  | Data source for column value. Defaults to column name. Formats: - `:field` - direct field access (`record.field`) - `{:relation, :field}` - nested access (`record.relation.field`) - `[:field1, :field2]` - merged fields joined by separator - `[{:user, :name}, :title]` - mixed nested and direct fields |
+| [`sortable`](#mishka_gervaz-table-view-columns-column-sortable){: #mishka_gervaz-table-view-columns-column-sortable } | `boolean` | `false` | Enable sorting. |
+| [`searchable`](#mishka_gervaz-table-view-columns-column-searchable){: #mishka_gervaz-table-view-columns-column-searchable } | `boolean` | `false` | Include in global text search. |
+| [`filterable`](#mishka_gervaz-table-view-columns-column-filterable){: #mishka_gervaz-table-view-columns-column-filterable } | `boolean` | `false` | Auto-create filter for this column. |
+| [`visible`](#mishka_gervaz-table-view-columns-column-visible){: #mishka_gervaz-table-view-columns-column-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. |
+| [`position`](#mishka_gervaz-table-view-columns-column-position){: #mishka_gervaz-table-view-columns-column-position } | `any` |  | Column position (integer, :first, :last, {:before, :col}, {:after, :col}). |
+| [`export`](#mishka_gervaz-table-view-columns-column-export){: #mishka_gervaz-table-view-columns-column-export } | `boolean` | `true` | Include in CSV/Excel export. |
+| [`export_as`](#mishka_gervaz-table-view-columns-column-export_as){: #mishka_gervaz-table-view-columns-column-export_as } | `atom` |  | Field name in export. Defaults to column name. |
+| [`default`](#mishka_gervaz-table-view-columns-column-default){: #mishka_gervaz-table-view-columns-column-default } | `any` |  | Default value when source is nil. |
+| [`separator`](#mishka_gervaz-table-view-columns-column-separator){: #mishka_gervaz-table-view-columns-column-separator } | `String.t` | `" "` | Separator for merged fields. |
+| [`static`](#mishka_gervaz-table-view-columns-column-static){: #mishka_gervaz-table-view-columns-column-static } | `boolean` | `false` | No database source (computed/hardcoded). |
+| [`requires`](#mishka_gervaz-table-view-columns-column-requires){: #mishka_gervaz-table-view-columns-column-requires } | `list(atom)` | `[]` | Fields needed for static columns. |
+| [`sort_field`](#mishka_gervaz-table-view-columns-column-sort_field){: #mishka_gervaz-table-view-columns-column-sort_field } | `list(atom)` | `[]` | Database field(s) to sort by. Required for static+sortable columns. Supports multiple fields. |
+| [`format`](#mishka_gervaz-table-view-columns-column-format){: #mishka_gervaz-table-view-columns-column-format } | `(any -> any) \| (any, any, any -> any)` |  | Value formatter: `fn value -> ... end` or `fn state, record, value -> ... end`. |
+| [`render`](#mishka_gervaz-table-view-columns-column-render){: #mishka_gervaz-table-view-columns-column-render } | `(any -> any) \| (any, any -> any)` |  | Custom HEEx render function. - 1-arity: `fn record -> ~H"..." end` - receives full record struct - 2-arity: `fn record, state -> ~H"..." end` - receives record and state (access `state.master_user?`, `state.current_user`, etc.) |
+| [`label`](#mishka_gervaz-table-view-columns-column-label){: #mishka_gervaz-table-view-columns-column-label } | `String.t \| (-> any)` |  | Shorthand for ui.label. String or `fn -> gettext(...) end` for i18n. |
+
+
+### mishka_gervaz.table.view.columns.column.ui
+
+
+UI/presentation configuration for the column.
+
+
+
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`label`](#mishka_gervaz-table-view-columns-column-ui-label){: #mishka_gervaz-table-view-columns-column-ui-label } | `String.t \| (-> any)` |  | Header text. String or `fn -> gettext(...) end` for i18n. |
+| [`type`](#mishka_gervaz-table-view-columns-column-ui-type){: #mishka_gervaz-table-view-columns-column-ui-type } | `:text \| :boolean \| :badge \| :bars \| :number \| :currency \| :percentage \| :date \| :datetime \| :time \| :link \| :image \| :avatar \| :avatars \| :tags \| :progress \| :json \| :uuid \| :array \| :custom \| module` | `:text` | Display type. Can be a built-in type atom or a custom module implementing ColumnType behaviour. Built-in types: :text, :boolean, :badge, :bars, :number, :currency, :percentage, :date, :datetime, :time, :link, :image, :avatar, :avatars, :tags, :progress, :json, :uuid, :array, :custom Custom type example:     column :color do       ui do         type MyApp.Table.Types.ColorType       end     end |
+| [`width`](#mishka_gervaz-table-view-columns-column-ui-width){: #mishka_gervaz-table-view-columns-column-ui-width } | `String.t` |  | CSS width (e.g., "200px", "20%"). |
+| [`min_width`](#mishka_gervaz-table-view-columns-column-ui-min_width){: #mishka_gervaz-table-view-columns-column-ui-min_width } | `String.t` |  | CSS min-width. |
+| [`max_width`](#mishka_gervaz-table-view-columns-column-ui-max_width){: #mishka_gervaz-table-view-columns-column-ui-max_width } | `String.t` |  | CSS max-width. |
+| [`align`](#mishka_gervaz-table-view-columns-column-ui-align){: #mishka_gervaz-table-view-columns-column-ui-align } | `:left \| :center \| :right` | `:left` | Text alignment. |
+| [`class`](#mishka_gervaz-table-view-columns-column-ui-class){: #mishka_gervaz-table-view-columns-column-ui-class } | `String.t` |  | Cell CSS classes. |
+| [`header_class`](#mishka_gervaz-table-view-columns-column-ui-header_class){: #mishka_gervaz-table-view-columns-column-ui-header_class } | `String.t` |  | Header cell CSS classes. |
+| [`extra`](#mishka_gervaz-table-view-columns-column-ui-extra){: #mishka_gervaz-table-view-columns-column-ui-extra } | `map` | `%{}` | Template-specific options. |
+
+
+
+
+
+### Introspection
+
+Target: `MishkaGervaz.Table.Entities.Column.Ui`
+
+
+
+
+### Introspection
+
+Target: `MishkaGervaz.Table.Entities.Column`
+
+
+
+
+### Introspection
+
+Target: `MishkaGervaz.Table.Entities.View.Columns`
+
+
+
+
+### Introspection
+
+Target: `MishkaGervaz.Table.Entities.View`
+
 
 ### mishka_gervaz.form
 Form configuration for admin interfaces.
@@ -3125,7 +3277,7 @@ Lifecycle callbacks for forms.
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`on_init`](#mishka_gervaz-form-hooks-on_init){: #mishka_gervaz-form-hooks-on_init } | `(any, any -> any)` |  | `fn form, state -> form` - After form initialization. |
-| [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:cont, params} \| {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `"form"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save. |
+| [`before_save`](#mishka_gervaz-form-hooks-before_save){: #mishka_gervaz-form-hooks-before_save } | `(any, any -> any)` |  | `fn params, state -> params \| {:cont, params} \| {:halt, reason}` - Before save. `params` are the save event's params, the form's values under `"form"`; the params returned, bare or in `{:cont, params}`, are saved, and `{:halt, reason}` cancels the save: nothing is saved, the form keeps what was typed and shows `reason` (a string, or a list of strings) above the submit row, or says the changes were not saved when `reason` is not one. |
 | [`after_save`](#mishka_gervaz-form-hooks-after_save){: #mishka_gervaz-form-hooks-after_save } | `(any, any -> any)` |  | `fn record, state -> any` - After a successful save, with the saved record, for side effects. What it returns is not read: the form then starts over. |
 | [`on_error`](#mishka_gervaz-form-hooks-on_error){: #mishka_gervaz-form-hooks-on_error } | `(any, any -> any)` |  | `fn form, state -> state` - After a failed save, with the form it left. The state it returns is the one the form shows; anything else keeps the form's own. |
 | [`on_cancel`](#mishka_gervaz-form-hooks-on_cancel){: #mishka_gervaz-form-hooks-on_cancel } | `(any -> any)` |  | `fn state -> state` - When form is cancelled. |

@@ -38,7 +38,8 @@ defmodule MishkaGervaz.Table.Web.State.ColumnBuilder do
 
       ## Parameters
 
-        - `config` - The table configuration map
+        - `config` - The table configuration map; its `:view`, set by
+          `MishkaGervaz.Table.Web.State.apply_view/2`, names the view whose columns are built
         - `resource` - The Ash resource module
 
       ## Returns
@@ -52,7 +53,8 @@ defmodule MishkaGervaz.Table.Web.State.ColumnBuilder do
         attributes = get_resource_attributes(resource)
 
         columns =
-          Info.columns(resource)
+          resource
+          |> Info.columns(Map.get(config, :view))
           |> Enum.map(fn col ->
             col
             |> maybe_resolve_type(attributes)

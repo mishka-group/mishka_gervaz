@@ -137,6 +137,18 @@ defmodule MishkaGervaz.Table.Web.UrlSyncLiveTest do
       assert "/items?sort=title:asc" |> open() |> in_order() == ["draft", "published"]
     end
 
+    test "that keeps the filter and drops the search shows the filter's rows" do
+      view = open("/items?filter_status=draft&search=zz-no-such")
+      assert shown(view) == []
+
+      render_patch(view, "/items?filter_status=draft")
+      assert shown(view) == ["draft"]
+
+      pick(view, "published")
+      assert shown(view) == ["published"]
+      assert_patch(view, "/items?filter_status=published")
+    end
+
     test "is followed after the table wrote its own" do
       view = open("/items")
 

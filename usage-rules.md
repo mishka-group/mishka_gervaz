@@ -94,7 +94,7 @@ may declare either, both, or neither.
 
 ```
 mishka_gervaz do
-  table do   # 14 sections + 6 top-level entities → usage-rules/table.md
+  table do   # 14 sections + 7 top-level entities → usage-rules/table.md
   end
 
   form do    #  9 sections + 3 top-level entities → usage-rules/form.md

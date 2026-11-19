@@ -5,8 +5,8 @@ defmodule MishkaGervaz.Table.Web.StateTest do
   use ExUnit.Case, async: true
 
   alias MishkaGervaz.Table.Templates
-  alias MishkaGervaz.Table.Web.State
-  alias MishkaGervaz.Test.Resources.{User, Post, MultiTenantResource}
+  alias MishkaGervaz.Table.Web.{State, UrlSync}
+  alias MishkaGervaz.Test.Resources.{User, Post, MultiTenantResource, QSearchResource}
   alias Phoenix.LiveView.AsyncResult
 
   # Test user fixtures
@@ -228,13 +228,71 @@ defmodule MishkaGervaz.Table.Web.StateTest do
       assert result.filter_values[:active] == true
     end
 
-    test "merges filters with existing filter_values", %{state: state} do
+    test "the URL's filters replace the filter values the table held", %{state: state} do
       state = %{state | filter_values: %{existing: "value"}}
       url_state = %{filters: %{role: "admin"}}
       result = State.apply_url_state(state, url_state)
 
-      assert result.filter_values[:existing] == "value"
-      assert result.filter_values[:role] == "admin"
+      assert result.filter_values == %{role: "admin"}
+    end
+
+    test "a URL that keeps a filter and drops the search clears the search", %{state: state} do
+      state = State.apply_url_state(state, %{filters: %{role: "admin"}, search: "zz-no-such"})
+      assert state.filter_values == %{role: "admin", search: "zz-no-such"}
+
+      state = State.apply_url_state(state, %{filters: %{role: "admin"}, search: nil})
+
+      assert state.filter_values == %{role: "admin"}
+    end
+
+    test "a URL that keeps a filter drops a :q search it does not carry", %{state: state} do
+      state = %{state | filter_values: %{role: "admin", q: "zz-no-such"}}
+
+      result = State.apply_url_state(state, %{filters: %{role: "admin"}, search: nil})
+
+      assert result.filter_values == %{role: "admin"}
+    end
+
+    for {resource, search} <- [{Post, :search}, {QSearchResource, :q}] do
+      test "a reload keeps the search a #{inspect(search)} table wrote to the URL" do
+        resource = unquote(resource)
+        search = unquote(search)
+
+        written = State.init("test-id", resource, nil)
+        written = %{written | filter_values: Map.put(written.filter_values, search, "elixir")}
+        url = UrlSync.build_path("/admin/table", written, written.static.url_sync_config)
+
+        %URI{path: path, query: query} = URI.parse(url)
+        url_state = UrlSync.decode(URI.decode_query(query), url, resource)
+
+        reloaded =
+          "test-id"
+          |> State.init(resource, nil)
+          |> State.apply_url_state(url_state)
+
+        assert url_state.search == "elixir"
+        assert path == "/admin/table"
+        assert reloaded.filter_values == written.filter_values
+      end
+    end
+
+    test "a URL that drops one of two filters clears it and keeps the other", %{state: state} do
+      state = State.apply_url_state(state, %{filters: %{role: "admin", active: "true"}})
+
+      state = State.apply_url_state(state, %{filters: %{active: "true"}})
+
+      assert state.filter_values == %{active: "true"}
+    end
+
+    test "a filter's default stays under the URL's filters, and the URL's value wins" do
+      state = State.init("test-id", Post, nil)
+      assert state.filter_values == %{status: "published"}
+
+      state = State.apply_url_state(state, %{filters: %{search: "elixir"}})
+      assert state.filter_values == %{status: "published", search: "elixir"}
+
+      state = State.apply_url_state(state, %{filters: %{status: "draft"}})
+      assert state.filter_values == %{status: "draft"}
     end
 
     test "ignores empty filters", %{state: state} do

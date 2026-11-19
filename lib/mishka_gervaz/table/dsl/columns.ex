@@ -19,7 +19,8 @@ defmodule MishkaGervaz.Table.Dsl.Columns do
     }
   end
 
-  defp column_entity do
+  @doc false
+  def column_entity do
     %Spark.Dsl.Entity{
       name: :column,
       describe: "Define a table column.",

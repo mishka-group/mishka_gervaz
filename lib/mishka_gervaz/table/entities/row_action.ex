@@ -95,7 +95,8 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
     ],
     path: [
       type: {:or, [:string, {:fun, 1}]},
-      doc: "Link path (supports {field} interpolation)."
+      doc:
+        "Link path (supports {field} interpolation). A `:link` named `:show`, `:show_link`, `:edit` or `:edit_link` may leave it out: its address is built from the table's route, `{route}/{id}` or `{route}/{id}/edit`."
     ],
     event: [
       type: {:or, [:atom, :string]},

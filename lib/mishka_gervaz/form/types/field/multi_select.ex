@@ -1,6 +1,9 @@
 defmodule MishkaGervaz.Form.Types.Field.MultiSelect do
   @moduledoc """
-  Multi-select dropdown field type.
+  Multi-select field type, for an `{:array, :string}` or `{:array, :atom}` attribute or argument.
+
+  The form draws one checkbox per option, all named `form[<field>][]`, so a save sends the ticked
+  values as a list, and an empty list when nothing is ticked.
 
   ## Example
 

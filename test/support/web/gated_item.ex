@@ -1,8 +1,8 @@
 defmodule MishkaGervaz.Test.Web.GatedItem do
   @moduledoc """
-  The resource of `MishkaGervaz.Test.Web.TablePageLive`'s table: a `:status` select filter, a
-  sortable `:title`, URL sync of the filters, the sort and the page in `:bidirectional` mode, and
-  every load passing `MishkaGervaz.Test.Web.LoadGate`.
+  The resource of `MishkaGervaz.Test.Web.TablePageLive`'s table: a `:search` text filter on the
+  title, a `:status` select filter, a sortable `:title`, URL sync of the filters, the sort, the page
+  and the search in `:bidirectional` mode, and every load passing `MishkaGervaz.Test.Web.LoadGate`.
   """
 
   use Ash.Resource,
@@ -27,6 +27,10 @@ defmodule MishkaGervaz.Test.Web.GatedItem do
       end
 
       filters do
+        filter :search, :text do
+          fields [:title]
+        end
+
         filter :status, :select do
           options [
             [value: "draft", label: "Draft"],
@@ -38,7 +42,7 @@ defmodule MishkaGervaz.Test.Web.GatedItem do
       url_sync do
         enabled true
         mode :bidirectional
-        params [:filters, :sort, :page]
+        params [:filters, :sort, :page, :search]
       end
 
       data_loader do

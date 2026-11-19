@@ -9,6 +9,8 @@ defmodule MishkaGervaz.Table.Transformers.ResolveColumns do
   - Applies column order from `column_order` option
   - Infers column sources if not explicitly specified
   - Detects required preloads from relationship sources
+  - Resolves each named `view`'s columns the same way and persists them as
+    `:mishka_gervaz_views`, keyed by the view's name
 
   See `MishkaGervaz.Table.Entities.Column`,
   `MishkaGervaz.Table.Entities.AutoColumns`,
@@ -23,9 +25,11 @@ defmodule MishkaGervaz.Table.Transformers.ResolveColumns do
   alias Spark.Dsl.Transformer
   alias MishkaGervaz.Table.Entities.Column
   alias MishkaGervaz.Table.Entities.AutoColumns
+  alias MishkaGervaz.Table.Entities.View
   import MishkaGervaz.Table.Transformers.Helpers
 
   @columns_path [:mishka_gervaz, :table, :columns]
+  @table_path [:mishka_gervaz, :table]
 
   @impl true
   @spec after?(module()) :: boolean()
@@ -44,6 +48,7 @@ defmodule MishkaGervaz.Table.Transformers.ResolveColumns do
       |> resolve_column_sources()
       |> resolve_column_positions()
       |> detect_preloads()
+      |> resolve_views()
 
     {:ok, dsl_state}
   end
@@ -228,6 +233,46 @@ defmodule MishkaGervaz.Table.Transformers.ResolveColumns do
 
     Transformer.persist(dsl_state, :mishka_gervaz_detected_preloads, preloads)
   end
+
+  @spec resolve_views(Spark.Dsl.t()) :: Spark.Dsl.t()
+  defp resolve_views(dsl_state) do
+    views =
+      dsl_state
+      |> get_entities(@table_path)
+      |> Enum.filter(&match?(%View{}, &1))
+      |> Map.new(&{&1.name, resolve_view(&1)})
+
+    Transformer.persist(dsl_state, :mishka_gervaz_views, views)
+  end
+
+  @spec resolve_view(View.t()) :: map()
+  defp resolve_view(%View{name: name, filter: filter} = view) do
+    column_set = view_column_set(view.column_set)
+
+    columns =
+      column_set.columns
+      |> filter_columns()
+      |> Enum.map(fn
+        %Column{source: nil, name: column_name} = col -> %{col | source: column_name}
+        col -> col
+      end)
+      |> sort_columns(column_set.column_order)
+
+    %{
+      name: name,
+      filter: filter,
+      columns: columns,
+      order: Enum.map(columns, & &1.name),
+      column_order: column_set.column_order,
+      default_sort: column_set.default_sort,
+      detected_preloads: columns |> Enum.flat_map(&extract_preloads(&1.source)) |> Enum.uniq()
+    }
+  end
+
+  @spec view_column_set(View.Columns.t() | [View.Columns.t()] | nil) :: View.Columns.t()
+  defp view_column_set(%View.Columns{} = column_set), do: column_set
+  defp view_column_set([%View.Columns{} = column_set | _]), do: column_set
+  defp view_column_set(_none), do: %View.Columns{}
 
   @spec extract_preloads(atom() | list() | {atom(), atom()} | term()) :: [atom()]
   defp extract_preloads(source) when is_atom(source), do: []

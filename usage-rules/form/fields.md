@@ -43,6 +43,11 @@ Omit `type` and it is inferred from the Ash attribute:
 
 An attribute with `constraints one_of:` still needs its `options` written out.
 
+`:multi_select` draws one checkbox per option, all named `form[<field>][]`, so a save sends the
+ticked values as a list, for an `{:array, :string}` or `{:array, :atom}` attribute or argument.
+With nothing ticked it sends an empty list. To pick records of another resource, use a `:relation`
+field with `mode :search_multi` instead.
+
 ## Options
 
 | Option | Type | Default | Note |

@@ -33,6 +33,8 @@ mishka_gervaz do
     error_state message: "…"
     data_loader do … end
     events do … end
+
+    view :refunds do … end      # named views: other columns and a base filter, picked per mount
   end
 end
 ```
@@ -60,6 +62,7 @@ Entities also take inline form: `pagination type: :infinite, page_size: 25` ·
 | `presentation` | template vs UI adapter, features, theme, responsive, template switching | [table/presentation.md](table/presentation.md) |
 | `empty_state` / `error_state` | what fills the table when there is nothing, or something broke | [table/states.md](table/states.md) |
 | `hooks` | lifecycle callbacks, per-action observers, full action overrides, built-in transitions | [table/hooks.md](table/hooks.md) |
+| `view` | a named table over the same resource, with its own columns and base filter | [table/views.md](table/views.md) |
 | `state` / `data_loader` / `events` | replacing a builder, loader or event handler | [customization/overrides.md](customization/overrides.md) |
 
 ## The five things that fail a build

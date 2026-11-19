@@ -2166,6 +2166,290 @@ defmodule MishkaGervaz.Test.Resources.HookedEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.HaltedEntry do
+  @moduledoc """
+  A form whose `before_save` refuses some saves: a title starting with "stale" is halted with a
+  sentence for the author, a title of "refuse" with a reason that is not one.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :halted_entry
+        route "/admin/halted-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+      end
+
+      hooks do
+        before_save fn
+          %{"form" => %{"title" => "stale" <> _}}, _state ->
+            {:halt, "This entry changed in another tab. Reload to see it."}
+
+          %{"form" => %{"title" => "refuse"}}, _state ->
+            {:halt, :refused}
+
+          params, _state ->
+            params
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title]
+    end
+
+    update :update do
+      primary? true
+      accept [:title]
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.PricedEntry do
+  @moduledoc """
+  A form with `:number` fields for `Decimal` values: the `:amount` attribute and the `:fee`
+  argument, which the actions save as `:fee_paid`.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :priced_entry
+        route "/admin/priced-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :amount, :number do
+          ui do
+            label "Amount"
+          end
+        end
+
+        field :fee, :number do
+          virtual true
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+    attribute :amount, :decimal, public?: true
+    attribute :fee_paid, :decimal, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :amount]
+      argument :fee, :decimal, allow_nil?: true
+      change set_attribute(:fee_paid, arg(:fee))
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+      accept [:title, :amount]
+      argument :fee, :decimal, allow_nil?: true
+      change set_attribute(:fee_paid, arg(:fee))
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.WebhookEntry do
+  @moduledoc """
+  A form with `:multi_select` fields: `:event_types` for an `{:array, :string}` attribute, `:kinds`
+  for an `{:array, :atom}` attribute and `:channels` for an `{:array, :string}` argument, which the
+  actions save as `:channels_saved`.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :webhook_entry
+        route "/admin/webhook-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :event_types, :multi_select do
+          options [
+            {"Order paid", "order.paid"},
+            {"Order refunded", "order.refunded"},
+            {"Dispute opened", "dispute.opened"}
+          ]
+        end
+
+        field :kinds, :multi_select do
+          options [{"Refund", :refund}, {"Dispute", :dispute}, {"Payout", :payout}]
+        end
+
+        field :channels, :multi_select do
+          virtual true
+          options [{"Email", "email"}, {"Slack", "slack"}, {"SMS", "sms"}]
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, allow_nil?: false, public?: true
+    attribute :event_types, {:array, :string}, public?: true, default: []
+
+    attribute :kinds, {:array, :atom},
+      public?: true,
+      default: [],
+      constraints: [items: [one_of: [:refund, :dispute, :payout]]]
+
+    attribute :channels_saved, {:array, :string}, public?: true, default: []
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :event_types, :kinds]
+      argument :channels, {:array, :string}, allow_nil?: true
+      change set_attribute(:channels_saved, arg(:channels))
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+      accept [:title, :event_types, :kinds]
+      argument :channels, {:array, :string}, allow_nil?: true
+      change set_attribute(:channels_saved, arg(:channels))
+    end
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.DescriptorEntry do
+  @moduledoc """
+  A form of two text fields, `:name` and `:statement_descriptor`, for a resource whose `:owner`
+  only a mount's `defaults` can give, since the form draws no field for it.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :descriptor_entry
+        route "/admin/descriptor-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :name, :text
+        field :statement_descriptor, :text
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :name, :string, allow_nil?: false, public?: true
+    attribute :statement_descriptor, :string, public?: true
+    attribute :owner, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:name, :statement_descriptor, :owner]
+    end
+
+    update :update do
+      primary? true
+      accept [:name, :statement_descriptor, :owner]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
   @moduledoc """
   A form whose `:title` and `:status` fields declare the value a create form starts with.

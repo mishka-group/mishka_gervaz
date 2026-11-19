@@ -86,6 +86,7 @@ defmodule MishkaGervaz.Resource do
   - `state` - State-module overrides (`column`, `filter`, `action`, `presentation`, `url_sync`, `access`, `module`). See `MishkaGervaz.Table.Dsl.State`
   - `data_loader` - Data-loader sub-builder overrides (`query`, `filter_parser`, `pagination`, `tenant`, `relation`, `hooks`, `module`). See `MishkaGervaz.Table.Entities.DataLoader`
   - `events` - Event-handler sub-builder overrides (`sanitization`, `record`, `selection`, `bulk_action`, `relation_filter`, `hooks`, `module`). See `MishkaGervaz.Table.Entities.Events`
+  - `view` - Named views of the table, each with its own columns and base filter. See `MishkaGervaz.Table.Dsl.Views`
 
   ## Form sections
 

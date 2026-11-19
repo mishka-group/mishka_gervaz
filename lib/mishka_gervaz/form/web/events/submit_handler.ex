@@ -20,7 +20,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
   Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
   `save_errors/2`, `add_field_type_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`,
-  `merge_defaults/2`, `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`,
+  `merge_defaults/3`, `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`,
   `field_readonly?/2`)
   are public so user overrides can reuse them — they live outside the
   `__using__` macro to avoid per-consumer compile cost.
@@ -172,12 +172,18 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   @doc """
   Fills each param a create form left `nil` or `""` from `state.defaults`.
 
-  A default is left out when its field no longer holds, in `state.field_values`, the value the form
-  was built with. A picker cleared on screen, or emptied because a picker it depends on changed, is
-  saved empty rather than with its default. Update forms are returned unchanged.
+  `posted` are the params the save itself sent, the form's drawn inputs, without the fields the
+  user may not change (`field_protected?/2`). A key among them is the author's answer, kept even
+  when empty: a text field emptied on screen is saved empty, not
+  refilled from its default. So is a field that no longer holds, in `state.field_values`, the value
+  the form was built with: a picker cleared on screen, or emptied because a picker it depends on
+  changed. A default for a field the form does not draw, such as one in the mount's
+  `hidden_fields`, is still filled in. Update forms are returned unchanged.
   """
-  @spec merge_defaults(map(), map()) :: map()
-  def merge_defaults(%{mode: :create, defaults: defaults} = state, params)
+  @spec merge_defaults(map(), map(), map()) :: map()
+  def merge_defaults(state, params, posted \\ %{})
+
+  def merge_defaults(%{mode: :create, defaults: defaults} = state, params, posted)
       when is_map(defaults) and defaults != %{} do
     moved = moved_fields(state)
 
@@ -187,12 +193,13 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       cond do
         MapSet.member?(moved, str_key) -> acc
         Map.has_key?(acc, str_key) and acc[str_key] not in [nil, ""] -> acc
+        Map.has_key?(posted, str_key) -> acc
         true -> Map.put(acc, str_key, value)
       end
     end)
   end
 
-  def merge_defaults(_state, params), do: params
+  def merge_defaults(_state, params, _posted), do: params
 
   defp moved_fields(%{static: %{fields: fields}, field_values: field_values} = state) do
     built_with = DataLoaderHelpers.extract_defaults_to_field_values(state)
@@ -255,6 +262,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           cleanup_temp_uploads: 1,
           push_js_hook: 4,
           merge_defaults: 2,
+          merge_defaults: 3,
           drop_protected_fields: 2
         ]
 
@@ -283,7 +291,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
         form_params = transform_params(state, form_params)
         form_params = drop_protected_fields(state, form_params)
-        form_params = merge_defaults(state, form_params)
+        form_params = merge_defaults(state, form_params, drop_protected_fields(state, incoming))
 
         {socket, form_params} = consume_and_merge_uploads(state, form_params, socket)
 

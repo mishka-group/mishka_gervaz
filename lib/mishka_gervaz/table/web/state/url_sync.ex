@@ -13,6 +13,17 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   and the table opens in it when it is one of its `switchable_templates` (`apply_url_template/2`).
   A name it does not offer leaves the table in its own template.
 
+  ## The filters from the URL
+
+  The table opens the filters the URL carries, over the `default` of each filter: a filter the URL
+  names takes the URL's value, a filter with a `default` the URL does not name keeps its default,
+  and a filter or search the URL no longer carries is dropped. Following a URL gives the filters a
+  fresh load of that URL gives, so a patch that keeps a filter and drops the search (or drops one
+  of two filters) clears what it dropped. A URL without any filter opens the table with none.
+  The URL's search is the table's search filter, `:search`, or `:q` on a table whose search filter
+  is named so (`apply_url_search/2`,
+  `MishkaGervaz.Table.Web.State.Helpers.search_filter_name/1`).
+
   ## The page from the URL
 
   The table opens the URL's page when the database can read it: its offset, `(page - 1)` times
@@ -51,14 +62,16 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   """
 
   import MishkaGervaz.Helpers, only: [accessible?: 2, find_by_name: 2]
-  import MishkaGervaz.Table.Web.State.Helpers, only: [readable_page: 2, readable_sort: 2]
+
+  import MishkaGervaz.Table.Web.State.Helpers,
+    only: [readable_page: 2, readable_sort: 2, resolve_filter_builder: 2, search_filter_name: 1]
 
   @doc false
   @spec apply_url_filters(map(), map()) :: map()
   def apply_url_filters(state, %{filters: filters}) when filters != %{} do
     valid_filters = validate_url_filters(filters, state)
-    merged = Map.merge(state.filter_values, valid_filters)
-    %{state | filter_values: merged}
+    filter_values = Map.merge(filter_defaults(state), valid_filters)
+    %{state | filter_values: filter_values}
   end
 
   def apply_url_filters(state, %{filters: _filters}) do
@@ -66,6 +79,18 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   end
 
   def apply_url_filters(state, _), do: state
+
+  # The values the table's filters open with, from their `default`, as its filter builder reads
+  # them at init.
+  defp filter_defaults(%{static: %{resource: resource, filters: filters}})
+       when is_list(filters) do
+    filter_mod =
+      resolve_filter_builder(resource, MishkaGervaz.Table.Web.State.FilterBuilder.Default)
+
+    filter_mod.build_initial_values(filters)
+  end
+
+  defp filter_defaults(_state), do: %{}
 
   defp validate_url_filters(url_filters, state) do
     url_filters
@@ -101,7 +126,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   @doc false
   @spec apply_url_search(map(), map()) :: map()
   def apply_url_search(state, %{search: search}) when is_binary(search) and search != "" do
-    merged = Map.put(state.filter_values, :search, search)
+    merged = Map.put(state.filter_values, search_filter_name(state), search)
     %{state | filter_values: merged}
   end
 

@@ -1418,9 +1418,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         options = resolve_field_options(field, assigns.state)
 
         base
-        |> assign(:function, :multi_select)
-        |> assign(:options, options)
-        |> dynamic_component()
+        |> assign(:options, MishkaGervaz.Helpers.normalize_options(options))
+        |> assign(:picked, picked_values(assigns.state.form, field.name))
+        |> render_multi_select()
 
       :checkbox ->
         form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
@@ -1540,11 +1540,44 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     end
   end
 
+  # A `:multi_select` draws one checkbox per option, each named `name[]`, so a save sends the ticked
+  # values as a list. The empty value before them stands for none: with nothing ticked the save
+  # still sends the field, as an empty list. A read-only field leaves it out, so its values are kept.
+  defp render_multi_select(assigns) do
+    ~H"""
+    <div id={@id} data-role="gervaz-multi-select" class="flex flex-col gap-2 py-1">
+      <input :if={!@disabled} type="hidden" name={@name <> "[]"} value="" />
+      <.dynamic_component
+        :for={{{label, value}, index} <- Enum.with_index(@options)}
+        module={@module}
+        function={:checkbox}
+        id={"#{@id}-#{index}"}
+        name={@name <> "[]"}
+        value={value}
+        label={label}
+        checked={value in @picked}
+        disabled={@disabled}
+      />
+    </div>
+    """
+  end
+
+  defp picked_values(form, name) do
+    case Phoenix.HTML.Form.input_value(form, name) do
+      values when is_list(values) -> for value <- values, scalar?(value), do: to_string(value)
+      _not_a_list -> []
+    end
+  end
+
+  defp scalar?(value), do: is_binary(value) or is_atom(value) or is_number(value)
+
   # The value a field's input shows. A field that holds one value shows none when its params carry
   # a map or a list instead, such as a page drawn by an older form that had keys under the field
-  # sends, so the input draws empty rather than crashing the form.
+  # sends, so the input draws empty rather than crashing the form. A `Decimal` is shown as its
+  # plain digits, since HTML has no way to draw the struct.
   defp shown_value(type, form, name) do
     case Phoenix.HTML.Form.input_value(form, name) do
+      %Decimal{} = value -> Decimal.to_string(value, :normal)
       value when type in @one_value_types and is_list(value) -> nil
       value when type in @one_value_types and is_map(value) and not is_struct(value) -> nil
       value -> value

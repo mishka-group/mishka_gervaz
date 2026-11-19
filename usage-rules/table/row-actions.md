@@ -48,7 +48,7 @@ end
 
 | Option | Type | Note |
 |---|---|---|
-| `path` | string \| `fn record -> string` | `:link`; supports `{field}` interpolation |
+| `path` | string \| `fn record -> string` | `:link`; supports `{field}` interpolation; optional on `:show`/`:edit` links (built from the route) |
 | `event` | atom \| string | `:event`; reaches the parent as `{:row_action, event, payload}` |
 | `action` | atom \| `{master, tenant}` | the Ash action for `:update` |
 | `payload` | `fn record -> map` | |
@@ -129,7 +129,9 @@ app sets nothing up. Below 980px the rows are cards and none of this applies.
 
 ## Rules the compiler enforces
 
-- `type :link` requires `path`.
+- `type :link` requires `path`, unless the action is named `:show`, `:show_link`, `:edit` or
+  `:edit_link`: those build `{route}/{id}` or `{route}/{id}/edit` from `identity`'s route, its
+  `:param` segments filled in from `state.path_params`. A `path` still wins when given.
 - `type :event` requires `event`.
 - A `dropdown` requires a `ui` block **with a `label`** — including for actions nested inside it.
 
@@ -137,7 +139,7 @@ app sets nothing up. Below 980px the rows are cards and none of this applies.
 
 | `type` | What it does | Needs | Message to the parent |
 |---|---|---|---|
-| `:link` | navigates | `path` | — |
+| `:link` | navigates | `path` (or a `:show`/`:edit` name) | — |
 | `:event` | fires a custom event | `event` | `{:row_action, event, payload}` |
 | `:edit` | opens the resource's form | the form section | none — `send_update`s the form component directly |
 | `:destroy` | soft-deletes | `source.actions.destroy` | — |
