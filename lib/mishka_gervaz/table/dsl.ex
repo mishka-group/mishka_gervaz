@@ -29,6 +29,7 @@ defmodule MishkaGervaz.Table.Dsl do
   - `MishkaGervaz.Table.Dsl.States` - `empty_state` / `error_state` entities
   - `MishkaGervaz.Table.Dsl.DataLoader` - Data loader module overrides
   - `MishkaGervaz.Table.Dsl.Events` - Event handler module overrides
+  - `MishkaGervaz.Table.Dsl.Views` - `view` entities: named tables with their own columns
 
   Admin-sidebar grouping (`MishkaGervaz.Dsl.Navigation`) is declared at
   the **domain** level, not inside a resource's `table do` — see
@@ -59,6 +60,7 @@ defmodule MishkaGervaz.Table.Dsl do
       state do ... end
       data_loader do ... end
       events do ... end
+      view :name do ... end
     end
   end
   ```
@@ -89,7 +91,8 @@ defmodule MishkaGervaz.Table.Dsl do
     Hooks,
     Refresh,
     UrlSync,
-    Layout
+    Layout,
+    Views
   }
 
   alias MishkaGervaz.Table.Dsl.State, as: StateDsl
@@ -127,7 +130,8 @@ defmodule MishkaGervaz.Table.Dsl do
         States.empty_state_entity(),
         States.error_state_entity(),
         DataLoaderDsl.entity(),
-        EventsDsl.entity()
+        EventsDsl.entity(),
+        Views.entity()
       ]
     }
   end

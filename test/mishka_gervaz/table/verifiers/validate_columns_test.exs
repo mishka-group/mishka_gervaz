@@ -386,6 +386,27 @@ defmodule MishkaGervaz.Verifiers.ValidateColumnsTest do
       assert output =~ "Spark.Error.DslError"
     end
 
+    test "a view's column that is not a resource field emits DslError" do
+      output = compile_view("column :missing_field")
+
+      assert output =~ "missing_field"
+      assert output =~ "not a resource field"
+      assert output =~ "Spark.Error.DslError"
+    end
+
+    test "a view with no columns emits DslError" do
+      output = compile_view("")
+
+      assert output =~ "View :side declares no columns."
+    end
+
+    test "a view of resource fields compiles without a warning" do
+      unique_id = System.unique_integer([:positive])
+
+      refute compile_view("column :name", unique_id) =~
+               "[MishkaGervaz.Test.ViewColumns#{unique_id}]"
+    end
+
     test "static column with requires compiles successfully" do
       unique_id = System.unique_integer([:positive])
 
@@ -436,5 +457,49 @@ defmodule MishkaGervaz.Verifiers.ValidateColumnsTest do
       # Check that no DslError was raised for THIS specific module
       refute output =~ "StaticWithRequires#{unique_id}]"
     end
+  end
+
+  defp compile_view(view_columns, unique_id \\ System.unique_integer([:positive])) do
+    code = """
+    defmodule MishkaGervaz.Test.ViewColumns#{unique_id} do
+      use Ash.Resource,
+        domain: MishkaGervaz.Test.Domain,
+        extensions: [MishkaGervaz.Resource],
+        data_layer: Ash.DataLayer.Ets
+
+      attributes do
+        uuid_primary_key :id
+        attribute :name, :string, allow_nil?: false, public?: true
+      end
+
+      actions do
+        defaults [:read, :destroy, create: :*, update: :*]
+        read :master_read
+        read :master_get
+        read :tenant_read
+      end
+
+      mishka_gervaz do
+        table do
+          identity do
+            name :view_columns_#{unique_id}
+            route "/admin/view-columns"
+          end
+
+          columns do
+            column :name
+          end
+
+          view :side do
+            columns do
+              #{view_columns}
+            end
+          end
+        end
+      end
+    end
+    """
+
+    ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(code) end)
   end
 end

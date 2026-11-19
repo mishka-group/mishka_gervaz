@@ -94,7 +94,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       events: build_events(dsl_state),
       detected_preloads:
         Transformer.get_persisted(dsl_state, :mishka_gervaz_detected_preloads, []),
-      column_order: Transformer.get_persisted(dsl_state, :mishka_gervaz_column_order, [])
+      column_order: Transformer.get_persisted(dsl_state, :mishka_gervaz_column_order, []),
+      views: build_views(dsl_state, module)
     }
 
     {:ok, Transformer.persist(dsl_state, :mishka_gervaz_config, config)}
@@ -225,6 +226,30 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
     else
       nil
     end
+  end
+
+  defp build_views(dsl_state, module) do
+    case Transformer.get_persisted(dsl_state, :mishka_gervaz_views, %{}) do
+      views when map_size(views) == 0 ->
+        %{}
+
+      views ->
+        ash_attrs = get_ash_attributes(module)
+        Map.new(views, fn {name, view} -> {name, view_to_map(view, ash_attrs)} end)
+    end
+  end
+
+  defp view_to_map(view, ash_attrs) do
+    %{
+      name: view.name,
+      filter: view.filter,
+      columns: %{
+        list: Enum.map(view.columns, &column_to_map(&1, ash_attrs)),
+        order: view.order,
+        default_sort: view.default_sort
+      },
+      detected_preloads: view.detected_preloads
+    }
   end
 
   defp get_ash_attributes(module) do

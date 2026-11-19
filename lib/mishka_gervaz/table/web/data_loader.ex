@@ -289,7 +289,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
       @doc """
       The query the table reads its rows with now: its `path_params`, filters, search, sort and
-      preloads, and the `on_load` hook, before its read action and tenant are set.
+      preloads, the base filter of its view, and the `on_load` hook, before its read action and
+      tenant are set.
 
       `load_total/1` and `in_view?/2` read with it, and a bulk action starts from it
       (`MishkaGervaz.Table.Web.Events.BulkActionHandler`), so each reaches the rows the table shows.
@@ -299,12 +300,25 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         query_mod = resolve_query_builder(state.static.resource)
         hook_mod = resolve_hook_runner(state.static.resource)
 
-        query = query_mod.build_query(state)
+        query = state |> query_mod.build_query() |> apply_view_filter(state)
 
         state.static.hooks
         |> hook_mod.run_hook(:on_load, [query, state])
         |> hook_mod.apply_hook_result(query)
       end
+
+      # A view's base filter, see `MishkaGervaz.Table.Web.State.apply_view/2`, narrows every read
+      # the table makes, under whatever the reader filters by.
+      @spec apply_view_filter(Ash.Query.t(), State.t()) :: Ash.Query.t()
+      defp apply_view_filter(query, %{static: %{view: view, resource: resource}})
+           when not is_nil(view) do
+        case Info.view(resource, view) do
+          %{filter: filter} when not is_nil(filter) -> Ash.Query.do_filter(query, filter)
+          _no_filter -> query
+        end
+      end
+
+      defp apply_view_filter(query, _state), do: query
 
       @doc """
       The table's total from the read a load makes now — filters, search, `path_params`, the

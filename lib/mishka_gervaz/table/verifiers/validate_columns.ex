@@ -6,6 +6,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
   - At least one column exists after all transformers have run
   - Custom columns (not in resource attributes) have `static: true`
   - Static columns with render have `requires` defined
+  - Every named `view` declares columns, held to the same rules
 
   See `MishkaGervaz.Table.Dsl.Columns`,
   `MishkaGervaz.Table.Entities.Column`,
@@ -15,10 +16,11 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
   use Spark.Dsl.Verifier
 
   alias Spark.Dsl.Verifier
-  alias MishkaGervaz.Table.Entities.Column
+  alias MishkaGervaz.Table.Entities.{Column, View}
   import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3, entities_of: 3]
 
   @path [:mishka_gervaz, :table, :columns]
+  @table_path [:mishka_gervaz, :table]
 
   @impl true
   def verify(dsl_state) do
@@ -30,8 +32,8 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
       fields = get_resource_fields(module)
 
       with :ok <- validate_columns_exist(columns, module),
-           :ok <- validate_static_columns(columns, fields, module),
-           do: :ok
+           :ok <- validate_static_columns(columns, fields, module, @path),
+           do: validate_views(entities_of(dsl_state, @table_path, View), fields, module)
     end
   end
 
@@ -59,13 +61,36 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
 
   defp validate_columns_exist(_columns, _module), do: :ok
 
-  @spec validate_static_columns([Column.t()], [atom()], module()) ::
-          :ok | {:error, Spark.Error.DslError.t()}
-  defp validate_static_columns(columns, fields, module) do
-    Enum.find_value(columns, :ok, &check_column(&1, fields, module))
+  @spec validate_views([View.t()], [atom()], module()) :: :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_views(views, fields, module) do
+    Enum.find_value(views, :ok, fn view ->
+      path = @table_path ++ [:view, view.name, :columns]
+
+      case view_columns(view) do
+        [] -> dsl_error(module, path, "View #{inspect(view.name)} declares no columns.")
+        columns -> invalid_or_nil(validate_static_columns(columns, fields, module, path))
+      end
+    end)
   end
 
-  defp check_column(column, fields, module) do
+  defp view_columns(%View{column_set: %View.Columns{columns: columns}}),
+    do: Enum.filter(columns, &match?(%Column{}, &1))
+
+  defp view_columns(%View{column_set: [%View.Columns{} = column_set | _]} = view),
+    do: view_columns(%{view | column_set: column_set})
+
+  defp view_columns(_view), do: []
+
+  defp invalid_or_nil(:ok), do: nil
+  defp invalid_or_nil(error), do: error
+
+  @spec validate_static_columns([Column.t()], [atom()], module(), [atom()]) ::
+          :ok | {:error, Spark.Error.DslError.t()}
+  defp validate_static_columns(columns, fields, module, path) do
+    Enum.find_value(columns, :ok, &check_column(&1, fields, module, path))
+  end
+
+  defp check_column(column, fields, module, path) do
     is_field = column.name in fields
     has_custom_source = has_custom_source?(column)
     has_render = not is_nil(column.render)
@@ -75,10 +100,10 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
 
     cond do
       column.static and column.sortable and not has_sort_field ->
-        dsl_error(module, @path ++ [column.name], static_sortable_message(column))
+        dsl_error(module, path ++ [column.name], static_sortable_message(column))
 
       column.sortable and has_sort_field ->
-        invalid_sort_fields(column, fields, module)
+        invalid_sort_fields(column, fields, module, path)
 
       is_field ->
         nil
@@ -87,17 +112,17 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
         nil
 
       column.static and has_render and not has_requires ->
-        dsl_error(module, @path ++ [column.name], static_needs_requires_message(column))
+        dsl_error(module, path ++ [column.name], static_needs_requires_message(column))
 
       not column.static and not is_field ->
-        dsl_error(module, @path ++ [column.name], not_a_field_message(column))
+        dsl_error(module, path ++ [column.name], not_a_field_message(column))
 
       true ->
         nil
     end
   end
 
-  defp invalid_sort_fields(column, fields, module) do
+  defp invalid_sort_fields(column, fields, module, path) do
     case Enum.reject(Map.get(column, :sort_field, []), &(&1 in fields)) do
       [] ->
         nil
@@ -105,7 +130,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateColumns do
       invalid ->
         dsl_error(
           module,
-          @path ++ [column.name],
+          path ++ [column.name],
           invalid_sort_field_message(column, invalid, fields)
         )
     end

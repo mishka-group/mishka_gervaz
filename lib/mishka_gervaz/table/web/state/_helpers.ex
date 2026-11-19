@@ -235,6 +235,23 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
   def get_pagination_ui(_), do: struct(MishkaGervaz.Table.Entities.Pagination.Ui)
 
   @doc """
+  The preloads a table reads with, for the view `view` of it: `preloads`, the ones the table's
+  `Access` module gives, without those only the table's own columns need, and with those the
+  view's columns need. `preloads` as they are when `view` is `nil`.
+  """
+  @spec view_preloads(list(), module(), atom() | nil, boolean()) :: list()
+  def view_preloads(preloads, _resource, nil, _master_user?), do: preloads
+
+  def view_preloads(preloads, resource, view, master_user?) do
+    table_only =
+      Info.detected_preloads(resource) -- Info.declared_preloads(resource, master_user?)
+
+    wanted = resource |> Info.view(view) |> Map.get(:detected_preloads, [])
+
+    Enum.uniq((preloads -- table_only) ++ wanted)
+  end
+
+  @doc """
   The names of the columns declared `sortable true`.
 
       iex> get_sortable_columns([%{name: :title, sortable: true}, %{name: :body, sortable: false}])

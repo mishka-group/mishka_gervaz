@@ -154,7 +154,8 @@ defmodule MishkaGervaz.Table.Web.State do
       :header,
       :footer,
       :notices,
-      :keep_loaded_records
+      :keep_loaded_records,
+      :view
     ]
 
     @type t :: %__MODULE__{
@@ -187,7 +188,8 @@ defmodule MishkaGervaz.Table.Web.State do
             max_page_size: pos_integer() | nil,
             header: map() | nil,
             footer: map() | nil,
-            notices: list(map())
+            notices: list(map()),
+            view: atom() | nil
           }
   end
 
@@ -299,6 +301,13 @@ defmodule MishkaGervaz.Table.Web.State do
   Applies a mount's own presentation choices over the resource's — see the `__using__` version.
   """
   defdelegate apply_presentation(state, assigns), to: __MODULE__.Default
+
+  @spec apply_view(t(), atom() | nil) :: t()
+  @doc """
+  Draws the named view of the resource's table instead of the table's own columns — see the
+  `__using__` version.
+  """
+  defdelegate apply_view(state, view), to: __MODULE__.Default
 
   defdelegate switch_template(state, template), to: __MODULE__.Default
 
@@ -567,6 +576,48 @@ defmodule MishkaGervaz.Table.Web.State do
 
       def apply_presentation(state, _assigns), do: state
 
+      @doc """
+      Draws the view `view` of the resource's table (`view :name do … end`) instead of the table's
+      own columns: its columns, their order and default sort, and its base filter on every read.
+      Everything else stays the table's. `nil` leaves the state as it is.
+
+      Raises `ArgumentError` when the resource declares no view of that name. Call this at init,
+      before the URL state is applied, so a sort from the address is checked against the view's
+      columns.
+      """
+      @spec apply_view(State.t(), atom() | nil) :: State.t()
+      def apply_view(state, nil), do: state
+
+      def apply_view(%State{static: %{resource: resource} = static} = state, view)
+          when is_atom(view) do
+        case Info.view(resource, view) do
+          nil ->
+            raise ArgumentError,
+                  "#{inspect(resource)} declares no table view #{inspect(view)}; its views are " <>
+                    inspect(resource |> Info.views() |> Map.keys())
+
+          %{columns: view_columns} ->
+            config = static.config |> Map.put(:columns, view_columns) |> Map.put(:view, view)
+            column_mod = Map.get(Info.state(resource), :column, column_builder())
+            columns = column_mod.build(config, resource)
+
+            view_static = %{
+              static
+              | config: config,
+                columns: columns,
+                sortable_columns: StateHelpers.get_sortable_columns(columns),
+                sort_field_map: StateHelpers.build_sort_field_map(columns),
+                view: view
+            }
+
+            %{
+              state
+              | static: view_static,
+                sort_fields: StateHelpers.get_default_sort(config, columns)
+            }
+        end
+      end
+
       defp override_url_sync(%{static: %{url_sync_config: config} = static} = state, false)
            when is_map(config),
            do: %{state | static: %{static | url_sync_config: Map.put(config, :enabled, false)}}
@@ -664,8 +715,11 @@ defmodule MishkaGervaz.Table.Web.State do
       end
 
       @spec get_preloads(State.t()) :: list(atom())
-      def get_preloads(%State{static: %{resource: resource}, master_user?: master_user?}) do
-        StateHelpers.resolve_access(resource, access()).get_preloads(resource, master_user?)
+      def get_preloads(%State{static: %{resource: resource} = static, master_user?: master_user?}) do
+        access_mod = StateHelpers.resolve_access(resource, access())
+        preloads = access_mod.get_preloads(resource, master_user?)
+
+        StateHelpers.view_preloads(preloads, resource, Map.get(static, :view), master_user?)
       end
 
       defoverridable column_builder: 0,
@@ -681,6 +735,7 @@ defmodule MishkaGervaz.Table.Web.State do
                      hydrate_relation_filter_labels: 1,
                      bidirectional_url_sync?: 1,
                      apply_presentation: 2,
+                     apply_view: 2,
                      switch_template: 2,
                      template_switching_enabled?: 1,
                      can_modify_record?: 2,
