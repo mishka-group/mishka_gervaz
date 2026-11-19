@@ -1,3 +1,17 @@
+# Changelog for MishkaGervaz 0.0.11
+
+### Features:
+- Named table views: `view :name do ... end` inside `table` has its own columns, sort and base filter, and is mounted with `view={:name}`
+
+### Bug fixes:
+- A link action named `:edit` or `:show` with no `path` builds its address from the table's route; a `path` still wins
+- A `before_save` halt reason shows on the form above the submit row
+- A `:number` field draws and saves a `Decimal`
+- A `:multi_select` field submits the ticked options as a list
+- A text field the author empties saves empty instead of its default
+- A URL the table follows drops a search or filter it no longer carries, in the table state and in `UrlSync.apply_url_state/2`
+- A search in the URL is read back into the table's own search filter, `:q` or `:search`
+
 # Changelog for MishkaGervaz 0.0.10
 
 ### Features:
