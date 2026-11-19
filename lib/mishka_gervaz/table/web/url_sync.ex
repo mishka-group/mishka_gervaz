@@ -45,8 +45,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   - Filters: `?table_filter_status=active&table_filter_category=1`
   - Sort: `?table_sort=name:asc` or `?table_sort=inserted_at:desc`
   - Page: `?table_page=2`
-  - Search: `?table_search=hello` — with `:search` in `params`, the search filter is written here
-    and not again as `table_filter_search`
+  - Search: `?table_search=hello` — with `:search` in `params`, the search filter (`:search`, or
+    `:q`) is written here and not again as `table_filter_search`; it is read back into the table's
+    own search filter
   - Template: `?table_template=grid` — the `name/0` of the template the table shows. A URL naming
     one of the table's `switchable_templates` opens the table in it; any other name is ignored
 
@@ -57,6 +58,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   """
 
   import MishkaGervaz.Helpers, only: [positive_integer: 1]
+  import MishkaGervaz.Table.Web.State.Helpers, only: [search_filter_name: 1]
 
   @default_config %{
     enabled: false,
@@ -358,14 +360,15 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   Check if url_state matches current table state.
 
   Used to detect if incoming url_state is from our own push_patch
-  (to avoid duplicate data reload). The URL's search is read as the `:search` filter it is applied
-  as, and its template as the name of the state's template.
+  (to avoid duplicate data reload). The URL's search is read as the search filter it is applied
+  as (`:search`, or `:q` on a table whose search filter is named so), and its template as the name
+  of the state's template.
   """
   @spec matches_state?(url_state() | nil, map()) :: boolean()
   def matches_state?(nil, _state), do: false
 
   def matches_state?(url_state, state) do
-    url_state = with_search_filter(url_state)
+    url_state = with_search_filter(url_state, state)
 
     Enum.all?(
       [
@@ -380,10 +383,13 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     )
   end
 
-  defp with_search_filter(%{search: search} = url_state) when is_binary(search) and search != "",
-    do: Map.put(url_state, :filters, Map.put(url_state[:filters] || %{}, :search, search))
+  defp with_search_filter(%{search: search} = url_state, state)
+       when is_binary(search) and search != "" do
+    filters = Map.put(url_state[:filters] || %{}, search_filter_name(state), search)
+    Map.put(url_state, :filters, filters)
+  end
 
-  defp with_search_filter(url_state), do: url_state
+  defp with_search_filter(url_state, _state), do: url_state
 
   @spec specified_match?(url_state(), atom(), any()) :: boolean()
   defp specified_match?(url_state, key, current) do
@@ -635,7 +641,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @spec maybe_apply_search(map(), map()) :: map()
   defp maybe_apply_search(state, %{search: search}) when is_binary(search) and search != "" do
     current = Map.get(state, :filter_values, %{})
-    %{state | filter_values: Map.put(current, :search, search)}
+    %{state | filter_values: Map.put(current, search_filter_name(state), search)}
   end
 
   defp maybe_apply_search(state, _), do: state

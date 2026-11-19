@@ -34,8 +34,10 @@ end
 &<prefix>_template=grid
 ```
 
-With `:search` in `params`, a filter named `:search` is written as `<prefix>_search` only, never
-again as `<prefix>_filter_search`; without it, the search filter is a `filter_` param like any other.
+With `:search` in `params`, a filter named `:search` (or `:q`, on a table without a `:search`
+filter) is written as `<prefix>_search` only, never again as `<prefix>_filter_search`, and a reload
+reads it back into that same filter; without it, the search filter is a `filter_` param like any
+other.
 
 With `:template` in `params`, `<prefix>_template` is the `name/0` of the template the table shows,
 written as the reader switches. A URL naming one of the table's `switchable_templates` opens the

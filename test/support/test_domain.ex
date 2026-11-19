@@ -73,6 +73,7 @@ defmodule MishkaGervaz.Test.Domain do
     resource MishkaGervaz.Test.Resources.User
     resource MishkaGervaz.Test.Resources.Comment
     resource MishkaGervaz.Test.Resources.MinimalResource
+    resource MishkaGervaz.Test.Resources.QSearchResource
     resource MishkaGervaz.Test.Resources.AutoColumnsResource
     resource MishkaGervaz.Test.Resources.ArchivableResource
     resource MishkaGervaz.Test.Resources.FormPost

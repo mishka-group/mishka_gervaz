@@ -5,7 +5,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
   use ExUnit.Case, async: true
 
   alias MishkaGervaz.Table.Web.{State, UrlSync}
-  alias MishkaGervaz.Test.Resources.Post
+  alias MishkaGervaz.Test.Resources.{Post, QSearchResource}
 
   describe "encode/2 without prefix" do
     test "encodes filters without prefix" do
@@ -972,6 +972,14 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
 
       assert UrlSync.matches_state?(url_state, state)
       refute UrlSync.matches_state?(%{url_state | search: "other"}, state)
+    end
+
+    test "reads the URL's search as a :q search filter on a table whose search is :q" do
+      url_state = %{filters: %{}, search: "hello", sort: [], page: 1}
+      state = State.init("test-id", QSearchResource, nil)
+
+      assert UrlSync.matches_state?(url_state, %{state | filter_values: %{q: "hello"}})
+      refute UrlSync.matches_state?(url_state, %{state | filter_values: %{search: "hello"}})
     end
 
     test "returns true when url_state matches state" do

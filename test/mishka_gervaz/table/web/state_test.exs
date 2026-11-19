@@ -5,8 +5,8 @@ defmodule MishkaGervaz.Table.Web.StateTest do
   use ExUnit.Case, async: true
 
   alias MishkaGervaz.Table.Templates
-  alias MishkaGervaz.Table.Web.State
-  alias MishkaGervaz.Test.Resources.{User, Post, MultiTenantResource}
+  alias MishkaGervaz.Table.Web.{State, UrlSync}
+  alias MishkaGervaz.Test.Resources.{User, Post, MultiTenantResource, QSearchResource}
   alias Phoenix.LiveView.AsyncResult
 
   # Test user fixtures
@@ -251,6 +251,29 @@ defmodule MishkaGervaz.Table.Web.StateTest do
       result = State.apply_url_state(state, %{filters: %{role: "admin"}, search: nil})
 
       assert result.filter_values == %{role: "admin"}
+    end
+
+    for {resource, search} <- [{Post, :search}, {QSearchResource, :q}] do
+      test "a reload keeps the search a #{inspect(search)} table wrote to the URL" do
+        resource = unquote(resource)
+        search = unquote(search)
+
+        written = State.init("test-id", resource, nil)
+        written = %{written | filter_values: Map.put(written.filter_values, search, "elixir")}
+        url = UrlSync.build_path("/admin/table", written, written.static.url_sync_config)
+
+        %URI{path: path, query: query} = URI.parse(url)
+        url_state = UrlSync.decode(URI.decode_query(query), url, resource)
+
+        reloaded =
+          "test-id"
+          |> State.init(resource, nil)
+          |> State.apply_url_state(url_state)
+
+        assert url_state.search == "elixir"
+        assert path == "/admin/table"
+        assert reloaded.filter_values == written.filter_values
+      end
     end
 
     test "a URL that drops one of two filters clears it and keeps the other", %{state: state} do

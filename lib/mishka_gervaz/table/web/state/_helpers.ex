@@ -383,6 +383,25 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
   defp sort_name(field), do: field
 
   @doc """
+  The name of the table's search filter, the filter the URL's `<prefix>_search` param restores:
+  `:search` when the table has a filter by that name, else `:q` when it has one, else `:search`.
+  A state without its filters, such as a plain map, reads `:search`.
+
+  This is the order the URL writes it in (`MishkaGervaz.Table.Web.UrlSync.encode/2`), so a table
+  whose search filter is `:q` reads its search back into `:q` on a reload.
+
+      search_filter_name(state)
+      #=> :q
+  """
+  @spec search_filter_name(map()) :: :search | :q
+  def search_filter_name(%{static: %{filters: [_ | _] = filters}}) do
+    names = Enum.map(filters, & &1.name)
+    if :search not in names and :q in names, do: :q, else: :search
+  end
+
+  def search_filter_name(_state), do: :search
+
+  @doc """
   The URL-sync module for a resource — its `state do url_sync … end` override, or the default
   passed in.
   """

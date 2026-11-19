@@ -20,7 +20,9 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   and a filter or search the URL no longer carries is dropped. Following a URL gives the filters a
   fresh load of that URL gives, so a patch that keeps a filter and drops the search (or drops one
   of two filters) clears what it dropped. A URL without any filter opens the table with none.
-  The URL's search is the `:search` filter (`apply_url_search/2`).
+  The URL's search is the table's search filter, `:search`, or `:q` on a table whose search filter
+  is named so (`apply_url_search/2`,
+  `MishkaGervaz.Table.Web.State.Helpers.search_filter_name/1`).
 
   ## The page from the URL
 
@@ -62,7 +64,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   import MishkaGervaz.Helpers, only: [accessible?: 2, find_by_name: 2]
 
   import MishkaGervaz.Table.Web.State.Helpers,
-    only: [readable_page: 2, readable_sort: 2, resolve_filter_builder: 2]
+    only: [readable_page: 2, readable_sort: 2, resolve_filter_builder: 2, search_filter_name: 1]
 
   @doc false
   @spec apply_url_filters(map(), map()) :: map()
@@ -124,7 +126,7 @@ defmodule MishkaGervaz.Table.Web.State.UrlSync do
   @doc false
   @spec apply_url_search(map(), map()) :: map()
   def apply_url_search(state, %{search: search}) when is_binary(search) and search != "" do
-    merged = Map.put(state.filter_values, :search, search)
+    merged = Map.put(state.filter_values, search_filter_name(state), search)
     %{state | filter_values: merged}
   end
 
