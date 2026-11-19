@@ -395,6 +395,18 @@ defmodule MishkaGervaz.Table.Web.State.Helpers do
   end
 
   @doc """
+  The filter builder for a resource — its `state do filter … end` override, or the default
+  passed in.
+  """
+  @spec resolve_filter_builder(module() | nil, module()) :: module()
+  def resolve_filter_builder(nil, default_filter_builder), do: default_filter_builder
+
+  def resolve_filter_builder(resource, default_filter_builder) do
+    dsl_state = Info.state(resource)
+    Map.get(dsl_state, :filter, default_filter_builder)
+  end
+
+  @doc """
   The access module for a resource — its `state do access … end` override, or the default
   passed in.
   """
