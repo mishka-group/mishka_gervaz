@@ -14,6 +14,7 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateRowActions do
   import MishkaGervaz.Table.Verifiers.Helpers, only: [dsl_error: 3, entities_of: 3]
 
   @path [:mishka_gervaz, :table, :row_actions]
+  @routed_links [:show, :show_link, :edit, :edit_link]
 
   @impl true
   def verify(dsl_state) do
@@ -46,6 +47,8 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateRowActions do
   end
 
   @spec validate_action(map()) :: list(String.t())
+  defp validate_action(%{type: :link, path: nil, name: name}) when name in @routed_links, do: []
+
   defp validate_action(%{type: :link, path: nil, name: name}),
     do: ["Action #{inspect(name)} of type :link requires a :path option"]
 

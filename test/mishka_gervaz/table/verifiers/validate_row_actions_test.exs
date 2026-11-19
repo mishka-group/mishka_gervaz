@@ -236,6 +236,57 @@ defmodule MishkaGervaz.Verifiers.ValidateRowActionsTest do
       assert output =~ "Spark.Error.DslError"
     end
 
+    test "show and edit links without path compile without a warning" do
+      unique_id = System.unique_integer([:positive])
+
+      code = """
+      defmodule MishkaGervaz.Test.RoutedLinks#{unique_id} do
+        use Ash.Resource,
+          domain: MishkaGervaz.Test.Domain,
+          extensions: [MishkaGervaz.Resource],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :name, :string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :destroy, create: :*, update: :*]
+          read :master_read
+          read :tenant_read
+        end
+
+        mishka_gervaz do
+          table do
+            identity do
+              name :routed_links
+              route "/admin/routed-links"
+            end
+
+            columns do
+              column :name
+            end
+
+            row_actions do
+              action :show, type: :link
+              action :show_link, type: :link
+              action :edit, type: :link
+              action :edit_link, type: :link
+            end
+          end
+        end
+      end
+      """
+
+      output =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Code.compile_string(code)
+        end)
+
+      refute output =~ "requires a :path option"
+    end
+
     test "event action without event emits DslError warning" do
       unique_id = System.unique_integer([:positive])
 

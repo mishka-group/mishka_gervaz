@@ -6,11 +6,12 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
 
   ## Route Building
 
-  Routes are built from `state.static.config[:identity][:route]`:
+  An action named `:show`, `:show_link`, `:edit` or `:edit_link` with no `path` builds its address
+  from the table's `identity` route, its `:param` segments filled in from `state.path_params`:
   - `:show` / `:show_link` → `{route}/{id}`
   - `:edit` / `:edit_link` → `{route}/{id}/edit`
 
-  Or use a custom path function:
+  A table with no route links to `"#"`. A `path` function always wins over the built address:
 
       action :view, type: :link, path: fn record -> "/custom/\#{record.id}" end
 
@@ -55,34 +56,36 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
   defp action_variant(_), do: :default
 
   @spec build_path(map(), map(), struct()) :: String.t()
-  defp build_path(assigns, action, record) do
-    cond do
-      is_function(action[:path], 1) ->
-        action[:path].(record)
+  defp build_path(_assigns, %{path: path}, record) when is_function(path, 1), do: path.(record)
+  defp build_path(_assigns, %{path: path}, _record) when is_binary(path), do: path
 
-      action[:name] in [:show_link, :show] ->
-        build_route(assigns, record, :show)
+  defp build_path(assigns, %{name: name}, record) when name in [:show, :show_link],
+    do: build_route(assigns, record, :show)
 
-      action[:name] in [:edit_link, :edit] ->
-        build_route(assigns, record, :edit)
+  defp build_path(assigns, %{name: name}, record) when name in [:edit, :edit_link],
+    do: build_route(assigns, record, :edit)
 
-      true ->
-        action[:path] || "#"
-    end
-  end
+  defp build_path(_assigns, _action, _record), do: "#"
 
   @spec build_route(map(), struct(), :show | :edit) :: String.t()
   defp build_route(assigns, record, type) do
-    base =
-      get_route_pattern(assigns)
-      |> substitute_path_params(get_path_params(assigns))
-      |> String.trim_trailing("/")
+    case get_route_pattern(assigns) do
+      route when is_binary(route) and route != "" ->
+        base =
+          route
+          |> substitute_path_params(get_path_params(assigns))
+          |> String.trim_trailing("/")
 
-    case type do
-      :show -> "#{base}/#{record.id}"
-      :edit -> "#{base}/#{record.id}/edit"
+        record_route(base, record, type)
+
+      _ ->
+        "#"
     end
   end
+
+  @spec record_route(String.t(), struct(), :show | :edit) :: String.t()
+  defp record_route(base, record, :show), do: "#{base}/#{record.id}"
+  defp record_route(base, record, :edit), do: "#{base}/#{record.id}/edit"
 
   @spec substitute_path_params(String.t(), map()) :: String.t()
   defp substitute_path_params(route, params) when map_size(params) == 0, do: route
@@ -93,22 +96,15 @@ defmodule MishkaGervaz.Table.Types.Action.Link do
     end)
   end
 
-  @spec get_route_pattern(map()) :: String.t()
-  defp get_route_pattern(assigns) do
-    cond do
-      is_map(assigns[:state]) and is_map(assigns[:state][:static]) ->
-        get_in(assigns, [:state, :static, :config, :identity, :route]) || ""
+  @spec get_route_pattern(map()) :: String.t() | nil
+  defp get_route_pattern(%{state: %{static: %{config: config}}}), do: config_route(config)
+  defp get_route_pattern(%{static: %{config: config}}), do: config_route(config)
+  defp get_route_pattern(%{state: %{config: config}}), do: config_route(config)
+  defp get_route_pattern(_assigns), do: nil
 
-      is_map(assigns[:state]) and is_map(assigns[:state][:config]) ->
-        get_in(assigns, [:state, :config, :identity, :route]) || ""
-
-      is_map(assigns[:static]) ->
-        get_in(assigns, [:static, :config, :identity, :route]) || ""
-
-      true ->
-        ""
-    end
-  end
+  @spec config_route(map() | nil) :: String.t() | nil
+  defp config_route(%{identity: %{route: route}}), do: route
+  defp config_route(_config), do: nil
 
   @spec get_path_params(map()) :: map()
   defp get_path_params(assigns) do
