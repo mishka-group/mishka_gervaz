@@ -2392,6 +2392,64 @@ defmodule MishkaGervaz.Test.Resources.WebhookEntry do
   end
 end
 
+defmodule MishkaGervaz.Test.Resources.DescriptorEntry do
+  @moduledoc """
+  A form of two text fields, `:name` and `:statement_descriptor`, for a resource whose `:owner`
+  only a mount's `defaults` can give, since the form draws no field for it.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :descriptor_entry
+        route "/admin/descriptor-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :name, :text
+        field :statement_descriptor, :text
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :name, :string, allow_nil?: false, public?: true
+    attribute :statement_descriptor, :string, public?: true
+    attribute :owner, :string, public?: true
+  end
+
+  actions do
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:name, :statement_descriptor, :owner]
+    end
+
+    update :update do
+      primary? true
+      accept [:name, :statement_descriptor, :owner]
+    end
+  end
+end
+
 defmodule MishkaGervaz.Test.Resources.DefaultedEntry do
   @moduledoc """
   A form whose `:title` and `:status` fields declare the value a create form starts with.

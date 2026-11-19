@@ -121,8 +121,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       @doc """
       Build the AshPhoenix.Form for creating a new record.
 
-      The form starts with each field's `default` as its params, except a field the mount's
-      `defaults` give a value.
+      The form starts with each field's value in the mount's `defaults`, or else the field's own
+      `default`, as its params, so its input draws it.
       """
       @spec new_for_create(State.t(), keyword()) ::
               {:ok, Phoenix.HTML.Form.t()} | {:error, term()}
@@ -143,17 +143,22 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
         given = state.defaults || %{}
 
         params =
-          for %{name: name, default: default} <- fields,
-              not is_nil(default),
-              not Map.has_key?(given, name),
-              not Map.has_key?(given, to_string(name)),
-              into: %{},
-              do: {to_string(name), default}
+          fields
+          |> Enum.map(&{to_string(&1.name), mount_default(given, &1.name, Map.get(&1, :default))})
+          |> Enum.reject(fn {_name, value} -> is_nil(value) end)
+          |> Map.new()
 
         if params == %{}, do: nil, else: params
       end
 
       defp field_defaults(_state), do: nil
+
+      defp mount_default(given, name, field_default) do
+        case given do
+          %{^name => value} -> value
+          _not_by_atom -> Map.get(given, to_string(name), field_default)
+        end
+      end
 
       @doc """
       Build an AshPhoenix.Form from a record (for edit) or resource (for create). `opts` take
