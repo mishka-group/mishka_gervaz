@@ -4,7 +4,8 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
   """
   use ExUnit.Case, async: true
 
-  alias MishkaGervaz.Table.Web.UrlSync
+  alias MishkaGervaz.Table.Web.{State, UrlSync}
+  alias MishkaGervaz.Test.Resources.Post
 
   describe "encode/2 without prefix" do
     test "encodes filters without prefix" do
@@ -806,13 +807,40 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       assert result.filter_values == %{status: "active"}
     end
 
-    test "merges filters with existing state" do
+    test "the URL's filters replace the filter values the state held" do
       state = %{filter_values: %{category: "news"}, sort_fields: [], page: 1}
       url_state = %{filters: %{status: "active"}, sort: [], page: 1, search: nil, template: nil}
 
       result = UrlSync.apply_url_state(state, url_state)
 
-      assert result.filter_values == %{category: "news", status: "active"}
+      assert result.filter_values == %{status: "active"}
+    end
+
+    test "a URL that drops the search or a filter clears it" do
+      state = %{
+        filter_values: %{status: "active", category: "news", search: "hello"},
+        sort_fields: [],
+        page: 1
+      }
+
+      url_state = %{filters: %{status: "active"}, sort: [], page: 1, search: nil, template: nil}
+
+      result = UrlSync.apply_url_state(state, url_state)
+
+      assert result.filter_values == %{status: "active"}
+    end
+
+    test "a table state keeps its filter defaults under the URL's filters" do
+      state = %{
+        State.init("test-id", Post, nil)
+        | filter_values: %{status: "draft", search: "old"}
+      }
+
+      url_state = %{filters: %{search: "elixir"}, sort: [], page: 1, search: nil, template: nil}
+
+      result = UrlSync.apply_url_state(state, url_state)
+
+      assert result.filter_values == %{status: "published", search: "elixir"}
     end
 
     test "applies sort to state" do

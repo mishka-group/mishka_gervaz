@@ -311,7 +311,11 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   @doc """
   Apply URL state to existing table state.
 
-  Merges decoded URL state with default table state.
+  The URL is the source of truth for the filters and the search it carries: the state's filters
+  become the URL's filters, so a filter or search the URL no longer carries is dropped. A
+  `MishkaGervaz.Table.Web.State` keeps each filter's `default` under them, as
+  `MishkaGervaz.Table.Web.State.UrlSync` applies them. The sort, page and page size are taken when
+  the URL carries them.
   """
   @spec apply_url_state(map(), url_state()) :: map()
   def apply_url_state(state, url_state) do
@@ -594,9 +598,11 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   end
 
   @spec maybe_apply_filters(map(), map()) :: map()
+  defp maybe_apply_filters(%MishkaGervaz.Table.Web.State{} = state, url_state),
+    do: MishkaGervaz.Table.Web.State.UrlSync.apply_url_filters(state, url_state)
+
   defp maybe_apply_filters(state, %{filters: filters}) when filters != %{} do
-    current = Map.get(state, :filter_values, %{})
-    %{state | filter_values: Map.merge(current, filters)}
+    %{state | filter_values: filters}
   end
 
   defp maybe_apply_filters(state, %{filters: filters}) when filters == %{} do
