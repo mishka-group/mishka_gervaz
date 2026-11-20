@@ -4153,6 +4153,194 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @drawer_motion {"translate-y-full sm:translate-y-0 sm:translate-x-full sm:rtl:-translate-x-full",
+                  "translate-y-0 sm:translate-x-0"}
+  @sheet_motion {"translate-y-full", "translate-y-0"}
+
+  @doc """
+  A drawer from the right side (the left in a right-to-left page), for a form or a page. Below
+  640px it is a bottom sheet instead, rising from the bottom edge.
+
+  It is drawn hidden and opens through `show_drawer/2`: render it with `show` (as
+  `:if={@open?} show`, so it opens as it is drawn), or keep it rendered and run
+  `show_drawer(id)` from a click. The close button and the backdrop run `hide_drawer/2` after
+  `:on_close`; Escape closes it too, unless `:confirm_close` is given.
+
+  ## Assigns
+    * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`
+    * `:show` - open it as it is drawn
+    * `:title` - the heading at its top
+    * `:on_close` - a `Phoenix.LiveView.JS` run as it closes, such as `JS.push("close_drawer")`
+    * `:confirm_close` - a question the close button and the backdrop ask first through
+      `data-confirm`, such as "Discard your changes?" while the form in it holds changes (see
+      `MishkaGervaz.Form.Web.Live`'s `notify_dirty`); `nil` closes at once
+    * `:class` - replaces the panel's width classes (`sm:w-[min(520px,100vw)]`)
+    * `:inner_block` - its body, which scrolls
+    * `:footer` - an optional slot pinned under the body, for buttons
+  """
+  @impl true
+  def drawer(assigns) do
+    assigns
+    |> assign(:kind, :drawer)
+    |> assign_new(:class, fn -> "sm:w-[min(520px,100vw)]" end)
+    |> side_panel()
+  end
+
+  @doc """
+  A bottom sheet, rising from the bottom edge at every width, for a form or a page.
+
+  It opens and closes as `drawer/1` does, through `show_sheet/2` and `hide_sheet/2`, and takes its
+  assigns; `:class` replaces the panel's width classes (`sm:mx-auto sm:max-w-[640px]`).
+  """
+  @impl true
+  def sheet(assigns) do
+    assigns
+    |> assign(:kind, :sheet)
+    |> assign_new(:class, fn -> "sm:mx-auto sm:max-w-[640px]" end)
+    |> side_panel()
+  end
+
+  @doc "The `Phoenix.LiveView.JS` that opens the drawer `id`: its backdrop fades in, its panel slides in."
+  @spec show_drawer(JS.t(), String.t()) :: JS.t()
+  def show_drawer(js \\ %JS{}, id), do: show_panel(js, id, @drawer_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that closes the drawer `id`."
+  @spec hide_drawer(JS.t(), String.t()) :: JS.t()
+  def hide_drawer(js \\ %JS{}, id), do: hide_panel(js, id, @drawer_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that opens the bottom sheet `id`."
+  @spec show_sheet(JS.t(), String.t()) :: JS.t()
+  def show_sheet(js \\ %JS{}, id), do: show_panel(js, id, @sheet_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that closes the bottom sheet `id`."
+  @spec hide_sheet(JS.t(), String.t()) :: JS.t()
+  def hide_sheet(js \\ %JS{}, id), do: hide_panel(js, id, @sheet_motion)
+
+  defp show_panel(js, id, {away, shown}) do
+    js
+    |> JS.push_focus()
+    |> JS.show(to: "#" <> id)
+    |> JS.show(
+      to: "#" <> id <> "-backdrop",
+      time: 200,
+      transition: {"transition-opacity ease-out duration-200", "opacity-0", "opacity-100"}
+    )
+    |> JS.show(
+      to: "#" <> id <> "-panel",
+      display: "flex",
+      time: 200,
+      transition: {"transition-transform ease-out duration-200", away, shown}
+    )
+    |> JS.add_class("overflow-hidden", to: "body")
+    |> JS.focus_first(to: "#" <> id <> "-panel")
+  end
+
+  defp hide_panel(js, id, {away, shown}) do
+    js
+    |> JS.hide(
+      to: "#" <> id <> "-backdrop",
+      time: 200,
+      transition: {"transition-opacity ease-in duration-200", "opacity-100", "opacity-0"}
+    )
+    |> JS.hide(
+      to: "#" <> id <> "-panel",
+      time: 200,
+      transition: {"transition-transform ease-in duration-200", shown, away}
+    )
+    |> JS.hide(to: "#" <> id, time: 200, transition: {"block", "block", "block"})
+    |> JS.remove_class("overflow-hidden", to: "body")
+    |> JS.pop_focus()
+  end
+
+  defp side_panel(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:show, fn -> false end)
+      |> assign_new(:title, fn -> nil end)
+      |> assign_new(:on_close, fn -> %JS{} end)
+      |> assign_new(:confirm_close, fn -> nil end)
+      |> assign_new(:footer, fn -> [] end)
+
+    assigns =
+      assigns
+      |> assign(:open_js, open_js(assigns.kind, assigns.id))
+      |> assign(:close_js, close_js(assigns.kind, assigns.on_close, assigns.id))
+      |> assign(:hide_js, close_js(assigns.kind, %JS{}, assigns.id))
+      |> assign(:confirm_close, assigns.confirm_close || nil)
+
+    ~H"""
+    <div
+      id={@id}
+      data-role={"gervaz-#{@kind}"}
+      phx-mounted={@show && @open_js}
+      phx-remove={@hide_js}
+      class="relative z-50 hidden"
+    >
+      <div
+        id={@id <> "-backdrop"}
+        data-role="gervaz-panel-backdrop"
+        class="fixed inset-0 bg-[#17161a]/40 transition-opacity"
+        aria-hidden="true"
+        data-confirm={@confirm_close}
+        phx-click={@close_js}
+      />
+      <div
+        id={@id <> "-panel"}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={@title && @id <> "-title"}
+        tabindex="-1"
+        phx-window-keydown={is_nil(@confirm_close) && @close_js}
+        phx-key="escape"
+        class={[
+          "fixed inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[18px] bg-white shadow-[0_-12px_40px_rgba(20,18,26,.18)]",
+          @kind == :drawer &&
+            "sm:inset-y-0 sm:start-auto sm:end-0 sm:max-h-none sm:rounded-none sm:rounded-s-[18px] sm:shadow-[-12px_0_40px_rgba(20,18,26,.18)]",
+          @class
+        ]}
+      >
+        <div
+          :if={@kind == :sheet}
+          aria-hidden="true"
+          class="mx-auto mt-2.5 h-1 w-10 flex-none rounded-full bg-[#dcdad2]"
+        />
+        <div class="flex flex-none items-center justify-between gap-3 border-b border-[#f0efea] px-5 py-4">
+          <h2 :if={@title} id={@id <> "-title"} class="text-[15px] font-bold text-[#17161a]">
+            {@title}
+          </h2>
+          <span :if={!@title} />
+          <button
+            type="button"
+            data-role="gervaz-panel-close"
+            aria-label={dgettext("mishka_gervaz", "Close")}
+            data-confirm={@confirm_close}
+            phx-click={@close_js}
+            class="grid size-8 flex-none place-items-center rounded-[9px] text-[#8a877f] transition-colors hover:bg-[#f6f5f2] hover:text-[#1b1a18]"
+          >
+            <.render_icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          {render_slot(@inner_block)}
+        </div>
+        <div
+          :if={@footer != []}
+          data-role="gervaz-panel-footer"
+          class="flex flex-none items-center justify-end gap-3 border-t border-[#f0efea] px-5 py-4"
+        >
+          {render_slot(@footer)}
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp open_js(:drawer, id), do: show_drawer(id)
+  defp open_js(:sheet, id), do: show_sheet(id)
+
+  defp close_js(:drawer, on_close, id), do: hide_drawer(on_close, id)
+  defp close_js(:sheet, on_close, id), do: hide_sheet(on_close, id)
+
   @doc """
   Render a static alert/notice.
 

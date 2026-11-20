@@ -59,7 +59,8 @@ defmodule MishkaGervaz.Form.Web.Live do
         do: {:noreply, assign(socket, :post_form_dirty?, dirty?)}
 
   A `cancel` or `discard` button of the form's `submit` block with a `confirm` asks it before it
-  acts while the form holds changes.
+  acts while the form holds changes. A form in the UI adapter's `drawer/1` or `sheet/1` passes
+  `confirm_close={@post_form_dirty? && "Discard your changes?"}`, so closing the window asks too.
 
   ## Opening a form again
 

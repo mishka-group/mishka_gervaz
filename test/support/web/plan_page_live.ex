@@ -1,17 +1,29 @@
 defmodule MishkaGervaz.Test.Web.PlanPageLive do
   @moduledoc """
   A page with one `MishkaGervaz.Form.Web.Live` form of `MishkaGervaz.Test.Web.PlanItem`, mounted the
-  way an admin page mounts one. A saved record's title shows in `#saved`. Opened with `?id=<id>`,
-  the form edits that record.
+  way an admin page mounts one, with `notify_dirty`. A saved record's title shows in `#saved`, the
+  error flash the form sends in `#flash-error`, and whether the form holds changes in `#dirty`.
+  Opened with `?id=<id>`, the form edits that record.
+
+  On `/plans/drawer` the form sits in the Tailwind adapter's drawer, `#plan-drawer`, open as the
+  page opens. While the form holds changes the drawer asks "Discard your changes?" before it
+  closes; its close sends the page `close_drawer`, which takes it away.
   """
 
   use Phoenix.LiveView
+
+  alias MishkaGervaz.Helpers
+  alias MishkaGervaz.UIAdapters.Tailwind
+  alias Phoenix.LiveView.JS
 
   @master %{id: "master-1", site_id: nil, role: :admin}
 
   @impl true
   def mount(params, _session, socket),
-    do: {:ok, assign(socket, saved: nil, dirty?: false, record_id: params["id"])}
+    do: {:ok, assign(socket, saved: nil, dirty?: false, open?: true, record_id: params["id"])}
+
+  @impl true
+  def handle_event("close_drawer", _params, socket), do: {:noreply, assign(socket, :open?, false)}
 
   @impl true
   def handle_info({:put_flash, kind, message}, socket),
@@ -24,6 +36,33 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
     do: {:noreply, assign(socket, :saved, record.title)}
 
   @impl true
+  def render(%{live_action: :drawer} = assigns) do
+    assigns = assign(assigns, :master, @master)
+
+    ~H"""
+    <p id="dirty">{to_string(@dirty?)}</p>
+    <Helpers.dynamic_component
+      :if={@open?}
+      module={Tailwind}
+      function={:drawer}
+      id="plan-drawer"
+      show={true}
+      title="Edit plan"
+      on_close={JS.push("close_drawer")}
+      confirm_close={@dirty? && "Discard your changes?"}
+    >
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="plan"
+        resource={MishkaGervaz.Test.Web.PlanItem}
+        current_user={@master}
+        record_id={@record_id}
+        notify_dirty={true}
+      />
+    </Helpers.dynamic_component>
+    """
+  end
+
   def render(assigns) do
     assigns = assign(assigns, :master, @master)
 

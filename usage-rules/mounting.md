@@ -108,7 +108,9 @@ def handle_info({:form_dirty, "post-form", dirty?}, socket),
 ```
 
 It is sent once the form holds changes, and again once it holds none: after a save, a Discard, a
-Cancel or a start over. A page that did not ask is never sent it. A `cancel` or `discard` button
+Cancel or a start over. A page that did not ask is never sent it. A form in the UI adapter's
+`drawer` or `sheet` hands it on as `confirm_close`, so closing the window asks "Discard your
+changes?" first ([customization/ui-adapters.md](customization/ui-adapters.md)). A `cancel` or `discard` button
 declared with `confirm` asks its question itself while the form holds changes
 ([form/submit.md](form/submit.md)).
 
@@ -219,6 +221,10 @@ Two ways to close a modal after save — pick **one**:
 
 Keep both modals rendered rather than wrapping them in `:if` — a modal removed from the DOM cannot
 run its own exit transition.
+
+The UI adapter's `drawer` (a bottom sheet below 640px) and `sheet` are the gervaz panels for a form
+or a page; they carry their own exit transition in `phx-remove`, so they may sit under an `:if`
+([customization/ui-adapters.md](customization/ui-adapters.md)).
 
 ## TODO — every mount
 - [ ] `id` stable and matching every `send_update/2` call site

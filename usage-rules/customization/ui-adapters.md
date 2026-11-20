@@ -1,7 +1,7 @@
 # Custom UI adapters
 
 A **UI adapter** answers *how things look*: the button, the select, the badge, the cell. It is one
-module implementing `MishkaGervaz.Behaviours.UIAdapter` — 71 one-arity component functions, all
+module implementing `MishkaGervaz.Behaviours.UIAdapter` — 73 one-arity component functions, all
 supplied with defaults, so you override only what differs.
 
 Wire it in either DSL:
@@ -35,7 +35,7 @@ end
 ### The worked example that ships with the library
 
 `MishkaGervaz.UIAdapters.MediaGallery` is the smallest useful adapter — it changes exactly one
-component and inherits the other 70:
+component and inherits the other 72:
 
 ```elixir
 defmodule MishkaGervaz.UIAdapters.MediaGallery do
@@ -155,7 +155,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 
 ## The component list
 
-71 callbacks, grouped by what they render. Introspect the live list with
+73 callbacks, grouped by what they render. Introspect the live list with
 `MishkaGervaz.Behaviours.UIAdapter.component_functions/0`.
 
 - **Inputs** — `text_input` `select` `multi_select` `search_select` `load_more_select` `checkbox`
@@ -163,6 +163,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
   `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
 - **State & status** — `empty_state` `error_state` `loading_state` `alert`
+- **Panels** — `drawer` `sheet`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
   `cell_text` `cell_number` `cell_date` `cell_datetime` `cell_code` `cell_array` `cell_tags`
   `cell_avatars` `cell_stacked` `cell_stats` `cell_bars` `filter_reset_button` `archive_toggle`
@@ -174,8 +175,36 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 
 One adapter serves **both** the table and the form — there is no separate form adapter.
 
+## Drawer and bottom sheet
+
+`drawer/1` is a panel from the right side (the left in a right-to-left page) that is a bottom
+sheet below 640px; `sheet/1` is a bottom sheet at every width. Both hold a form or any page
+content, are drawn hidden and open with `Phoenix.LiveView.JS` — no hook. Draw one with `show` under
+an `:if`, or keep it and run the Tailwind adapter's `show_drawer/2` / `show_sheet/2`:
+
+```heex
+<MishkaGervaz.Helpers.dynamic_component
+  :if={@editing?}
+  module={MishkaGervaz.UIAdapters.Tailwind}
+  function={:drawer}
+  id="product-drawer"
+  show
+  title={dgettext("mishka_gervaz", "Edit product")}
+  on_close={JS.push("close_editor")}
+  confirm_close={@product_form_dirty? && dgettext("mishka_gervaz", "Discard your changes?")}
+>
+  <.live_component module={MishkaGervaz.Form.Web.Live} id="product-form" … notify_dirty />
+  <:footer>…</:footer>
+</MishkaGervaz.Helpers.dynamic_component>
+```
+
+The close button and the backdrop run `on_close` and the close; with `confirm_close` they ask it
+first (`data-confirm`), and Escape closes only a panel without one. Keep `confirm_close` from the
+form's `{:form_dirty, id, dirty?}` ([../mounting.md](../mounting.md)). `:class` replaces the
+panel's width classes.
+
 ## TODO
-- [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 71 stubs
+- [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 73 stubs
 - [ ] Only the components that genuinely differ are defined
 - [ ] A caller-supplied `class` wins over the adapter's default
 - [ ] `attr`/`:rest` declared so `phx-*` and `data-confirm` reach the DOM
