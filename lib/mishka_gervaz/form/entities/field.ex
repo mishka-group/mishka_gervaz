@@ -418,6 +418,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
           label: String.t() | (-> String.t()) | nil,
           placeholder: String.t() | nil,
           description: String.t() | (-> String.t()) | nil,
+          note: String.t() | (-> String.t()) | nil,
           icon: String.t() | nil,
           class: String.t() | nil,
           wrapper_class: String.t() | nil,
@@ -440,6 +441,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
   defstruct label: nil,
             placeholder: nil,
             description: nil,
+            note: nil,
             icon: nil,
             class: nil,
             wrapper_class: nil,
@@ -468,7 +470,13 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
     ],
     description: [
       type: {:or, [:string, {:fun, 0}]},
-      doc: "Help text below the field. String or `fn -> gettext(...) end` for i18n."
+      doc:
+        "Help text below the field, drawn under any field type. String or `fn -> gettext(...) end` for i18n."
+    ],
+    note: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "Text beside a `:toggle` or `:checkbox` field's control, inside its label, so a click on it flips the control: what switching it on does. String or `fn -> gettext(...) end`."
     ],
     icon: [
       type: :string,

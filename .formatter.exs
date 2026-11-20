@@ -166,6 +166,7 @@ spark_locals_without_parens = [
   nested_field: 3,
   nested_fields: 1,
   next_label: 1,
+  note: 1,
   notice: 1,
   notice: 2,
   number_step: 1,

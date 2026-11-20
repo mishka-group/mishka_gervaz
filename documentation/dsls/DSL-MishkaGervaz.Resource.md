@@ -2541,7 +2541,8 @@ UI/presentation configuration for the field.
 |------|------|---------|------|
 | [`label`](#mishka_gervaz-form-fields-field-ui-label){: #mishka_gervaz-form-fields-field-ui-label } | `String.t \| (-> any)` |  | Field label. String or `fn -> gettext(...) end` for i18n. |
 | [`placeholder`](#mishka_gervaz-form-fields-field-ui-placeholder){: #mishka_gervaz-form-fields-field-ui-placeholder } | `String.t \| (-> any)` |  | Placeholder text. String or `fn -> gettext(...) end` for i18n. |
-| [`description`](#mishka_gervaz-form-fields-field-ui-description){: #mishka_gervaz-form-fields-field-ui-description } | `String.t \| (-> any)` |  | Help text below the field. String or `fn -> gettext(...) end` for i18n. |
+| [`description`](#mishka_gervaz-form-fields-field-ui-description){: #mishka_gervaz-form-fields-field-ui-description } | `String.t \| (-> any)` |  | Help text below the field, drawn under any field type. String or `fn -> gettext(...) end` for i18n. |
+| [`note`](#mishka_gervaz-form-fields-field-ui-note){: #mishka_gervaz-form-fields-field-ui-note } | `String.t \| (-> any)` |  | Text beside a `:toggle` or `:checkbox` field's control, inside its label, so a click on it flips the control: what switching it on does. String or `fn -> gettext(...) end`. |
 | [`icon`](#mishka_gervaz-form-fields-field-ui-icon){: #mishka_gervaz-form-fields-field-ui-icon } | `String.t` |  | Icon name (e.g. hero icon). |
 | [`class`](#mishka_gervaz-form-fields-field-ui-class){: #mishka_gervaz-form-fields-field-ui-class } | `String.t` |  | Field CSS classes. |
 | [`wrapper_class`](#mishka_gervaz-form-fields-field-ui-wrapper_class){: #mishka_gervaz-form-fields-field-ui-wrapper_class } | `String.t` |  | Wrapper element CSS classes. |
@@ -2793,7 +2794,8 @@ UI/presentation configuration for the field.
 |------|------|---------|------|
 | [`label`](#mishka_gervaz-form-fields-auto_fields-override-ui-label){: #mishka_gervaz-form-fields-auto_fields-override-ui-label } | `String.t \| (-> any)` |  | Field label. String or `fn -> gettext(...) end` for i18n. |
 | [`placeholder`](#mishka_gervaz-form-fields-auto_fields-override-ui-placeholder){: #mishka_gervaz-form-fields-auto_fields-override-ui-placeholder } | `String.t \| (-> any)` |  | Placeholder text. String or `fn -> gettext(...) end` for i18n. |
-| [`description`](#mishka_gervaz-form-fields-auto_fields-override-ui-description){: #mishka_gervaz-form-fields-auto_fields-override-ui-description } | `String.t \| (-> any)` |  | Help text below the field. String or `fn -> gettext(...) end` for i18n. |
+| [`description`](#mishka_gervaz-form-fields-auto_fields-override-ui-description){: #mishka_gervaz-form-fields-auto_fields-override-ui-description } | `String.t \| (-> any)` |  | Help text below the field, drawn under any field type. String or `fn -> gettext(...) end` for i18n. |
+| [`note`](#mishka_gervaz-form-fields-auto_fields-override-ui-note){: #mishka_gervaz-form-fields-auto_fields-override-ui-note } | `String.t \| (-> any)` |  | Text beside a `:toggle` or `:checkbox` field's control, inside its label, so a click on it flips the control: what switching it on does. String or `fn -> gettext(...) end`. |
 | [`icon`](#mishka_gervaz-form-fields-auto_fields-override-ui-icon){: #mishka_gervaz-form-fields-auto_fields-override-ui-icon } | `String.t` |  | Icon name (e.g. hero icon). |
 | [`class`](#mishka_gervaz-form-fields-auto_fields-override-ui-class){: #mishka_gervaz-form-fields-auto_fields-override-ui-class } | `String.t` |  | Field CSS classes. |
 | [`wrapper_class`](#mishka_gervaz-form-fields-auto_fields-override-ui-wrapper_class){: #mishka_gervaz-form-fields-auto_fields-override-ui-wrapper_class } | `String.t` |  | Wrapper element CSS classes. |

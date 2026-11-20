@@ -102,7 +102,7 @@ second lines are translated. The UI adapter draws them with `choice_cards/1` and
 
 ## `ui do … end`
 
-`label` · `placeholder` · `description` · `icon` · `class` · `wrapper_class` · `debounce` ·
+`label` · `placeholder` · `description` · `note` · `icon` · `class` · `wrapper_class` · `debounce` ·
 `span` · `rows` · `step` · `first_day_of_week` · `autocomplete` · `prefix` · `suffix` ·
 `add_label` · `remove_label` · `disabled_prompt` · `extra`. On a `:datetime` field `step` is the
 minutes between the times its picker offers; `first_day_of_week` (`:monday` when not set) is the day
@@ -124,6 +124,21 @@ end
 
 The adapter's `text_input/1`, `password_input/1` and `number_input/1` take them as `:prefix` and
 `:suffix`.
+
+`description` is help text under any field. `note` is text beside a `:toggle` or `:checkbox`
+control, inside its label, so a click on it flips the control; say there what switching it on does:
+
+```elixir
+field :listed, :toggle do
+  ui do
+    label "Listed"
+    note "Buyers find it in the store"
+    description "Turn it off to keep a draft"
+  end
+end
+```
+
+The adapter's `toggle_input/1` takes it as `:note`, `checkbox/1` as `:label`.
 
 ## Relation fields — the pattern that recurs
 

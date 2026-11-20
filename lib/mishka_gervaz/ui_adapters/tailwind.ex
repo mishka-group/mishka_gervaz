@@ -2986,6 +2986,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A switch: a checkbox drawn as a track and a knob, after a hidden `false` so an unticked switch
+  still sends the field.
+
+  ## Assigns
+    * `:name`, `:id` - the checkbox's attributes
+    * `:checked` - the switch is on
+    * `:disabled` - the switch cannot be flipped
+    * `:note` - text beside the switch, inside its label, so a click on it flips the switch
+  """
   @impl true
   def toggle_input(assigns) do
     assigns =
@@ -2993,14 +3003,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:checked, fn -> false end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:note, fn -> nil end)
 
     ~H"""
     <label class={[
-      "inline-flex cursor-pointer items-center",
+      "inline-flex cursor-pointer items-center gap-3",
       @disabled && "opacity-50 cursor-not-allowed"
     ]}>
       <input type="hidden" name={@name} value="false" />
-      <div class="relative w-11 h-6">
+      <div class="relative h-6 w-11 flex-none">
         <input
           type="checkbox"
           id={@id}
@@ -3021,6 +3032,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           if(@checked, do: "translate-x-5", else: "translate-x-0")
         ]} />
       </div>
+      <span
+        :if={@note}
+        data-role="gervaz-toggle-note"
+        class="text-[12.5px] font-medium leading-[1.45] text-[#5c5a54]"
+      >
+        {@note}
+      </span>
     </label>
     """
   end

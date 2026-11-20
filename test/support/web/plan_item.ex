@@ -7,7 +7,9 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
     * `:billing` — a `:segmented` field: Monthly and Yearly, Yearly with a second line;
     * `:slug` — a text field with the prefix `/products/`;
     * `:price` — a decimal number with the prefix `USD`;
-    * `:discount` — a whole number with the suffix `%`.
+    * `:discount` — a whole number with the suffix `%`;
+    * `:listed` — a `:toggle` with a note beside it and help text under it;
+    * `:featured` — a `:checkbox` with a note beside it.
   """
 
   use Ash.Resource,
@@ -66,7 +68,21 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
 
         field :discount, :number do
           ui do
-            suffix(fn -> "%" end)
+            suffix fn -> "%" end
+          end
+        end
+
+        field :listed, :toggle do
+          ui do
+            label "Listed"
+            note "Buyers find it in the store"
+            description "Turn it off to keep a draft"
+          end
+        end
+
+        field :featured, :checkbox do
+          ui do
+            note fn -> "Shown first on the home page" end
           end
         end
       end
@@ -90,5 +106,7 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
     attribute :slug, :string, public?: true
     attribute :price, :decimal, public?: true
     attribute :discount, :integer, public?: true
+    attribute :listed, :boolean, default: false, public?: true
+    attribute :featured, :boolean, default: false, public?: true
   end
 end

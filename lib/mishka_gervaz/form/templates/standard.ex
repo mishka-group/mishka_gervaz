@@ -848,12 +848,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  # A checkbox or toggle, centred in the 44px height of the inputs beside it.
-  defp boolean_box(control) do
+  # A checkbox or toggle, centred in the 44px height of the inputs beside it. One with a note beside
+  # it grows with the note's lines.
+  defp boolean_box(control, note \\ nil)
+
+  defp boolean_box(control, nil) do
     assigns = %{control: control}
 
     ~H"""
     <div data-role="gervaz-boolean-control" class="flex h-11 items-center">{@control}</div>
+    """
+  end
+
+  defp boolean_box(control, _note) do
+    assigns = %{control: control}
+
+    ~H"""
+    <div data-role="gervaz-boolean-control" class="flex min-h-11 items-center py-1">{@control}</div>
     """
   end
 
@@ -1434,24 +1445,28 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
       :checkbox ->
         form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+        note = resolve_label(get_in_map(field, [:ui, :note]))
 
         base
         |> assign(:value, "true")
         |> assign(:checked, form_value in [true, "true"])
         |> assign(:hidden_input, true)
         |> assign(:function, :checkbox)
+        |> put_present(:label, note)
         |> dynamic_component()
-        |> boolean_box()
+        |> boolean_box(note)
 
       :toggle ->
         form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+        note = resolve_label(get_in_map(field, [:ui, :note]))
 
         base
         |> assign(:value, "true")
         |> assign(:checked, form_value in [true, "true"])
         |> assign(:function, :toggle_input)
+        |> put_present(:note, note)
         |> dynamic_component()
-        |> boolean_box()
+        |> boolean_box(note)
 
       kind when kind in [:date, :datetime] ->
         base
