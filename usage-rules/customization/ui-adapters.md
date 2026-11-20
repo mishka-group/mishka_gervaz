@@ -162,7 +162,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
   `date_input` `datetime_input` `number_input` `textarea` `json_editor` `toggle_input`
   `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
-- **State & status** — `empty_state` `error_state` `loading_state` `alert` `toast`
+- **State & status** — `empty_state` `error_state` `loading_state` `skeleton` `alert` `toast`
 - **Panels** — `drawer` `sheet` `question`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
   `cell_text` `cell_number` `cell_date` `cell_datetime` `cell_code` `cell_array` `cell_tags`
@@ -244,6 +244,26 @@ the backdrop and Escape send `on_cancel`. With an `answer`, a field named `answe
 each change sends `on_change`, and the button stays off until what was typed is the answer; an
 `error` is said under the field. The server draws it and takes it away: tables and forms draw it
 for their own questions, and a page draws one for its own with `MishkaGervaz.Question.window/1`.
+
+## Skeleton
+
+`skeleton/1` stands where content goes while it loads and holds its room: `type: :rows` (the
+default), `rows` placeholder rows the height of a table row (`row_class` for taller ones), or
+`type: :block`, a box of `lines` with its height in `class`. It is marked `aria-busy` and a screen
+reader hears its `text`. The table template draws it while it reads with no rows to show
+([../table/states.md](../table/states.md)); a page draws it for a block it reads with
+`assign_async`, as many rows as the block showed before, so a reload does not collapse it:
+
+```heex
+<.async_result :let={orders} assign={@latest_orders}>
+  <:loading>
+    <MishkaGervaz.UIAdapters.Tailwind.skeleton rows={@latest_shown || 5} />
+  </:loading>
+  <.order_row :for={order <- orders} order={order} />
+</.async_result>
+
+<MishkaGervaz.UIAdapters.Tailwind.skeleton type={:block} lines={4} class="h-[180px]" />
+```
 
 ## Toast
 

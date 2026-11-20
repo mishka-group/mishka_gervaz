@@ -124,6 +124,7 @@ most:
 | `table_counts/1` | the `%{shown:, total:, more?:, loading?:}` the `table_footer` slot receives |
 | `render_overlays/1` | the last thing in the root element: the row drawer and the question window, while one is open |
 | `render_load_more/1`, `load_more_at_footer?/1` | the Load more button, for a template that draws it outside the pager, and whether the resource asked for it in the footer row |
+| `reading_with_no_rows?/1`, `skeleton_rows/2` | whether the table reads with no rows to show, and how many placeholder rows (`skeleton/1`) stand where its rows go meanwhile |
 | `across_tenants?/1` | whether the table reads across tenants, as a master's read of every site does: when a template says whose each row is |
 | `row_path/3` | the path a row opens, from `row do path … end` |
 | `render_pagination_row/1`, `range_label/1` | the one row every pager is laid out in (`:leading`, `:center` and `:trailing` slots), and the `Showing 1–40 of 136` of a growing list; a template that draws its own pager lays it out with them |

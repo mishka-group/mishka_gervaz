@@ -65,6 +65,7 @@ a key it does not consume is silently ignored.
 | `Table` | `:striped` | `false` | ✔ zebra rows |
 | `Table` | `:hoverable` | `true` | ✔ row hover |
 | `Table` | `:highlight_arrivals` | `true` | ✔ a row that arrives by a stream insert fades from a highlight — see [realtime.md](realtime.md) |
+| `Table` | `:skeleton_rows` | the page size up to 5 | ✔ how many placeholder rows stand where the rows go while the table reads with none to show — see [states.md](states.md) |
 | `Table` | `:show_header` / `:bordered` / `:compact` | `true` / `false` / `false` | declared in `default_options/0` but **not read** by the current markup |
 | any built-in | `:switcher` | `true` | ✔ `false` draws no template switcher, see below |
 | `MediaGallery` | `:columns` | `6` | ✔ sets the card-width floor (`≤3` ⇒ wider cards) |

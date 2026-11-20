@@ -74,7 +74,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
       hoverable: true,
       bordered: false,
       compact: false,
-      highlight_arrivals: true
+      highlight_arrivals: true,
+      skeleton_rows: nil
     ]
   end
 
@@ -109,6 +110,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
     viewport_event = if is_infinite_scroll?, do: "load_more", else: nil
     footer_load_more? = Shared.load_more_at_footer?(static)
+    reading_with_no_rows? = Shared.reading_with_no_rows?(state)
 
     grid_template =
       grid_template_columns(
@@ -132,6 +134,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:infinite_scroll?, is_infinite_scroll?)
       |> assign(:viewport_event, viewport_event)
       |> assign(:footer_load_more?, footer_load_more? and show_pagination)
+      |> assign(:reading_with_no_rows?, reading_with_no_rows?)
       |> assign_new(:before_table, fn -> nil end)
       |> assign_new(:rail, fn -> nil end)
       |> assign_new(:filter_actions, fn -> nil end)
@@ -204,7 +207,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
             <.render_loading_overlay
               :if={
                 @state.has_initial_data? and @state.loading == :loading and
-                  @state.loading_type == :reset
+                  @state.loading_type == :reset and not @reading_with_no_rows?
               }
               static={@static}
               state={@state}
@@ -238,6 +241,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
                   show_expand={@show_expand}
                   show_actions={@show_actions}
                   myself={@myself}
+                />
+              </div>
+              <div :if={@reading_with_no_rows?} class="min-[980px]:col-span-full">
+                <.dynamic_component
+                  module={@static.ui_adapter}
+                  function={:skeleton}
+                  rows={Shared.skeleton_rows(@static, @state)}
+                  text={translate_text(@static.pagination_ui.loading_text)}
                 />
               </div>
             </div>
@@ -916,9 +927,12 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp expanded_content(content), do: Phoenix.HTML.raw(content)
 
   @doc """
-  The default loading state: the table's own header, and a spinner where the rows will be.
+  The default loading state, before the table's first read returns: the table's own header, and its
+  frame with placeholder rows (the UI adapter's `skeleton/1`, `Shared.skeleton_rows/2` of them)
+  where the rows will be, so the table holds about the room its rows will take. A screen reader
+  hears the pagination's `loading_text`.
 
-  Without a state there is no header to draw, and this is the spinner alone.
+  Without a state there is no header to draw, and the frame holds five placeholder rows.
   """
   @impl true
   def render_loading(assigns) do
@@ -928,14 +942,29 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
     assigns = assign(assigns, :loading_text, loading_text)
 
+    assigns =
+      assigns
+      |> assign(:skeleton_rows, Shared.skeleton_rows(assigns[:static], assigns[:state]))
+      |> assign(
+        :ui,
+        (assigns[:static] && assigns.static.ui_adapter) || MishkaGervaz.UIAdapters.Tailwind
+      )
+
     ~H"""
     <div class="mishka-gervaz-table">
       {@static && @state && render_chrome_header(assigns)}
 
-      <div class="py-12 text-center">
-        <div class="inline-block size-8 animate-spin rounded-full border-4 border-[#dcdbf5] border-t-[#5b57d6]">
-        </div>
-        <p class="mt-2 text-[12.5px] font-medium text-[#8a877f]">{@loading_text}</p>
+      <div
+        data-role="gervaz-table-frame"
+        class="overflow-hidden rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)]"
+      >
+        <div aria-hidden="true" class="h-[45px] border-b border-[#ecebe6] bg-[#faf9f6]"></div>
+        <.dynamic_component
+          module={@ui}
+          function={:skeleton}
+          rows={@skeleton_rows}
+          text={@loading_text}
+        />
       </div>
     </div>
     """

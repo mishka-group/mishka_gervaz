@@ -62,6 +62,11 @@
   gain `more?` and `loading?`, `Shared.render_load_more/1` draws the button in a custom template and
   `MishkaGervaz.Table.Web.Live.load_more/2` is the JS of a page's own button; each press streams the
   next page, read by keyset when the read action allows it
+- The UI adapter gains `skeleton/1`, placeholder rows or a block that hold the room of what loads.
+  The default table template draws its frame with placeholder rows before its first read, and in
+  place of its empty state while a read with no rows shown runs, as after a filter that found
+  nothing, so the table keeps its height; `template_options skeleton_rows: n` sets how many
+  (`Shared.skeleton_rows/2`, `Shared.reading_with_no_rows?/1`)
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

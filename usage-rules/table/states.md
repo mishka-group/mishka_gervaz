@@ -24,6 +24,26 @@ empty_state do
 end
 ```
 
+## While it reads: placeholder rows
+
+The default table template keeps its room while it reads. Before its first read returns, and when
+a read starts the list afresh with no rows shown (a filter or a tab that found nothing, then
+another), it draws its frame with placeholder rows where the rows go, the UI adapter's
+`skeleton/1`, in place of the empty state: as many as `template_options skeleton_rows: n`, else its
+page size up to five. A read over rows shown keeps those rows under a veil, so the table neither
+shrinks nor grows until the new rows arrive. A screen reader hears the pagination's
+`loading_text`.
+
+```elixir
+presentation do
+  template_options skeleton_rows: 12
+end
+```
+
+A custom template draws the same with `Shared.reading_with_no_rows?/1` and
+`Shared.skeleton_rows/2`, and a page's own block that loads with `assign_async` draws
+`skeleton/1` in its `:loading` slot, `type: :block` for a card ([../customization/ui-adapters.md](../customization/ui-adapters.md)).
+
 ## `empty_state`
 
 | Option | Type | Default |

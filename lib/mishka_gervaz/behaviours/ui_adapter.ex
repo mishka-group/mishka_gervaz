@@ -85,6 +85,8 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     {:empty_state, "Render empty state"},
     {:error_state, "Render error state"},
     {:loading_state, "Render loading state"},
+    {:skeleton,
+     "Render placeholder rows or a placeholder block that hold the room of what they stand in for while it loads"},
     {:alert, "Render a static alert/notice (info/warning/error/success/neutral)"},
     {:toast,
      "Render one toast: a short note with a tone, an optional Undo and link, and a Close"},

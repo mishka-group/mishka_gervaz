@@ -1213,6 +1213,42 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   defp shown_count(_state), do: 0
 
   @doc """
+  How many placeholder rows a table draws while it reads with no rows to show: the template's
+  `template_options skeleton_rows: n`, else its page size up to five, so the table holds about the
+  room its rows will take.
+  """
+  @spec skeleton_rows(map() | nil, map() | nil) :: pos_integer()
+  def skeleton_rows(%{template_options: options} = static, state) when is_list(options) do
+    case options[:skeleton_rows] do
+      rows when is_integer(rows) and rows > 0 -> rows
+      _unset -> skeleton_rows(Map.delete(static, :template_options), state)
+    end
+  end
+
+  def skeleton_rows(%{page_size: page_size}, state) do
+    case (state && Map.get(state, :current_page_size)) || page_size do
+      size when is_integer(size) and size > 0 -> min(size, 5)
+      _unknown -> 5
+    end
+  end
+
+  def skeleton_rows(_static, _state), do: 5
+
+  @doc """
+  Whether a table is reading with no rows to show: a read that starts the list afresh, after a
+  first read that found rows or none, while the view shows no row, as after a filter that found
+  nothing. The default table template then stands placeholder rows (`skeleton_rows/2`) where the
+  rows go, in place of its empty state; over rows shown it keeps them, under a veil.
+  """
+  @spec reading_with_no_rows?(map()) :: boolean()
+  def reading_with_no_rows?(
+        %{has_initial_data?: true, loading: :loading, loading_type: :reset} = state
+      ),
+      do: table_counts(state).shown == 0
+
+  def reading_with_no_rows?(_state), do: false
+
+  @doc """
   Whether the table reads across tenants: its resource is multi-tenant and the table reads with no
   tenant (`MishkaGervaz.Table.Web.DataLoader.read_tenant/1`), as a master's read of every site
   does. A `:site` column is drawn only then; a column or template that says whose each row is uses

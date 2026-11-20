@@ -2557,6 +2557,92 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
+  Placeholder rows, or a placeholder block, that stand where content goes while it loads and hold
+  its room, so the page does not shrink and grow again: a table's rows while it reads with none to
+  show, a card's body while its `assign_async` read runs. Its bars pulse; it is marked busy, and a
+  screen reader hears its `text`.
+
+  ## Assigns
+    * `:type` - `:rows` (the default), rows the height of a table row, or `:block`, one box
+    * `:rows` - how many rows (default 5); draw as many as the content will likely show, such as
+      the rows shown before a reload
+    * `:row_class` - replaces a row's height and rule (`h-[49px] border-b border-[#f4f3ee]`), for
+      rows taller than a table's
+    * `:lines` - how many lines a block draws (default 3)
+    * `:class` - extra classes of the whole, such as a block's height (`h-[180px]`)
+    * `:text` - what a screen reader hears (default "Loading...")
+
+  ## Example
+
+      <.async_result :let={orders} assign={@orders}>
+        <:loading>
+          <MishkaGervaz.UIAdapters.Tailwind.skeleton rows={@orders_shown || 5} />
+        </:loading>
+        ...
+      </.async_result>
+  """
+  @impl true
+  def skeleton(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:type, fn -> :rows end)
+      |> assign_new(:rows, fn -> 5 end)
+      |> assign_new(:row_class, fn -> "h-[49px] border-b border-[#f4f3ee] last:border-b-0" end)
+      |> assign_new(:lines, fn -> 3 end)
+      |> assign_new(:class, fn -> nil end)
+      |> assign_new(:text, fn -> nil end)
+
+    assigns =
+      assigns
+      |> assign(:text, assigns.text || dgettext("mishka_gervaz", "Loading..."))
+      |> assign(
+        :widths,
+        skeleton_widths(if(assigns.type == :block, do: assigns.lines, else: assigns.rows))
+      )
+
+    ~H"""
+    <div
+      data-role="gervaz-skeleton"
+      data-type={@type}
+      data-rows={@type == :rows && @rows}
+      aria-busy="true"
+      class={[
+        @type == :block &&
+          "flex flex-col gap-3 rounded-[14px] border border-[#ecebe6] bg-white p-5",
+        @class
+      ]}
+    >
+      <span class="sr-only">{@text}</span>
+      <div
+        :for={width <- @widths}
+        :if={@type != :block}
+        data-role="gervaz-skeleton-row"
+        aria-hidden="true"
+        class={["flex items-center px-[16px]", @row_class]}
+      >
+        <span class="block h-3 animate-pulse rounded-full bg-[#efeee9]" style={"width: #{width}"} />
+      </div>
+      <span
+        :for={width <- @widths}
+        :if={@type == :block}
+        data-role="gervaz-skeleton-line"
+        aria-hidden="true"
+        class="block h-3 animate-pulse rounded-full bg-[#efeee9]"
+        style={"width: #{width}"}
+      />
+    </div>
+    """
+  end
+
+  defp skeleton_widths(count) when is_integer(count) and count > 0 do
+    ["92%", "78%", "86%", "70%", "96%", "82%"]
+    |> Stream.cycle()
+    |> Enum.take(count)
+  end
+
+  defp skeleton_widths(_count), do: []
+
+  @doc """
   The list/grid switch — one recessed tray with the active view lifted onto a white tile. The single
   switcher every admin page (and every `fallback: __MODULE__` adapter) uses.
 
