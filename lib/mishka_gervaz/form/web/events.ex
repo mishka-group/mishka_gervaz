@@ -10,6 +10,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   - Relation field search/select
   - Cancel
   - Reset — starts the form over as an empty create form, see `MishkaGervaz.Form.Web.Live.reset/2`
+  - Discard — puts the form back to its starting values, see `MishkaGervaz.Form.Web.Live.discard/1`
   - Nested/array field management
 
   ## Sub-builders
@@ -212,6 +213,12 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def do_handle("reset", _params, _state, socket),
     do: {:noreply, MishkaGervaz.Form.Web.Live.start_over(socket, nil)}
+
+  def do_handle("discard", _params, state, socket) do
+    if submit_button_allowed?(state.static.submit[:discard], state),
+      do: {:noreply, MishkaGervaz.Form.Web.Live.discard(socket)},
+      else: {:noreply, socket}
+  end
 
   def do_handle("next_step", _params, state, socket),
     do: {:noreply, next_step(%{}, state, socket)}

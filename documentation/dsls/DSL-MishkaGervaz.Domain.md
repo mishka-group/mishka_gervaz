@@ -121,6 +121,7 @@ MishkaGervaz domain configuration for shared table and form defaults.
      * create
      * update
      * cancel
+     * discard
      * ui
    * actions
    * theme
@@ -353,6 +354,7 @@ Form configuration inherited by all resources in this domain.
    * create
    * update
    * cancel
+   * discard
    * ui
 
 
@@ -441,6 +443,7 @@ Submit and cancel button configuration.
  * [create](#mishka_gervaz-form-submit-create)
  * [update](#mishka_gervaz-form-submit-update)
  * [cancel](#mishka_gervaz-form-submit-cancel)
+ * [discard](#mishka_gervaz-form-submit-discard)
  * [ui](#mishka_gervaz-form-submit-ui)
 
 
@@ -532,6 +535,35 @@ cancel button configuration.
 | [`disabled`](#mishka_gervaz-form-submit-cancel-disabled){: #mishka_gervaz-form-submit-cancel-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-cancel-visible){: #mishka_gervaz-form-submit-cancel-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
 | [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
+
+
+
+
+
+### Introspection
+
+Target: `MishkaGervaz.Form.Entities.Submit.Button`
+
+### mishka_gervaz.form.submit.discard
+
+
+discard button configuration.
+
+
+
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`label`](#mishka_gervaz-form-submit-discard-label){: #mishka_gervaz-form-submit-discard-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`loading_label`](#mishka_gervaz-form-submit-discard-loading_label){: #mishka_gervaz-form-submit-discard-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
+| [`active`](#mishka_gervaz-form-submit-discard-active){: #mishka_gervaz-form-submit-discard-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
+| [`disabled`](#mishka_gervaz-form-submit-discard-disabled){: #mishka_gervaz-form-submit-discard-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
+| [`visible`](#mishka_gervaz-form-submit-discard-visible){: #mishka_gervaz-form-submit-discard-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-discard-restricted){: #mishka_gervaz-form-submit-discard-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 

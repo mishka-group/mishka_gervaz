@@ -1,8 +1,8 @@
 defmodule MishkaGervaz.Form.Entities.Submit.Button do
   @moduledoc """
-  Single submit / cancel button configuration.
+  Single submit / cancel / discard button configuration.
 
-  Each button (create / update / cancel) is an independent entity with
+  Each button (create / update / cancel / discard) is an independent entity with
   its own `label`, `loading_label`, `active`, `disabled`, `restricted`, and `visible`
   options. Every option except the two labels accepts a boolean or a
   `fn state -> boolean() end` predicate.
@@ -70,7 +70,7 @@ end
 defmodule MishkaGervaz.Form.Entities.Submit do
   @moduledoc """
   Submit / cancel button block — the singleton entity that owns the
-  three button sub-entities (`create`, `update`, `cancel`), the `ui`
+  button sub-entities (`create`, `update`, `cancel`, `discard`), the `ui`
   styling sub-entity, and the `position` field (`:top`, `:bottom`, or
   `:both`).
 
@@ -109,6 +109,7 @@ defmodule MishkaGervaz.Form.Entities.Submit do
           create: Button.t() | nil,
           update: Button.t() | nil,
           cancel: Button.t() | nil,
+          discard: Button.t() | nil,
           position: :top | :bottom | :both,
           ui: __MODULE__.Ui.t() | nil,
           __spark_metadata__: map() | nil
@@ -117,6 +118,7 @@ defmodule MishkaGervaz.Form.Entities.Submit do
   defstruct create: nil,
             update: nil,
             cancel: nil,
+            discard: nil,
             position: :bottom,
             ui: nil,
             __spark_metadata__: nil
@@ -143,7 +145,8 @@ defmodule MishkaGervaz.Form.Entities.Submit do
      |> Helpers.extract_singleton_entity(:ui)
      |> Helpers.extract_singleton_entity(:create)
      |> Helpers.extract_singleton_entity(:update)
-     |> Helpers.extract_singleton_entity(:cancel)}
+     |> Helpers.extract_singleton_entity(:cancel)
+     |> Helpers.extract_singleton_entity(:discard)}
   end
 
   def transform(submit), do: {:ok, submit}

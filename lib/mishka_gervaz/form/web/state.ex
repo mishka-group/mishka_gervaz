@@ -361,7 +361,7 @@ defmodule MishkaGervaz.Form.Web.State do
     def get_notices(_config), do: []
 
     @doc """
-    The resolved submit configuration — the three buttons, their position and shared `ui`.
+    The resolved submit configuration — the buttons, their position and shared `ui`.
 
     Falls back to a full default block rather than `nil`, so a template can read
     `submit[:create][:label]` without guarding first.
@@ -374,6 +374,7 @@ defmodule MishkaGervaz.Form.Web.State do
         create: %{label: "Create", disabled: false, restricted: false, visible: true},
         update: %{label: "Update", disabled: false, restricted: false, visible: true},
         cancel: %{label: "Cancel", disabled: false, restricted: false, visible: true},
+        discard: nil,
         position: :bottom,
         ui: nil
       }

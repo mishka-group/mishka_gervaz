@@ -984,6 +984,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     submit_button = if mode == :create, do: submit[:create], else: submit[:update]
     cancel_button = submit[:cancel]
+    discard_button = submit[:discard]
 
     show_submit =
       submit_button != nil and
@@ -997,6 +998,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         evaluate_button_active(cancel_button, state) and
         evaluate_button_visible(cancel_button, state) and
         not evaluate_button_restricted(cancel_button, state)
+
+    show_discard =
+      discard_button != nil and state.dirty? == true and
+        evaluate_button_active(discard_button, state) and
+        evaluate_button_visible(discard_button, state) and
+        not evaluate_button_restricted(discard_button, state)
 
     submit_label =
       if show_submit,
@@ -1021,6 +1028,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:submit_label, submit_label)
       |> assign(:submit_busy_label, busy_label(submit_button, assigns.static))
       |> assign(:cancel_label, cancel_label)
+      |> assign(:show_discard, show_discard)
+      |> assign(
+        :discard_label,
+        show_discard &&
+          (resolve_label(discard_button[:label]) || dgettext("mishka_gervaz", "Discard"))
+      )
+      |> assign(
+        :discard_disabled,
+        show_discard and evaluate_button_disabled(discard_button, state)
+      )
       |> assign(:show_submit, show_submit)
       |> assign(:show_cancel, show_cancel)
       |> assign(:submit_disabled, submit_disabled)
@@ -1047,6 +1064,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           phx_click={@cancel_js}
           phx_target={@myself}
         />
+
+        <button
+          :if={@show_discard}
+          type="button"
+          data-role="gervaz-discard"
+          disabled={@discard_disabled}
+          phx-click="discard"
+          phx-target={@myself}
+          class="inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] bg-white px-[15px] text-[12.5px] font-semibold text-[#5c5a54] transition-colors hover:bg-[#f7f6f3] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {@discard_label}
+        </button>
 
         <.dynamic_component
           :if={@show_step_nav}

@@ -35,6 +35,7 @@ defmodule MishkaGervaz.Resource.Info.Form do
     create: nil,
     update: nil,
     cancel: nil,
+    discard: nil,
     position: :bottom,
     ui: nil
   }

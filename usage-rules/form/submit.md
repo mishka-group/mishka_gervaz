@@ -1,7 +1,7 @@
 # Form → `submit`
 
-The create / update / cancel buttons. An entity, not a section — one singleton block holding three
-button sub-entities, a shared `ui`, and a `position`.
+The create / update / cancel / discard buttons. An entity, not a section — one singleton block
+holding the button sub-entities, a shared `ui`, and a `position`.
 
 ```elixir
 submit do
@@ -38,13 +38,27 @@ end
 
 | Button option | Type | Default | Note |
 |---|---|---|---|
-| `label` | string \| `fn -> string` | per-kind default | `"Create"` / `"Save Changes"` / `"Cancel"` |
+| `label` | string \| `fn -> string` | per-kind default | `"Create"` / `"Save Changes"` / `"Cancel"` / `"Discard"` |
 | `active` | bool \| `fn state ->` | `true` | `false` drops an inherited button — resource only |
 | `disabled` | bool \| `fn state ->` | `false` | |
 | `restricted` | bool \| `fn state ->` | `false` | master-only |
 | `visible` | bool \| `fn state ->` | `true` | |
 
 All predicates are arity **1** (`state`).
+
+## Discard
+
+`discard` draws a button beside Save while the form holds changes (`state.dirty?`). It puts the
+form back to its starting values: an edit reads its record again, a create starts over empty with
+its `defaults`, the pending uploads are cancelled, and a `:tabs` form stays on its tab. Nothing is
+saved. Without a `discard` block there is no such button; a page can do the same with
+`MishkaGervaz.Form.Web.Live.discard/1`.
+
+```elixir
+submit do
+  discard label: fn -> dgettext("mishka_gervaz", "Discard") end
+end
+```
 
 ## Inheritance is per button, not per block
 
@@ -84,7 +98,7 @@ A mount can suppress or extend the submit row without touching the DSL — `subm
 
 Generated from the schema, always current:
 
-- Resource — [`mishka_gervaz.form.submit`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit) · [`mishka_gervaz.form.submit.create`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-create) · [`mishka_gervaz.form.submit.update`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-update) · [`mishka_gervaz.form.submit.cancel`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-cancel) · [`mishka_gervaz.form.submit.ui`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-ui)
+- Resource — [`mishka_gervaz.form.submit`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit) · [`mishka_gervaz.form.submit.create`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-create) · [`mishka_gervaz.form.submit.update`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-update) · [`mishka_gervaz.form.submit.cancel`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-cancel) · [`mishka_gervaz.form.submit.discard`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-discard) · [`mishka_gervaz.form.submit.ui`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-resource.html#mishka_gervaz-form-submit-ui)
 
 - Domain — [`mishka_gervaz.form.submit`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-domain.html#mishka_gervaz-form-submit) · [`mishka_gervaz.form.submit.create`](https://hexdocs.pm/mishka_gervaz/dsl-mishkagervaz-domain.html#mishka_gervaz-form-submit-create)
 

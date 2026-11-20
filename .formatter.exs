@@ -77,6 +77,8 @@ spark_locals_without_parens = [
   destroy_action: 1,
   disabled: 1,
   disabled_prompt: 1,
+  discard: 0,
+  discard: 1,
   dismissible: 1,
   display_field: 1,
   dropdown: 1,

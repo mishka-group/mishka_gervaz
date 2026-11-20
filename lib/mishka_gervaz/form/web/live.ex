@@ -204,6 +204,37 @@ defmodule MishkaGervaz.Form.Web.Live do
     end
   end
 
+  @doc """
+  Puts the form back to its starting values, as the `discard` button of the form's `submit` block
+  does: an edit reads its record again, a create starts over empty, with the form's `defaults`.
+  The pending uploads are cancelled. A `:tabs` form stays on the tab it is on.
+  """
+  @spec discard(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def discard(socket) do
+    state = socket.assigns.form_state
+    record_id = if state.mode == :update, do: socket.assigns[:record_id]
+    socket = start_over(socket, record_id)
+
+    case state do
+      %{static: %{layout_mode: :tabs}, current_step: step} when not is_nil(step) ->
+        Phoenix.Component.update(socket, :form_state, &on_tab(&1, step))
+
+      _state ->
+        socket
+    end
+  end
+
+  defp on_tab(state, step) do
+    State.update(state,
+      current_step: step,
+      step_states: Map.new(state.step_states, fn {name, _} -> {name, tab_status(name, step)} end),
+      wizard_history: Enum.uniq([step | state.wizard_history])
+    )
+  end
+
+  defp tab_status(step, step), do: :active
+  defp tab_status(_name, _step), do: :pending
+
   @doc false
   @spec fresh_state(State.t()) :: State.t()
   def fresh_state(%State{} = state) do

@@ -396,6 +396,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       create: button_to_map(entity.create),
       update: button_to_map(entity.update),
       cancel: button_to_map(entity.cancel),
+      discard: button_to_map(entity.discard),
       position: entity.position,
       ui: maybe_ui(entity.ui)
     }

@@ -108,6 +108,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
       create: button_to_map(entity.create),
       update: button_to_map(entity.update),
       cancel: button_to_map(entity.cancel),
+      discard: button_to_map(entity.discard),
       position: entity.position,
       ui: ui_to_map(entity.ui)
     }
