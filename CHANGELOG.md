@@ -1,3 +1,48 @@
+# Changelog for MishkaGervaz 0.0.12
+
+### Features:
+- `field :kind, :choice_cards` and `field :billing, :segmented` hold one of a few values, drawn as a
+  radio per option: a card each, or a segment each of one bar. An option may be a keyword list or
+  map with `:description`, a second line under its label, and `:icon`. The UI adapter gains
+  `choice_cards/1` and `segmented_control/1`
+- `ui do prefix "USD" end` and `ui do suffix "%" end` put a unit at the start or end of a `:text`,
+  `:password` or `:number` input, joined to it and named by `aria-describedby`; it is not saved
+- `ui do note "…" end` on a `:toggle` or `:checkbox` field draws the text beside the control, inside
+  its label; `description` stays the help text under any field
+- A `:multi_select` option may carry a `:description`, drawn under its label; the field still saves
+  the ticked values as a list, an empty list when none is ticked
+- A `:tabs` form draws its steps as a tablist over their panels. With `navigation :free` any tab
+  opens and Save stands on every tab: a save runs `before_save` and the action, and one that fails
+  on another tab's field moves there, marks the tab and flashes its name. With `:sequential` only
+  visited tabs open and the submit row is a wizard's
+- `submit do discard label: "Discard" end` draws a button beside Save while the form holds changes,
+  putting the form back to its starting values (`MishkaGervaz.Form.Web.Live.discard/1`); a tabs form
+  stays on its tab
+- A form mounted with `notify_dirty={true}` sends its page `{:form_dirty, id, dirty?}` when it comes
+  to hold changes and when it holds none; its wrapper carries `data-dirty`. A submit button takes
+  `confirm`, asked through `data-confirm`, on `cancel` and `discard` only while the form holds changes
+- A `:number` or `:range` field takes a `Decimal` or a float `min` and `max`, compared as `Decimal`s
+  and drawn on the input as plain digits
+- `row do path fn record -> … end end` makes a whole table row open a path: a link over the row,
+  reached with Tab, the checkbox, caret and actions above it
+- A `:table_footer` slot on the table, drawn under the rows, receives `%{shown: n, total: n}` and
+  carries the page's own text and buttons (`Shared.table_counts/1`)
+- A row that arrives by a stream insert after the table loaded, over realtime or from a row
+  action, fades from a highlight in a few seconds through CSS `@starting-style`;
+  `template_options highlight_arrivals: false` turns it off
+- `template_options switcher: false` keeps a table's `switchable_templates` and draws no switcher
+  (`Shared.show_switcher?/1`)
+- The UI adapter gains `drawer/1`, a right-side panel that is a bottom sheet below 640px, and
+  `sheet/1`, a bottom sheet, for a form or a page. They open and close with `Phoenix.LiveView.JS`
+  (`show_drawer/2`, `hide_drawer/2`, `show_sheet/2`, `hide_sheet/2`) and ask `confirm_close` before
+  they close
+
+### Dependencies:
+- phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)
+- phoenix 1.8.16 => 1.8.17
+- ex_doc 0.40.4 => 0.40.5
+- rewrite 1.3.0 => 1.3.1
+
 # Changelog for MishkaGervaz 0.0.11
 
 ### Features:
