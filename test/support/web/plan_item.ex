@@ -9,7 +9,8 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
     * `:price` — a decimal number with the prefix `USD`;
     * `:discount` — a whole number with the suffix `%`;
     * `:listed` — a `:toggle` with a note beside it and help text under it;
-    * `:featured` — a `:checkbox` with a note beside it.
+    * `:featured` — a `:checkbox` with a note beside it;
+    * `:channels` — a `:multi_select` over `{:array, :atom}`, its options with second lines.
   """
 
   use Ash.Resource,
@@ -85,6 +86,14 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
             note fn -> "Shown first on the home page" end
           end
         end
+
+        field :channels, :multi_select do
+          options [
+            [label: "Store", value: :store, description: "The public store page"],
+            [label: "Email", value: :email, description: "The newsletter"],
+            {"Feed", :feed}
+          ]
+        end
       end
     end
   end
@@ -108,5 +117,10 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
     attribute :discount, :integer, public?: true
     attribute :listed, :boolean, default: false, public?: true
     attribute :featured, :boolean, default: false, public?: true
+
+    attribute :channels, {:array, :atom},
+      constraints: [items: [one_of: [:store, :email, :feed]]],
+      default: [],
+      public?: true
   end
 end

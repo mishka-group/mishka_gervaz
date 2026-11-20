@@ -1016,6 +1016,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A checkbox in its label, the label's text beside it.
+
+  ## Assigns
+    * `:name`, `:value`, `:id` - the checkbox's attributes
+    * `:checked`, `:disabled` - its state
+    * `:label` - the text beside the box
+    * `:description` - a second, quieter line under the label
+    * `:icon` - an icon before the box
+    * `:hidden_input` - send `false` for an unticked box, through a hidden input before it
+    * `:class` - replaces the box's classes
+  """
   @impl true
   def checkbox(assigns) do
     label = resolve_label(assigns[:label])
@@ -1025,6 +1037,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:class, fn -> "size-4 cursor-pointer accent-[#5b57d6]" end)
       |> assign(:label, label)
+      |> assign_new(:description, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:checked, fn -> false end)
       |> assign_new(:hidden_input, fn -> false end)
@@ -1034,7 +1047,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
 
     ~H"""
-    <label class="flex items-center gap-[9px]">
+    <label class={["flex gap-[9px]", if(@description, do: "items-start", else: "items-center")]}>
       <.render_icon :if={@icon} name={@icon} class="w-4 h-4 text-[#a8a5a0]" />
       <input :if={@hidden_input} type="hidden" name={@name} value="false" />
       <input
@@ -1044,12 +1057,23 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         checked={@checked}
         disabled={@disabled}
-        class={[@class, @disabled && "cursor-not-allowed"]}
+        class={[@class, @description && "mt-0.5 flex-none", @disabled && "cursor-not-allowed"]}
         phx-click={@phx_click}
         phx-target={@phx_target}
         phx-value-id={@phx_value_id}
       />
-      <span :if={@label} class="text-[12.5px] font-semibold text-[#5c5a54]">{@label}</span>
+      <span :if={@label && is_nil(@description)} class="text-[12.5px] font-semibold text-[#5c5a54]">
+        {@label}
+      </span>
+      <span :if={@description} class="flex min-w-0 flex-col gap-0.5">
+        <span :if={@label} class="text-[12.5px] font-semibold text-[#5c5a54]">{@label}</span>
+        <span
+          data-role="gervaz-checkbox-description"
+          class="text-[11.5px] font-medium leading-[1.45] text-[#8a877f]"
+        >
+          {@description}
+        </span>
+      </span>
     </label>
     """
   end

@@ -45,8 +45,19 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 
 `:multi_select` draws one checkbox per option, all named `form[<field>][]`, so a save sends the
 ticked values as a list, for an `{:array, :string}` or `{:array, :atom}` attribute or argument.
-With nothing ticked it sends an empty list. To pick records of another resource, use a `:relation`
-field with `mode :search_multi` instead.
+With nothing ticked it sends an empty list. An option may carry a second line, drawn under its
+label, as a choice field's does:
+
+```elixir
+field :channels, :multi_select do
+  options [
+    [label: "Store", value: :store, description: "The public store page"],
+    [label: "Email", value: :email, description: "The newsletter"]
+  ]
+end
+```
+
+To pick records of another resource, use a `:relation` field with `mode :search_multi` instead.
 
 ## Choice cards and segmented control
 

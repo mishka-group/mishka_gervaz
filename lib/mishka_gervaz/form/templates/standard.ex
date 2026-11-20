@@ -1436,10 +1436,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> dynamic_component()
 
       :multi_select ->
-        options = resolve_field_options(field, assigns.state)
-
         base
-        |> assign(:options, MishkaGervaz.Helpers.normalize_options(options))
+        |> assign(:options, choice_options(field, assigns.state))
         |> assign(:picked, picked_values(assigns.state.form, field.name))
         |> render_multi_select()
 
@@ -1566,21 +1564,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   # A `:multi_select` draws one checkbox per option, each named `name[]`, so a save sends the ticked
-  # values as a list. The empty value before them stands for none: with nothing ticked the save
+  # values as a list. An option's second line stands under its label. The empty value before them stands for none: with nothing ticked the save
   # still sends the field, as an empty list. A read-only field leaves it out, so its values are kept.
   defp render_multi_select(assigns) do
     ~H"""
     <div id={@id} data-role="gervaz-multi-select" class="flex flex-col gap-2 py-1">
       <input :if={!@disabled} type="hidden" name={@name <> "[]"} value="" />
       <.dynamic_component
-        :for={{{label, value}, index} <- Enum.with_index(@options)}
+        :for={{option, index} <- Enum.with_index(@options)}
         module={@module}
         function={:checkbox}
         id={"#{@id}-#{index}"}
         name={@name <> "[]"}
-        value={value}
-        label={label}
-        checked={value in @picked}
+        value={option.value}
+        label={option.label}
+        description={option.description}
+        icon={option.icon}
+        checked={option.value in @picked}
         disabled={@disabled}
       />
     </div>
@@ -1590,8 +1590,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp choice_component(:choice_cards), do: :choice_cards
   defp choice_component(:segmented), do: :segmented_control
 
-  # The options of a `:choice_cards` or `:segmented` field, with the second line and the icon each
-  # may carry: a list, or a function of no arguments or of the form state, read on every draw.
+  # The options of a `:choice_cards`, `:segmented` or `:multi_select` field, with the second line and
+  # the icon each may carry: a list, or a function of no arguments or of the form state, read on every draw.
   defp choice_options(%{options: options}, state) when is_function(options, 1),
     do: MishkaGervaz.Helpers.choice_options(options.(state))
 
