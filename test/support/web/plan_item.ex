@@ -10,7 +10,7 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
       Subscription;
     * `:billing` — a `:segmented` field: Monthly and Yearly, Yearly with a second line;
     * `:slug` — a text field with the prefix `/products/`;
-    * `:price` — a decimal number with the prefix `USD`;
+    * `:price` — a decimal number with the prefix `USD`, from `0.50` to `9999.99`;
     * `:discount` — a whole number with the suffix `%`;
     * `:listed` — a `:toggle` with a note beside it and help text under it;
     * `:featured` — a `:checkbox` with a note beside it;
@@ -78,8 +78,12 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
         end
 
         field :price, :number do
+          min Decimal.new("0.50")
+          max fn -> Decimal.new("9999.99") end
+
           ui do
             prefix "USD"
+            step 0.01
           end
         end
 

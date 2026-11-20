@@ -2619,6 +2619,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp number_bound(bound) when is_number(bound), do: bound
+  defp number_bound(%Decimal{} = bound), do: Decimal.to_string(bound, :normal)
   defp number_bound(bound) when is_function(bound, 0), do: number_bound(bound.())
   defp number_bound(_bound), do: nil
 

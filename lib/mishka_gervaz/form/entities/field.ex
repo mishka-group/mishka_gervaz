@@ -50,11 +50,13 @@ defmodule MishkaGervaz.Form.Entities.Field do
   @type position :: integer() | :first | :last | {:before, atom()} | {:after, atom()}
 
   @type bound ::
-          Date.t()
+          number()
+          | Decimal.t()
+          | Date.t()
           | DateTime.t()
           | NaiveDateTime.t()
-          | (-> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | nil)
-          | (map() -> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | nil)
+          | (-> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | Decimal.t() | nil)
+          | (map() -> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | Decimal.t() | nil)
 
   @type t :: %__MODULE__{
           name: atom(),
@@ -84,8 +86,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
           load: (Ash.Query.t(), map() -> Ash.Query.t()) | nil,
           position: position() | nil,
           include_nil: boolean() | String.t() | (-> String.t()),
-          min: integer() | bound() | nil,
-          max: integer() | bound() | nil,
+          min: bound() | nil,
+          max: bound() | nil,
           min_chars: integer() | nil,
           auto_fields: boolean(),
           nested_fields: list(),
@@ -297,6 +299,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                     {:or,
                      [
                        :integer,
+                       :float,
+                       {:struct, Decimal},
                        {:struct, Date},
                        {:struct, DateTime},
                        {:struct, NaiveDateTime},
@@ -304,13 +308,15 @@ defmodule MishkaGervaz.Form.Entities.Field do
                        {:fun, 1}
                      ]},
                   doc:
-                    "Minimum value for number/range fields. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound."
+                    "Minimum value for number/range fields: an integer, a float or a `Decimal`, so `min Decimal.new(\"0.50\")` bounds a price. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound."
                 ],
                 max: [
                   type:
                     {:or,
                      [
                        :integer,
+                       :float,
+                       {:struct, Decimal},
                        {:struct, Date},
                        {:struct, DateTime},
                        {:struct, NaiveDateTime},
