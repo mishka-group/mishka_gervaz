@@ -54,6 +54,14 @@
   `attach/1` in `mount/3`, `push/4` (`undo:`, `navigate:` or `href:`, `ms:`), `send_toast/3` from a
   component and `toasts/1` to draw them. Each leaves by itself through a timer message in the page's
   own process, no JavaScript, and an Undo sends the page `{:toast_undo, undo}`
+- A column `ui do type :site end` names the site of each row of a multi-tenant table, and is drawn
+  only while the table reads across tenants, as a master's read of every site does
+  (`Shared.across_tenants?/1`, `DataLoader.read_tenant/1`)
+- `pagination do ui do load_more_at :footer end end` draws a `:load_more` table's Load more at the
+  end of its footer row, beside the `table_footer` slot, instead of in the pager. The slot's counts
+  gain `more?` and `loading?`, `Shared.render_load_more/1` draws the button in a custom template and
+  `MishkaGervaz.Table.Web.Live.load_more/2` is the JS of a page's own button; each press streams the
+  next page, read by keyset when the read action allows it
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

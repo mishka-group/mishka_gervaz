@@ -16,6 +16,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       a path.
     * `/desk` — the same page with a table of `MishkaGervaz.Test.Web.DeskItem`, whose rows open in
       the table's drawer.
+    * `/ledger` — the same page with a multi-tenant table of `MishkaGervaz.Test.Web.LedgerItem`,
+      read by a master, or with `?site=<id>` by that site's admin.
     * `/orders` — `MishkaGervaz.Test.Web.ViewsPageLive`, a table and a named view of it on one page.
     * `/wizard` — `MishkaGervaz.Test.Web.FormPageLive`, a page with the wizard form of
       `MishkaGervaz.Test.Web.WizardItem`.
@@ -44,6 +46,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
     live "/shelf", MishkaGervaz.Test.Web.TablePageLive, :shelf
     live "/desk", MishkaGervaz.Test.Web.TablePageLive, :desk
+    live "/ledger", MishkaGervaz.Test.Web.TablePageLive, :ledger
     live "/orders", MishkaGervaz.Test.Web.ViewsPageLive
     live "/wizard", MishkaGervaz.Test.Web.FormPageLive
     live "/plans", MishkaGervaz.Test.Web.PlanPageLive, :page

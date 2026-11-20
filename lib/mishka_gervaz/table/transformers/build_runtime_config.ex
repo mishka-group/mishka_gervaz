@@ -648,7 +648,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       next_label: ui.next_label,
       first_label: ui.first_label,
       last_label: ui.last_label,
-      page_info_format: ui.page_info_format
+      page_info_format: ui.page_info_format,
+      load_more_at: ui.load_more_at
     }
   end
 

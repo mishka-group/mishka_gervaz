@@ -326,6 +326,7 @@ UI/presentation configuration for pagination.
 | [`first_label`](#mishka_gervaz-table-pagination-ui-first_label){: #mishka_gervaz-table-pagination-ui-first_label } | `String.t` | `"First"` | First page button text. |
 | [`last_label`](#mishka_gervaz-table-pagination-ui-last_label){: #mishka_gervaz-table-pagination-ui-last_label } | `String.t` | `"Last"` | Last page button text. |
 | [`page_info_format`](#mishka_gervaz-table-pagination-ui-page_info_format){: #mishka_gervaz-table-pagination-ui-page_info_format } | `String.t` | `"Page {page} of {total}"` | Page info format. Placeholders: {page}, {total} and {count}. |
+| [`load_more_at`](#mishka_gervaz-table-pagination-ui-load_more_at){: #mishka_gervaz-table-pagination-ui-load_more_at } | `:pager \| :footer` | `:pager` | Where a `:load_more` table draws its Load more: `:pager`, in the middle of the pager, or `:footer`, at the end of the table's footer row, beside the `table_footer` slot. |
 
 
 

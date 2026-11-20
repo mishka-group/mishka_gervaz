@@ -38,9 +38,10 @@ drag back a choice the reader has since changed.
 | `filter_actions` | at the end of the filter bar |
 | `table_footer` | under the rows, by the default table template, given the table's counts |
 
-`table_footer` receives `%{shown: shown, total: total}` — the rows the view shows and the rows the
-read finds under its filters, `nil` when the table keeps no count — and carries the page's own text
-and buttons. It is not drawn while the table has nothing to show or its first read failed:
+`table_footer` receives `%{shown: shown, total: total, more?: more?, loading?: loading?}` — the
+rows the view shows, the rows the read finds under its filters (`nil` when the table keeps no
+count), whether rows are left for Load more and whether a read runs — and carries the page's own
+text and buttons. It is not drawn while the table has nothing to show or its first read failed:
 
 ```heex
 <.live_component module={MishkaGervaz.Table.Web.Live} id="products" …>
@@ -52,6 +53,21 @@ and buttons. It is not drawn while the table has nothing to show or its first re
 ```
 
 A custom template reads the counts with `MishkaGervaz.Table.Templates.Shared.table_counts/1`.
+
+A page's own button loads the next page with `MishkaGervaz.Table.Web.Live.load_more/2`, the JS the
+table's Load more runs; chain the page's own push before it when the page keeps count of presses:
+
+```heex
+<:table_footer :let={counts}>
+  <span>{counts.shown} of {counts.total} orders</span>
+  <button :if={counts.more?} phx-click={JS.push("older") |> MishkaGervaz.Table.Web.Live.load_more("orders")}>
+    Load older orders
+  </button>
+</:table_footer>
+```
+
+`pagination do ui do load_more_at :footer end end` moves the table's own Load more to the end of
+this row instead ([table/pagination.md](table/pagination.md)).
 
 ## Form
 

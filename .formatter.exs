@@ -143,6 +143,7 @@ spark_locals_without_parens = [
   last_label: 1,
   load: 1,
   load_action: 1,
+  load_more_at: 1,
   load_more_label: 1,
   loading_label: 1,
   loading_text: 1,

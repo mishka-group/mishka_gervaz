@@ -15,6 +15,7 @@ defmodule MishkaGervaz.Table.Entities.Pagination.Ui do
           first_label: String.t(),
           last_label: String.t(),
           page_info_format: String.t(),
+          load_more_at: :pager | :footer,
           __spark_metadata__: map() | nil
         }
 
@@ -26,6 +27,7 @@ defmodule MishkaGervaz.Table.Entities.Pagination.Ui do
             first_label: "First",
             last_label: "Last",
             page_info_format: "Page {page} of {total}",
+            load_more_at: :pager,
             __spark_metadata__: nil
 
   @opt_schema [
@@ -68,6 +70,12 @@ defmodule MishkaGervaz.Table.Entities.Pagination.Ui do
       type: :string,
       default: "Page {page} of {total}",
       doc: "Page info format. Placeholders: {page}, {total} and {count}."
+    ],
+    load_more_at: [
+      type: {:in, [:pager, :footer]},
+      default: :pager,
+      doc:
+        "Where a `:load_more` table draws its Load more: `:pager`, in the middle of the pager, or `:footer`, at the end of the table's footer row, beside the `table_footer` slot."
     ]
   ]
 

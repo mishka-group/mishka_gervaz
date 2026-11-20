@@ -155,6 +155,19 @@ defmodule MishkaGervaz.Table.Web.Live do
   alias MishkaGervaz.Helpers
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.AsyncResult
+  alias Phoenix.LiveView.JS
+
+  @doc """
+  The JS command that makes the table with this component `id` load its next page, as its Load
+  more button does: it pushes `"load_more"` to the table, which streams the page after the last row
+  shown, read by keyset when the read action allows it. For a page's own button, such as one in the
+  table's `table_footer` slot or chained after the page's own push:
+
+      <button phx-click={MishkaGervaz.Table.Web.Live.load_more("orders-table")}>Load older orders</button>
+  """
+  @spec load_more(JS.t(), String.t()) :: JS.t()
+  def load_more(js \\ %JS{}, id) when is_binary(id),
+    do: JS.push(js, "load_more", target: "#" <> id)
 
   @doc """
   Closes the row drawer of the table with this component `id`. Given the record a form in the

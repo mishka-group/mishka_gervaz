@@ -1178,10 +1178,22 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   filters, `nil` when the table keeps no count (`show_total false`).
 
   `shown` is the rows the loads put in the view, less those it took out: the rows kept, for a table
-  that keeps its loaded rows, or the rows from the view's first page to its last otherwise.
+  that keeps its loaded rows, or the rows from the view's first page to its last otherwise. `more?`
+  is whether rows are left for Load more to read, and `loading?` whether a read runs.
   """
-  @spec table_counts(map()) :: %{shown: non_neg_integer(), total: non_neg_integer() | nil}
-  def table_counts(state), do: %{shown: shown_count(state), total: state.total_count}
+  @spec table_counts(map()) :: %{
+          shown: non_neg_integer(),
+          total: non_neg_integer() | nil,
+          more?: boolean(),
+          loading?: boolean()
+        }
+  def table_counts(state),
+    do: %{
+      shown: shown_count(state),
+      total: state.total_count,
+      more?: Map.get(state, :has_more?) == true,
+      loading?: Map.get(state, :loading) == :loading
+    }
 
   defp shown_count(%{static: %{keep_loaded_records: true}, loaded_records: rows})
        when is_list(rows),
@@ -1199,6 +1211,76 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   end
 
   defp shown_count(_state), do: 0
+
+  @doc """
+  Whether the table reads across tenants: its resource is multi-tenant and the table reads with no
+  tenant (`MishkaGervaz.Table.Web.DataLoader.read_tenant/1`), as a master's read of every site
+  does. A `:site` column is drawn only then; a column or template that says whose each row is uses
+  it the same way:
+
+      column :store, visible: &Shared.across_tenants?/1, render: &MyAppWeb.Cells.store/1
+  """
+  @spec across_tenants?(map()) :: boolean()
+  def across_tenants?(%{static: %{resource: resource}} = state) when is_atom(resource) do
+    not is_nil(Ash.Resource.Info.multitenancy_strategy(resource)) and
+      is_nil(MishkaGervaz.Table.Web.DataLoader.read_tenant(state))
+  end
+
+  def across_tenants?(_state), do: false
+
+  @doc """
+  The Load more button of a `:load_more` table, as the pager draws it: a press sends the table
+  `"load_more"`, which streams the page after the last row shown, read by keyset when the read
+  action allows it. Drawn only while rows are left and no read runs.
+
+  The default table template draws it at the end of its footer row with
+  `pagination do ui do load_more_at :footer end end`; a custom template draws it wherever its
+  design puts it. `label` replaces the table's `load_more_label`.
+
+      <Shared.render_load_more static={@static} state={@state} myself={@myself} />
+  """
+  attr :static, :map, required: true
+  attr :state, :map, required: true
+  attr :myself, :any, default: nil
+  attr :label, :string, default: nil
+  attr :class, :any, default: nil
+
+  @spec render_load_more(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_load_more(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :label,
+        assigns.label || translate_text(assigns.static.pagination_ui.load_more_label) ||
+          dgettext("mishka_gervaz", "Load More")
+      )
+
+    ~H"""
+    <button
+      :if={@state.has_more? and @state.loading != :loading}
+      type="button"
+      data-role="gervaz-load-more"
+      phx-click="load_more"
+      phx-target={@myself}
+      class={
+        @class ||
+          "h-[38px] rounded-[11px] border border-[#dcdbf5] bg-[#f2f1fc] px-[18px] text-[12.5px] font-bold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+      }
+    >
+      {@label}
+    </button>
+    """
+  end
+
+  @doc """
+  Whether a `:load_more` table draws its Load more in the footer row instead of the pager
+  (`pagination do ui do load_more_at :footer end end`).
+  """
+  @spec load_more_at_footer?(map()) :: boolean()
+  def load_more_at_footer?(static) do
+    pagination_type(static) == :load_more and
+      Map.get(static.pagination_ui || %{}, :load_more_at) == :footer
+  end
 
   @doc """
   The path the row of `record` opens, from the resource's `row do path … end`, or `nil` when it
@@ -1459,7 +1541,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   numbered table or the `range_label/1` of a growing list.
 
   Reads its labels from `static.pagination_ui`, so `pagination do ui do … end end` on the
-  resource is honoured without the template knowing about it.
+  resource is honoured without the template knowing about it. A template that draws Load more in
+  its footer row passes `footer_load_more?={true}`, and the pager draws none.
   """
   def render_pagination(assigns) do
     static = assigns.static
@@ -1469,6 +1552,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     assigns =
       assigns
       |> assign_new(:pagination_type, fn -> pagination_type(static) end)
+      |> assign_new(:footer_load_more?, fn -> false end)
       |> assign(:static_id, static.id)
       |> assign(:page, state.page)
       |> assign(:has_more?, state.has_more?)
@@ -1544,7 +1628,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           myself={@myself}
         />
       </:leading>
-      <:center :if={@pagination_type == :load_more and @has_more? and @loading != :loading}>
+      <:center :if={
+        @pagination_type == :load_more and @has_more? and @loading != :loading and
+          not @footer_load_more?
+      }>
         <button
           type="button"
           phx-click="load_more"

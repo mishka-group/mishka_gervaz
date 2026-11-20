@@ -19,6 +19,7 @@ pagination do
     first_label "First"
     last_label "Last"
     page_info_format "Page {page} of {total}"   # {page} {total} {count}
+    load_more_at :pager            # :pager | :footer
   end
 end
 ```
@@ -87,6 +88,31 @@ buttons or Load More in the middle, and last where the reader is. A numbered tab
 `Showing 1–40 of 136` (`Shared.range_label/1`): from the first row shown, so a list opened at page
 3 starts at 41, to `state.next_offset`. Both need `show_total`, and read only the state, so the
 footer adds no query. Below 640px the three parts stack, each centred.
+
+## Load more in the footer row
+
+`ui do load_more_at :footer end` moves a `:load_more` table's Load more from the middle of the
+pager to the end of the table's footer row, the row of the `table_footer` slot
+([../mounting.md](../mounting.md)), so a design whose list ends with "12 of 48 orders · Load older
+orders" needs no button of its own. The default table template draws the row for it even without
+the slot; the pager keeps its page size selector and its `Showing 1–40 of 136`. A press streams the
+next page under the rows shown, by keyset as above, and the button leaves when no row is left.
+
+```elixir
+pagination do
+  type :load_more
+  page_size 12
+
+  ui do
+    load_more_at :footer
+    load_more_label "Load older orders"
+  end
+end
+```
+
+A custom template draws the same button where its design puts it with
+`Shared.render_load_more/1`, and a page's own button sends the same with
+`MishkaGervaz.Table.Web.Live.load_more/2`.
 
 ## `show_total` costs a COUNT
 

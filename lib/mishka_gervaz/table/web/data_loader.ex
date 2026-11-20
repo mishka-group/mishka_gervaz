@@ -113,6 +113,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec load_more(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate load_more(socket, state), to: __MODULE__.Default
 
+  @spec read_tenant(State.t()) :: term()
+  defdelegate read_tenant(state), to: __MODULE__.Default
+
   @spec load_earlier(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate load_earlier(socket, state), to: __MODULE__.Default
 
@@ -919,6 +922,14 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         Map.get(dsl_config, :pagination, pagination_handler())
       end
 
+      @doc """
+      The tenant the table reads with, from the resource's tenant resolver (`data_loader do
+      tenant … end`, `TenantResolver` by default): `nil` for a read across every tenant, as a
+      master's read is.
+      """
+      @spec read_tenant(State.t()) :: term()
+      def read_tenant(state), do: resolve_tenant_resolver(state.static.resource).get_tenant(state)
+
       @spec resolve_tenant_resolver(module() | nil) :: module()
       defp resolve_tenant_resolver(nil), do: tenant_resolver()
 
@@ -960,6 +971,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      handle_async: 3,
                      reload: 2,
                      load_more: 2,
+                     read_tenant: 1,
                      load_earlier: 2,
                      apply_filters: 3,
                      apply_sort: 3,

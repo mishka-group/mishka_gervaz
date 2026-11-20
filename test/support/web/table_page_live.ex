@@ -16,6 +16,10 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   form in the drawer
   closes it with `MishkaGervaz.Table.Web.Live.close_drawer/2`, the saved row put back in its place.
 
+  On `/ledger` the table is of `MishkaGervaz.Test.Web.LedgerItem`, read by a master, or with
+  `?site=<id>` by that site's admin. Its footer shows the counts, `#more` while rows are left to
+  load, and an Older button that loads them with `MishkaGervaz.Table.Web.Live.load_more/2`.
+
   `send(view.pid, :activity)` stands for a live event of the page, such as a PubSub broadcast: it
   redraws the rail, so the page renders the table again with the `url_state` it already holds.
   `send(view.pid, {:notify, notification})` hands an Ash notification on to the table, as a page
@@ -31,6 +35,7 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
     FeedItem,
     GatedItem,
     KeptItem,
+    LedgerItem,
     OffsetItem,
     PlainItem,
     ShelfItem
@@ -39,9 +44,12 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   @master %{id: "master-1", site_id: nil, role: :admin}
 
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, current_user: @master, activity: 0, url_state: nil)}
+  def mount(params, _session, socket) do
+    {:ok, assign(socket, current_user: user(params), activity: 0, url_state: nil)}
   end
+
+  defp user(%{"site" => site_id}), do: %{id: "admin-1", site_id: site_id, role: :admin}
+  defp user(_params), do: @master
 
   @impl true
   def handle_params(params, uri, socket) do
@@ -83,9 +91,18 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
       <:rail>
         <p id="activity">{@activity}</p>
       </:rail>
-      <:table_footer :let={counts} :if={@live_action == :shelf}>
+      <:table_footer :let={counts} :if={@live_action in [:shelf, :ledger]}>
         <span id="counts">{counts.shown} of {counts.total}</span>
+        <span :if={counts.more?} id="more">more</span>
         <button id="add-item" type="button" phx-click="add_item">Add item</button>
+        <button
+          :if={@live_action == :ledger}
+          id="older"
+          type="button"
+          phx-click={MishkaGervaz.Table.Web.Live.load_more("items")}
+        >
+          Older
+        </button>
       </:table_footer>
     </.live_component>
     """
@@ -97,5 +114,6 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   defp resource(:offset), do: OffsetItem
   defp resource(:shelf), do: ShelfItem
   defp resource(:desk), do: DeskItem
+  defp resource(:ledger), do: LedgerItem
   defp resource(_items), do: GatedItem
 end

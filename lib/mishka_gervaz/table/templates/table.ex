@@ -108,6 +108,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       pagination_type(static) == :infinite and state.has_more?
 
     viewport_event = if is_infinite_scroll?, do: "load_more", else: nil
+    footer_load_more? = Shared.load_more_at_footer?(static)
 
     grid_template =
       grid_template_columns(
@@ -130,6 +131,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:features, features)
       |> assign(:infinite_scroll?, is_infinite_scroll?)
       |> assign(:viewport_event, viewport_event)
+      |> assign(:footer_load_more?, footer_load_more? and show_pagination)
       |> assign_new(:before_table, fn -> nil end)
       |> assign_new(:rail, fn -> nil end)
       |> assign_new(:filter_actions, fn -> nil end)
@@ -242,11 +244,23 @@ defmodule MishkaGervaz.Table.Templates.Table do
           </div>
 
           <div
-            :if={@table_footer not in [nil, []] and not @empty? and not @failed?}
+            :if={
+              (@table_footer not in [nil, []] or @footer_load_more?) and not @empty? and
+                not @failed?
+            }
             data-role="gervaz-table-footer"
             class="mt-3 flex flex-wrap items-center justify-between gap-3 px-1 text-[12.5px] font-semibold text-[#8a877f]"
           >
-            {render_slot(@table_footer, Shared.table_counts(@state))}
+            <%= if @table_footer not in [nil, []] do %>
+              {render_slot(@table_footer, Shared.table_counts(@state))}
+            <% end %>
+            <Shared.render_load_more
+              :if={@footer_load_more?}
+              static={@static}
+              state={@state}
+              myself={@myself}
+              class="ms-auto h-[38px] rounded-[11px] border border-[#dcdbf5] bg-[#f2f1fc] px-[18px] text-[12.5px] font-bold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+            />
           </div>
 
           <div
@@ -272,6 +286,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
             static={@static}
             state={@state}
             myself={@myself}
+            footer_load_more?={@footer_load_more?}
           />
           {render_notices_at(assigns, :after_pagination)}
 
