@@ -1,7 +1,7 @@
 # Custom UI adapters
 
 A **UI adapter** answers *how things look*: the button, the select, the badge, the cell. It is one
-module implementing `MishkaGervaz.Behaviours.UIAdapter` — 69 one-arity component functions, all
+module implementing `MishkaGervaz.Behaviours.UIAdapter` — 71 one-arity component functions, all
 supplied with defaults, so you override only what differs.
 
 Wire it in either DSL:
@@ -35,7 +35,7 @@ end
 ### The worked example that ships with the library
 
 `MishkaGervaz.UIAdapters.MediaGallery` is the smallest useful adapter — it changes exactly one
-component and inherits the other 68:
+component and inherits the other 70:
 
 ```elixir
 defmodule MishkaGervaz.UIAdapters.MediaGallery do
@@ -155,12 +155,12 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 
 ## The component list
 
-69 callbacks, grouped by what they render. Introspect the live list with
+71 callbacks, grouped by what they render. Introspect the live list with
 `MishkaGervaz.Behaviours.UIAdapter.component_functions/0`.
 
 - **Inputs** — `text_input` `select` `multi_select` `search_select` `load_more_select` `checkbox`
   `date_input` `datetime_input` `number_input` `textarea` `json_editor` `toggle_input`
-  `range_input` `string_list_input` `password_input` `combobox`
+  `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
 - **State & status** — `empty_state` `error_state` `loading_state` `alert`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
@@ -175,7 +175,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 One adapter serves **both** the table and the form — there is no separate form adapter.
 
 ## TODO
-- [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 69 stubs
+- [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 71 stubs
 - [ ] Only the components that genuinely differ are defined
 - [ ] A caller-supplied `class` wins over the adapter's default
 - [ ] `attr`/`:rest` declared so `phx-*` and `data-confirm` reach the DOM

@@ -1270,7 +1270,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     end
   end
 
-  @grouped_controls [:string_list, :key_map, :key_list, :nested]
+  @grouped_controls [:string_list, :key_map, :key_list, :nested, :choice_cards, :segmented]
   @one_value_types ~w(password text email url tel hidden number textarea select date datetime range search_select combobox)a
 
   # The id of the one element a field's label names: none for a control that is a group of
@@ -1412,6 +1412,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:function, :select)
         |> assign(:options, options)
         |> assign(:prompt, MishkaGervaz.Form.Types.Field.Select.prompt(field))
+        |> dynamic_component()
+
+      kind when kind in [:choice_cards, :segmented] ->
+        base
+        |> assign(:function, choice_component(kind))
+        |> assign(:options, choice_options(field, assigns.state))
+        |> assign(:value, chosen_value(assigns.state.form, field.name))
         |> dynamic_component()
 
       :multi_select ->
@@ -1560,6 +1567,28 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       />
     </div>
     """
+  end
+
+  defp choice_component(:choice_cards), do: :choice_cards
+  defp choice_component(:segmented), do: :segmented_control
+
+  # The options of a `:choice_cards` or `:segmented` field, with the second line and the icon each
+  # may carry: a list, or a function of no arguments or of the form state, read on every draw.
+  defp choice_options(%{options: options}, state) when is_function(options, 1),
+    do: MishkaGervaz.Helpers.choice_options(options.(state))
+
+  defp choice_options(%{options: options}, _state) when is_function(options, 0),
+    do: MishkaGervaz.Helpers.choice_options(options.())
+
+  defp choice_options(field, _state),
+    do: MishkaGervaz.Helpers.choice_options(Map.get(field, :options))
+
+  defp chosen_value(form, name) do
+    case Phoenix.HTML.Form.input_value(form, name) do
+      value when is_binary(value) or is_number(value) -> to_string(value)
+      value when is_atom(value) and not is_nil(value) -> Atom.to_string(value)
+      _none -> nil
+    end
   end
 
   defp picked_values(form, name) do

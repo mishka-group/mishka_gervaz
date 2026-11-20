@@ -158,7 +158,9 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :toggle,
     :range,
     :upload,
-    :combobox
+    :combobox,
+    :choice_cards,
+    :segmented
   ]
 
   @opt_schema [
@@ -233,6 +235,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   what the form holds (`state.form`, `state.defaults`, `state.current_user`). It
                   runs on every draw, so read what it needs from the state or a cache rather than
                   querying. Its options are returned as it gives them, labels untranslated.
+
+                  A `:choice_cards` or `:segmented` field takes the same list or functions, and each
+                  option may also be a keyword list or map with `:label`, `:value`, `:description`
+                  (a second line under the label) and `:icon`. See
+                  `MishkaGervaz.Helpers.choice_options/1`.
                   """
                 ],
                 display_field: [

@@ -15,6 +15,8 @@ defmodule MishkaGervaz.Test.Web.Router do
     * `/orders` — `MishkaGervaz.Test.Web.ViewsPageLive`, a table and a named view of it on one page.
     * `/wizard` — `MishkaGervaz.Test.Web.FormPageLive`, a page with the wizard form of
       `MishkaGervaz.Test.Web.WizardItem`.
+    * `/plans` — `MishkaGervaz.Test.Web.PlanPageLive`, a page with the form of
+      `MishkaGervaz.Test.Web.PlanItem`.
   """
 
   use Phoenix.Router
@@ -36,5 +38,6 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
     live "/orders", MishkaGervaz.Test.Web.ViewsPageLive
     live "/wizard", MishkaGervaz.Test.Web.FormPageLive
+    live "/plans", MishkaGervaz.Test.Web.PlanPageLive
   end
 end

@@ -3173,6 +3173,145 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  One choice drawn as a card per option: a radio input in each card, the option's icon and label,
+  and its second line under them. The chosen card is drawn in the accent colour.
+
+  ## Assigns
+    * `:name` - the radio inputs' name
+    * `:value` - the value chosen, as a string
+    * `:options` - maps of `:label`, `:value`, `:description` and `:icon`, as
+      `MishkaGervaz.Helpers.choice_options/1` gives them
+    * `:id` - the group's id; each radio is `<id>-<index>`
+    * `:label_id` - the id of the label naming the group
+    * `:disabled` - no option can be picked
+    * `:class` - replaces the grid's classes
+  """
+  @impl true
+  def choice_cards(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:options, fn -> [] end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:class, fn -> "grid grid-cols-1 gap-2.5 sm:grid-cols-2" end)
+
+    ~H"""
+    <div
+      id={@id}
+      role="radiogroup"
+      aria-labelledby={@label_id}
+      data-role="gervaz-choice-cards"
+      class={@class}
+    >
+      <label
+        :for={{option, index} <- Enum.with_index(@options)}
+        data-value={option.value}
+        class={[
+          "flex items-start gap-3 rounded-[13px] border border-[#ecebe6] bg-white p-[13px] transition-colors",
+          "has-checked:border-[#5b57d6] has-checked:bg-[#f6f5fe] has-checked:shadow-[0_0_0_3px_rgba(91,87,214,0.1)]",
+          "has-focus-visible:border-[#5b57d6]",
+          if(@disabled,
+            do: "cursor-not-allowed opacity-60",
+            else: "cursor-pointer hover:bg-[#faf9f6]"
+          )
+        ]}
+      >
+        <input
+          type="radio"
+          id={"#{@id}-#{index}"}
+          name={@name}
+          value={option.value}
+          checked={option.value == @value}
+          disabled={@disabled}
+          class="mt-0.5 size-4 flex-none accent-[#5b57d6]"
+        />
+        <.render_icon
+          :if={option.icon}
+          name={option.icon}
+          class="mt-px size-[18px] flex-none text-[#5b57d6]"
+        />
+        <span class="min-w-0 flex-1">
+          <span class="block text-[13px] font-bold text-[#1b1a18]">{option.label}</span>
+          <span
+            :if={option.description}
+            data-role="gervaz-choice-description"
+            class="mt-0.5 block text-[11.5px] font-medium leading-[1.45] text-[#8a877f]"
+          >
+            {option.description}
+          </span>
+        </span>
+      </label>
+    </div>
+    """
+  end
+
+  @doc """
+  One choice drawn as a segmented control: every option a segment of one bar, the chosen one
+  raised. Each segment holds a radio input, hidden from sight but not from the keyboard, its icon,
+  its label and, smaller, its second line.
+
+  ## Assigns
+    Those of `choice_cards/1`; `:class` replaces the bar's classes.
+  """
+  @impl true
+  def segmented_control(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:options, fn -> [] end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:class, fn ->
+        "inline-flex max-w-full flex-wrap gap-1 rounded-[12px] border border-[#ecebe6] bg-[#f6f5f2] p-1"
+      end)
+
+    ~H"""
+    <div
+      id={@id}
+      role="radiogroup"
+      aria-labelledby={@label_id}
+      data-role="gervaz-segmented-control"
+      class={@class}
+    >
+      <label
+        :for={{option, index} <- Enum.with_index(@options)}
+        data-value={option.value}
+        class={[
+          "relative flex min-h-[34px] flex-1 flex-col items-center justify-center rounded-[9px] px-[14px] py-1.5 text-center transition-colors",
+          "has-checked:bg-white has-checked:shadow-[0_1px_3px_rgba(30,28,24,0.12)]",
+          "has-focus-visible:ring-2 has-focus-visible:ring-[#c3c1f0]",
+          if(@disabled, do: "cursor-not-allowed opacity-60", else: "cursor-pointer")
+        ]}
+      >
+        <input
+          type="radio"
+          id={"#{@id}-#{index}"}
+          name={@name}
+          value={option.value}
+          checked={option.value == @value}
+          disabled={@disabled}
+          class="peer sr-only"
+        />
+        <span class="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8a877f] peer-checked:text-[#1b1a18]">
+          <.render_icon :if={option.icon} name={option.icon} class="size-4" />
+          {option.label}
+        </span>
+        <span
+          :if={option.description}
+          data-role="gervaz-choice-description"
+          class="text-[10.5px] font-medium text-[#a8a5a0]"
+        >
+          {option.description}
+        </span>
+      </label>
+    </div>
+    """
+  end
+
   @impl true
   def combobox(assigns) do
     normalized = normalize_options(assigns[:options] || [])

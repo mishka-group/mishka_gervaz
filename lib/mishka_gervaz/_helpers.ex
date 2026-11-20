@@ -442,6 +442,62 @@ defmodule MishkaGervaz.Helpers do
   def exports?(_module, _fun, _arity), do: false
 
   @doc """
+  The options of a choice control, as maps of `:label`, `:value`, `:description` and `:icon`.
+
+  Takes `{label, value}`, a keyword list or a map with `:label`, `:value` and the optional
+  `:description` and `:icon`, or a bare atom or string that is its own label. The label and the
+  description are translated in the caller's locale (`resolve_label/1`, so either may be a
+  function of no arguments), the value is a string, and a missing description or icon is `nil`.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.choice_options([{"Monthly", :monthly}])
+      [%{label: "Monthly", value: "monthly", description: nil, icon: nil}]
+
+      iex> MishkaGervaz.Helpers.choice_options([[label: "Once", value: :once, description: "Pay one time", icon: "hero-bolt"]])
+      [%{label: "Once", value: "once", description: "Pay one time", icon: "hero-bolt"}]
+  """
+  @spec choice_options(list() | nil) :: [
+          %{
+            label: String.t(),
+            value: String.t(),
+            description: String.t() | nil,
+            icon: String.t() | nil
+          }
+        ]
+  def choice_options(options) when is_list(options), do: Enum.map(options, &choice_option/1)
+  def choice_options(_options), do: []
+
+  defp choice_option({label, value}), do: choice_option(%{label: label, value: value})
+
+  defp choice_option(option) when is_list(option) and option != [] do
+    if Keyword.keyword?(option),
+      do: choice_option(Map.new(option)),
+      else: choice_option(to_string(option))
+  end
+
+  defp choice_option(%{value: value} = option) do
+    %{
+      label: choice_text(Map.get(option, :label) || humanize_value(value)),
+      value: to_string(value),
+      description: choice_text(Map.get(option, :description)),
+      icon: Map.get(option, :icon)
+    }
+  end
+
+  defp choice_option(%{label: label} = option),
+    do: choice_option(Map.put(option, :value, label))
+
+  defp choice_option(value), do: choice_option(%{value: value})
+
+  defp humanize_value(value) when is_atom(value), do: humanize(value)
+  defp humanize_value(value), do: to_string(value)
+
+  defp choice_text(nil), do: nil
+  defp choice_text(text) when is_function(text, 0) or is_binary(text), do: resolve_label(text)
+  defp choice_text(text), do: to_string(text)
+
+  @doc """
   Normalizes a list of options for HTML select elements.
 
   Converts various option formats to `{label, value}` tuples with string values,

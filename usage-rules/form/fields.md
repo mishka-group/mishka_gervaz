@@ -26,7 +26,7 @@ end
 `:text` · `:password` · `:textarea` · `:number` · `:checkbox` · `:toggle` · `:date` · `:datetime` ·
 `:range` · `:select` · `:multi_select` · `:combobox` · `:relation` · `:json` · `:nested` ·
 `:key_map` · `:key_list` · `:array_of_maps` · `:string_list` · `:file` · `:upload` · `:hidden` ·
-or a module implementing `MishkaGervaz.Form.Behaviours.FieldType`
+`:choice_cards` · `:segmented` · or a module implementing `MishkaGervaz.Form.Behaviours.FieldType`
 ([../customization/types.md](../customization/types.md)).
 
 Omit `type` and it is inferred from the Ash attribute:
@@ -47,6 +47,29 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 ticked values as a list, for an `{:array, :string}` or `{:array, :atom}` attribute or argument.
 With nothing ticked it sends an empty list. To pick records of another resource, use a `:relation`
 field with `mode :search_multi` instead.
+
+## Choice cards and segmented control
+
+`:choice_cards` and `:segmented` hold one of a few values, as a `:select` does, drawn as a radio per
+option: a card each, or a segment each of one bar. An option may carry a second line and an icon,
+written as a keyword list or a map; `{label, value}` still works:
+
+```elixir
+field :kind, :choice_cards do
+  options [
+    [label: "One-time", value: :one_time, description: "Pay once, keep it", icon: "hero-bolt"],
+    [label: "Subscription", value: :subscription, description: "Billed every period"]
+  ]
+end
+
+field :billing, :segmented do
+  options [{"Monthly", :monthly}, {"Yearly", :yearly}]
+end
+```
+
+`options` may also be `fn -> list end` or `fn state -> list end`, read on every draw. Labels and
+second lines are translated. The UI adapter draws them with `choice_cards/1` and
+`segmented_control/1`; see `MishkaGervaz.Helpers.choice_options/1` for the shapes.
 
 ## Options
 
