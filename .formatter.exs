@@ -274,6 +274,7 @@ spark_locals_without_parens = [
   submit: 0,
   submit: 1,
   submit_class: 1,
+  suffix: 1,
   summary: 1,
   switch_to_active_on_empty_archive: 1,
   switch_to_archive_on_empty_active: 1,

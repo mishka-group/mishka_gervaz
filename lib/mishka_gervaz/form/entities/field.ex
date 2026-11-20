@@ -428,6 +428,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
           first_day_of_week:
             :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday | nil,
           autocomplete: String.t() | nil,
+          prefix: String.t() | (-> String.t()) | nil,
+          suffix: String.t() | (-> String.t()) | nil,
           add_label: String.t() | (-> String.t()) | nil,
           remove_label: String.t() | (-> String.t()) | nil,
           disabled_prompt: String.t() | (-> String.t()) | nil,
@@ -447,6 +449,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
             step: nil,
             first_day_of_week: nil,
             autocomplete: nil,
+            prefix: nil,
+            suffix: nil,
             add_label: nil,
             remove_label: nil,
             disabled_prompt: nil,
@@ -503,6 +507,16 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
     autocomplete: [
       type: :string,
       doc: "HTML autocomplete attribute value."
+    ],
+    prefix: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "A unit drawn at the start of a `:text`, `:password` or `:number` field's input, such as `\"USD\"` or `\"https://\"`. Only shown: it is not part of the value. String or `fn -> gettext(...) end`."
+    ],
+    suffix: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "A unit drawn at the end of a `:text`, `:password` or `:number` field's input, such as `\"%\"` or `\"days\"`. Only shown: it is not part of the value. String or `fn -> gettext(...) end`."
     ],
     add_label: [
       type: {:or, [:string, {:fun, 0}]},

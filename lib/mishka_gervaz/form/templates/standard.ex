@@ -1378,6 +1378,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:readonly, is_readonly)
         |> assign(:function, :password_input)
         |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
+        |> put_units(field)
         |> dynamic_component()
 
       t when t in [:text, :email, :url, :tel, :hidden] ->
@@ -1386,6 +1387,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:readonly, is_readonly)
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
+        |> put_units(field)
         |> dynamic_component()
 
       :number ->
@@ -1396,6 +1398,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> put_present(:min, number_bound(Map.get(field, :min)))
         |> put_present(:max, number_bound(Map.get(field, :max)))
         |> put_present(:step, get_in_map(field, [:ui, :step]))
+        |> put_units(field)
         |> dynamic_component()
 
       :textarea ->
@@ -2517,6 +2520,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp number_bound(bound) when is_number(bound), do: bound
   defp number_bound(bound) when is_function(bound, 0), do: number_bound(bound.())
   defp number_bound(_bound), do: nil
+
+  # The `ui` `prefix` and `suffix` a text, password or number input draws beside its value.
+  defp put_units(assigns, field) do
+    assigns
+    |> put_present(:prefix, resolve_label(get_in_map(field, [:ui, :prefix])))
+    |> put_present(:suffix, resolve_label(get_in_map(field, [:ui, :suffix])))
+  end
 
   defp put_present(assigns, _key, nil), do: assigns
   defp put_present(assigns, key, value), do: assign(assigns, key, value)

@@ -67,44 +67,50 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:autocomplete, fn -> nil end)
+      |> assign_new(:prefix, fn -> nil end)
+      |> assign_new(:suffix, fn -> nil end)
       |> assign(:placeholder, placeholder)
       |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
-    <div class="relative">
-      <svg
-        :if={@search}
-        class="pointer-events-none absolute start-[13px] top-1/2 size-[15px] -translate-y-1/2 text-[#a8a5a0]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.9"
-        stroke-linecap="round"
-        aria-hidden="true"
-      >
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.2-3.2" />
-      </svg>
-      <input
-        type="text"
-        id={@id}
-        name={@name}
-        value={@value}
-        placeholder={@placeholder}
-        disabled={@disabled}
-        readonly={@readonly}
-        autocomplete={@autocomplete}
-        aria-label={@aria_label}
-        dir={icon_dir(@search, @dir)}
-        class={[
-          @class,
-          "placeholder:text-[#a8a5a0]",
-          @search && "ps-[38px]! [unicode-bidi:plaintext]",
-          (@disabled || @readonly) && disabled_class()
-        ]}
-        phx-debounce={@phx_debounce}
-      />
-    </div>
+    <.with_units id={@id} prefix={@prefix} suffix={@suffix}>
+      <div class="relative">
+        <svg
+          :if={@search}
+          class="pointer-events-none absolute start-[13px] top-1/2 size-[15px] -translate-y-1/2 text-[#a8a5a0]"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.2-3.2" />
+        </svg>
+        <input
+          type="text"
+          id={@id}
+          name={@name}
+          value={@value}
+          placeholder={@placeholder}
+          disabled={@disabled}
+          readonly={@readonly}
+          autocomplete={@autocomplete}
+          aria-label={@aria_label}
+          aria-describedby={units_ids(@id, @prefix, @suffix)}
+          dir={icon_dir(@search, @dir)}
+          class={[
+            @class,
+            "placeholder:text-[#a8a5a0]",
+            @search && "ps-[38px]! [unicode-bidi:plaintext]",
+            units_class(@prefix, @suffix),
+            (@disabled || @readonly) && disabled_class()
+          ]}
+          phx-debounce={@phx_debounce}
+        />
+      </div>
+    </.with_units>
     """
   end
 
@@ -124,23 +130,85 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:prefix, fn -> nil end)
+      |> assign_new(:suffix, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
-    <input
-      type="password"
-      id={@id}
-      name={@name}
-      value={@value}
-      placeholder={@placeholder}
-      disabled={@disabled}
-      readonly={@readonly}
-      autocomplete={@autocomplete}
-      dir={@dir}
-      class={[@class, (@disabled || @readonly) && disabled_class()]}
-      phx-debounce={@phx_debounce}
-    />
+    <.with_units id={@id} prefix={@prefix} suffix={@suffix}>
+      <input
+        type="password"
+        id={@id}
+        name={@name}
+        value={@value}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        readonly={@readonly}
+        autocomplete={@autocomplete}
+        aria-describedby={units_ids(@id, @prefix, @suffix)}
+        dir={@dir}
+        class={[
+          @class,
+          units_class(@prefix, @suffix),
+          (@disabled || @readonly) && disabled_class()
+        ]}
+        phx-debounce={@phx_debounce}
+      />
+    </.with_units>
     """
+  end
+
+  attr :id, :string, default: nil
+  attr :prefix, :string, default: nil
+  attr :suffix, :string, default: nil
+  slot :inner_block, required: true
+
+  # An input with a unit at its start, its end, or both: the units stand joined to the input as
+  # one box. Without either, the input alone.
+  defp with_units(%{prefix: nil, suffix: nil} = assigns) do
+    ~H"""
+    {render_slot(@inner_block)}
+    """
+  end
+
+  defp with_units(assigns) do
+    ~H"""
+    <div data-role="gervaz-input-units" class="flex items-stretch">
+      <span
+        :if={@prefix}
+        id={@id && @id <> "-prefix"}
+        data-role="gervaz-input-prefix"
+        class={[unit_class(), "rounded-s-[11px] border-e-0"]}
+      >
+        {@prefix}
+      </span>
+      <div class="min-w-0 flex-1">{render_slot(@inner_block)}</div>
+      <span
+        :if={@suffix}
+        id={@id && @id <> "-suffix"}
+        data-role="gervaz-input-suffix"
+        class={[unit_class(), "rounded-e-[11px] border-s-0"]}
+      >
+        {@suffix}
+      </span>
+    </div>
+    """
+  end
+
+  defp unit_class,
+    do:
+      "flex flex-none items-center whitespace-nowrap border border-[#ecebe6] bg-[#f6f5f2] px-3 text-[12.5px] font-semibold text-[#8a877f]"
+
+  defp units_class(prefix, suffix),
+    do: [prefix && "rounded-s-none", suffix && "rounded-e-none"]
+
+  defp units_ids(nil, _prefix, _suffix), do: nil
+
+  defp units_ids(id, prefix, suffix) do
+    case Enum.reject([prefix && id <> "-prefix", suffix && id <> "-suffix"], &is_nil/1) do
+      [] -> nil
+      ids -> Enum.join(ids, " ")
+    end
   end
 
   @doc false
@@ -1116,30 +1184,40 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:prefix, fn -> nil end)
+      |> assign_new(:suffix, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
-    <div class="relative">
-      <.render_icon
-        :if={@icon}
-        name={@icon}
-        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
-      />
-      <input
-        type="number"
-        id={@id}
-        name={@name}
-        value={@value}
-        placeholder={@placeholder}
-        min={@min}
-        max={@max}
-        step={@step}
-        disabled={@disabled}
-        readonly={@readonly}
-        dir={@dir}
-        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
-      />
-    </div>
+    <.with_units id={@id} prefix={@prefix} suffix={@suffix}>
+      <div class="relative">
+        <.render_icon
+          :if={@icon}
+          name={@icon}
+          class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
+        />
+        <input
+          type="number"
+          id={@id}
+          name={@name}
+          value={@value}
+          placeholder={@placeholder}
+          min={@min}
+          max={@max}
+          step={@step}
+          disabled={@disabled}
+          readonly={@readonly}
+          aria-describedby={units_ids(@id, @prefix, @suffix)}
+          dir={@dir}
+          class={[
+            @class,
+            @icon && "ps-9",
+            units_class(@prefix, @suffix),
+            (@disabled || @readonly) && disabled_class()
+          ]}
+        />
+      </div>
+    </.with_units>
     """
   end
 

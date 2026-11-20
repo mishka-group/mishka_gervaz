@@ -103,9 +103,27 @@ second lines are translated. The UI adapter draws them with `choice_cards/1` and
 ## `ui do … end`
 
 `label` · `placeholder` · `description` · `icon` · `class` · `wrapper_class` · `debounce` ·
-`span` · `rows` · `step` · `first_day_of_week` · `autocomplete` · `add_label` · `remove_label` ·
-`disabled_prompt` · `extra`. On a `:datetime` field `step` is the minutes between the times its
-picker offers; `first_day_of_week` (`:monday` when not set) is the day a calendar's weeks start on.
+`span` · `rows` · `step` · `first_day_of_week` · `autocomplete` · `prefix` · `suffix` ·
+`add_label` · `remove_label` · `disabled_prompt` · `extra`. On a `:datetime` field `step` is the
+minutes between the times its picker offers; `first_day_of_week` (`:monday` when not set) is the day
+a calendar's weeks start on.
+
+`prefix` and `suffix` put a unit at the start or end of a `:text`, `:password` or `:number` input,
+joined to it as one box and named to a screen reader by `aria-describedby`. The unit is only shown:
+what is typed is saved without it. String or `fn -> dgettext(…) end`:
+
+```elixir
+field :discount, :number do
+  ui do suffix "%" end
+end
+
+field :price, :number do
+  ui do prefix "USD" end
+end
+```
+
+The adapter's `text_input/1`, `password_input/1` and `number_input/1` take them as `:prefix` and
+`:suffix`.
 
 ## Relation fields — the pattern that recurs
 

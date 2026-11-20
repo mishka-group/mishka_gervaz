@@ -4,7 +4,10 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
 
     * `:kind` — a `:choice_cards` field: One-time, with a second line and an icon, and
       Subscription;
-    * `:billing` — a `:segmented` field: Monthly and Yearly, Yearly with a second line.
+    * `:billing` — a `:segmented` field: Monthly and Yearly, Yearly with a second line;
+    * `:slug` — a text field with the prefix `/products/`;
+    * `:price` — a decimal number with the prefix `USD`;
+    * `:discount` — a whole number with the suffix `%`.
   """
 
   use Ash.Resource,
@@ -48,6 +51,24 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
             [label: "Yearly", value: :yearly, description: "Two months free"]
           ]
         end
+
+        field :slug, :text do
+          ui do
+            prefix "/products/"
+          end
+        end
+
+        field :price, :number do
+          ui do
+            prefix "USD"
+          end
+        end
+
+        field :discount, :number do
+          ui do
+            suffix(fn -> "%" end)
+          end
+        end
       end
     end
   end
@@ -66,5 +87,8 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
       public?: true
 
     attribute :billing, :atom, constraints: [one_of: [:monthly, :yearly]], public?: true
+    attribute :slug, :string, public?: true
+    attribute :price, :decimal, public?: true
+    attribute :discount, :integer, public?: true
   end
 end
