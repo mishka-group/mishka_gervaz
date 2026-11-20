@@ -179,7 +179,13 @@ defmodule MishkaGervaz.Form.Web.Events do
     socket =
       validation_handler(state).validate(state, params, socket, forced_errors, target)
 
-    {:noreply, socket |> reload_dependents_of(picked) |> search_typed(target, params)}
+    new_socket =
+      socket
+      |> reload_dependents_of(picked)
+      |> search_typed(target, params)
+      |> clear_fixed_tabs()
+
+    {:noreply, new_socket}
   end
 
   def do_handle("save", params, state, socket) do
@@ -826,6 +832,32 @@ defmodule MishkaGervaz.Form.Web.Events do
     validated = socket.assigns.form_state
     step_handler(validated).advance(validated, socket)
   end
+
+  # A save on a step before the last moves a wizard on, and a tabs form whose steps open in order;
+  # a tabs form with `navigation :free` saves from any tab.
+  # A tab marked `:error` by a save that failed loses the mark once none of its fields shows an
+  # error any more.
+  defp clear_fixed_tabs(
+         %{assigns: %{form_state: %{static: %{layout_mode: :tabs}} = state}} = socket
+       ) do
+    step_states =
+      Map.new(state.step_states, fn
+        {step, :error} -> {step, if(tab_errors?(state, step), do: :error, else: :pending)}
+        other -> other
+      end)
+
+    Phoenix.Component.assign(socket, :form_state, State.update(state, step_states: step_states))
+  end
+
+  defp clear_fixed_tabs(socket), do: socket
+
+  defp tab_errors?(state, step) do
+    state
+    |> StepHandler.step_fields(step)
+    |> Enum.any?(&(Map.get(state.errors || %{}, &1, []) not in [[], nil]))
+  end
+
+  defp before_last_step?(%{static: %{layout_mode: :tabs, layout_navigation: :free}}), do: false
 
   defp before_last_step?(%{static: %{layout_mode: mode, steps: [_ | _] = steps}} = state)
        when mode in [:wizard, :tabs],

@@ -2770,8 +2770,67 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:class` - the `<nav>`'s classes
 
   A completed step shows a check, a step with an error is drawn in the error colour.
+
+  ## Tabs
+
+  Given `tabs: true`, as a `:tabs` form gives it, the steps are a `tablist` of buttons instead, each
+  a `tab` sending `goto_step` with its step's name. Its own assigns:
+
+    * `:id` - the form's id: each tab is `<id>-tab-<step>` and controls the panel `<id>-step-<step>`
+    * `:navigable` - the names of the steps the reader may open; the others are disabled
+    * `:target` - the form's LiveComponent, which `goto_step` is sent to
+
+  The current tab is `aria-selected`; a tab whose step holds an error carries a dot in the error
+  colour.
   """
   @impl true
+  def step_indicator(%{tabs: true} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:steps, fn -> [] end)
+      |> assign_new(:current_step, fn -> nil end)
+      |> assign_new(:navigable, fn -> [] end)
+      |> assign_new(:target, fn -> nil end)
+      |> assign_new(:class, fn ->
+        "flex gap-1 overflow-x-auto border-b border-[#ecebe6]"
+      end)
+
+    ~H"""
+    <div role="tablist" data-role="gervaz-step-tabs" class={@class}>
+      <button
+        :for={step <- @steps}
+        type="button"
+        role="tab"
+        id={"#{@id}-tab-#{step.name}"}
+        aria-selected={to_string(step.name == @current_step)}
+        aria-controls={"#{@id}-step-#{step.name}"}
+        data-step={step.name}
+        data-status={step.status}
+        disabled={step.name not in @navigable}
+        phx-click="goto_step"
+        phx-value-step={step.name}
+        phx-target={@target}
+        class={[
+          "-mb-px inline-flex flex-none items-center gap-2 border-b-2 px-[14px] py-[10px] text-[12.5px] font-semibold transition-colors",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          if(step.name == @current_step,
+            do: "border-[#5b57d6] text-[#1b1a18]",
+            else: "border-transparent text-[#8a877f] hover:text-[#1b1a18]"
+          )
+        ]}
+      >
+        <.render_icon :if={step[:icon]} name={step.icon} class="size-4" />
+        {step.label}
+        <span
+          :if={step.status == :error}
+          data-role="gervaz-step-error"
+          class="size-1.5 rounded-full bg-[#c0392b]"
+        />
+      </button>
+    </div>
+    """
+  end
+
   def step_indicator(assigns) do
     assigns =
       assigns

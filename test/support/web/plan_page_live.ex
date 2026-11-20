@@ -14,6 +14,9 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
     do: {:ok, assign(socket, saved: nil, record_id: params["id"])}
 
   @impl true
+  def handle_info({:put_flash, kind, message}, socket),
+    do: {:noreply, put_flash(socket, kind, message)}
+
   def handle_info({:form_saved, _mode, record}, socket),
     do: {:noreply, assign(socket, :saved, record.title)}
 
@@ -24,6 +27,7 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
     assigns = assign(assigns, :master, @master)
 
     ~H"""
+    <p id="flash-error">{Phoenix.Flash.get(@flash, :error)}</p>
     <p id="saved">{@saved}</p>
     <.live_component
       module={MishkaGervaz.Form.Web.Live}

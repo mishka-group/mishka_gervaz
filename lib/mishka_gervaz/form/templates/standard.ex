@@ -36,6 +36,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   button, so Enter in a field presses it: see `MishkaGervaz.Form.Web.Events.StepHandler` for what
   a submit does on each step.
 
+  A `:tabs` form draws its steps as tabs (`render_step_indicator/1`) and each step's container as
+  the tab's panel, `"<id>-step-<name>"`. With `navigation :free` any tab opens and the submit row
+  holds the submit button on every tab, with no Back or Next; with `:sequential` the visited tabs
+  open and the submit row is a wizard's.
+
   ## Two-axis composition
 
     * **Template** (this module) — *where* things go: groups, steps,
@@ -277,6 +282,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp open_group, do: JS.set_attribute({"open", ""}, to: {:closest, "details"})
 
+  @doc """
+  The steps of a wizard or tabs form, through the UI adapter's `step_indicator`.
+
+  A `:tabs` form draws them as tabs (`tabs: true`): each a button sending `goto_step`, those the
+  reader may open listed in `navigable` (every step with `navigation :free`, the steps already
+  visited with `:sequential`), each naming the panel of its step, `"<id>-step-<name>"`.
+  """
   @impl true
   def render_step_indicator(assigns) do
     steps = assigns.static.steps
@@ -286,6 +298,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         %{
           name: step.name,
           label: translate_text(Map.get(step, :resolved_label, to_string(step.name))),
+          icon: get_in_map(step, [:ui, :icon]),
           status: Map.get(assigns.state.step_states, step.name, :pending)
         }
       end)
@@ -294,19 +307,38 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns
       |> assign(:step_data, step_data)
       |> assign(:current_step, assigns.state.current_step)
+      |> assign(:tabs?, assigns.static.layout_mode == :tabs)
+      |> assign(:navigable, navigable_steps(assigns.static, assigns.state))
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
     <div class="mb-6">
       <.dynamic_component
+        :if={!@tabs?}
         module={@ui}
         function={:step_indicator}
         steps={@step_data}
         current_step={@current_step}
       />
+      <.dynamic_component
+        :if={@tabs?}
+        module={@ui}
+        function={:step_indicator}
+        steps={@step_data}
+        current_step={@current_step}
+        tabs={true}
+        id={@static.id}
+        navigable={@navigable}
+        target={@myself}
+      />
     </div>
     """
   end
+
+  defp navigable_steps(%{layout_navigation: :free, steps: steps}, _state),
+    do: Enum.map(steps, & &1.name)
+
+  defp navigable_steps(_static, state), do: state.wizard_history || []
 
   # Draws the groups in order, then the fields no group holds, with the `:before_fields` notices
   # ahead of those fields.
@@ -366,11 +398,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     assigns = assign(assigns, :steps, steps)
 
+    assigns = assign(assigns, :tabs?, assigns.static.layout_mode == :tabs)
+
     ~H"""
     <div>
       <div
         :for={{step, groups} <- @steps}
+        id={@static.id <> "-step-" <> to_string(step.name)}
         data-step={step.name}
+        role={@tabs? && "tabpanel"}
+        aria-labelledby={@tabs? && @static.id <> "-tab-" <> to_string(step.name)}
         hidden={step.name != @state.current_step}
       >
         <%= for group <- groups do %>
@@ -944,7 +981,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     submit = assigns.static.submit
     mode = assigns.state.mode
     state = assigns.state
-    layout_mode = assigns.static.layout_mode
 
     submit_button = if mode == :create, do: submit[:create], else: submit[:update]
     cancel_button = submit[:cancel]
@@ -989,7 +1025,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:show_cancel, show_cancel)
       |> assign(:submit_disabled, submit_disabled)
       |> assign(:cancel_disabled, cancel_disabled)
-      |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
+      |> assign(:show_step_nav, stepwise?(assigns.static))
       |> assign(:last_step?, last_step?(assigns))
       |> assign(:first_step?, first_step?(assigns))
       |> assign(:alternatives, alternatives_for(assigns.static, state, submit_disabled))
@@ -1089,6 +1125,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  # A wizard, and a tabs form whose steps open in order, move with Back and Next and save on their
+  # last step; a tabs form with `navigation :free` saves from any tab.
+  defp stepwise?(%{layout_mode: :wizard}), do: true
+  defp stepwise?(%{layout_mode: :tabs, layout_navigation: navigation}), do: navigation != :free
+  defp stepwise?(_static), do: false
 
   defp alternatives_for(%{submit_alternatives: alternatives}, %{mode: :create}, false)
        when is_list(alternatives),

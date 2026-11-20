@@ -18,9 +18,42 @@ end
 |---|---|---|
 | `:standard` | **forbidden** | one page, every group visible |
 | `:wizard` | **required** | one step at a time, sequential by design |
-| `:tabs` | **required** | every step rendered as a tab/accordion; `navigation :free` allowed |
+| `:tabs` | **required** | the steps are tabs; `navigation :free` allowed — see below |
 
 `columns`, `navigation` and `persistence` are inheritable from the domain.
+
+## Tabs
+
+A `:tabs` form draws its steps as a `tablist` over the panels, each tab a button sending
+`goto_step`; a step's `ui` `label` and `icon` are its tab's. Every panel stays in the form, so what
+is typed on one tab is kept while another is open, and the save sends it all.
+
+| `navigation` | Tabs | Submit row |
+|---|---|---|
+| `:free` | any tab opens | Save on every tab, and Enter in a field saves; no Back or Next |
+| `:sequential` (default) | only the tabs already visited open | Back and Next, Save on the last tab only, as a wizard |
+
+A save runs the form's `before_save` and the action as any save does. One that fails on a field of
+another tab moves to the first tab holding an error, marks every tab holding one (the adapter
+draws a dot, `data-role="gervaz-step-error"`) and sends the page `{:put_flash, :error, message}`
+naming the tab; the mark goes once the tab's fields show no error.
+
+```elixir
+layout do
+  mode :tabs
+  navigation :free
+
+  step :basics do
+    groups [:basics]
+    ui do label "Basics" end
+  end
+
+  step :pricing do
+    groups [:pricing]
+    ui do label "Pricing"; icon "hero-banknotes" end
+  end
+end
+```
 
 ## Steps
 

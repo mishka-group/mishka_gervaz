@@ -1,6 +1,9 @@
 defmodule MishkaGervaz.Test.Web.PlanItem do
   @moduledoc """
-  The resource of `MishkaGervaz.Test.Web.PlanPageLive`'s form: a price plan.
+  The resource of `MishkaGervaz.Test.Web.PlanPageLive`'s form: a price plan, a `:tabs` form with
+  `navigation :free` and three tabs, Basics (`:title`, `:kind`, `:billing`), Pricing (`:slug`,
+  `:price`, `:discount`) and Publishing (`:listed`, `:featured`, `:channels`). Its `before_save`
+  fills an empty slug from the title.
 
     * `:kind` — a `:choice_cards` field: One-time, with a second line and an icon, and
       Subscription;
@@ -30,6 +33,18 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
           create {:create, :create}
           update {:update, :update}
           read {:read, :read}
+        end
+      end
+
+      hooks do
+        before_save fn %{"form" => values} = params, _state ->
+          case values do
+            %{"slug" => slug, "title" => title} when slug in [nil, ""] ->
+              put_in(params, ["form", "slug"], String.downcase(title))
+
+            _values ->
+              params
+          end
         end
       end
 
@@ -93,6 +108,50 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
             [label: "Email", value: :email, description: "The newsletter"],
             {"Feed", :feed}
           ]
+        end
+      end
+
+      groups do
+        group :basics do
+          fields [:title, :kind, :billing]
+        end
+
+        group :pricing do
+          fields [:slug, :price, :discount]
+        end
+
+        group :publishing do
+          fields [:listed, :featured, :channels]
+        end
+      end
+
+      layout do
+        mode :tabs
+        navigation :free
+
+        step :basics do
+          groups [:basics]
+
+          ui do
+            label "Basics"
+          end
+        end
+
+        step :pricing do
+          groups [:pricing]
+
+          ui do
+            label "Pricing"
+            icon "hero-banknotes"
+          end
+        end
+
+        step :publishing do
+          groups [:publishing]
+
+          ui do
+            label "Publishing"
+          end
         end
       end
     end
