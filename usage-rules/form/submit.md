@@ -39,6 +39,7 @@ end
 | Button option | Type | Default | Note |
 |---|---|---|---|
 | `label` | string \| `fn -> string` | per-kind default | `"Create"` / `"Save Changes"` / `"Cancel"` / `"Discard"` |
+| `confirm` | string \| `fn -> string` | — | asked before the button acts (`data-confirm`); on `cancel` and `discard` only while the form holds changes |
 | `active` | bool \| `fn state ->` | `true` | `false` drops an inherited button — resource only |
 | `disabled` | bool \| `fn state ->` | `false` | |
 | `restricted` | bool \| `fn state ->` | `false` | master-only |
@@ -56,9 +57,14 @@ saved. Without a `discard` block there is no such button; a page can do the same
 
 ```elixir
 submit do
-  discard label: fn -> dgettext("mishka_gervaz", "Discard") end
+  cancel confirm: fn -> dgettext("mishka_gervaz", "Discard your changes?") end
+  discard label: fn -> dgettext("mishka_gervaz", "Discard") end,
+          confirm: fn -> dgettext("mishka_gervaz", "Discard your changes?") end
 end
 ```
+
+`confirm` is asked through the button's `data-confirm`, which the host's `phoenix_html` script
+answers with the browser's confirm dialog.
 
 ## Inheritance is per button, not per block
 

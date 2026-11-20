@@ -121,6 +121,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildDomainConfig do
     %{
       label: btn.label,
       loading_label: btn.loading_label,
+      confirm: btn.confirm,
       disabled: btn.disabled,
       restricted: btn.restricted,
       visible: btn.visible

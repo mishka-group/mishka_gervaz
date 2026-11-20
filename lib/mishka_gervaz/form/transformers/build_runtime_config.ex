@@ -408,6 +408,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     %{
       label: btn.label,
       loading_label: btn.loading_label,
+      confirm: btn.confirm,
       active: btn.active,
       disabled: btn.disabled,
       restricted: btn.restricted,

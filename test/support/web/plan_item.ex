@@ -3,7 +3,8 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
   The resource of `MishkaGervaz.Test.Web.PlanPageLive`'s form: a price plan, a `:tabs` form with
   `navigation :free` and three tabs, Basics (`:title`, `:kind`, `:billing`), Pricing (`:slug`,
   `:price`, `:discount`) and Publishing (`:listed`, `:featured`, `:channels`). Its `before_save`
-  fills an empty slug from the title. Its submit row has a Discard button.
+  fills an empty slug from the title. Its submit row has a Discard button,
+  and its Cancel and Discard ask "Discard your changes?" while the form holds changes.
 
     * `:kind` — a `:choice_cards` field: One-time, with a second line and an icon, and
       Subscription;
@@ -112,7 +113,8 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
       end
 
       submit do
-        discard label: "Discard"
+        cancel label: "Cancel", confirm: "Discard your changes?"
+        discard label: "Discard", confirm: fn -> "Discard your changes?" end
       end
 
       groups do

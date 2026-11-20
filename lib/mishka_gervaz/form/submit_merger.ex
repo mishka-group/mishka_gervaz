@@ -37,7 +37,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
   Returns the merged map with this shape:
 
       %{
-        create: %{label, loading_label, active, disabled, restricted, visible} | nil,
+        create: %{label, loading_label, confirm, active, disabled, restricted, visible} | nil,
         update: %{...} | nil,
         cancel: %{...} | nil,
         discard: %{...} | nil,
@@ -98,6 +98,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
     %{
       label: domain_btn[:label] || Map.fetch!(@default_labels, kind),
       loading_label: domain_btn[:loading_label],
+      confirm: domain_btn[:confirm],
       active: true,
       disabled: domain_btn[:disabled] || false,
       restricted: domain_btn[:restricted] || false,
@@ -113,6 +114,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
     %{
       label: resolve_label(resource_btn.label, domain_btn, kind),
       loading_label: resource_btn.loading_label || (domain_btn && domain_btn[:loading_label]),
+      confirm: resource_btn.confirm || (domain_btn && domain_btn[:confirm]),
       active: resource_btn.active,
       disabled: resource_btn.disabled,
       restricted: resource_btn.restricted,
@@ -131,6 +133,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
     %{
       label: resolve_label(resource_btn[:label], domain_btn, kind),
       loading_label: resource_btn[:loading_label] || (domain_btn && domain_btn[:loading_label]),
+      confirm: resource_btn[:confirm] || (domain_btn && domain_btn[:confirm]),
       active: Map.get(resource_btn, :active, true),
       disabled: Map.get(resource_btn, :disabled, false),
       restricted: Map.get(resource_btn, :restricted, false),

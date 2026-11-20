@@ -45,6 +45,21 @@ defmodule MishkaGervaz.Form.Web.Live do
     `record_id`, keeps the defaults the form has. Pass `defaults: nil` to drop them.
   - `reset` - `true` starts the form over on its `record_id`, even when that is the record already
     open, or `nil` while the form is already on create. See "Opening a form again".
+  - `notify_dirty` - `true` sends the page `{:form_dirty, id, dirty?}` each time the form comes to
+    hold changes the reader has not saved, and each time it holds none any more: after a save, a
+    Discard, a Cancel or a start over. See "Unsaved changes".
+
+  ## Unsaved changes
+
+  The form's wrapper, `"<id>-form-wrapper"`, carries `data-dirty="true"` while the form holds
+  changes. A page that wants to know, to ask before it closes the form's window, mounts the form
+  with `notify_dirty={true}` and keeps what it is told:
+
+      def handle_info({:form_dirty, "post-form", dirty?}, socket),
+        do: {:noreply, assign(socket, :post_form_dirty?, dirty?)}
+
+  A `cancel` or `discard` button of the form's `submit` block with a `confirm` asks it before it
+  acts while the form holds changes.
 
   ## Opening a form again
 
@@ -122,7 +137,13 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   @impl true
-  def update(%{id: _id, build_create: true}, socket) do
+  def update(assigns, socket) do
+    was_dirty? = dirty?(socket)
+    {:ok, new_socket} = do_update(assigns, socket)
+    {:ok, announce_dirty(new_socket, was_dirty?)}
+  end
+
+  defp do_update(%{id: _id, build_create: true}, socket) do
     state = socket.assigns[:form_state]
 
     if state && state.loading == :initial && is_nil(state.form) &&
@@ -133,7 +154,7 @@ defmodule MishkaGervaz.Form.Web.Live do
     end
   end
 
-  def update(assigns, socket) do
+  defp do_update(assigns, socket) do
     id = Map.fetch!(assigns, :id)
     resource = Map.get(assigns, :resource) || socket.assigns[:resource]
     current_user = Map.get(assigns, :current_user) || socket.assigns[:current_user]
@@ -150,6 +171,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:form_state, state)
         |> assign(:resource, resource)
         |> assign(:id, id)
+        |> assign(:notify_dirty, Map.get(assigns, :notify_dirty) == true)
         |> assign(:record_id, record_id)
         |> assign(:record_id_given?, Map.has_key?(assigns, :record_id))
         |> assign(:initialized, true)
@@ -283,7 +305,10 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   @impl true
   def handle_event(event, params, socket) do
-    events_module(socket.assigns[:form_state]).handle(event, params, socket)
+    {:noreply, new_socket} =
+      events_module(socket.assigns[:form_state]).handle(event, params, socket)
+
+    {:noreply, announce_dirty(new_socket, dirty?(socket))}
   end
 
   defp events_module(%{static: %{config: %{events: %{module: mod}}}})
@@ -294,9 +319,27 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   @impl true
   def handle_async(name, result, socket) do
-    socket = DataLoader.Default.handle_async_result(name, result, socket)
-    {:noreply, socket}
+    new_socket = DataLoader.Default.handle_async_result(name, result, socket)
+    {:noreply, announce_dirty(new_socket, dirty?(socket))}
   end
+
+  defp dirty?(%{assigns: %{form_state: %State{dirty?: dirty?}}}), do: dirty? == true
+  defp dirty?(_socket), do: false
+
+  # A form mounted with `notify_dirty` tells its page each time it comes to hold changes, or holds
+  # none any more.
+  defp announce_dirty(%{assigns: %{notify_dirty: true}} = socket, was_dirty?) do
+    case dirty?(socket) do
+      ^was_dirty? ->
+        socket
+
+      dirty? ->
+        send(self(), {:form_dirty, socket.assigns.id, dirty?})
+        socket
+    end
+  end
+
+  defp announce_dirty(socket, _was_dirty?), do: socket
 
   @impl true
   def render(assigns) do

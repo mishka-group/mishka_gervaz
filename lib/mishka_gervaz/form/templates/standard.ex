@@ -125,7 +125,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns = assign(assigns, :init_js, resolve_js_hook(assigns, :on_init))
 
     ~H"""
-    <div id={@static.id <> "-form-wrapper"} phx-mounted={@init_js} hidden={@state.loading == :denied}>
+    <div
+      id={@static.id <> "-form-wrapper"}
+      data-dirty={to_string(@state.dirty? == true)}
+      phx-mounted={@init_js}
+      hidden={@state.loading == :denied}
+    >
       <%= cond do %>
         <% @state.loading == :denied -> %>
         <% @state.loading == :loaded and @state.form -> %>
@@ -1038,6 +1043,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         :discard_disabled,
         show_discard and evaluate_button_disabled(discard_button, state)
       )
+      |> assign(:submit_confirm, show_submit && resolve_label(submit_button[:confirm]))
+      |> assign(:cancel_confirm, show_cancel && dirty_confirm(cancel_button, state))
+      |> assign(:discard_confirm, show_discard && dirty_confirm(discard_button, state))
       |> assign(:show_submit, show_submit)
       |> assign(:show_cancel, show_cancel)
       |> assign(:submit_disabled, submit_disabled)
@@ -1061,6 +1069,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           type="button"
           class="px-1.5 py-2 text-[13px] font-semibold text-[#8a877f] transition-colors hover:text-[#1b1a18]"
           disabled={@cancel_disabled}
+          data_confirm={@cancel_confirm || nil}
           phx_click={@cancel_js}
           phx_target={@myself}
         />
@@ -1069,6 +1078,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           :if={@show_discard}
           type="button"
           data-role="gervaz-discard"
+          data-confirm={@discard_confirm || nil}
           disabled={@discard_disabled}
           phx-click="discard"
           phx-target={@myself}
@@ -1090,6 +1100,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <button
             type="submit"
             disabled={@submit_disabled}
+            data-confirm={@submit_confirm || nil}
             phx-disable-with={@submit_busy_label}
             class={[
               "inline-flex h-[42px] items-center gap-2 px-[18px] text-[12.5px] font-bold text-white transition-opacity",
@@ -1154,6 +1165,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  # A cancel or discard button asks its `confirm` only while the form holds changes.
+  defp dirty_confirm(button, %{dirty?: true}), do: resolve_label(button[:confirm])
+  defp dirty_confirm(_button, _state), do: nil
 
   # A wizard, and a tabs form whose steps open in order, move with Back and Next and save on their
   # last step; a tabs form with `navigation :free` saves from any tab.

@@ -21,6 +21,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
           loading_label: String.t() | (-> String.t()) | nil,
+          confirm: String.t() | (-> String.t()) | nil,
           active: boolean() | (map() -> boolean()),
           disabled: boolean() | (map() -> boolean()),
           restricted: boolean() | (map() -> boolean()),
@@ -30,6 +31,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
 
   defstruct label: nil,
             loading_label: nil,
+            confirm: nil,
             active: true,
             disabled: false,
             restricted: false,
@@ -45,6 +47,11 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
                   type: {:or, [:string, {:fun, 0}]},
                   doc:
                     "What the submit button reads while its save runs, such as \"Checking the connection…\". String or zero-arity function. Without it the button reads \"Uploading…\" on a form with uploads and \"Saving…\" on any other."
+                ],
+                confirm: [
+                  type: {:or, [:string, {:fun, 0}]},
+                  doc:
+                    "A question the browser asks before the button acts, such as \"Discard your changes?\", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function."
                 ],
                 active: [
                   type: {:or, [:boolean, {:fun, 1}]},

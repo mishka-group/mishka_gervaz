@@ -51,8 +51,9 @@ drag back a choice the reader has since changed.
 | `hidden_fields` | — | `[:site_id]` — fields **this mount** does not draw |
 | `submit` | — | `false` draws no submit row (the `save` event stays allowed) |
 | `submit_alternatives` | — | other ways to create, offered from a caret beside the submit button |
+| `notify_dirty` | — | `true` sends the page `{:form_dirty, id, dirty?}` — see "Unsaved changes" |
 
-Changing `record_id` or `defaults` re-initializes the form. The other three are applied **at init
+Changing `record_id` or `defaults` re-initializes the form. The others are applied **at init
 only**. An update that leaves `defaults` out, such as the `send_update/2` a table's Edit sends with
 only a `record_id`, keeps the defaults the form has; pass `defaults: nil` to drop them.
 
@@ -71,6 +72,22 @@ then either:
 - `:name` and `:value` — the item is a submit button of this same form, so the browser sends the
   pair alongside every field and the choice reaches `before_save` as an ordinary param.
 
+### Unsaved changes
+
+The form's wrapper, `"<id>-form-wrapper"`, carries `data-dirty="true"` while the form holds changes
+the reader has not saved. Mounted with `notify_dirty={true}`, the form also tells its page each
+time that changes, so the page can ask before it closes the form's window:
+
+```elixir
+def handle_info({:form_dirty, "post-form", dirty?}, socket),
+  do: {:noreply, assign(socket, :post_form_dirty?, dirty?)}
+```
+
+It is sent once the form holds changes, and again once it holds none: after a save, a Discard, a
+Cancel or a start over. A page that did not ask is never sent it. A `cancel` or `discard` button
+declared with `confirm` asks its question itself while the form holds changes
+([form/submit.md](form/submit.md)).
+
 ## Messages the parent must answer
 
 ### Form
@@ -80,6 +97,7 @@ def handle_info({:form_saved, :create, result}, socket), do: …
 def handle_info({:form_saved, :update, result}, socket), do: …
 def handle_info({:form_cancelled, resource}, socket), do: …
 def handle_info({:form_event, event, params}, socket), do: …   # any unrecognized form event
+def handle_info({:form_dirty, id, dirty?}, socket), do: …       # only with notify_dirty={true}
 ```
 
 ### Table
