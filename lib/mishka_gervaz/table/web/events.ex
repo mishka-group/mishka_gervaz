@@ -5,7 +5,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   This module centralizes event handling for:
   - Sorting
   - Filtering
-  - Row actions (delete, edit, custom events)
+  - Row actions (delete, edit, custom events, the row drawer's `open_drawer` and `close_drawer`)
   - Bulk actions
   - Row expansion
   - Archive status changes
@@ -603,6 +603,18 @@ defmodule MishkaGervaz.Table.Web.Events do
     {:noreply, socket}
   end
 
+  def do_handle("open_drawer", %{"action" => name, "id" => id}, state, socket) do
+    with %{type: :drawer} = action <- find_row_action(state, name),
+         %{} = record <- get_record(state, sanitize(state, id), state.archive_status) do
+      {:noreply, Phoenix.Component.assign(socket, :row_drawer, %{action: action, record: record})}
+    else
+      _no_row -> {:noreply, Phoenix.Component.assign(socket, :row_drawer, nil)}
+    end
+  end
+
+  def do_handle("close_drawer", _params, _state, socket),
+    do: {:noreply, Phoenix.Component.assign(socket, :row_drawer, nil)}
+
   def do_handle("row_action", params, state, socket) do
     event_name = sanitize(state, params["event"])
     payload = params
@@ -949,6 +961,19 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
 
     {:noreply, socket}
+  end
+
+  @doc """
+  The row action named `name` (a string from the page or an atom), dropdown items included, or
+  `nil` when the table has none of that name.
+  """
+  @spec find_row_action(State.t(), String.t() | atom()) :: map() | nil
+  def find_row_action(state, name) do
+    name = to_string(name)
+    matcher = &(is_map_key(&1, :name) and to_string(&1.name) == name)
+
+    Enum.find(state.static.row_actions, matcher) ||
+      Enum.find_value(state.static.row_action_dropdowns, &Enum.find(&1.items, matcher))
   end
 
   @doc false

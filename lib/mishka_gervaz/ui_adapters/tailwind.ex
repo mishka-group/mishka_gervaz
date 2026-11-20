@@ -4167,16 +4167,24 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   `:on_close`; Escape closes it too, unless `:confirm_close` is given.
 
   ## Assigns
-    * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`
+    * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`, its sub line `<id>-sub`
     * `:show` - open it as it is drawn
     * `:title` - the heading at its top
+    * `:icon` - a heroicon name drawn in a tile before the title, such as `"hero-receipt-percent"`
+    * `:tone` - the tile's colours: `:info` (the default), `:ok`, `:warn`, `:danger` or `:mute`
+    * `:sub` - a line under the title, such as the record's number and owner; the dialog is
+      described by it
+    * `:chips` - chips under the title, each a label or a `{tone, label}` pair, tones as `:tone`
     * `:on_close` - a `Phoenix.LiveView.JS` run as it closes, such as `JS.push("close_drawer")`
     * `:confirm_close` - a question the close button and the backdrop ask first through
       `data-confirm`, such as "Discard your changes?" while the form in it holds changes (see
       `MishkaGervaz.Form.Web.Live`'s `notify_dirty`); `nil` closes at once
     * `:class` - replaces the panel's width classes (`sm:w-[min(520px,100vw)]`)
     * `:inner_block` - its body, which scrolls
-    * `:footer` - an optional slot pinned under the body, for buttons
+    * `:actions` - an optional slot of buttons; drawn in the foot unless `:actions_at` is `:head`
+    * `:actions_at` - `:foot` (the default), the row pinned under the body, or `:head`, beside
+      the close button
+    * `:footer` - an optional slot pinned under the body, before the foot's actions
   """
   @impl true
   def drawer(assigns) do
@@ -4257,9 +4265,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       assigns
       |> assign_new(:show, fn -> false end)
       |> assign_new(:title, fn -> nil end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:tone, fn -> :info end)
+      |> assign_new(:sub, fn -> nil end)
+      |> assign_new(:chips, fn -> [] end)
       |> assign_new(:on_close, fn -> %JS{} end)
       |> assign_new(:confirm_close, fn -> nil end)
       |> assign_new(:footer, fn -> [] end)
+      |> assign_new(:actions, fn -> [] end)
+      |> assign_new(:actions_at, fn -> :foot end)
 
     assigns =
       assigns
@@ -4289,6 +4303,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         role="dialog"
         aria-modal="true"
         aria-labelledby={@title && @id <> "-title"}
+        aria-describedby={@sub && @id <> "-sub"}
         tabindex="-1"
         phx-window-keydown={is_nil(@confirm_close) && @close_js}
         phx-key="escape"
@@ -4304,11 +4319,57 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           aria-hidden="true"
           class="mx-auto mt-2.5 h-1 w-10 flex-none rounded-full bg-[#dcdad2]"
         />
-        <div class="flex flex-none items-center justify-between gap-3 border-b border-[#f0efea] px-5 py-4">
-          <h2 :if={@title} id={@id <> "-title"} class="text-[15px] font-bold text-[#17161a]">
-            {@title}
-          </h2>
-          <span :if={!@title} />
+        <div
+          data-role="gervaz-panel-head"
+          class="flex flex-none items-start justify-between gap-3 border-b border-[#f0efea] px-5 py-4"
+        >
+          <span
+            :if={@icon}
+            data-role="gervaz-panel-tile"
+            data-tone={panel_tone(@tone)}
+            class={[
+              "grid size-10 flex-none place-items-center rounded-[12px]",
+              panel_tile_class(panel_tone(@tone))
+            ]}
+          >
+            <.render_icon name={@icon} class="size-[18px]" />
+          </span>
+          <div class="min-w-0 flex-1 self-center">
+            <h2
+              :if={@title}
+              id={@id <> "-title"}
+              class="text-[15px] font-bold text-[#17161a] [overflow-wrap:anywhere]"
+            >
+              {@title}
+            </h2>
+            <p
+              :if={@sub}
+              id={@id <> "-sub"}
+              class="mt-0.5 text-[12px] font-medium text-[#6f6d68] [overflow-wrap:anywhere]"
+            >
+              {@sub}
+            </p>
+            <div :if={@chips != []} class="mt-2 flex flex-wrap gap-1.5">
+              <span
+                :for={{chip_tone, label} <- Enum.map(@chips, &panel_chip/1)}
+                data-role="gervaz-panel-chip"
+                data-tone={chip_tone}
+                class={[
+                  "inline-flex items-center rounded-[7px] px-2 py-[3px] text-[10.5px] font-bold",
+                  panel_tile_class(chip_tone)
+                ]}
+              >
+                {label}
+              </span>
+            </div>
+          </div>
+          <div
+            :if={@actions != [] and @actions_at == :head}
+            data-role="gervaz-panel-actions"
+            class="flex flex-none items-center gap-2"
+          >
+            {render_slot(@actions)}
+          </div>
           <button
             type="button"
             data-role="gervaz-panel-close"
@@ -4324,16 +4385,32 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           {render_slot(@inner_block)}
         </div>
         <div
-          :if={@footer != []}
+          :if={@footer != [] or (@actions != [] and @actions_at != :head)}
           data-role="gervaz-panel-footer"
-          class="flex flex-none items-center justify-end gap-3 border-t border-[#f0efea] px-5 py-4"
+          class="flex flex-none flex-wrap items-center justify-end gap-3 border-t border-[#f0efea] px-5 py-4 max-[640px]:[&>*]:min-h-[48px] max-[640px]:[&>*]:flex-1"
         >
           {render_slot(@footer)}
+          {@actions_at != :head && render_slot(@actions)}
         </div>
       </div>
     </div>
     """
   end
+
+  defp panel_tone(tone) when tone in [:ok, :success], do: :ok
+  defp panel_tone(tone) when tone in [:warn, :warning], do: :warn
+  defp panel_tone(tone) when tone in [:danger, :error], do: :danger
+  defp panel_tone(:mute), do: :mute
+  defp panel_tone(_info), do: :info
+
+  defp panel_chip({tone, label}), do: {panel_tone(tone), label}
+  defp panel_chip(label), do: {:mute, label}
+
+  defp panel_tile_class(:ok), do: "bg-[#edf7f1] text-[#177a53]"
+  defp panel_tile_class(:warn), do: "bg-[#fdf3dc] text-[#8a5a00]"
+  defp panel_tile_class(:danger), do: "bg-[#fbeef1] text-[#a23a52]"
+  defp panel_tile_class(:mute), do: "bg-[#f2f1ec] text-[#5c5a54]"
+  defp panel_tile_class(_info), do: "bg-[#f2f1fc] text-[#4f4bcc]"
 
   defp open_js(:drawer, id), do: show_drawer(id)
   defp open_js(:sheet, id), do: show_sheet(id)

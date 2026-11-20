@@ -88,6 +88,71 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
     end
   end
 
+  defp actions_slot do
+    assigns = %{}
+
+    inner_block = fn _changed, _arg ->
+      ~H"""
+      <button id="archive">Archive</button>
+      """
+    end
+
+    [%{__slot__: :actions, inner_block: inner_block}]
+  end
+
+  defp head(doc), do: one(doc, ~s|[data-role="gervaz-panel-head"]|)
+
+  for fun <- [:drawer, :sheet] do
+    describe "#{fun} head" do
+      test "draws the icon tile in its tone, the sub line and the chips under the title" do
+        doc =
+          render(unquote(fun), %{
+            icon: "hero-receipt-percent",
+            tone: :warn,
+            sub: "MS-1042 · Jane Doe",
+            chips: [{:ok, "Paid"}, "Card"]
+          })
+
+        [tile] = attr(doc, ~s|[data-role="gervaz-panel-tile"]|, "data-tone")
+        assert tile == "warn"
+
+        assert one(doc, ~s|[data-role="gervaz-panel-tile"] .hero-receipt-percent|) |> Enum.count() ==
+                 1
+
+        assert one(doc, "#edit-sub") |> LazyHTML.text() =~ "MS-1042 · Jane Doe"
+        assert attr(doc, "#edit-panel", "aria-describedby") == ["edit-sub"]
+
+        chips = one(doc, ~s|[data-role="gervaz-panel-chip"]|)
+        assert Enum.map(chips, &LazyHTML.text/1) |> Enum.map(&String.trim/1) == ["Paid", "Card"]
+        assert LazyHTML.attribute(chips, "data-tone") == ["ok", "mute"]
+      end
+
+      test "draws no tile, sub line or chips when none is given" do
+        doc = render(unquote(fun), %{})
+
+        assert one(doc, ~s|[data-role="gervaz-panel-tile"]|) |> Enum.count() == 0
+        assert one(doc, "#edit-sub") |> Enum.count() == 0
+        assert one(doc, ~s|[data-role="gervaz-panel-chip"]|) |> Enum.count() == 0
+      end
+
+      test "puts its actions in the foot, or in the head beside the close button" do
+        foot = render(unquote(fun), %{actions: actions_slot()})
+
+        assert one(foot, ~s|[data-role="gervaz-panel-footer"] #archive|) |> Enum.count() == 1
+        assert foot |> head() |> LazyHTML.query("#archive") |> Enum.count() == 0
+
+        top = render(unquote(fun), %{actions: actions_slot(), actions_at: :head})
+
+        assert top
+               |> head()
+               |> LazyHTML.query(~s|[data-role="gervaz-panel-actions"] #archive|)
+               |> Enum.count() == 1
+
+        assert one(top, ~s|[data-role="gervaz-panel-footer"]|) |> Enum.count() == 0
+      end
+    end
+  end
+
   test "the drawer comes from the end side from 640px and rises from the bottom below" do
     [class] = attr(render(:drawer, %{}), "#edit-panel", "class")
 

@@ -505,6 +505,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       visible: action.visible,
       js: action.js,
       render: action.render,
+      open: action.open,
+      drawer: action.drawer || [],
       type_module: action.type_module,
       ui: maybe_ui(ui, &action_ui_to_map/1, &has_action_ui_values?/1)
     }

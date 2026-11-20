@@ -203,6 +203,37 @@ first (`data-confirm`), and Escape closes only a panel without one. Keep `confir
 form's `{:form_dirty, id, dirty?}` ([../mounting.md](../mounting.md)). `:class` replaces the
 panel's width classes.
 
+### The head and the actions row
+
+The head can say what the panel is about: an icon in a tile (`icon`, coloured by `tone`: `:info`,
+`:ok`, `:warn`, `:danger`, `:mute`), the `title`, a `sub` line under it, which also describes the
+dialog, and `chips` under that, each a label or a `{tone, label}` pair. The `:actions` slot holds
+its buttons, in the foot (`actions_at: :foot`, the default) or in the head beside the close button
+(`actions_at: :head`); below 640px the foot's buttons are 48px tall and share the row.
+
+```heex
+<MishkaGervaz.Helpers.dynamic_component
+  module={MishkaGervaz.UIAdapters.Tailwind}
+  function={:drawer}
+  id="order-drawer"
+  show
+  icon="hero-receipt-percent"
+  tone={:info}
+  title={@order.number}
+  sub={@order.customer_name}
+  chips={[{:ok, "Paid"}, "Card"]}
+  on_close={JS.push("close_order")}
+>
+  <MyAppWeb.OrderViews.order order={@order} />
+  <:actions>
+    <button phx-click="refund" phx-value-id={@order.id}>Refund</button>
+  </:actions>
+</MishkaGervaz.Helpers.dynamic_component>
+```
+
+A table opens a row in this drawer with a `:drawer` row action
+([../table/row-actions.md](../table/row-actions.md)).
+
 ## TODO
 - [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 73 stubs
 - [ ] Only the components that genuinely differ are defined

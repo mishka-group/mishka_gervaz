@@ -14,6 +14,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       keyset pagination, so Load more reads from an offset.
     * `/shelf` — the same page with a table of `MishkaGervaz.Test.Web.ShelfItem`, whose rows open
       a path.
+    * `/desk` — the same page with a table of `MishkaGervaz.Test.Web.DeskItem`, whose rows open in
+      the table's drawer.
     * `/orders` — `MishkaGervaz.Test.Web.ViewsPageLive`, a table and a named view of it on one page.
     * `/wizard` — `MishkaGervaz.Test.Web.FormPageLive`, a page with the wizard form of
       `MishkaGervaz.Test.Web.WizardItem`.
@@ -40,6 +42,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/offset", MishkaGervaz.Test.Web.TablePageLive, :offset
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
     live "/shelf", MishkaGervaz.Test.Web.TablePageLive, :shelf
+    live "/desk", MishkaGervaz.Test.Web.TablePageLive, :desk
     live "/orders", MishkaGervaz.Test.Web.ViewsPageLive
     live "/wizard", MishkaGervaz.Test.Web.FormPageLive
     live "/plans", MishkaGervaz.Test.Web.PlanPageLive, :page

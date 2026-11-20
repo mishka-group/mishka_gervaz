@@ -1216,6 +1216,119 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   def row_path(_static, _record, _state), do: nil
 
   @doc """
+  Draws what the table opens over its rows, inside the template's root element: the row drawer a
+  `:drawer` row action opened (`render_row_drawer/1`). Nothing while none is open.
+
+  The default templates call it last in their root element; a custom template does the same, so its
+  table's `:drawer` row actions open:
+
+      <div id={@static.id}>
+        ...
+        {Shared.render_overlays(assigns)}
+      </div>
+  """
+  @spec render_overlays(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_overlays(assigns) do
+    assigns = assign(assigns, :row_drawer, assigns[:row_drawer])
+
+    ~H"""
+    <.render_row_drawer
+      :if={@row_drawer}
+      static={@static}
+      state={@state}
+      row_drawer={@row_drawer}
+      myself={@myself}
+    />
+    """
+  end
+
+  @doc """
+  Draws the row drawer a `:drawer` row action opened (`MishkaGervaz.Table.Types.Action.Drawer`):
+  the UI adapter's `drawer/1`, or `sheet/1` for `kind: :sheet`, open as it is drawn, with the id
+  `"<table id>-row-drawer"`. Its head is the action's `drawer` options read for the row; its body is
+  the record view of the action's `open`, or with `open: :form` the resource's form editing the row
+  (`MishkaGervaz.Form.Web.Live`, id `"<table id>-drawer-form"`). Its close sends the table
+  `"close_drawer"`.
+
+  `render_overlays/1` draws it while the table's `@row_drawer` holds
+  `%{action: action, record: record}`.
+  """
+  @spec render_row_drawer(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_row_drawer(%{row_drawer: %{action: action, record: record}} = assigns) do
+    head = action[:drawer] || []
+
+    assigns =
+      assigns
+      |> assign(:ui, assigns.static.ui_adapter)
+      |> assign(:kind, Keyword.get(head, :kind, :drawer))
+      |> assign(:panel_id, assigns.static.id <> "-row-drawer")
+      |> assign(:form_id, assigns.static.id <> "-drawer-form")
+      |> assign(:record, record)
+      |> assign(:open, action[:open])
+      |> assign(:title, drawer_text(head[:title], record))
+      |> assign(:sub, drawer_text(head[:sub], record))
+      |> assign(:icon, drawer_value(head[:icon], record))
+      |> assign(:tone, drawer_value(head[:tone], record) || :info)
+      |> assign(:chips, drawer_chips(head[:chips], record))
+      |> assign(:head_actions, head[:actions])
+      |> assign(:actions_at, Keyword.get(head, :actions_at, :foot))
+      |> assign(:on_close, JS.push("close_drawer", target: assigns.myself))
+
+    ~H"""
+    <.dynamic_component
+      module={@ui}
+      function={@kind}
+      id={@panel_id}
+      show={true}
+      title={@title}
+      sub={@sub}
+      icon={@icon}
+      tone={@tone}
+      chips={@chips}
+      actions_at={@actions_at}
+      on_close={@on_close}
+    >
+      <.live_component
+        :if={@open == :form}
+        module={MishkaGervaz.Form.Web.Live}
+        id={@form_id}
+        resource={@static.resource}
+        current_user={@state.current_user}
+        record_id={@record.id}
+      />
+      <%= if @open != :form do %>
+        {drawer_view(@open, @record, @state)}
+      <% end %>
+      <:actions :if={@head_actions}>{drawer_view(@head_actions, @record, @state)}</:actions>
+    </.dynamic_component>
+    """
+  end
+
+  defp drawer_value(value, record) when is_function(value, 1), do: value.(record)
+  defp drawer_value(value, _record), do: value
+
+  defp drawer_text(value, record) do
+    case drawer_value(value, record) do
+      text when is_binary(text) -> translate_text(text)
+      other -> other
+    end
+  end
+
+  defp drawer_chips(chips, record) do
+    chips
+    |> drawer_value(record)
+    |> List.wrap()
+    |> Enum.map(fn
+      {tone, label} -> {tone, translate_text(label)}
+      label -> translate_text(label)
+    end)
+  end
+
+  defp drawer_view(view, record, _state) when is_function(view, 1), do: view.(record)
+  defp drawer_view(view, record, state) when is_function(view, 2), do: view.(record, state)
+  defp drawer_view(_view, _record, _state), do: nil
+
+  @doc """
   The extra classes the resource asks this record's row to wear, if any.
 
   `row do class do apply … end end` is where a resource says which records look different.

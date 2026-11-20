@@ -280,6 +280,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       </div>
 
       {render_chrome_footer(assigns)}
+      {Shared.render_overlays(assigns)}
     </div>
     """
   end

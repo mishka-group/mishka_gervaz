@@ -35,7 +35,14 @@
 - The UI adapter gains `drawer/1`, a right-side panel that is a bottom sheet below 640px, and
   `sheet/1`, a bottom sheet, for a form or a page. They open and close with `Phoenix.LiveView.JS`
   (`show_drawer/2`, `hide_drawer/2`, `show_sheet/2`, `hide_sheet/2`) and ask `confirm_close` before
-  they close
+  they close. Their head takes an `icon` in a tile coloured by `tone`, a `sub` line and `chips`
+  under the title, and an `:actions` slot of buttons in the foot or, with `actions_at: :head`, in
+  the head
+- A row action `type: :drawer` opens the row in the table's drawer: a record view
+  (`open: fn record -> ~H"…" end`) or the resource's form editing it (`open: :form`), its head
+  built from the row (`drawer: [title:, sub:, icon:, tone:, chips:, actions:, kind: :sheet]`).
+  `MishkaGervaz.Table.Web.Live.close_drawer/2` closes it after a save and puts the saved row back
+  in its place; a custom template draws it with `Shared.render_overlays/1`
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

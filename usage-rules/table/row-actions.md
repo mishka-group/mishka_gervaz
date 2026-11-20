@@ -43,7 +43,7 @@ end
 ## `type` is required
 
 `:link` · `:event` · `:edit` · `:destroy` · `:update` · `:unarchive` · `:permanent_destroy` ·
-`:row_click` · `:accordion` · `:modal` · or an `ActionType` module
+`:row_click` · `:accordion` · `:modal` · `:drawer` · or an `ActionType` module
 ([../customization/types.md](../customization/types.md)).
 
 | Option | Type | Note |
@@ -57,6 +57,8 @@ end
 | `visible` | `:active` (default) \| `:archived` \| bool \| **`fn record, state ->`** | arity **2** |
 | `js` | `fn record -> %JS{}` | chained onto the click |
 | `render` | `fn record ->` / `fn record, action ->` / `fn record, action, target ->` | |
+| `open` | `:form` \| `fn record ->` / `fn record, state ->` | `:drawer`; what the drawer shows |
+| `drawer` | keyword list | `:drawer`; the drawer's head, see below |
 
 `ui`: `label` (defaults to the humanized action name) · `icon` · `class` · `extra`.
 
@@ -83,6 +85,45 @@ panel back with `send_update(..., expanded_html: html)` — see
 `visible` and `restricted` decide which rows expand, as they decide which rows show any other
 action: the caret is drawn only on a row whose accordion is visible for that record. The caret
 column stays while some row may expand, so the other rows keep their columns.
+
+## `:drawer`
+
+Opens the row in the table's drawer, the UI adapter's `drawer/1` (or `sheet/1` with
+`kind: :sheet`), without leaving the page. `open` is what it shows: a record view,
+`fn record -> ~H"…" end`, or `:form`, the resource's own form editing the row. `drawer` builds its
+head from the row; each value but `kind` and `actions_at` is a value or `fn record -> value end`:
+
+```elixir
+action :view, type: :drawer,
+  open: &MyAppWeb.OrderViews.order/1,
+  drawer: [
+    title: fn order -> order.number end,
+    sub: fn order -> order.customer_name end,
+    icon: "hero-receipt-percent",
+    tone: :info,                                   # :info | :ok | :warn | :danger | :mute
+    chips: fn order -> [{:ok, "Paid"}, order.provider] end,
+    actions: &MyAppWeb.OrderViews.order_actions/1, # buttons, fn record -> ~H"…" end
+    actions_at: :foot                              # or :head
+  ]
+
+action :edit, type: :drawer, open: :form, drawer: [kind: :sheet, title: "Edit order"]
+```
+
+The table reads the row again by its id as the drawer opens, under its own read action and tenant;
+a row that is gone opens nothing. The drawer's id is `"<table id>-row-drawer"` and its close button
+closes it. With `open: :form` the form is `MishkaGervaz.Form.Web.Live` with the id
+`"<table id>-drawer-form"`; it tells the page `{:form_saved, mode, record}`, and the page closes the
+drawer and puts the saved row back in its place:
+
+```elixir
+def handle_info({:form_saved, _mode, record}, socket) do
+  MishkaGervaz.Table.Web.Live.close_drawer("orders-table", record)
+  {:noreply, socket}
+end
+```
+
+A custom template draws the drawer by ending its root element with
+`Shared.render_overlays(assigns)` ([../customization/table-templates.md](../customization/table-templates.md)).
 
 ## `dropdown`
 
@@ -133,6 +174,7 @@ app sets nothing up. Below 980px the rows are cards and none of this applies.
   `:edit_link`: those build `{route}/{id}` or `{route}/{id}/edit` from `identity`'s route, its
   `:param` segments filled in from `state.path_params`. A `path` still wins when given.
 - `type :event` requires `event`.
+- `type :drawer` requires `open`.
 - A `dropdown` requires a `ui` block **with a `label`** — including for actions nested inside it.
 
 ## The action types — compared
@@ -149,6 +191,7 @@ app sets nothing up. Below 980px the rows are cards and none of this applies.
 | `:row_click` | makes the whole row clickable | `event` / `path` | as for its shape |
 | `:accordion` | declares the row expands | the `on_expand` hook | `{:expand_row, id}` |
 | `:modal` | a modal-opening button | your own `js` / `event` | as for its shape |
+| `:drawer` | opens the row's view or form in the table's drawer | `open` | none; a form in it sends `{:form_saved, mode, record}` |
 | a module | anything | the `ActionType` behaviour | yours |
 
 `:edit` needs **no** parent message: the component calls

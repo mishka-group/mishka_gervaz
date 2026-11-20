@@ -57,6 +57,19 @@ defmodule MishkaGervaz.Table.Web.Live do
       def handle_info({:row_action, event_name, payload}, socket), do: ...
       def handle_info({:bulk_action, action_name, selected_ids}, socket), do: ...
 
+  ## Row drawer
+
+  A row action of type `:drawer` opens the row in the table's drawer, the UI adapter's `drawer/1`
+  or `sheet/1`, which the template draws with `MishkaGervaz.Table.Templates.Shared.render_overlays/1`:
+  the row's record view, or the resource's form editing the row (see
+  `MishkaGervaz.Table.Types.Action.Drawer`). Its close button closes it. A page
+  closes it itself with `close_drawer/2`, as after the form in it saved:
+
+      def handle_info({:form_saved, _mode, record}, socket) do
+        MishkaGervaz.Table.Web.Live.close_drawer("posts-table", record)
+        {:noreply, socket}
+      end
+
   ## PubSub Integration (Automatic)
 
   The component automatically subscribes to PubSub topics when `realtime` is configured
@@ -137,11 +150,21 @@ defmodule MishkaGervaz.Table.Web.Live do
   alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.AsyncResult
 
+  @doc """
+  Closes the row drawer of the table with this component `id`. Given the record a form in the
+  drawer saved, the table also reads that row again and puts it in its place, as it does for a
+  realtime update; a row the table's read no longer finds leaves the list.
+  """
+  @spec close_drawer(String.t(), Ash.Resource.Record.t() | nil) :: :ok
+  def close_drawer(id, saved \\ nil) when is_binary(id),
+    do: send_update(__MODULE__, id: id, close_drawer: true, saved: saved)
+
   @impl true
   def mount(socket) do
     {:ok,
      socket
      |> assign(:table_state, nil)
+     |> assign(:row_drawer, nil)
      |> assign(:initialized, false)
      |> assign(:subscribed, false)
      |> assign(:refresh_initialized, false)
@@ -177,6 +200,15 @@ defmodule MishkaGervaz.Table.Web.Live do
   end
 
   def update(%{realtime_flush: true}, socket), do: {:ok, flush_realtime(socket)}
+
+  def update(%{close_drawer: true} = assigns, socket) do
+    socket = assign(socket, :row_drawer, nil)
+
+    case {assigns[:saved], socket.assigns.table_state} do
+      {%{id: _id} = saved, %State{} = state} -> {:ok, place_row(socket, state, saved)}
+      _nothing_saved -> {:ok, socket}
+    end
+  end
 
   def update(%{gervaz_refresh: true}, socket) do
     state = socket.assigns.table_state

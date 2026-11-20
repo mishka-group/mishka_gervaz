@@ -179,6 +179,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
         state={@state}
         myself={@myself}
       />
+      {Shared.render_overlays(assigns)}
     </div>
     """
   end

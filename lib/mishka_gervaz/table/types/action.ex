@@ -16,6 +16,7 @@ defmodule MishkaGervaz.Table.Types.Action do
   - `:permanent_destroy` - Permanently delete archived record
   - `:row_click` - Full-row click handler
   - `:accordion` - Expandable row toggle (requires `:expand` feature)
+  - `:drawer` - Opens the row's record view or form in the table's drawer
 
   ## Custom Action Types
 
@@ -54,7 +55,8 @@ defmodule MishkaGervaz.Table.Types.Action do
       unarchive: Action.Unarchive,
       permanent_destroy: Action.PermanentDestroy,
       row_click: Action.RowClick,
-      accordion: Action.Accordion
+      accordion: Action.Accordion,
+      drawer: Action.Drawer
     },
     default: Action.Event
 

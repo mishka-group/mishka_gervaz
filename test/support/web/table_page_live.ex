@@ -11,6 +11,10 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   On `/shelf` the table's footer shows its counts in `#counts`, beside an Add item button whose
   click the page counts in `#activity`.
 
+  On `/desk` the table is of `MishkaGervaz.Test.Web.DeskItem`, whose rows open in the table's
+  drawer. The drawer's Copy button is counted in `#activity`, and a save of the form in the drawer
+  closes it with `MishkaGervaz.Table.Web.Live.close_drawer/2`, the saved row put back in its place.
+
   `send(view.pid, :activity)` stands for a live event of the page, such as a PubSub broadcast: it
   redraws the rail, so the page renders the table again with the `url_state` it already holds.
   `send(view.pid, {:notify, notification})` hands an Ash notification on to the table, as a page
@@ -20,7 +24,16 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   use Phoenix.LiveView
 
   alias MishkaGervaz.Table.Web.UrlSync
-  alias MishkaGervaz.Test.Web.{FeedItem, GatedItem, KeptItem, OffsetItem, PlainItem, ShelfItem}
+
+  alias MishkaGervaz.Test.Web.{
+    DeskItem,
+    FeedItem,
+    GatedItem,
+    KeptItem,
+    OffsetItem,
+    PlainItem,
+    ShelfItem
+  }
 
   @master %{id: "master-1", site_id: nil, role: :admin}
 
@@ -36,11 +49,16 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   end
 
   @impl true
-  def handle_event("add_item", _params, socket),
+  def handle_event(event, _params, socket) when event in ["add_item", "copy_item"],
     do: {:noreply, update(socket, :activity, &(&1 + 1))}
 
   @impl true
   def handle_info(:activity, socket), do: {:noreply, update(socket, :activity, &(&1 + 1))}
+
+  def handle_info({:form_saved, _mode, record}, socket) do
+    MishkaGervaz.Table.Web.Live.close_drawer("items", record)
+    {:noreply, socket}
+  end
 
   def handle_info({:notify, notification}, socket) do
     send_update(MishkaGervaz.Table.Web.Live, id: "items", pubsub_notification: notification)
@@ -74,5 +92,6 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   defp resource(:plain), do: PlainItem
   defp resource(:offset), do: OffsetItem
   defp resource(:shelf), do: ShelfItem
+  defp resource(:desk), do: DeskItem
   defp resource(_items), do: GatedItem
 end
