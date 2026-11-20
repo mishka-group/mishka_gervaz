@@ -66,6 +66,7 @@ a key it does not consume is silently ignored.
 | `Table` | `:hoverable` | `true` | ✔ row hover |
 | `Table` | `:highlight_arrivals` | `true` | ✔ a row that arrives by a stream insert fades from a highlight — see [realtime.md](realtime.md) |
 | `Table` | `:show_header` / `:bordered` / `:compact` | `true` / `false` / `false` | declared in `default_options/0` but **not read** by the current markup |
+| any built-in | `:switcher` | `true` | ✔ `false` draws no template switcher, see below |
 | `MediaGallery` | `:columns` | `6` | ✔ sets the card-width floor (`≤3` ⇒ wider cards) |
 | `MediaGallery` | `:overlay_action` | `:toggle_featured` | ✔ the row action drawn as the star over the thumbnail |
 | `MediaGallery` | `:primary_action` | `:edit` | ✔ the one wide, labelled button |
@@ -88,6 +89,18 @@ column :stats, do: visible fn state -> state.template.name() == :table end
 ```
 
 Add `:template` to `url_sync.params` to make the choice bookmarkable.
+
+`template_options switcher: false` keeps the templates and draws no switcher: each stays reachable
+from the URL's template param or a mount's `template`, and the reader is offered no buttons. A
+mount's `switchable_templates={[]}` turns the switcher off for that mount alone. A custom template
+asks `MishkaGervaz.Table.Templates.Shared.show_switcher?/1` before it draws one.
+
+```elixir
+presentation do
+  switchable_templates [MishkaGervaz.Table.Templates.Table, MyAppWeb.Templates.ProductCard]
+  template_options switcher: false
+end
+```
 
 ## `keep_loaded_records`
 

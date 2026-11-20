@@ -97,8 +97,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     show_pagination = :paginate in features
     show_bulk_actions = :bulk_actions in features and show_checkboxes
 
-    show_template_switcher =
-      static.switchable_templates != nil and static.switchable_templates != []
+    show_template_switcher = Shared.show_switcher?(static)
 
     show_expand = :expand in features and Shared.expandable_rows?(static.row_actions, state)
 

@@ -1256,11 +1256,22 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       :paginate in features and is_integer(state.total_count) and state.total_count > 0
     )
     |> assign(:show_bulk_actions, :bulk_actions in features and show_checkboxes)
-    |> assign(
-      :show_switcher,
-      static.switchable_templates != nil and static.switchable_templates != []
-    )
+    |> assign(:show_switcher, show_switcher?(static))
   end
+
+  @doc """
+  Whether the table draws its template switcher: the resource declared `switchable_templates`, and
+  its `template_options` do not say `switcher: false`.
+
+  `switcher: false` keeps the templates reachable, by the URL's template param or a mount's
+  `template`, and only leaves the reader without the buttons. A mount's `switchable_templates={[]}`
+  turns the switcher off for that mount alone.
+  """
+  @spec show_switcher?(map()) :: boolean()
+  def show_switcher?(%{switchable_templates: [_ | _]} = static),
+    do: (Map.get(static, :template_options) || [])[:switcher] != false
+
+  def show_switcher?(_static), do: false
 
   defp bulk_action_visible_for_status?(%{visible: :active}, :active), do: true
   defp bulk_action_visible_for_status?(%{visible: :active}, _status), do: false

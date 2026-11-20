@@ -2,7 +2,8 @@ defmodule MishkaGervaz.Test.Web.ShelfItem do
   @moduledoc """
   The resource of `MishkaGervaz.Test.Web.TablePageLive`'s `/shelf` table: a numbered list of three
   rows a page, sorted by title, whose rows open `/shelf/<id>`. Its rows can be picked, and each has a
-  Delete action.
+  Delete action. It may be drawn as a table or a media gallery, but draws no switcher between them
+  (`template_options switcher: false`); its template is synced to the URL.
   """
 
   use Ash.Resource,
@@ -40,6 +41,21 @@ defmodule MishkaGervaz.Test.Web.ShelfItem do
 
       bulk_actions do
         action :wipe, type: :destroy
+      end
+
+      presentation do
+        switchable_templates [
+          MishkaGervaz.Table.Templates.Table,
+          MishkaGervaz.Table.Templates.MediaGallery
+        ]
+
+        template_options switcher: false
+      end
+
+      url_sync do
+        enabled true
+        mode :bidirectional
+        params [:template]
       end
     end
   end
