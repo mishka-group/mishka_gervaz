@@ -32,6 +32,20 @@ defmodule MishkaGervaz.Table.Web.Live do
   - `view` - The name of a `view` of the resource's table, drawn instead of the table's own
     columns, with its base filter; see `MishkaGervaz.Table.Dsl.Views`
 
+  ## Slots
+
+  - `rail` - drawn beside the table, under its filters
+  - `before_table` - drawn above the rows
+  - `filter_actions` - drawn at the end of the filter bar
+  - `table_footer` - drawn under the rows by the default table template, given the table's counts,
+    `%{shown: shown, total: total}` (`MishkaGervaz.Table.Templates.Shared.table_counts/1`); it may
+    carry text and buttons of the page's own:
+
+        <:table_footer :let={counts}>
+          {counts.shown} of {counts.total} products
+          <button phx-click="new_product">Add product</button>
+        </:table_footer>
+
   ## Parent LiveView Integration
 
   The component sends messages to the parent for certain actions:
@@ -236,6 +250,7 @@ defmodule MishkaGervaz.Table.Web.Live do
       |> assign(:before_table, Map.get(assigns, :before_table))
       |> assign(:rail, Map.get(assigns, :rail))
       |> assign(:filter_actions, Map.get(assigns, :filter_actions))
+      |> assign(:table_footer, Map.get(assigns, :table_footer))
       |> assign(:url_sync_pending, false)
       |> then(fn s ->
         if is_map(url_state[:query]),

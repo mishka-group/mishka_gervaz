@@ -116,6 +116,8 @@ most:
 | `action_visible?/3` | the `:active` / `:archived` / `fn record, state` rule |
 | `render_filters/1`, `render_pagination/1`, `render_bulk_actions/1` | the standard bars |
 | `render_load_earlier/1` | the Load earlier button above the rows, for a `:load_more` / `:infinite` table opened past its first page; a template that draws its own pager draws it, or a button sending `"load_earlier"` |
+| `table_counts/1` | the `%{shown:, total:}` the `table_footer` slot receives |
+| `row_path/3` | the path a row opens, from `row do path … end` |
 | `render_pagination_row/1`, `range_label/1` | the one row every pager is laid out in (`:leading`, `:center` and `:trailing` slots), and the `Showing 1–40 of 136` of a growing list; a template that draws its own pager lays it out with them |
 | `render_empty_state/1`, `render_error_state/1`, `render_loading/1` | the standard states |
 | `record_checked?/2` | selection state, including `select_all?` + `excluded_ids` |

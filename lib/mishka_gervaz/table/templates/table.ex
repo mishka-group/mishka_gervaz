@@ -127,6 +127,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign_new(:before_table, fn -> nil end)
       |> assign_new(:rail, fn -> nil end)
       |> assign_new(:filter_actions, fn -> nil end)
+      |> assign_new(:table_footer, fn -> nil end)
 
     ~H"""
     <div id={@static.id} class="mishka-gervaz-table">
@@ -232,6 +233,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
                 />
               </div>
             </div>
+          </div>
+
+          <div
+            :if={@table_footer not in [nil, []] and not @empty? and not @failed?}
+            data-role="gervaz-table-footer"
+            class="mt-3 flex flex-wrap items-center justify-between gap-3 px-1 text-[12.5px] font-semibold text-[#8a877f]"
+          >
+            {render_slot(@table_footer, Shared.table_counts(@state))}
           </div>
 
           <div

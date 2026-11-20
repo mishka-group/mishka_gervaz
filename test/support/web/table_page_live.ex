@@ -8,6 +8,9 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   of `MishkaGervaz.Test.Web.OffsetItem` on `/offset`, and of `MishkaGervaz.Test.Web.GatedItem`
   everywhere else.
 
+  On `/shelf` the table's footer shows its counts in `#counts`, beside an Add item button whose
+  click the page counts in `#activity`.
+
   `send(view.pid, :activity)` stands for a live event of the page, such as a PubSub broadcast: it
   redraws the rail, so the page renders the table again with the `url_state` it already holds.
   `send(view.pid, {:notify, notification})` hands an Ash notification on to the table, as a page
@@ -33,6 +36,10 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   end
 
   @impl true
+  def handle_event("add_item", _params, socket),
+    do: {:noreply, update(socket, :activity, &(&1 + 1))}
+
+  @impl true
   def handle_info(:activity, socket), do: {:noreply, update(socket, :activity, &(&1 + 1))}
 
   def handle_info({:notify, notification}, socket) do
@@ -54,6 +61,10 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
       <:rail>
         <p id="activity">{@activity}</p>
       </:rail>
+      <:table_footer :let={counts} :if={@live_action == :shelf}>
+        <span id="counts">{counts.shown} of {counts.total}</span>
+        <button id="add-item" type="button" phx-click="add_item">Add item</button>
+      </:table_footer>
     </.live_component>
     """
   end

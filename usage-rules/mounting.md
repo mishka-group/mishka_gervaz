@@ -29,6 +29,30 @@ decodes the URL, and answers a handful of messages.
 `view` / `template` / `switchable_templates` / `url_sync` are applied **at init only** — a later parent render will not
 drag back a choice the reader has since changed.
 
+### Slots
+
+| Slot | Drawn |
+|---|---|
+| `rail` | beside the table, under its filters |
+| `before_table` | above the rows |
+| `filter_actions` | at the end of the filter bar |
+| `table_footer` | under the rows, by the default table template, given the table's counts |
+
+`table_footer` receives `%{shown: shown, total: total}` — the rows the view shows and the rows the
+read finds under its filters, `nil` when the table keeps no count — and carries the page's own text
+and buttons. It is not drawn while the table has nothing to show or its first read failed:
+
+```heex
+<.live_component module={MishkaGervaz.Table.Web.Live} id="products" …>
+  <:table_footer :let={counts}>
+    <span>{counts.shown} of {counts.total} products</span>
+    <button phx-click="new_product">Add product</button>
+  </:table_footer>
+</.live_component>
+```
+
+A custom template reads the counts with `MishkaGervaz.Table.Templates.Shared.table_counts/1`.
+
 ## Form
 
 ```heex

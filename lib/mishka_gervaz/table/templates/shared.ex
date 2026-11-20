@@ -1152,6 +1152,34 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     do: MapSet.member?(selected, record_id)
 
   @doc """
+  The table's counts, as the `:table_footer` slot of `MishkaGervaz.Table.Web.Live` receives them:
+  `shown`, how many rows the view shows, and `total`, how many the table's read finds under its
+  filters, `nil` when the table keeps no count (`show_total false`).
+
+  `shown` is the rows the loads put in the view, less those it took out: the rows kept, for a table
+  that keeps its loaded rows, or the rows from the view's first page to its last otherwise.
+  """
+  @spec table_counts(map()) :: %{shown: non_neg_integer(), total: non_neg_integer() | nil}
+  def table_counts(state), do: %{shown: shown_count(state), total: state.total_count}
+
+  defp shown_count(%{static: %{keep_loaded_records: true}, loaded_records: rows})
+       when is_list(rows),
+       do: length(rows)
+
+  defp shown_count(%{next_offset: last} = state) when is_integer(last) do
+    page_size = state.current_page_size || state.static.page_size || 0
+    before_first = ((state.first_page || 1) - 1) * page_size
+    shown = max(last - before_first, 0)
+
+    case state.total_count do
+      total when is_integer(total) -> min(shown, max(total - before_first, 0))
+      _no_count -> shown
+    end
+  end
+
+  defp shown_count(_state), do: 0
+
+  @doc """
   The path the row of `record` opens, from the resource's `row do path … end`, or `nil` when it
   declares none or its function gives `nil` for this record.
   """
