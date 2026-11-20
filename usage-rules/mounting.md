@@ -204,6 +204,43 @@ def handle_info({:expand_row, id}, socket) do
 end
 ```
 
+## Toasts
+
+A page that tells the reader what just happened, "Order refunded.", keeps its toasts with
+`MishkaGervaz.Toast`: `attach/1` once in `mount/3`, `toasts/1` drawn once, and `push/4` where
+something happened. Each toast leaves by itself, through a timer message the hook answers in the
+page's own process (5 seconds, 8 with an Undo or a link, or `ms:`), and at once on its Close; a page
+keeps the four newest. A component of the page sends one with `send_toast/3`.
+
+```elixir
+def mount(_params, _session, socket), do: {:ok, MishkaGervaz.Toast.attach(socket)}
+
+def handle_info({:form_saved, :update, product}, socket) do
+  new_socket =
+    MishkaGervaz.Toast.push(socket, :ok, "Product saved.",
+      navigate: "/admin/products/#{product.id}",
+      link_label: "Open it"
+    )
+
+  {:noreply, new_socket}
+end
+
+def handle_info({:row_action, "archive", %{"id" => id}}, socket) do
+  # ... archive it
+  {:noreply, MishkaGervaz.Toast.push(socket, :info, "Product archived.", undo: {:restore, id})}
+end
+
+def handle_info({:toast_undo, {:restore, id}}, socket), do: …   # the Undo was pressed
+```
+
+```heex
+<MishkaGervaz.Toast.toasts toasts={@gervaz_toasts} ui={MyAppWeb.UIAdapter} />
+```
+
+Tones: `:ok`, `:info`, `:warn`, `:error`. A link is `navigate:` (inside the app) or `href:` (a
+plain address, such as a file), with `link_label:`; an Undo is `undo:` (any term), with
+`undo_label:`. The toasts live in the `:gervaz_toasts` assign; the UI adapter's `toast/1` draws each.
+
 ## Modals
 
 Two ways to close a modal after save — pick **one**:
@@ -237,6 +274,8 @@ or a page; they carry their own exit transition in `phx-remove`, so they may sit
 - [ ] `{:row_action, …}` / `{:bulk_action, …}` handled for every `:event` / `:parent` action
 - [ ] `hidden_fields` paired with `defaults`
 - [ ] Modal closing driven by exactly one of the two mechanisms
+- [ ] A page that pushes toasts runs `MishkaGervaz.Toast.attach/1` in `mount/3` and draws
+  `MishkaGervaz.Toast.toasts/1` once, and answers `{:toast_undo, undo}` for every Undo it offers
 
 ## DSL reference
 

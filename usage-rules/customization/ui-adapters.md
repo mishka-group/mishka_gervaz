@@ -162,7 +162,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
   `date_input` `datetime_input` `number_input` `textarea` `json_editor` `toggle_input`
   `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
-- **State & status** — `empty_state` `error_state` `loading_state` `alert`
+- **State & status** — `empty_state` `error_state` `loading_state` `alert` `toast`
 - **Panels** — `drawer` `sheet` `question`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
   `cell_text` `cell_number` `cell_date` `cell_datetime` `cell_code` `cell_array` `cell_tags`
@@ -244,6 +244,15 @@ the backdrop and Escape send `on_cancel`. With an `answer`, a field named `answe
 each change sends `on_change`, and the button stays off until what was typed is the answer; an
 `error` is said under the field. The server draws it and takes it away: tables and forms draw it
 for their own questions, and a page draws one for its own with `MishkaGervaz.Question.window/1`.
+
+## Toast
+
+`toast/1` is one toast of a page's `MishkaGervaz.Toast.toasts/1` ([../mounting.md](../mounting.md)):
+a short dark note with a dot in its `tone`'s colour (`:ok`, `:info`, `:warn`, `:error`), its `text`,
+an Undo button when it has an `undo_label`, a link (`navigate`, or `href`, with `link_label`) and a
+Close. Its buttons send `gervaz_toast_undo` and `gervaz_toast_close` with `phx-value-id` set to its
+`toast_id`; the page's `Toast.attach/1` hook answers them. An adapter that draws its own keeps those
+two events and that value.
 
 ## TODO
 - [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 73 stubs

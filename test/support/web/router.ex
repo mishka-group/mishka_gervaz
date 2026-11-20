@@ -22,6 +22,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     * `/plans` — `MishkaGervaz.Test.Web.PlanPageLive`, a page with the form of
       `MishkaGervaz.Test.Web.PlanItem`.
     * `/plans/drawer` — the same page with the form in a drawer.
+    * `/toasts` — `MishkaGervaz.Test.Web.ToastPageLive`, a page that pushes toasts.
   """
 
   use Phoenix.Router
@@ -47,5 +48,6 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/wizard", MishkaGervaz.Test.Web.FormPageLive
     live "/plans", MishkaGervaz.Test.Web.PlanPageLive, :page
     live "/plans/drawer", MishkaGervaz.Test.Web.PlanPageLive, :drawer
+    live "/toasts", MishkaGervaz.Test.Web.ToastPageLive
   end
 end

@@ -86,6 +86,8 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     {:error_state, "Render error state"},
     {:loading_state, "Render loading state"},
     {:alert, "Render a static alert/notice (info/warning/error/success/neutral)"},
+    {:toast,
+     "Render one toast: a short note with a tone, an optional Undo and link, and a Close"},
     {:drawer,
      "Render a drawer from the right side, a bottom sheet below 640px, for a form or a page"},
     {:sheet, "Render a bottom sheet, for a form or a page"},

@@ -49,6 +49,11 @@
   form's `create` or `update` button. The server draws it: the action runs, or the form saves what
   was submitted, once it is answered, and with `answer` only once that word is typed
   (`MishkaGervaz.Question`, `Question.bind/4` for a custom action type)
+- Toasts: the UI adapter gains `toast/1`, a short note in a tone (`:ok`, `:info`, `:warn`,
+  `:error`) with an optional Undo and link, and `MishkaGervaz.Toast` keeps a page's toasts:
+  `attach/1` in `mount/3`, `push/4` (`undo:`, `navigate:` or `href:`, `ms:`), `send_toast/3` from a
+  component and `toasts/1` to draw them. Each leaves by itself through a timer message in the page's
+  own process, no JavaScript, and an Undo sends the page `{:toast_undo, undo}`
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

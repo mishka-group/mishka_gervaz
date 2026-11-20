@@ -4693,6 +4693,92 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     }
 
   @doc """
+  One toast, a short dark note at the bottom of the screen (see `MishkaGervaz.Toast`): a dot in its
+  tone's colour, its sentence, an Undo button and a link when it has them, and a Close. Its buttons
+  send `gervaz_toast_undo` and `gervaz_toast_close` with the toast's id to the page, whose
+  `MishkaGervaz.Toast.attach/1` hook answers them.
+
+  ## Assigns
+    * `:id` - the toast's DOM id
+    * `:toast_id` - the toast's id, sent with its buttons' events
+    * `:tone` - `:ok`, `:info`, `:warn` or `:error`
+    * `:text` - its sentence
+    * `:undo_label` - the Undo button's words; no button when `nil`
+    * `:navigate` - a path inside the app it links to
+    * `:href` - a plain address it links to instead, such as a file
+    * `:link_label` - the link's words
+  """
+  @impl true
+  def toast(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:tone, fn -> :ok end)
+      |> assign_new(:undo_label, fn -> nil end)
+      |> assign_new(:navigate, fn -> nil end)
+      |> assign_new(:href, fn -> nil end)
+      |> assign_new(:link_label, fn -> nil end)
+
+    ~H"""
+    <div
+      id={@id}
+      role="status"
+      data-role="gervaz-toast"
+      data-tone={@tone}
+      class="pointer-events-auto flex max-w-[420px] items-center gap-2.5 rounded-[13px] bg-[#17161a] px-3.5 py-[11px] text-[12.5px] font-semibold leading-[1.45] text-white shadow-[0_14px_34px_rgba(23,22,26,0.3)] max-[640px]:max-w-none max-[640px]:w-full"
+    >
+      <span aria-hidden="true" class={["size-2 flex-none rounded-full", toast_dot(@tone)]}></span>
+      <span data-role="gervaz-toast-text" class="flex-1">{@text}</span>
+      <button
+        :if={@undo_label}
+        type="button"
+        data-role="gervaz-toast-undo"
+        phx-click="gervaz_toast_undo"
+        phx-value-id={@toast_id}
+        class="flex-none rounded-[8px] border border-white/20 px-[9px] py-[3px] text-[11.5px] font-extrabold text-white hover:bg-white/10"
+      >
+        {@undo_label}
+      </button>
+      <.link
+        :if={@navigate}
+        navigate={@navigate}
+        data-role="gervaz-toast-link"
+        class={["flex-none text-[11.5px] font-extrabold no-underline", toast_link(@tone)]}
+      >
+        {@link_label}
+      </.link>
+      <a
+        :if={is_nil(@navigate) and @href}
+        href={@href}
+        data-role="gervaz-toast-link"
+        class={["flex-none text-[11.5px] font-extrabold no-underline", toast_link(@tone)]}
+      >
+        {@link_label}
+      </a>
+      <button
+        type="button"
+        data-role="gervaz-toast-close"
+        phx-click="gervaz_toast_close"
+        phx-value-id={@toast_id}
+        aria-label={dgettext("mishka_gervaz", "Close")}
+        class="grid size-5 flex-none place-items-center text-white/60 hover:text-white"
+      >
+        <.render_icon name="hero-x-mark" class="size-[13px]" />
+      </button>
+    </div>
+    """
+  end
+
+  defp toast_dot(:warn), do: "bg-[#e0a23a]"
+  defp toast_dot(:error), do: "bg-[#c8546d]"
+  defp toast_dot(:info), do: "bg-[#6d69e6]"
+  defp toast_dot(_ok), do: "bg-[#1f9d6b]"
+
+  defp toast_link(:warn), do: "text-[#f0b453]"
+  defp toast_link(:error), do: "text-[#f08aa0]"
+  defp toast_link(:info), do: "text-[#a5a1ff]"
+  defp toast_link(_ok), do: "text-[#4fd39f]"
+
+  @doc """
   Render the form header (title + description).
 
   ## Assigns
