@@ -74,6 +74,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Errors
+  alias MishkaGervaz.Table.Templates.Shared
   alias MishkaGervaz.Table.Types.Filter.DateRange
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -613,7 +614,12 @@ defmodule MishkaGervaz.Table.Web.Events do
 
       {:ok, :stream_insert, record} ->
         socket =
-          Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record, at: 0)
+          Phoenix.LiveView.stream_insert(
+            socket,
+            state.static.stream_name,
+            Shared.arrived(record),
+            at: 0
+          )
 
         {:noreply, socket}
 
@@ -682,7 +688,12 @@ defmodule MishkaGervaz.Table.Web.Events do
 
       {:ok, :stream_insert, record} ->
         socket =
-          Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record, at: 0)
+          Phoenix.LiveView.stream_insert(
+            socket,
+            state.static.stream_name,
+            Shared.arrived(record),
+            at: 0
+          )
 
         {:noreply, socket}
 

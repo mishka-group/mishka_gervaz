@@ -68,7 +68,14 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
   @impl true
   def default_options do
-    [show_header: true, striped: false, hoverable: true, bordered: false, compact: false]
+    [
+      show_header: true,
+      striped: false,
+      hoverable: true,
+      bordered: false,
+      compact: false,
+      highlight_arrivals: true
+    ]
   end
 
   @impl true
@@ -641,6 +648,13 @@ defmodule MishkaGervaz.Table.Templates.Table do
     end
   end
 
+  # A row that arrived by a stream insert after the table loaded wears a highlight that fades in a
+  # few seconds: an overlay that starts opaque (`starting:`, CSS `@starting-style`) and fades as it is
+  # first drawn. `template_options highlight_arrivals: false` turns it off.
+  defp highlight_arrival?(static, record) do
+    (static.template_options || [])[:highlight_arrivals] != false and Shared.arrived?(record)
+  end
+
   # What the row's link reads to a screen reader: the first shown column's value when it is plain
   # text or a number, "Open" otherwise.
   defp row_link_label(%{visible_columns: [column | _], record: record}) do
@@ -723,6 +737,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:row_path, row_path)
       |> assign(:above_link, row_path && "relative z-[1]")
       |> assign(:row_link_label, row_path && row_link_label(assigns))
+      |> assign(:arrived?, highlight_arrival?(assigns.static, assigns.record))
 
     ~H"""
     <div
@@ -737,6 +752,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
         "gervaz-row grid py-[14px] items-center transition-colors",
         subgrid_class(),
         @row_path && "relative cursor-pointer",
+        @arrived? && "relative",
         "max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
         | row_classes(@static, @state, @record, @is_checked)
       ]}>
@@ -748,6 +764,12 @@ defmodule MishkaGervaz.Table.Templates.Table do
         >
           <span class="sr-only">{@row_link_label}</span>
         </.link>
+        <span
+          :if={@arrived?}
+          aria-hidden="true"
+          data-role="gervaz-row-arrived"
+          class="pointer-events-none absolute inset-0 z-0 bg-[#fff1c2] opacity-0 mix-blend-multiply transition-opacity duration-[2400ms] ease-out starting:opacity-100"
+        />
         <div
           :if={@show_checkboxes}
           class={["flex items-center ps-[16px] max-[980px]:ps-0!", @above_link]}

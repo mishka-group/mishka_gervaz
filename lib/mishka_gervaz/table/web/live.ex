@@ -134,6 +134,7 @@ defmodule MishkaGervaz.Table.Web.Live do
   alias MishkaGervaz.Table.Web.{State, DataLoader, Events, Renderer, Refresh, UrlSync}
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Helpers
+  alias MishkaGervaz.Table.Templates.Shared
   alias Phoenix.LiveView.AsyncResult
 
   @impl true
@@ -559,7 +560,7 @@ defmodule MishkaGervaz.Table.Web.Live do
     row = Helpers.inject_preload_aliases(row, state.preload_aliases)
 
     socket
-    |> stream_insert(state.static.stream_name, row, at: 0)
+    |> stream_insert(state.static.stream_name, Shared.arrived(row), at: 0)
     |> keep_row(row)
   end
 

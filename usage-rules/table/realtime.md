@@ -105,6 +105,17 @@ on_realtime fn notification, socket ->
 end
 ```
 
+## A row that arrives is highlighted
+
+A row the default table template draws after it loaded, by a stream insert, wears a highlight
+that fades in a few seconds: a realtime notification's row, and a row action's
+`{:ok, :stream_insert, record}`. It is CSS alone, an overlay whose opacity starts at 1 through
+Tailwind's `starting:` variant (CSS `@starting-style`, Tailwind v4) and fades as it is first drawn;
+no JavaScript. The rows a load reads wear none. Turn it off with
+`template_options highlight_arrivals: false`. A custom template asks
+`MishkaGervaz.Table.Templates.Shared.arrived?/1`, and marks a row it inserts itself with
+`Shared.arrived/1`.
+
 ## TODO
 - [ ] `prefix` set (compile fails otherwise)
 - [ ] `pubsub` reachable — set on the domain

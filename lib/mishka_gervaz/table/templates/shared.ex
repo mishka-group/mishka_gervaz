@@ -1152,6 +1152,27 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     do: MapSet.member?(selected, record_id)
 
   @doc """
+  Marks `record` as a row that arrived by a stream insert after the table loaded: a realtime
+  notification, or a row action's `{:ok, :stream_insert, record}`. The default table template draws
+  such a row with a short highlight that fades in a few seconds (`arrived?/1`).
+
+  The mark is the record's `:gervaz_arrived` metadata, so a row read again from the data layer
+  comes back without it. A value that is not an Ash record is returned unmarked.
+  """
+  @spec arrived(term()) :: term()
+  def arrived(%{__metadata__: metadata} = record) when is_map(metadata),
+    do: %{record | __metadata__: Map.put(metadata, :gervaz_arrived, true)}
+
+  def arrived(record), do: record
+
+  @doc """
+  Whether `record` arrived by a stream insert after the table loaded, see `arrived/1`.
+  """
+  @spec arrived?(term()) :: boolean()
+  def arrived?(%{__metadata__: %{gervaz_arrived: true}}), do: true
+  def arrived?(_record), do: false
+
+  @doc """
   The table's counts, as the `:table_footer` slot of `MishkaGervaz.Table.Web.Live` receives them:
   `shown`, how many rows the view shows, and `total`, how many the table's read finds under its
   filters, `nil` when the table keeps no count (`show_total false`).
