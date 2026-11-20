@@ -163,7 +163,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
   `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
 - **State & status** — `empty_state` `error_state` `loading_state` `alert`
-- **Panels** — `drawer` `sheet`
+- **Panels** — `drawer` `sheet` `question`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
   `cell_text` `cell_number` `cell_date` `cell_datetime` `cell_code` `cell_array` `cell_tags`
   `cell_avatars` `cell_stacked` `cell_stats` `cell_bars` `filter_reset_button` `archive_toggle`
@@ -233,6 +233,17 @@ its buttons, in the foot (`actions_at: :foot`, the default) or in the head besid
 
 A table opens a row in this drawer with a `:drawer` row action
 ([../table/row-actions.md](../table/row-actions.md)).
+
+## Question window
+
+`question/1` is the confirm dialog a `confirm` keyword list asks (`MishkaGervaz.Question`): an alert
+dialog in the middle of the screen, a bottom sheet below 640px, with `title`, `body`, a `tone`
+(`:danger`, `:warn`, `:info`) that colours its button, and its `confirm_label` and
+`cancel_label`. It is a form: its button submits `on_confirm`, so Enter answers too, and Cancel,
+the backdrop and Escape send `on_cancel`. With an `answer`, a field named `answer` asks for it,
+each change sends `on_change`, and the button stays off until what was typed is the answer; an
+`error` is said under the field. The server draws it and takes it away: tables and forms draw it
+for their own questions, and a page draws one for its own with `MishkaGervaz.Question.window/1`.
 
 ## TODO
 - [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 73 stubs

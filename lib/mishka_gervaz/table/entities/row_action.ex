@@ -30,7 +30,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
           event: atom() | String.t() | nil,
           action: atom() | {atom(), atom()} | nil,
           payload: (map() -> map()) | nil,
-          confirm: String.t() | (map() -> String.t()) | nil,
+          confirm: String.t() | (map() -> String.t()) | keyword() | nil,
           restricted: boolean(),
           visible: boolean() | :active | :archived | (map(), map() -> boolean()),
           js: (map() -> Phoenix.LiveView.JS.t()) | nil,
@@ -127,8 +127,14 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
       doc: "Event payload function `fn record -> payload`."
     ],
     confirm: [
-      type: {:or, [:string, {:fun, 1}]},
-      doc: "Confirmation message (supports {field} interpolation)."
+      type: {:or, [:string, {:fun, 1}, {:keyword_list, MishkaGervaz.Question.schema("the row")}]},
+      doc: """
+      A question asked before the action runs. A string or `fn record -> string end` is the
+      browser's own question (`data-confirm`). A keyword list is asked in the UI adapter's question
+      window: `title`, `body`, `tone` (`:danger`, `:warn`, `:info`), `answer` (a word to type before
+      the button answers, such as the row's name), `answer_label`, `confirm_label` and
+      `cancel_label`, each a string or `fn record -> string end`. See `MishkaGervaz.Question`.
+      """
     ],
     restricted: [
       type: :boolean,

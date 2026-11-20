@@ -89,6 +89,8 @@ defmodule MishkaGervaz.Behaviours.UIAdapter do
     {:drawer,
      "Render a drawer from the right side, a bottom sheet below 640px, for a form or a page"},
     {:sheet, "Render a bottom sheet, for a form or a page"},
+    {:question,
+     "Render a question window (confirm dialog) with a tone, a title, a sentence, an optional typed answer and its two buttons"},
     {:table, "Render table wrapper"},
     {:table_header, "Render table header row"},
     {:th, "Render a table header cell"},

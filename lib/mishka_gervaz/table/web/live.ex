@@ -70,6 +70,12 @@ defmodule MishkaGervaz.Table.Web.Live do
         {:noreply, socket}
       end
 
+  ## Questions
+
+  A row or bulk action whose `confirm` is a keyword list asks it in the UI adapter's question
+  window before it runs, drawn by the table itself (`MishkaGervaz.Question`); a string `confirm`
+  stays the browser's own question.
+
   ## PubSub Integration (Automatic)
 
   The component automatically subscribes to PubSub topics when `realtime` is configured
@@ -165,6 +171,7 @@ defmodule MishkaGervaz.Table.Web.Live do
      socket
      |> assign(:table_state, nil)
      |> assign(:row_drawer, nil)
+     |> assign(:question, nil)
      |> assign(:initialized, false)
      |> assign(:subscribed, false)
      |> assign(:refresh_initialized, false)

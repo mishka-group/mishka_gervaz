@@ -62,6 +62,22 @@ defmodule MishkaGervaz.Form.Web.Live do
   acts while the form holds changes. A form in the UI adapter's `drawer/1` or `sheet/1` passes
   `confirm_close={@post_form_dirty? && "Discard your changes?"}`, so closing the window asks too.
 
+  ## Asking before a save
+
+  A `create` or `update` button of the form's `submit` block whose `confirm` is a keyword list asks
+  it in the UI adapter's question window before the save runs, drawn by the form itself under its
+  `<form>` with the id `"<id>-question"` (`MishkaGervaz.Question`). The save runs with the values the
+  form was submitted with once the question is answered; Cancel saves nothing.
+
+      submit do
+        update confirm: [
+                 title: "Publish the changes?",
+                 body: fn product -> "Buyers of \#{product.name} see them at once." end,
+                 tone: :warn,
+                 confirm_label: "Publish"
+               ]
+      end
+
   ## Opening a form again
 
   A form that stays mounted while it is hidden — in a modal that is shown and hidden, say — keeps
@@ -134,6 +150,7 @@ defmodule MishkaGervaz.Form.Web.Live do
     {:ok,
      socket
      |> assign(:form_state, nil)
+     |> assign(:question, nil)
      |> assign(:initialized, false)}
   end
 

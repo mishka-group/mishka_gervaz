@@ -23,8 +23,10 @@ defmodule MishkaGervaz.Table.Types.Action.Destroy do
   use Phoenix.Component
   use MishkaGervaz.Messages
 
+  alias MishkaGervaz.Question
+
   import MishkaGervaz.Helpers,
-    only: [dynamic_component: 1, maybe_assign: 3, resolve_label: 1, resolve_confirm: 2]
+    only: [dynamic_component: 1, maybe_assign: 3, resolve_label: 1]
 
   @impl true
   def render(_assigns, action, record, ui, target) do
@@ -40,10 +42,7 @@ defmodule MishkaGervaz.Table.Types.Action.Destroy do
       |> assign(:phx_value_id, record.id)
       |> assign(:phx_value_action, to_string(action[:name]))
       |> assign(:phx_target, target)
-      |> assign(
-        :data_confirm,
-        resolve_confirm(action[:confirm], record) || dgettext("mishka_gervaz", "Are you sure?")
-      )
+      |> Question.bind(action, record, dgettext("mishka_gervaz", "Are you sure?"))
 
     ~H"""
     <.dynamic_component {assigns} />

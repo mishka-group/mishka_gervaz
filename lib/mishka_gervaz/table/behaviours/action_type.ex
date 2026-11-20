@@ -72,6 +72,11 @@ defmodule MishkaGervaz.Table.Behaviours.ActionType do
   `MishkaGervaz.Helpers.resolve_confirm/2`: a string is translated in the caller's locale and a
   function is called, as every built-in type does.
 
+  A type whose button sends an event puts the action's `confirm` on it with
+  `MishkaGervaz.Question.bind/4`, after its `:phx_click` and `phx_value_*` values, as the built-in
+  types do: a string or a function becomes `:data_confirm`, and a keyword list makes the press ask
+  in the table's question window before the event is sent with its values.
+
   ## Accessing State
 
   The `assigns` parameter includes the full table state:

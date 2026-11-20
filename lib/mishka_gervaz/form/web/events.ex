@@ -61,6 +61,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   use MishkaGervaz.Messages
 
   alias MishkaGervaz.Form.Web.{State, DataLoader}
+  alias MishkaGervaz.Question
 
   alias MishkaGervaz.Form.Web.Events.{
     SanitizationHandler,
@@ -190,10 +191,50 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def do_handle("save", params, state, socket) do
-    if before_last_step?(state),
-      do: {:noreply, next_step(params, state, socket)},
-      else: {:noreply, save(params, state, socket)}
+    cond do
+      before_last_step?(state) ->
+        {:noreply, next_step(params, state, socket)}
+
+      question = submit_question(state) ->
+        question = Question.pending(question, "save", params)
+        {:noreply, Phoenix.Component.assign(socket, :question, question)}
+
+      true ->
+        {:noreply, save(params, state, socket)}
+    end
   end
+
+  def do_handle("question_typed", %{"answer" => typed}, _state, socket) do
+    case socket.assigns[:question] do
+      %{} = question ->
+        {:noreply,
+         Phoenix.Component.assign(socket, :question, Question.put_typed(question, typed))}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_confirm", params, state, socket) do
+    with %{} = question <- socket.assigns[:question],
+         question = Question.put_typed(question, params["answer"]),
+         true <- Question.answered?(question) do
+      socket = Phoenix.Component.assign(socket, :question, nil)
+      {:noreply, save(question.params, state, socket)}
+    else
+      false ->
+        refused =
+          socket.assigns.question |> Question.put_typed(params["answer"]) |> Question.refuse()
+
+        {:noreply, Phoenix.Component.assign(socket, :question, refused)}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_cancel", _params, _state, socket),
+    do: {:noreply, Phoenix.Component.assign(socket, :question, nil)}
 
   def do_handle("cancel", _params, state, socket) do
     cancel_button = state.static.submit[:cancel]
@@ -779,6 +820,23 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   defp settable_field?(_name, _state), do: false
+
+  # The question a save asks first: the `confirm` of the mode's submit button when it is a
+  # question (a keyword list), about the record the form edits (`nil` on create).
+  @spec submit_question(State.t()) :: Question.t() | nil
+  defp submit_question(state) do
+    button =
+      if state.mode == :create,
+        do: state.static.submit[:create],
+        else: state.static.submit[:update]
+
+    if button != nil and Question.question?(button[:confirm]) and
+         submit_button_allowed?(button, state),
+       do: Question.build(button[:confirm], edited_record(state))
+  end
+
+  defp edited_record(%{mode: :update, form: %{data: record}}), do: record
+  defp edited_record(_state), do: nil
 
   defp save(params, state, socket) do
     submit_button =

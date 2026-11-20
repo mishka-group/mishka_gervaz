@@ -85,6 +85,7 @@ defmodule MishkaGervaz.Table.Web.RowDrawerLiveTest do
     assert view |> element(form) |> render() =~ "Lamp"
 
     view |> form(form, form: %{title: "Desk lamp"}) |> render_submit()
+    view |> form("#items-drawer-form-question-dialog") |> render_submit()
     render_async(view)
 
     refute has_element?(view, "#items-row-drawer")

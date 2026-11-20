@@ -1217,10 +1217,12 @@ defmodule MishkaGervaz.Table.Templates.Shared do
 
   @doc """
   Draws what the table opens over its rows, inside the template's root element: the row drawer a
-  `:drawer` row action opened (`render_row_drawer/1`). Nothing while none is open.
+  `:drawer` row action opened (`render_row_drawer/1`) and the question window a row or bulk action
+  asks (`MishkaGervaz.Question.window/1`, with the id `"<table id>-question"`). Nothing while none
+  is open.
 
   The default templates call it last in their root element; a custom template does the same, so its
-  table's `:drawer` row actions open:
+  table's `:drawer` row actions open and its questions are asked:
 
       <div id={@static.id}>
         ...
@@ -1229,7 +1231,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   """
   @spec render_overlays(map()) :: Phoenix.LiveView.Rendered.t()
   def render_overlays(assigns) do
-    assigns = assign(assigns, :row_drawer, assigns[:row_drawer])
+    assigns =
+      assigns
+      |> assign(:row_drawer, assigns[:row_drawer])
+      |> assign(:question, assigns[:question])
 
     ~H"""
     <.render_row_drawer
@@ -1238,6 +1243,12 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       state={@state}
       row_drawer={@row_drawer}
       myself={@myself}
+    />
+    <MishkaGervaz.Question.window
+      question={@question}
+      id={@static.id <> "-question"}
+      ui={@static.ui_adapter}
+      target={@myself}
     />
     """
   end

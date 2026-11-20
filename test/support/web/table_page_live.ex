@@ -12,7 +12,8 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   click the page counts in `#activity`.
 
   On `/desk` the table is of `MishkaGervaz.Test.Web.DeskItem`, whose rows open in the table's
-  drawer. The drawer's Copy button is counted in `#activity`, and a save of the form in the drawer
+  drawer. The drawer's Copy button and its rows' Mark are counted in `#activity`, and a save of the
+  form in the drawer
   closes it with `MishkaGervaz.Table.Web.Live.close_drawer/2`, the saved row put back in its place.
 
   `send(view.pid, :activity)` stands for a live event of the page, such as a PubSub broadcast: it
@@ -54,6 +55,9 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
 
   @impl true
   def handle_info(:activity, socket), do: {:noreply, update(socket, :activity, &(&1 + 1))}
+
+  def handle_info({:row_action, "mark", _payload}, socket),
+    do: {:noreply, update(socket, :activity, &(&1 + 1))}
 
   def handle_info({:form_saved, _mode, record}, socket) do
     MishkaGervaz.Table.Web.Live.close_drawer("items", record)

@@ -52,7 +52,7 @@ end
 | `event` | atom \| string | `:event`; reaches the parent as `{:row_action, event, payload}` |
 | `action` | atom \| `{master, tenant}` | the Ash action for `:update` |
 | `payload` | `fn record -> map` | |
-| `confirm` | string \| `fn record -> string` | supports `{field}` |
+| `confirm` | string \| `fn record -> string` \| keyword list | a string asks the browser; a keyword list asks the question window, see below |
 | `restricted` | bool | master-only |
 | `visible` | `:active` (default) \| `:archived` \| bool \| **`fn record, state ->`** | arity **2** |
 | `js` | `fn record -> %JS{}` | chained onto the click |
@@ -85,6 +85,36 @@ panel back with `send_update(..., expanded_html: html)` — see
 `visible` and `restricted` decide which rows expand, as they decide which rows show any other
 action: the caret is drawn only on a row whose accordion is visible for that record. The caret
 column stays while some row may expand, so the other rows keep their columns.
+
+## `confirm` — the browser's question or the question window
+
+A string (or `fn record -> string`) is the browser's own question, through `data-confirm`. A
+keyword list is asked in the UI adapter's `question/1` window instead, drawn by the table on the
+server, with no JavaScript: a title, a sentence, a tone, its own button words and, with `answer`,
+a field the reader types a word into before the button answers. Each value but `tone` is a string,
+translated, or `fn record -> string`:
+
+```elixir
+action :delete, type: :destroy,
+  confirm: [
+    title: fn product -> "Delete #{product.name}?" end,
+    body: "Its files and its sales history are deleted with it.",
+    tone: :danger,                                   # :danger (default) | :warn | :info
+    answer: fn product -> product.name end,          # type the name to confirm
+    answer_label: "Type the product's name",         # default: "Type <answer> to confirm"
+    confirm_label: "Delete product",                 # default: "Confirm"
+    cancel_label: "Keep it"                          # default: "Cancel"
+  ]
+```
+
+The press asks and runs nothing. The window's button runs the very event the button would have
+sent, with its values; Cancel, the backdrop and Escape run nothing. A wrong answer is refused under
+the field, "Type “Lamp” exactly as it is written.", and runs nothing. The table reads the row again
+as it asks, so a row that is gone asks nothing. The window's id is `"<table id>-question"`, drawn
+by `Shared.render_overlays/1`. Every built-in type that asks takes it: `:event`, `:edit`,
+`:destroy`, `:update`, `:unarchive`, `:permanent_destroy`; a custom `ActionType` puts it on its
+button with `MishkaGervaz.Question.bind/4`
+([../customization/types.md](../customization/types.md)).
 
 ## `:drawer`
 
@@ -206,7 +236,8 @@ itself. Add a `js` to open the modal and nothing else.
 - [ ] `:update` actions name their Ash `action`
 - [ ] `:unarchive` / `:permanent_destroy` gated with `visible :archived`
 - [ ] Every name in `actions_layout` / `inline` / `dropdown` exists
-- [ ] Destructive actions carry `confirm`
+- [ ] Destructive actions carry `confirm`; one that cannot be taken back asks in the question
+  window with an `answer` to type
 - [ ] The table declares `source.actions.get` — most of these types need it
 
 ## DSL reference

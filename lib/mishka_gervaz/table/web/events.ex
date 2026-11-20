@@ -6,6 +6,8 @@ defmodule MishkaGervaz.Table.Web.Events do
   - Sorting
   - Filtering
   - Row actions (delete, edit, custom events, the row drawer's `open_drawer` and `close_drawer`)
+  - The question window a row or bulk action's `confirm` asks (`ask`, `question_typed`,
+    `question_confirm`, `question_cancel`; see `MishkaGervaz.Question`)
   - Bulk actions
   - Row expansion
   - Archive status changes
@@ -74,6 +76,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Errors
+  alias MishkaGervaz.Question
   alias MishkaGervaz.Table.Templates.Shared
   alias MishkaGervaz.Table.Types.Filter.DateRange
 
@@ -615,6 +618,51 @@ defmodule MishkaGervaz.Table.Web.Events do
   def do_handle("close_drawer", _params, _state, socket),
     do: {:noreply, Phoenix.Component.assign(socket, :row_drawer, nil)}
 
+  def do_handle("ask", %{"ask" => event, "question" => name} = params, state, socket)
+      when is_binary(event) do
+    values = Map.drop(params, ["ask", "question", "record", "scope"])
+
+    question =
+      case ask(params["scope"], name, params, state) do
+        %{} = question -> Question.pending(question, event, values)
+        nil -> nil
+      end
+
+    {:noreply, Phoenix.Component.assign(socket, :question, question)}
+  end
+
+  def do_handle("question_typed", %{"answer" => typed}, _state, socket) do
+    case socket.assigns[:question] do
+      %{} = question ->
+        {:noreply,
+         Phoenix.Component.assign(socket, :question, Question.put_typed(question, typed))}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_confirm", params, state, socket) do
+    with %{} = question <- socket.assigns[:question],
+         question = Question.put_typed(question, params["answer"]),
+         true <- Question.answered?(question) do
+      socket = Phoenix.Component.assign(socket, :question, nil)
+      do_handle(question.event, question.params, state, socket)
+    else
+      false ->
+        refused =
+          socket.assigns.question |> Question.put_typed(params["answer"]) |> Question.refuse()
+
+        {:noreply, Phoenix.Component.assign(socket, :question, refused)}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_cancel", _params, _state, socket),
+    do: {:noreply, Phoenix.Component.assign(socket, :question, nil)}
+
   def do_handle("row_action", params, state, socket) do
     event_name = sanitize(state, params["event"])
     payload = params
@@ -962,6 +1010,27 @@ defmodule MishkaGervaz.Table.Web.Events do
 
     {:noreply, socket}
   end
+
+  # The question a press asks: a bulk action's about the rows it runs on, a row action's about
+  # its row, read again under the table's read so a row that is gone asks nothing.
+  @spec ask(String.t() | nil, String.t(), map(), State.t()) :: Question.t() | nil
+  defp ask("bulk", name, _params, state) do
+    count = Shared.bulk_selection_count(state)
+
+    case Enum.find(state.static.bulk_actions, &(to_string(&1.name) == name)) do
+      %{confirm: confirm} -> Question.build(confirm, count, count: count)
+      nil -> nil
+    end
+  end
+
+  defp ask(_row, name, %{"record" => id}, state) do
+    with %{confirm: confirm} <- find_row_action(state, name),
+         %{} = record <- get_record(state, sanitize(state, id), state.archive_status) do
+      Question.build(confirm, record)
+    end
+  end
+
+  defp ask(_scope, _name, _params, _state), do: nil
 
   @doc """
   The row action named `name` (a string from the page or an atom), dropdown items included, or

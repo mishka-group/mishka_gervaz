@@ -165,6 +165,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
           </.form>
+          <MishkaGervaz.Question.window
+            question={assigns[:question]}
+            id={@static.id <> "-question"}
+            ui={@static.ui_adapter}
+            target={@myself}
+          />
           {render_form_footer(assigns)}
           {render_notices_at(assigns, :form_footer)}
         <% true -> %>
@@ -1043,7 +1049,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         :discard_disabled,
         show_discard and evaluate_button_disabled(discard_button, state)
       )
-      |> assign(:submit_confirm, show_submit && resolve_label(submit_button[:confirm]))
+      |> assign(:submit_confirm, show_submit && browser_confirm(submit_button[:confirm]))
       |> assign(:cancel_confirm, show_cancel && dirty_confirm(cancel_button, state))
       |> assign(:discard_confirm, show_discard && dirty_confirm(discard_button, state))
       |> assign(:show_submit, show_submit)
@@ -1167,8 +1173,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   # A cancel or discard button asks its `confirm` only while the form holds changes.
-  defp dirty_confirm(button, %{dirty?: true}), do: resolve_label(button[:confirm])
+  defp dirty_confirm(button, %{dirty?: true}), do: browser_confirm(button[:confirm])
   defp dirty_confirm(_button, _state), do: nil
+
+  # A `confirm` the browser asks through `data-confirm`; a question for the question window is
+  # asked by the form's save instead.
+  defp browser_confirm(confirm) do
+    if MishkaGervaz.Question.question?(confirm), do: nil, else: resolve_label(confirm)
+  end
 
   # A wizard, and a tabs form whose steps open in order, move with Back and Next and save on their
   # last step; a tabs form with `navigation :free` saves from any tab.

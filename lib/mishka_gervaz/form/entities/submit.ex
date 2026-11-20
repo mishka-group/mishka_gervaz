@@ -21,7 +21,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
           loading_label: String.t() | (-> String.t()) | nil,
-          confirm: String.t() | (-> String.t()) | nil,
+          confirm: String.t() | (-> String.t()) | keyword() | nil,
           active: boolean() | (map() -> boolean()),
           disabled: boolean() | (map() -> boolean()),
           restricted: boolean() | (map() -> boolean()),
@@ -49,9 +49,16 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
                     "What the submit button reads while its save runs, such as \"Checking the connection…\". String or zero-arity function. Without it the button reads \"Uploading…\" on a form with uploads and \"Saving…\" on any other."
                 ],
                 confirm: [
-                  type: {:or, [:string, {:fun, 0}]},
+                  type:
+                    {:or,
+                     [
+                       :string,
+                       {:fun, 0},
+                       {:keyword_list,
+                        MishkaGervaz.Question.schema("the record the form edits, `nil` on create")}
+                     ]},
                   doc:
-                    "A question the browser asks before the button acts, such as \"Discard your changes?\", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function."
+                    "A question the browser asks before the button acts, such as \"Discard your changes?\", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function. On `create` and `update`, a keyword list is asked in the UI adapter's question window instead, before the save: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label` (see `MishkaGervaz.Question`)."
                 ],
                 active: [
                   type: {:or, [:boolean, {:fun, 1}]},

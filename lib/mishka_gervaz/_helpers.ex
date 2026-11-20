@@ -177,7 +177,9 @@ defmodule MishkaGervaz.Helpers do
 
   `confirm` is declared as `String.t() | (map() -> String.t()) | nil`; the function form lets a
   prompt name what it is about to act on ("Delete the draft “Autosave”?"). A string is translated
-  in the caller's locale (`translate_text/1`); a function's result is returned as it is.
+  in the caller's locale (`translate_text/1`); a function's result is returned as it is. A
+  `confirm` that is a question for the question window (a keyword list, see
+  `MishkaGervaz.Question`) is not a browser question: it resolves to `nil`.
 
   ## Examples
 
@@ -190,7 +192,9 @@ defmodule MishkaGervaz.Helpers do
       iex> MishkaGervaz.Helpers.resolve_confirm(nil, %{id: 1})
       nil
   """
-  @spec resolve_confirm(String.t() | (map() -> String.t()) | nil, map()) :: String.t() | nil
+  @spec resolve_confirm(String.t() | (map() -> String.t()) | keyword() | nil, map()) ::
+          String.t() | nil
+  def resolve_confirm([{_key, _value} | _rest], _record), do: nil
   def resolve_confirm(confirm, record) when is_function(confirm, 1), do: confirm.(record)
   def resolve_confirm(confirm, _record), do: translate_text(confirm)
 
@@ -198,8 +202,9 @@ defmodule MishkaGervaz.Helpers do
   Resolves a bulk action's `confirm`.
 
   A string is translated in the caller's locale (`translate_text/1`), then every `{count}` in it
-  becomes `count`. With no `count`, the text keeps `{count}` as written. Anything else is returned
-  as it is.
+  becomes `count`. With no `count`, the text keeps `{count}` as written. A question for the
+  question window (a keyword list, see `MishkaGervaz.Question`) resolves to `nil`. Anything else is
+  returned as it is.
 
   ## Examples
 
@@ -217,6 +222,8 @@ defmodule MishkaGervaz.Helpers do
   """
   @spec resolve_bulk_confirm(boolean() | String.t() | nil, non_neg_integer() | nil) ::
           boolean() | String.t() | nil
+  def resolve_bulk_confirm([{_key, _value} | _rest], _count), do: nil
+
   def resolve_bulk_confirm(confirm, count) do
     case translate_text(confirm) do
       text when is_binary(text) and is_integer(count) ->

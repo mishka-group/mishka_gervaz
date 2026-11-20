@@ -43,6 +43,12 @@
   built from the row (`drawer: [title:, sub:, icon:, tone:, chips:, actions:, kind: :sheet]`).
   `MishkaGervaz.Table.Web.Live.close_drawer/2` closes it after a save and puts the saved row back
   in its place; a custom template draws it with `Shared.render_overlays/1`
+- A `confirm` given as a keyword list (`title`, `body`, `tone: :danger | :warn | :info`, `answer`,
+  `answer_label`, `confirm_label`, `cancel_label`) asks in the UI adapter's new `question/1` window
+  instead of the browser's dialog, on a row action, a bulk action (`{count}` in its strings) and a
+  form's `create` or `update` button. The server draws it: the action runs, or the form saves what
+  was submitted, once it is answered, and with `answer` only once that word is typed
+  (`MishkaGervaz.Question`, `Question.bind/4` for a custom action type)
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

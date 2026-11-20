@@ -30,8 +30,10 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
   use Phoenix.Component
 
+  alias MishkaGervaz.Question
+
   import MishkaGervaz.Helpers,
-    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3, resolve_confirm: 2]
+    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3]
 
   @impl true
   def render(_assigns, action, record, ui, target) do
@@ -55,7 +57,7 @@ defmodule MishkaGervaz.Table.Types.Action.Event do
       |> assign(:phx_value_event, event)
       |> assign(:phx_value_values, values)
       |> assign(:phx_target, target)
-      |> assign(:data_confirm, resolve_confirm(action[:confirm], record))
+      |> Question.bind(action, record)
 
     ~H"""
     <.dynamic_component {assigns} />

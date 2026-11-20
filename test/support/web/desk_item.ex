@@ -7,6 +7,14 @@ defmodule MishkaGervaz.Test.Web.DeskItem do
     * `:peek` — the record view of `MishkaGervaz.Test.Web.DeskViews.peek/1` in a drawer whose head
       has an icon tile, the title, a sub line and a chip, and a Copy button among its actions;
     * `:edit_here` — the resource's form, editing the row, in a bottom sheet.
+
+  Its other actions ask in the table's question window before they run:
+
+    * `:remove` — deletes the row once its title is typed, "Delete <title>?";
+    * `:mark` — sends the page `{:row_action, "mark", payload}` after "Mark it?", in the info tone;
+    * the bulk `:wipe` — deletes the picked rows after "Delete <count> items?".
+
+  Its form asks "Save the item?" before every save of an edit.
   """
 
   use Ash.Resource,
@@ -49,6 +57,30 @@ defmodule MishkaGervaz.Test.Web.DeskItem do
           ]
 
         action :edit_here, type: :drawer, open: :form, drawer: [kind: :sheet, title: "Edit item"]
+
+        action :remove,
+          type: :destroy,
+          confirm: [
+            title: &DeskViews.delete_title/1,
+            body: "It cannot be undone.",
+            answer: &DeskViews.title/1,
+            confirm_label: "Delete"
+          ]
+
+        action :mark,
+          type: :event,
+          event: "mark",
+          confirm: [title: "Mark it?", tone: :info, cancel_label: "Not now"]
+      end
+
+      row do
+        selectable true
+      end
+
+      bulk_actions do
+        action :wipe,
+          type: :destroy,
+          confirm: [title: "Delete {count} items?", confirm_label: "Delete them"]
       end
     end
 
@@ -69,6 +101,16 @@ defmodule MishkaGervaz.Test.Web.DeskItem do
       fields do
         field :title, :text, required: true
         field :owner, :text
+      end
+
+      submit do
+        update label: "Save",
+               confirm: [
+                 title: "Save the item?",
+                 body: &DeskViews.save_body/1,
+                 tone: :warn,
+                 confirm_label: "Save it"
+               ]
       end
     end
   end
@@ -103,6 +145,13 @@ defmodule MishkaGervaz.Test.Web.DeskViews do
 
   @doc "The drawer's title: the row's title."
   def title(record), do: record.title
+
+  @doc "The question the `:remove` action asks."
+  def delete_title(record), do: "Delete #{record.title}?"
+
+  @doc "The sentence of the form's question: the title of the record it edits."
+  def save_body(%{title: title}), do: "The changes to #{title} are saved."
+  def save_body(nil), do: "A new item is made."
 
   @doc "The line under the title: whose the row is."
   def sub(record), do: "Owned by #{record.owner || "nobody"}"

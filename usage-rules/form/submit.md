@@ -39,7 +39,7 @@ end
 | Button option | Type | Default | Note |
 |---|---|---|---|
 | `label` | string \| `fn -> string` | per-kind default | `"Create"` / `"Save Changes"` / `"Cancel"` / `"Discard"` |
-| `confirm` | string \| `fn -> string` | — | asked before the button acts (`data-confirm`); on `cancel` and `discard` only while the form holds changes |
+| `confirm` | string \| `fn -> string` \| keyword list | — | asked before the button acts (`data-confirm`); on `cancel` and `discard` only while the form holds changes. On `create` and `update` a keyword list asks in the question window, below |
 | `active` | bool \| `fn state ->` | `true` | `false` drops an inherited button — resource only |
 | `disabled` | bool \| `fn state ->` | `false` | |
 | `restricted` | bool \| `fn state ->` | `false` | master-only |
@@ -65,6 +65,25 @@ end
 
 `confirm` is asked through the button's `data-confirm`, which the host's `phoenix_html` script
 answers with the browser's confirm dialog.
+
+### Asking in the question window
+
+On `create` and `update`, a `confirm` given as a keyword list is asked in the UI adapter's question
+window before the save, drawn by the form under its `<form>` (id `"<form id>-question"`): the same
+keys as a row action's ([../table/row-actions.md](../table/row-actions.md)), a function given the
+record the form edits (`nil` on create). The save waits; the window's button saves the values the
+form was submitted with, and Cancel saves nothing and keeps what was typed.
+
+```elixir
+submit do
+  update confirm: [
+           title: "Publish the changes?",
+           body: fn product -> "Buyers of #{product.name} see them at once." end,
+           tone: :warn,
+           confirm_label: "Publish"
+         ]
+end
+```
 
 ## Inheritance is per button, not per block
 

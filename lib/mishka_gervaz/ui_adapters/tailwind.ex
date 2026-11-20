@@ -2255,6 +2255,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:myself` - LiveComponent target
     * `:count` - The number of rows the action runs on, or `nil` when the table cannot tell.
       `{count}` in the action's `confirm` becomes this number.
+
+  A `confirm` that is a question (a keyword list, see `MishkaGervaz.Question`) makes the press send
+  `"ask"` with the action, and the table asks it in its question window before the action runs.
   """
   @impl true
   def bulk_action_button(assigns) do
@@ -2270,12 +2273,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         resolve_ui_label(action) || translate_text(Phoenix.Naming.humanize(action.name))
       )
       |> assign(:confirm, resolve_bulk_confirm(action.confirm, assigns[:count]))
+      |> assign(:ask?, MishkaGervaz.Question.question?(action.confirm))
       |> assign(:btn_class, (action.ui && action.ui.class) || bulk_button_class(variant))
 
     ~H"""
     <button
       type="button"
-      phx-click="bulk_action"
+      phx-click={(@ask? && "ask") || "bulk_action"}
+      phx-value-ask={@ask? && "bulk_action"}
+      phx-value-question={@ask? && @action.name}
+      phx-value-scope={@ask? && "bulk"}
       phx-value-action={@action.name}
       phx-target={@myself}
       class={@btn_class}
@@ -4417,6 +4424,159 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   defp close_js(:drawer, on_close, id), do: hide_drawer(on_close, id)
   defp close_js(:sheet, on_close, id), do: hide_sheet(on_close, id)
+
+  @doc """
+  A question window, the confirm dialog a row action, a bulk action or a form's submit button asks
+  before it acts (see `MishkaGervaz.Question`): an alert dialog in the middle of the screen, a
+  bottom sheet below 640px, over a backdrop. It is drawn while the server holds the question and
+  taken away when it does not; nothing in it is JavaScript.
+
+  The window is a form: its button submits it with `on_confirm`, so Enter answers too. With an
+  `answer`, a field named `answer` asks the reader to type it, each change is sent with
+  `on_change`, and the button stays off until what was typed is the answer.
+
+  ## Assigns
+    * `:id` - required; the dialog is `<id>-dialog`, its title `<id>-title`, the field `<id>-answer`
+    * `:title` - the question
+    * `:body` - a sentence under it
+    * `:tone` - `:danger` (the default), `:warn` or `:info`: the colour of the answering button
+    * `:answer` - the word to type before the button answers, or `nil`
+    * `:answer_label` - the field's label (default "Type <answer> to confirm")
+    * `:typed` - what was typed so far
+    * `:error` - a refusal, said under the field
+    * `:confirm_label` / `:cancel_label` - the buttons' words (default "Confirm" and "Cancel")
+    * `:on_confirm` - the event the form submits with
+    * `:on_change` - the event the field's typing sends
+    * `:on_cancel` - the event or `Phoenix.LiveView.JS` of Cancel, the backdrop and Escape
+    * `:target` - the `phx-target` of its events
+  """
+  @impl true
+  def question(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:tone, fn -> :danger end)
+      |> assign_new(:body, fn -> nil end)
+      |> assign_new(:answer, fn -> nil end)
+      |> assign_new(:answer_label, fn -> nil end)
+      |> assign_new(:typed, fn -> "" end)
+      |> assign_new(:error, fn -> nil end)
+      |> assign_new(:confirm_label, fn -> nil end)
+      |> assign_new(:cancel_label, fn -> nil end)
+      |> assign_new(:on_change, fn -> nil end)
+      |> assign_new(:target, fn -> nil end)
+
+    assigns =
+      assigns
+      |> assign(:confirm_label, assigns.confirm_label || dgettext("mishka_gervaz", "Confirm"))
+      |> assign(:cancel_label, assigns.cancel_label || dgettext("mishka_gervaz", "Cancel"))
+      |> assign(
+        :answer_label,
+        assigns.answer && (assigns.answer_label || answer_label(assigns.answer))
+      )
+      |> assign(
+        :answered?,
+        is_nil(assigns.answer) or String.trim(assigns.typed || "") == assigns.answer
+      )
+
+    ~H"""
+    <div
+      id={@id}
+      data-role="gervaz-question"
+      data-tone={@tone}
+      phx-window-keydown={@on_cancel}
+      phx-key="escape"
+      phx-target={@target}
+      class="fixed inset-0 z-[60] flex items-center justify-center px-6 py-8 max-[640px]:items-end max-[640px]:p-0"
+    >
+      <div
+        id={@id <> "-backdrop"}
+        aria-hidden="true"
+        phx-click={@on_cancel}
+        phx-target={@target}
+        class="absolute inset-0 bg-[#17161a]/40"
+      />
+      <form
+        id={@id <> "-dialog"}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={@id <> "-title"}
+        aria-describedby={@body && @id <> "-body"}
+        phx-submit={@on_confirm}
+        phx-change={@answer && @on_change}
+        phx-target={@target}
+        class="relative w-[440px] max-w-full rounded-[18px] bg-white px-[22px] pt-[22px] pb-[18px] shadow-[0_30px_80px_rgba(23,22,26,0.32)] max-[640px]:w-full max-[640px]:rounded-b-none"
+      >
+        <h2 id={@id <> "-title"} class="text-[17px] font-semibold text-[#17161a]">{@title}</h2>
+        <p
+          :if={@body}
+          id={@id <> "-body"}
+          class="mt-[7px] text-[12.5px] font-medium leading-[1.6] text-[#5c5a54]"
+        >
+          {@body}
+        </p>
+        <div :if={@answer} class="mt-[13px]">
+          <label
+            for={@id <> "-answer"}
+            class="mb-[5px] block text-[12px] font-bold text-[#3a382f]"
+          >
+            {@answer_label}
+          </label>
+          <input
+            id={@id <> "-answer"}
+            type="text"
+            name="answer"
+            value={@typed}
+            autocomplete="off"
+            aria-invalid={@error && "true"}
+            aria-describedby={@error && @id <> "-error"}
+            phx-mounted={JS.focus()}
+            class="box-border h-[42px] w-full rounded-[11px] border border-[#e2e0d9] px-3 text-[13px] font-semibold text-[#17161a] outline-none focus:border-[#8b87ea] focus:shadow-[0_0_0_3px_rgba(109,105,230,0.16)]"
+          />
+          <p
+            :if={@error}
+            id={@id <> "-error"}
+            role="alert"
+            class="mt-[6px] text-[12px] font-semibold text-[#a23a52]"
+          >
+            {@error}
+          </p>
+        </div>
+        <div class="mt-[18px] flex justify-end gap-2 max-[640px]:flex-col-reverse">
+          <button
+            type="button"
+            data-role="gervaz-question-cancel"
+            phx-click={@on_cancel}
+            phx-target={@target}
+            class="h-10 rounded-[11px] border border-[#ecebe6] bg-white px-[15px] text-[12.5px] font-semibold text-[#3a382f] transition-colors hover:bg-[#f7f6f3] max-[640px]:min-h-[48px]"
+          >
+            {@cancel_label}
+          </button>
+          <button
+            type="submit"
+            data-role="gervaz-question-confirm"
+            disabled={not @answered?}
+            class={[
+              "h-10 rounded-[11px] px-[17px] text-[13px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:min-h-[48px]",
+              question_tone_class(@tone)
+            ]}
+          >
+            {@confirm_label}
+          </button>
+        </div>
+      </form>
+    </div>
+    """
+  end
+
+  defp answer_label(answer),
+    do: dgettext("mishka_gervaz", "Type %{answer} to confirm", answer: answer)
+
+  defp question_tone_class(:warn), do: "bg-[#a5691a] hover:bg-[#8a5a00]"
+
+  defp question_tone_class(:info),
+    do: "bg-[linear-gradient(140deg,#625ee0,#4f4bcc)] hover:opacity-95"
+
+  defp question_tone_class(_danger), do: "bg-[#b3445c] hover:bg-[#9c3a50]"
 
   @doc """
   Render a static alert/notice.
