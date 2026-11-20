@@ -1191,6 +1191,7 @@ Row styling and behavior.
 |------|------|---------|------|
 | [`event`](#mishka_gervaz-table-row-event){: #mishka_gervaz-table-row-event } | `String.t` |  | Event name triggered on row click. |
 | [`payload`](#mishka_gervaz-table-row-payload){: #mishka_gervaz-table-row-payload } | `(any -> any) \| map` |  | Payload for row click. Map or `fn record -> map`. |
+| [`path`](#mishka_gervaz-table-row-path){: #mishka_gervaz-table-row-path } | `(any -> any) \| (any, any -> any)` |  | The path the whole row opens, `fn record -> path end` or `fn record, state -> path end`; `nil` leaves that row without one. The default table template draws it as a link over the row, reached with Tab and opened with Enter; the row's checkbox, caret and actions stay above it. |
 | [`selectable`](#mishka_gervaz-table-row-selectable){: #mishka_gervaz-table-row-selectable } | `boolean` | `false` | Enable row selection checkboxes. |
 
 

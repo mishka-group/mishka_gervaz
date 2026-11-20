@@ -538,11 +538,12 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
     event = get_opt(dsl_state, path, :event)
     payload = get_opt(dsl_state, path, :payload)
+    row_path = get_opt(dsl_state, path, :path)
     selectable = get_opt(dsl_state, path, :selectable)
     class_possible = get_opt(dsl_state, class_path, :possible)
     class_apply = get_opt(dsl_state, class_path, :apply)
 
-    if overrides != [] or any_set?([event, selectable, class_possible, class_apply]) do
+    if overrides != [] or any_set?([event, row_path, selectable, class_possible, class_apply]) do
       class_section =
         if class_possible != nil or class_apply != nil,
           do: %{possible: class_possible || [], apply: class_apply},
@@ -553,6 +554,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
         overrides: Enum.map(overrides, &row_override_to_map/1),
         event: event,
         payload: payload,
+        path: row_path,
         selectable: default_if_nil(selectable, false)
       }
     else

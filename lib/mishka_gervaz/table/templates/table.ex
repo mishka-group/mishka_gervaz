@@ -632,6 +632,18 @@ defmodule MishkaGervaz.Table.Templates.Table do
     end
   end
 
+  # What the row's link reads to a screen reader: the first shown column's value when it is plain
+  # text or a number, "Open" otherwise.
+  defp row_link_label(%{visible_columns: [column | _], record: record}) do
+    case get_cell_value(record, column) do
+      value when is_binary(value) and value != "" -> value
+      value when is_number(value) -> to_string(value)
+      _other -> dgettext("mishka_gervaz", "Open")
+    end
+  end
+
+  defp row_link_label(_assigns), do: dgettext("mishka_gervaz", "Open")
+
   defp find_matching_override([], _record), do: nil
 
   defp find_matching_override(overrides, record) do
@@ -692,11 +704,16 @@ defmodule MishkaGervaz.Table.Templates.Table do
     is_expanded = expandable? and assigns.state.expanded_id == to_string(assigns.record.id)
     filtered_row_actions = Shared.non_accordion_actions(assigns.static.row_actions)
 
+    row_path = Shared.row_path(assigns.static, assigns.record, assigns.state)
+
     assigns =
       assigns
       |> assign(:expandable?, expandable?)
       |> assign(:is_expanded, is_expanded)
       |> assign(:filtered_row_actions, filtered_row_actions)
+      |> assign(:row_path, row_path)
+      |> assign(:above_link, row_path && "relative z-[1]")
+      |> assign(:row_link_label, row_path && row_link_label(assigns))
 
     ~H"""
     <div
@@ -710,10 +727,22 @@ defmodule MishkaGervaz.Table.Templates.Table do
       <div class={[
         "gervaz-row grid py-[14px] items-center transition-colors",
         subgrid_class(),
+        @row_path && "relative cursor-pointer",
         "max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
         | row_classes(@static, @state, @record, @is_checked)
       ]}>
-        <div :if={@show_checkboxes} class="flex items-center ps-[16px] max-[980px]:ps-0!">
+        <.link
+          :if={@row_path}
+          navigate={@row_path}
+          data-role="gervaz-row-link"
+          class="absolute inset-0 z-0 rounded-[inherit] outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5b57d6]"
+        >
+          <span class="sr-only">{@row_link_label}</span>
+        </.link>
+        <div
+          :if={@show_checkboxes}
+          class={["flex items-center ps-[16px] max-[980px]:ps-0!", @above_link]}
+        >
           <.dynamic_component
             module={@static.ui_adapter}
             function={:checkbox}
@@ -725,7 +754,10 @@ defmodule MishkaGervaz.Table.Templates.Table do
         </div>
         <div
           :if={@show_expand}
-          class="flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:end-[12px]"
+          class={[
+            "flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:end-[12px]",
+            @row_path && "z-[1] min-[980px]:relative"
+          ]}
         >
           <button
             :if={@expandable?}
@@ -768,7 +800,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
           data-role="gervaz-row-actions"
           class={[
             "flex items-center justify-end px-[16px] max-[980px]:px-0!",
-            sticky_actions_class(@static, true)
+            sticky_actions_class(@static, true),
+            @above_link
           ]}
         >
           <Shared.render_row_actions

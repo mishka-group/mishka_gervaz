@@ -1152,6 +1152,21 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     do: MapSet.member?(selected, record_id)
 
   @doc """
+  The path the row of `record` opens, from the resource's `row do path … end`, or `nil` when it
+  declares none or its function gives `nil` for this record.
+  """
+  @spec row_path(map(), map(), map()) :: String.t() | nil
+  def row_path(%{config: config}, record, state) do
+    case get_in(config, [:row, :path]) do
+      path_fn when is_function(path_fn, 1) -> path_fn.(record)
+      path_fn when is_function(path_fn, 2) -> path_fn.(record, state)
+      _absent -> nil
+    end
+  end
+
+  def row_path(_static, _record, _state), do: nil
+
+  @doc """
   The extra classes the resource asks this record's row to wear, if any.
 
   `row do class do apply … end end` is where a resource says which records look different.
