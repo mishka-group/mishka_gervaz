@@ -91,7 +91,9 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
                   build_errors(validated)
 
                 true ->
-                  refused_step_errors(state, validated)
+                  state
+                  |> refused_step_errors(validated)
+                  |> Map.merge(live_errors(state, validated, form_params))
               end
 
             state = State.update(state, form: validated, errors: errors, dirty?: true)
@@ -122,6 +124,22 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       end
 
       defp refused_step_errors(_state, _form), do: %{}
+
+      # The errors of the fields that declare `live_errors` and hold a value, shown before the
+      # first save while the rest of the form waits for it.
+      defp live_errors(%{static: %{fields: fields}}, form, params) when is_list(fields) do
+        case for(%{live_errors: true, name: name} <- fields, filled?(params, name), do: name) do
+          [] -> %{}
+          names -> form |> build_errors() |> Map.take(names)
+        end
+      end
+
+      defp live_errors(_state, _form, _params), do: %{}
+
+      defp filled?(params, name) when is_map(params),
+        do: Map.get(params, to_string(name)) not in [nil, "", []]
+
+      defp filled?(_params, _name), do: false
 
       defp merge_field_type_errors(form, []), do: form
 

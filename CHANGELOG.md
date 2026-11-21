@@ -38,6 +38,8 @@
   they close. Their head takes an `icon` in a tile coloured by `tone`, a `sub` line and `chips`
   under the title, and an `:actions` slot of buttons in the foot or, with `actions_at: :head`, in
   the head
+- `field :iban, :text do live_errors true end` shows that field's own errors as it is typed, once it
+  holds a value, in a form for a new record, which otherwise shows errors only after its first save
 - The UI adapter gains `window/1`, a window in the middle of the screen that is a bottom sheet below
   640px, for a form or a short page. It takes the drawer's assigns and opens and closes through
   `show_window/2` and `hide_window/2`; without a title it draws no head and its close button stands

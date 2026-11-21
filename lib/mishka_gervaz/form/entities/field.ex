@@ -80,6 +80,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
           search_field: atom() | nil,
           value_field: atom() | nil,
           readonly: boolean() | (map() -> boolean()),
+          live_errors: boolean(),
           mode: :static | :load_more | :search | :search_multi,
           page_size: pos_integer(),
           load_action: atom() | {atom(), atom()} | nil,
@@ -119,6 +120,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     search_field: nil,
     value_field: nil,
     readonly: false,
+    live_errors: false,
     mode: :static,
     page_size: 20,
     load_action: nil,
@@ -264,6 +266,12 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   type: {:or, [:boolean, {:fun, 1}]},
                   default: false,
                   doc: "Render as read-only. Boolean or `fn state -> boolean end`."
+                ],
+                live_errors: [
+                  type: :boolean,
+                  default: false,
+                  doc:
+                    "Show this field's own errors as it is typed, before the first save of a new record, once it holds a value: a check that helps while typing, such as the shape of an IBAN. Other fields still wait for the save."
                 ],
                 mode: [
                   type: {:in, [:static, :load_more, :search, :search_multi]},

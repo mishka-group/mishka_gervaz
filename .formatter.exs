@@ -141,6 +141,7 @@ spark_locals_without_parens = [
   label: 1,
   label_class: 1,
   last_label: 1,
+  live_errors: 1,
   load: 1,
   load_action: 1,
   load_more_at: 1,

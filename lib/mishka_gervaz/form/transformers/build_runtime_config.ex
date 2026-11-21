@@ -205,6 +205,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       search_field: field.search_field,
       value_field: field.value_field,
       readonly: field.readonly,
+      live_errors: Map.get(field, :live_errors, false),
       mode: field.mode,
       page_size: field.page_size,
       load_action: field.load_action || :read,

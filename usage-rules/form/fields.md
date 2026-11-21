@@ -89,6 +89,7 @@ second lines are translated. The UI adapter draws them with `choice_cards/1` and
 | `source` | atom | field name | attribute when it differs from the field name |
 | `required` | bool | `false` | |
 | `visible` / `restricted` / `readonly` | bool \| `fn state ->` | `true` / `false` / `false` | arity **1**; `restricted true` is masters only, `restricted fn` decides alone — `true` hides the field and leaves it out of the save for every user |
+| `live_errors` | bool | `false` | a new record's form shows this field's own errors as it is typed, once it holds a value, instead of after the first save: a check that helps while typing, such as an IBAN's shape |
 | `show_on` | `:create` \| `:update` | — | show only in that mode |
 | `default` | any | — | the value a create form starts with; the mount's `defaults` win |
 | `depends_on` | atom | — | cascading select; must be a field in this form |
