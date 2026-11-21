@@ -92,6 +92,7 @@ this row instead ([table/pagination.md](table/pagination.md)).
 | `submit` | — | `false` draws no submit row (the `save` event stays allowed) |
 | `submit_alternatives` | — | other ways to create, offered from a caret beside the submit button |
 | `notify_dirty` | — | `true` sends the page `{:form_dirty, id, dirty?}` — see "Unsaved changes" |
+| `:body` slot | — | the page places the groups in its own markup — see "Placing the groups in the page" |
 
 Changing `record_id` or `defaults` re-initializes the form. The others are applied **at init
 only**. An update that leaves `defaults` out, such as the `send_update/2` a table's Edit sends with
@@ -111,6 +112,33 @@ then either:
   no record. Right when the other way collects its own details elsewhere.
 - `:name` and `:value` — the item is a submit button of this same form, so the browser sends the
   pair alongside every field and the choice reaches `before_save` as an ordinary param.
+
+### Placing the groups in the page
+
+A `:standard` form draws its groups one after another. A page that puts them in its own cards or
+numbered steps, with markup of its own between them, passes a `:body` slot and calls `group/1`
+where each group goes:
+
+```heex
+<.live_component module={MishkaGervaz.Form.Web.Live} id="post-form" resource={MyApp.Post}
+  current_user={@current_user} record_id={@post_id}>
+  <:body :let={form}>
+    <section class="card"><MishkaGervaz.Form.Web.Live.group form={form} name={:basics} /></section>
+    <section class="card">The page's own content.</section>
+    <section class="card"><MishkaGervaz.Form.Web.Live.group form={form} name={:publishing} /></section>
+  </:body>
+</.live_component>
+```
+
+- It is **one form**: the slot sits inside the one `<form>`, so one changeset, one save, a field's
+  error in its own group, unsaved changes and Discard as before. The submit row, form errors and
+  uploads stay after the slot; the fields in no group are drawn there too.
+- The page's markup in the slot is inside that `<form>`: no `<form>` of its own, and no named input
+  that is not the form's. Its events go to the page unless they name a `phx-target`.
+- While the form loads, or when the reader may not use it, the slot is still drawn and each group
+  shows the loading state or nothing, so the page around them stays.
+- A group the page leaves out is not drawn; a name the form has no group for raises.
+- `:wizard` and `:tabs` forms ignore the slot.
 
 ### Unsaved changes
 

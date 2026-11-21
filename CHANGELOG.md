@@ -67,6 +67,11 @@
   place of its empty state while a read with no rows shown runs, as after a filter that found
   nothing, so the table keeps its height; `template_options skeleton_rows: n` sets how many
   (`Shared.skeleton_rows/2`, `Shared.reading_with_no_rows?/1`)
+- A `:standard` form mounted with a `:body` slot lets the page place its groups in its own cards or
+  steps: `<:body :let={form}>` with `<MishkaGervaz.Form.Web.Live.group form={form} name={:keys} />`
+  wherever a group goes, the page's own markup between them. It stays one form, one changeset and
+  one save; a field's error shows in its group's card, and the unsaved changes and Discard work as
+  before. The slot is drawn while the form loads, each group showing that it loads
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

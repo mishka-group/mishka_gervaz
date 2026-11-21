@@ -47,6 +47,12 @@ through a group, so in `:wizard` / `:tabs` mode every field needs one.
 `ui do span N end` on a field makes one input straddle several columns. Set the group's columns
 rather than repeating `span` on every field.
 
+## Groups in the page's own cards
+
+A page that wants a group in a card of its own, with its own markup between groups, mounts the form
+with a `:body` slot and draws each group with `MishkaGervaz.Form.Web.Live.group/1`. It stays one
+form, one save. See [../mounting.md](../mounting.md), "Placing the groups in the page".
+
 ## TODO
 - [ ] Every field belongs to exactly one group (mandatory in wizard/tabs mode)
 - [ ] No field listed twice

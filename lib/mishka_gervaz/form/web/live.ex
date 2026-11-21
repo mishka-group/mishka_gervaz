@@ -45,9 +45,46 @@ defmodule MishkaGervaz.Form.Web.Live do
     `record_id`, keeps the defaults the form has. Pass `defaults: nil` to drop them.
   - `reset` - `true` starts the form over on its `record_id`, even when that is the record already
     open, or `nil` while the form is already on create. See "Opening a form again".
+  - `body` - a slot that places the form's groups in the page's own markup. See "Placing the
+    groups in the page".
   - `notify_dirty` - `true` sends the page `{:form_dirty, id, dirty?}` each time the form comes to
     hold changes the reader has not saved, and each time it holds none any more: after a save, a
     Discard, a Cancel or a start over. See "Unsaved changes".
+
+  ## Placing the groups in the page
+
+  A page that draws a form's groups in its own cards or steps, with other markup between them,
+  passes a `:body` slot. The slot is given the form, and `group/1` draws one named group of it
+  wherever the page calls it:
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+      >
+        <:body :let={form}>
+          <section class="card">
+            <h2>Basics</h2>
+            <MishkaGervaz.Form.Web.Live.group form={form} name={:basics} />
+          </section>
+          <section class="card">The page's own content, not part of the form.</section>
+          <section class="card">
+            <h2>Publishing</h2>
+            <MishkaGervaz.Form.Web.Live.group form={form} name={:publishing} />
+          </section>
+        </:body>
+      </.live_component>
+
+  It stays one form: everything in the slot is inside the one `<form>`, so one changeset is
+  validated and saved, a field's error shows in the group that holds it, and the unsaved changes,
+  Discard and the submit row work as they do without the slot. The page's own markup in the slot is
+  inside that `<form>` too, so it holds no `<form>` of its own and no input with a `name` that is
+  not the form's. Events of the page's markup go to the page, as anywhere else, unless they name a
+  `phx-target`.
+
+  The slot is used by a `:standard` form (`MishkaGervaz.Form.Templates.Standard`, "Placed groups").
+  A group the page does not place is not drawn; a field in no group is drawn after the slot.
 
   ## Unsaved changes
 
@@ -128,8 +165,10 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   use Phoenix.LiveComponent
 
+  alias MishkaGervaz.Form.Templates.Standard
   alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
   alias MishkaGervaz.Form.Web.UploadHelpers
+  alias MishkaGervaz.Helpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
   alias Phoenix.LiveView.JS
 
@@ -157,9 +196,66 @@ defmodule MishkaGervaz.Form.Web.Live do
   @impl true
   def update(assigns, socket) do
     was_dirty? = dirty?(socket)
-    {:ok, new_socket} = do_update(assigns, socket)
+    {:ok, new_socket} = do_update(assigns, keep_body(socket, assigns))
     {:ok, announce_dirty(new_socket, was_dirty?)}
   end
+
+  # The page's `:body` slot comes with every render of the page; a `send_update/2` without it keeps
+  # the one the form has.
+  defp keep_body(socket, %{body: body}), do: assign(socket, :body, body)
+  defp keep_body(socket, _assigns), do: assign_new(socket, :body, fn -> [] end)
+
+  attr :form, :map,
+    required: true,
+    doc: "the form as the `:body` slot gives it (`<:body :let={form}>`)"
+
+  attr :name, :atom, required: true, doc: "the name of a group of the form's `groups` section"
+
+  @doc """
+  Draws one group of a form inside the form's `:body` slot, with the notices placed before and
+  after it, through the form's template (`render_group/1`). See "Placing the groups in the page".
+
+  While the form loads the group draws the template's loading state; a group the reader may not see
+  (its `visible` or `restricted`), or a form the reader may not use, draws nothing. A name the form
+  has no group for raises an `ArgumentError`.
+  """
+  @spec group(map()) :: Phoenix.LiveView.Rendered.t()
+  def group(%{form: %{static: static, state: state} = form, name: name} = assigns) do
+    template = static.template || Standard
+
+    group =
+      Enum.find(static.groups, &(&1.name == name)) ||
+        raise ArgumentError,
+              "the form #{inspect(static.id)} has no group #{inspect(name)}, it has " <>
+                inspect(Enum.map(static.groups, & &1.name))
+
+    drawn = Map.put(form, :group, group)
+
+    assigns =
+      assigns
+      |> assign(:drawn, drawn)
+      |> assign(:template, template)
+      |> assign(:show, group_state(state, group))
+
+    ~H"""
+    <%= case @show do %>
+      <% :loading -> %>
+        {@template.render_loading(@drawn)}
+      <% :shown -> %>
+        {Standard.render_notices_at(@drawn, {:before_group, @name})}
+        {@template.render_group(@drawn)}
+        {Standard.render_notices_at(@drawn, {:after_group, @name})}
+      <% :hidden -> %>
+    <% end %>
+    """
+  end
+
+  defp group_state(%{loading: :denied}, _group), do: :hidden
+
+  defp group_state(%{loading: :loaded, form: form} = state, group) when not is_nil(form),
+    do: (Helpers.accessible?(group, state) && :shown) || :hidden
+
+  defp group_state(_state, _group), do: :loading
 
   defp do_update(%{id: _id, build_create: true}, socket) do
     state = socket.assigns[:form_state]

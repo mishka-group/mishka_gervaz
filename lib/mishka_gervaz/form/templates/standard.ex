@@ -41,6 +41,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   holds the submit button on every tab, with no Back or Next; with `:sequential` the visited tabs
   open and the submit row is a wizard's.
 
+  ## Placed groups
+
+  A `:standard` form mounted with a `:body` slot draws that slot in place of its groups, inside the
+  one `<form>`, and the page puts each group where it wants with `MishkaGervaz.Form.Web.Live.group/1`.
+  The header, notices, upload section, form errors and submit row stay where they are; the fields
+  no group holds are drawn after the slot. While the form loads, and when the reader may not use
+  it, the slot is still drawn, outside the `<form>`, so the page around the groups never goes away.
+  A `:wizard` or `:tabs` form ignores the slot.
+
   ## Two-axis composition
 
     * **Template** (this module) — *where* things go: groups, steps,
@@ -122,17 +131,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :init_js, resolve_js_hook(assigns, :on_init))
+    assigns =
+      assigns
+      |> assign(:init_js, resolve_js_hook(assigns, :on_init))
+      |> assign(:placed?, placed?(assigns))
 
     ~H"""
     <div
       id={@static.id <> "-form-wrapper"}
       data-dirty={to_string(@state.dirty? == true)}
       phx-mounted={@init_js}
-      hidden={@state.loading == :denied}
+      hidden={@state.loading == :denied and not @placed?}
     >
       <%= cond do %>
         <% @state.loading == :denied -> %>
+          <%= if @placed? do %>
+            {render_slot(@body, placed_form(assigns))}
+          <% end %>
         <% @state.loading == :loaded and @state.form -> %>
           <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
             {render_step_indicator(assigns)}
@@ -153,10 +168,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_notices_at(assigns, :after_header)}
             {render_notices_at(assigns, :before_groups)}
 
-            <%= if @state.static.layout_mode == :standard do %>
-              {render_groups(assigns)}
-            <% else %>
-              {render_steps(assigns)}
+            <%= cond do %>
+              <% @placed? -> %>
+                {render_slot(@body, placed_form(assigns))}
+                {render_ungrouped(assigns)}
+              <% @state.static.layout_mode == :standard -> %>
+                {render_groups(assigns)}
+              <% true -> %>
+                {render_steps(assigns)}
             <% end %>
 
             {render_uploads_section(assigns)}
@@ -173,10 +192,42 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           />
           {render_form_footer(assigns)}
           {render_notices_at(assigns, :form_footer)}
+        <% @placed? -> %>
+          {render_slot(@body, placed_form(assigns))}
         <% true -> %>
           {render_loading(assigns)}
       <% end %>
     </div>
+    """
+  end
+
+  # A page that mounts the form with a `:body` slot places the groups itself, in a `:standard` form.
+  defp placed?(%{body: [_ | _], static: %{layout_mode: :standard}}), do: true
+  defp placed?(_assigns), do: false
+
+  # What the `:body` slot is given: what `MishkaGervaz.Form.Web.Live.group/1` needs to draw a group.
+  defp placed_form(assigns) do
+    %{
+      __changed__: nil,
+      static: assigns.static,
+      state: assigns.state,
+      myself: assigns[:myself],
+      uploads: assigns[:uploads] || %{}
+    }
+  end
+
+  # The fields no group holds, drawn after a placed body as `render_groups/1` draws them after the
+  # groups.
+  defp render_ungrouped(assigns) do
+    grouped = MapSet.new(Enum.flat_map(assigns.static.groups, &Map.get(&1, :fields, [])))
+    ungrouped = Enum.reject(assigns.static.fields, &MapSet.member?(grouped, &1.name))
+    assigns = assign(assigns, :ungrouped_fields, ungrouped)
+
+    ~H"""
+    <%= if @ungrouped_fields != [] do %>
+      {render_notices_at(assigns, :before_fields)}
+      {render_group_fields(assigns, @ungrouped_fields, nil)}
+    <% end %>
     """
   end
 
