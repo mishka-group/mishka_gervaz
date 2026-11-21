@@ -1073,12 +1073,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     submit_label =
       if show_submit,
-        do: resolve_label(submit_button[:label]) || dgettext("mishka_gervaz", "Submit"),
+        do: resolve_dynamic(submit_button[:label], state) || dgettext("mishka_gervaz", "Submit"),
         else: ""
 
     cancel_label =
       if show_cancel,
-        do: resolve_label(cancel_button[:label]) || dgettext("mishka_gervaz", "Cancel"),
+        do: resolve_dynamic(cancel_button[:label], state) || dgettext("mishka_gervaz", "Cancel"),
         else: ""
 
     submit_disabled = show_submit and evaluate_button_disabled(submit_button, state)
@@ -1098,7 +1098,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(
         :discard_label,
         show_discard &&
-          (resolve_label(discard_button[:label]) || dgettext("mishka_gervaz", "Discard"))
+          (resolve_dynamic(discard_button[:label], state) || dgettext("mishka_gervaz", "Discard"))
       )
       |> assign(
         :discard_disabled,

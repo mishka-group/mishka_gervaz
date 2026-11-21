@@ -40,8 +40,9 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
 
   @opt_schema [
                 label: [
-                  type: {:or, [:string, {:fun, 0}]},
-                  doc: "Button label. String or zero-arity function."
+                  type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
+                  doc:
+                    "Button label. String, zero-arity function, or `fn state -> label end` given the form state each time the buttons are drawn, so one form names its button for what the mount's `defaults` ask it to do (`Pause`, `End now`)."
                 ],
                 loading_label: [
                   type: {:or, [:string, {:fun, 0}]},
