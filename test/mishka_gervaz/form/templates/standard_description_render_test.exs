@@ -82,6 +82,34 @@ defmodule MishkaGervaz.Form.Templates.StandardDescriptionRenderTest do
       assert render_form([field]) =~ "resolved at render"
     end
 
+    test "can be a function of the form state, so it names what the mount's defaults hold" do
+      field =
+        described(FormInfo.field(FormPost, :title), fn state ->
+          "Up to #{state.defaults[:limit]}."
+        end)
+
+      state =
+        build_state(
+          static_opts: [fields: [field], groups: []],
+          mode: :create,
+          form: to_form(%{}, as: :form)
+        )
+
+      static = %{state.static | notices: []}
+      state = %{state | static: static, defaults: %{limit: "$12.00"}}
+
+      html =
+        render_component(&Standard.render/1, %{
+          static: static,
+          state: state,
+          ui: MishkaGervaz.UIAdapters.Tailwind,
+          myself: nil,
+          uploads: %{}
+        })
+
+      assert html =~ "Up to $12.00."
+    end
+
     test "is absent when the field declares none" do
       html = render_form([FormInfo.field(FormPost, :content)])
 

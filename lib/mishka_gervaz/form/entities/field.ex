@@ -423,7 +423,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
           placeholder: String.t() | nil,
-          description: String.t() | (-> String.t()) | nil,
+          description: String.t() | (-> String.t()) | (map() -> String.t()) | nil,
           note: String.t() | (-> String.t()) | nil,
           icon: String.t() | nil,
           class: String.t() | nil,
@@ -475,9 +475,9 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
       doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     description: [
-      type: {:or, [:string, {:fun, 0}]},
+      type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
       doc:
-        "Help text below the field, drawn under any field type. String or `fn -> gettext(...) end` for i18n."
+        "Help text below the field, drawn under any field type. String, `fn -> gettext(...) end` for i18n, or `fn state -> text end` given the form state each time the field is drawn, so the help can name what the mount's `defaults` hold (`\"Up to $12.00.\"`)."
     ],
     note: [
       type: {:or, [:string, {:fun, 0}]},

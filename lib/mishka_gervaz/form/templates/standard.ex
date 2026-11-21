@@ -1371,7 +1371,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_label, label)
         |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
-        |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
+        |> assign(
+          :wrapper_description,
+          resolve_dynamic(get_in_map(field, [:ui, :description]), assigns.state)
+        )
         |> assign(:disabled_prompt, disabled_prompt)
         |> assign(:is_loading, is_loading)
 
@@ -1409,7 +1412,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_label, label)
         |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
-        |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
+        |> assign(
+          :wrapper_description,
+          resolve_dynamic(get_in_map(field, [:ui, :description]), assigns.state)
+        )
         |> assign(:wrapper_for, labelled_control(field, form_field, assigns))
         |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
 
