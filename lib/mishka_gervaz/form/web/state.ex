@@ -129,6 +129,7 @@ defmodule MishkaGervaz.Form.Web.State do
       :footer,
       :notices,
       submit_visible?: true,
+      submit_external?: false,
       submit_alternatives: []
     ]
 
@@ -159,6 +160,7 @@ defmodule MishkaGervaz.Form.Web.State do
             footer: map() | nil,
             notices: list(map()),
             submit_visible?: boolean(),
+            submit_external?: boolean(),
             submit_alternatives: list(map())
           }
   end
@@ -777,9 +779,13 @@ defmodule MishkaGervaz.Form.Web.State do
           `drop_protected_fields/2` only looks at fields that are still declared, and
           `merge_defaults/2` then fills any param a hidden field would have carried. Pair this with
           `defaults` for anything the action requires, or the save arrives without it.
-        * `:submit` — `false` draws no submit row. The `save` event is still accepted, so a form
-          with no button of its own can be submitted by something else: a dropzone that fires on
-          drop, a keystroke, a control the parent draws.
+        * `:submit` — `false` draws no submit row while creating; `:external` draws none while
+          creating or while editing, for a page that draws the form's buttons itself (a header whose
+          buttons carry `form="<form id>"`). The `save` event is still accepted, so a form with no
+          button of its own can be submitted by something else: a dropzone that fires on drop, a
+          keystroke, a control the parent draws. `false` keeps the row over a loaded record, since a
+          record that can be changed and not saved is a trap; `:external` is the page's word that
+          it draws the way to save.
         * `:submit_alternatives` — other ways to create this record, offered from a caret beside the
           submit button. Each is a map with `:id`, `:label` and an optional `:description`, and then
           either
@@ -830,6 +836,9 @@ defmodule MishkaGervaz.Form.Web.State do
 
       defp hide_submit(state, false),
         do: %{state | static: %{state.static | submit_visible?: false}}
+
+      defp hide_submit(state, :external),
+        do: %{state | static: %{state.static | submit_visible?: false, submit_external?: true}}
 
       defp hide_submit(state, _other), do: state
 

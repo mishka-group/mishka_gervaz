@@ -1039,6 +1039,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     ~H""
   end
 
+  defp render_submit(%{static: %{submit_external?: true}} = assigns) do
+    ~H""
+  end
+
   defp render_submit(assigns) do
     submit = assigns.static.submit
     mode = assigns.state.mode
