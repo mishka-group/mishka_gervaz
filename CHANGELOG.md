@@ -38,6 +38,12 @@
   they close. Their head takes an `icon` in a tile coloured by `tone`, a `sub` line and `chips`
   under the title, and an `:actions` slot of buttons in the foot or, with `actions_at: :head`, in
   the head
+- The UI adapter gains `window/1`, a window in the middle of the screen that is a bottom sheet below
+  640px, for a form or a short page. It takes the drawer's assigns and opens and closes through
+  `show_window/2` and `hide_window/2`; without a title it draws no head and its close button stands
+  in the corner. Every panel (drawer, sheet, window) keeps the focus inside it, its close button is
+  `<id>-close` and 44px tall on a phone, and `request_close` runs in place of the close, for a page
+  that decides on the server whether a panel may close
 - A row action `type: :drawer` opens the row in the table's drawer: a record view
   (`open: fn record -> ~H"…" end`) or the resource's form editing it (`open: :form`), its head
   built from the row (`drawer: [title:, sub:, icon:, tone:, chips:, actions:, kind: :sheet]`).

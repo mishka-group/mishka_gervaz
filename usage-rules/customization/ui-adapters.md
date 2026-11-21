@@ -155,7 +155,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 
 ## The component list
 
-73 callbacks, grouped by what they render. Introspect the live list with
+77 callbacks, grouped by what they render. Introspect the live list with
 `MishkaGervaz.Behaviours.UIAdapter.component_functions/0`.
 
 - **Inputs** — `text_input` `select` `multi_select` `search_select` `load_more_select` `checkbox`
@@ -163,7 +163,7 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
   `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
 - **State & status** — `empty_state` `error_state` `loading_state` `skeleton` `alert` `toast`
-- **Panels** — `drawer` `sheet` `question`
+- **Panels** — `drawer` `sheet` `window` `question`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
   `cell_text` `cell_number` `cell_date` `cell_datetime` `cell_code` `cell_array` `cell_tags`
   `cell_avatars` `cell_stacked` `cell_stats` `cell_bars` `filter_reset_button` `archive_toggle`
@@ -233,6 +233,41 @@ its buttons, in the foot (`actions_at: :foot`, the default) or in the head besid
 
 A table opens a row in this drawer with a `:drawer` row action
 ([../table/row-actions.md](../table/row-actions.md)).
+
+## Window
+
+`window/1` is a window in the middle of the screen, for a form or a short page, that is a bottom
+sheet below 640px. It takes the drawer's assigns and opens and closes the same way, through
+`show_window/2` and `hide_window/2`: it grows in from a little smaller on a desktop and rises from
+the bottom on a phone. Its head and its foot stay while its body scrolls. `:class` replaces its
+width (`sm:w-[min(560px,calc(100vw-48px))]`).
+
+```heex
+<MishkaGervaz.Helpers.dynamic_component
+  :if={@noting?}
+  module={MishkaGervaz.UIAdapters.Tailwind}
+  function={:window}
+  id="order-note"
+  show
+  icon="hero-pencil-square"
+  title={dgettext("mishka_gervaz", "Note on the order")}
+  on_close={JS.push("close_note")}
+>
+  <form id="order-note-form" phx-submit="save_note">…</form>
+  <:footer>
+    <button type="submit" form="order-note-form">Save</button>
+  </:footer>
+</MishkaGervaz.Helpers.dynamic_component>
+```
+
+A window without a `title`, `icon`, `sub` or `chips` draws no head and puts its close button in the
+top corner, for a body that draws its own head (a gervaz form with a `header`). A window that stays
+rendered and holds a form whose page decides whether it may close takes `request_close`: the close
+button, the backdrop and Escape run it instead of closing, the page asks "Discard your changes?"
+when it must, and closes the window with `hide_window/2`, pushed to the
+client. Every panel keeps the focus inside it (`Phoenix.Component.focus_wrap/1`), puts it on its
+first field as it opens and gives it back as it closes; its close button is `<id>-close` and its
+body `<id>-body`.
 
 ## Question window
 

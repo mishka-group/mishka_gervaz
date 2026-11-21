@@ -4252,9 +4252,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
-  @drawer_motion {"translate-y-full sm:translate-y-0 sm:translate-x-full sm:rtl:-translate-x-full",
+  @drawer_motion {"transition-transform",
+                  "translate-y-full sm:translate-y-0 sm:translate-x-full sm:rtl:-translate-x-full",
                   "translate-y-0 sm:translate-x-0"}
-  @sheet_motion {"translate-y-full", "translate-y-0"}
+  @sheet_motion {"transition-transform", "translate-y-full", "translate-y-0"}
+  @window_motion {"transition-[translate,scale,opacity]",
+                  "translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0",
+                  "translate-y-0 sm:scale-100 sm:opacity-100"}
 
   @doc """
   A drawer from the right side (the left in a right-to-left page), for a form or a page. Below
@@ -4266,7 +4270,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   `:on_close`; Escape closes it too, unless `:confirm_close` is given.
 
   ## Assigns
-    * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`, its sub line `<id>-sub`
+    * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`, its sub line `<id>-sub`,
+      its body `<id>-body` and its close button `<id>-close`
     * `:show` - open it as it is drawn
     * `:title` - the heading at its top
     * `:icon` - a heroicon name drawn in a tile before the title, such as `"hero-receipt-percent"`
@@ -4278,6 +4283,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:confirm_close` - a question the close button and the backdrop ask first through
       `data-confirm`, such as "Discard your changes?" while the form in it holds changes (see
       `MishkaGervaz.Form.Web.Live`'s `notify_dirty`); `nil` closes at once
+    * `:request_close` - a `Phoenix.LiveView.JS` the close button, the backdrop and Escape run
+      instead of closing, such as `JS.push("close_editor")`, for a page that decides on the server
+      whether the panel closes (it may ask "Discard your changes?" first) and then closes it with
+      `hide_drawer/2` or takes it away; `nil` (the default) closes at once
     * `:class` - replaces the panel's width classes (`sm:w-[min(520px,100vw)]`)
     * `:inner_block` - its body, which scrolls
     * `:actions` - an optional slot of buttons; drawn in the foot unless `:actions_at` is `:head`
@@ -4307,6 +4316,24 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     |> side_panel()
   end
 
+  @doc """
+  A window in the middle of the screen, for a form or a short page, that is a bottom sheet below
+  640px. It grows from a little smaller as it opens and rises from the bottom edge on a phone.
+
+  It opens and closes as `drawer/1` does, through `show_window/2` and `hide_window/2`, and takes its
+  assigns. Its body scrolls when it is taller than the screen, its head and its foot stay. Without
+  a `:title`, `:icon`, `:sub` or `:chips` it draws no head and its close button stands in the top
+  corner, for a body that draws its own head, such as a gervaz form with a header. `:class`
+  replaces the panel's width classes (`sm:w-[min(560px,calc(100vw-48px))]`).
+  """
+  @impl true
+  def window(assigns) do
+    assigns
+    |> assign(:kind, :window)
+    |> assign_new(:class, fn -> "sm:w-[min(560px,calc(100vw-48px))]" end)
+    |> side_panel()
+  end
+
   @doc "The `Phoenix.LiveView.JS` that opens the drawer `id`: its backdrop fades in, its panel slides in."
   @spec show_drawer(JS.t(), String.t()) :: JS.t()
   def show_drawer(js \\ %JS{}, id), do: show_panel(js, id, @drawer_motion)
@@ -4323,7 +4350,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @spec hide_sheet(JS.t(), String.t()) :: JS.t()
   def hide_sheet(js \\ %JS{}, id), do: hide_panel(js, id, @sheet_motion)
 
-  defp show_panel(js, id, {away, shown}) do
+  @doc "The `Phoenix.LiveView.JS` that opens the window `id`: its backdrop fades in, its panel grows in."
+  @spec show_window(JS.t(), String.t()) :: JS.t()
+  def show_window(js \\ %JS{}, id), do: show_panel(js, id, @window_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that closes the window `id`."
+  @spec hide_window(JS.t(), String.t()) :: JS.t()
+  def hide_window(js \\ %JS{}, id), do: hide_panel(js, id, @window_motion)
+
+  defp show_panel(js, id, {property, away, shown}) do
     js
     |> JS.push_focus()
     |> JS.show(to: "#" <> id)
@@ -4336,13 +4371,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       to: "#" <> id <> "-panel",
       display: "flex",
       time: 200,
-      transition: {"transition-transform ease-out duration-200", away, shown}
+      transition:
+        {property <> " ease-out duration-200 motion-reduce:transition-none", away, shown}
     )
     |> JS.add_class("overflow-hidden", to: "body")
     |> JS.focus_first(to: "#" <> id <> "-panel")
   end
 
-  defp hide_panel(js, id, {away, shown}) do
+  defp hide_panel(js, id, {property, away, shown}) do
     js
     |> JS.hide(
       to: "#" <> id <> "-backdrop",
@@ -4352,7 +4388,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     |> JS.hide(
       to: "#" <> id <> "-panel",
       time: 200,
-      transition: {"transition-transform ease-in duration-200", shown, away}
+      transition: {property <> " ease-in duration-200 motion-reduce:transition-none", shown, away}
     )
     |> JS.hide(to: "#" <> id, time: 200, transition: {"block", "block", "block"})
     |> JS.remove_class("overflow-hidden", to: "body")
@@ -4370,6 +4406,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:chips, fn -> [] end)
       |> assign_new(:on_close, fn -> %JS{} end)
       |> assign_new(:confirm_close, fn -> nil end)
+      |> assign_new(:request_close, fn -> nil end)
       |> assign_new(:footer, fn -> [] end)
       |> assign_new(:actions, fn -> [] end)
       |> assign_new(:actions_at, fn -> :foot end)
@@ -4377,9 +4414,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     assigns =
       assigns
       |> assign(:open_js, open_js(assigns.kind, assigns.id))
-      |> assign(:close_js, close_js(assigns.kind, assigns.on_close, assigns.id))
+      |> assign(
+        :close_js,
+        assigns.request_close || close_js(assigns.kind, assigns.on_close, assigns.id)
+      )
       |> assign(:hide_js, close_js(assigns.kind, %JS{}, assigns.id))
       |> assign(:confirm_close, assigns.confirm_close || nil)
+      |> assign(
+        :head?,
+        assigns.kind != :window or
+          Enum.any?([assigns.title, assigns.icon, assigns.sub], & &1) or assigns.chips != [] or
+          (assigns.actions != [] and assigns.actions_at == :head)
+      )
 
     ~H"""
     <div
@@ -4397,7 +4443,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         data-confirm={@confirm_close}
         phx-click={@close_js}
       />
-      <div
+      <.focus_wrap
         id={@id <> "-panel"}
         role="dialog"
         aria-modal="true"
@@ -4410,15 +4456,33 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           "fixed inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[18px] bg-white shadow-[0_-12px_40px_rgba(20,18,26,.18)]",
           @kind == :drawer &&
             "sm:inset-y-0 sm:start-auto sm:end-0 sm:max-h-none sm:rounded-none sm:rounded-s-[18px] sm:shadow-[-12px_0_40px_rgba(20,18,26,.18)]",
+          @kind == :window &&
+            "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[min(88vh,820px)] sm:rounded-[18px] sm:shadow-[0_30px_80px_rgba(23,22,26,0.32)]",
           @class
         ]}
       >
         <div
-          :if={@kind == :sheet}
+          :if={@kind != :drawer}
           aria-hidden="true"
-          class="mx-auto mt-2.5 h-1 w-10 flex-none rounded-full bg-[#dcdad2]"
+          class={[
+            "mx-auto mt-2.5 h-1 w-10 flex-none rounded-full bg-[#dcdad2]",
+            @kind == :window && "sm:hidden"
+          ]}
         />
+        <button
+          :if={not @head?}
+          id={@id <> "-close"}
+          type="button"
+          data-role="gervaz-panel-close"
+          aria-label={dgettext("mishka_gervaz", "Close")}
+          data-confirm={@confirm_close}
+          phx-click={@close_js}
+          class="absolute end-3 top-3 z-10 grid size-11 place-items-center rounded-[10px] text-[#8a877f] transition-colors hover:bg-[#f6f5f2] hover:text-[#1b1a18]"
+        >
+          <.render_icon name="hero-x-mark" class="size-5" />
+        </button>
         <div
+          :if={@head?}
           data-role="gervaz-panel-head"
           class="flex flex-none items-start justify-between gap-3 border-b border-[#f0efea] px-5 py-4"
         >
@@ -4470,17 +4534,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             {render_slot(@actions)}
           </div>
           <button
+            id={@id <> "-close"}
             type="button"
             data-role="gervaz-panel-close"
             aria-label={dgettext("mishka_gervaz", "Close")}
             data-confirm={@confirm_close}
             phx-click={@close_js}
-            class="grid size-8 flex-none place-items-center rounded-[9px] text-[#8a877f] transition-colors hover:bg-[#f6f5f2] hover:text-[#1b1a18]"
+            class="grid size-8 flex-none place-items-center rounded-[9px] text-[#8a877f] transition-colors hover:bg-[#f6f5f2] hover:text-[#1b1a18] max-[640px]:-m-1.5 max-[640px]:size-11"
           >
             <.render_icon name="hero-x-mark" class="size-5" />
           </button>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div id={@id <> "-body"} class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {render_slot(@inner_block)}
         </div>
         <div
@@ -4491,7 +4556,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           {render_slot(@footer)}
           {@actions_at != :head && render_slot(@actions)}
         </div>
-      </div>
+      </.focus_wrap>
     </div>
     """
   end
@@ -4513,9 +4578,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   defp open_js(:drawer, id), do: show_drawer(id)
   defp open_js(:sheet, id), do: show_sheet(id)
+  defp open_js(:window, id), do: show_window(id)
 
   defp close_js(:drawer, on_close, id), do: hide_drawer(on_close, id)
   defp close_js(:sheet, on_close, id), do: hide_sheet(on_close, id)
+  defp close_js(:window, on_close, id), do: hide_window(on_close, id)
 
   @doc """
   A question window, the confirm dialog a row action, a bulk action or a form's submit button asks

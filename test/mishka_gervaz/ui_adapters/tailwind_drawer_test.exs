@@ -1,9 +1,11 @@
 defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
   @moduledoc """
-  The default adapter's `drawer/1` and `sheet/1`: a dialog over a backdrop, drawn hidden and opened
-  by `Phoenix.LiveView.JS`. The drawer comes from the right side from 640px and is a bottom sheet
-  below; the sheet is a bottom sheet at every width. A `confirm_close` question stands on the close
-  button and the backdrop, and Escape closes only a panel without one.
+  The default adapter's `drawer/1`, `sheet/1` and `window/1`: a dialog over a backdrop, drawn hidden
+  and opened by `Phoenix.LiveView.JS`, its focus kept inside it. The drawer comes from the right side
+  from 640px and is a bottom sheet below; the sheet is a bottom sheet at every width; the window is
+  in the middle of the screen from 640px and a bottom sheet below. A `confirm_close` question stands
+  on the close button and the backdrop, Escape closes only a panel without one, and a
+  `request_close` runs in place of the close.
   """
   use ExUnit.Case, async: true
 
@@ -41,7 +43,7 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
   defp one(doc, selector), do: LazyHTML.query(doc, selector)
   defp attr(doc, selector, name), do: doc |> one(selector) |> LazyHTML.attribute(name)
 
-  for fun <- [:drawer, :sheet] do
+  for fun <- [:drawer, :sheet, :window] do
     describe "#{fun}" do
       test "is a labelled dialog over a backdrop, drawn hidden, holding its body" do
         doc = render(unquote(fun), %{})
@@ -51,8 +53,33 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
         assert attr(doc, "#edit-panel", "aria-modal") == ["true"]
         assert attr(doc, "#edit-panel", "aria-labelledby") == ["edit-title"]
         assert one(doc, "#edit-title") |> LazyHTML.text() =~ "Edit product"
-        assert one(doc, "#edit-panel #body") |> Enum.count() == 1
+        assert one(doc, "#edit-panel #edit-body #body") |> Enum.count() == 1
         assert one(doc, "#edit-backdrop[aria-hidden]") |> Enum.count() == 1
+      end
+
+      test "keeps the focus inside its panel" do
+        doc = render(unquote(fun), %{})
+
+        assert attr(doc, "#edit-panel", "phx-hook") == ["Phoenix.FocusWrap"]
+        assert one(doc, "#edit-panel > #edit-panel-start[tabindex]") |> Enum.count() == 1
+        assert one(doc, "#edit-panel > #edit-panel-end[tabindex]") |> Enum.count() == 1
+      end
+
+      test "runs its request_close in place of the close, from its button, its backdrop and Escape" do
+        doc =
+          render(unquote(fun), %{
+            request_close: JS.push("ask_close"),
+            on_close: JS.push("close_drawer")
+          })
+
+        for selector <- ["#edit-close", "#edit-backdrop"] do
+          [click] = attr(doc, selector, "phx-click")
+          assert click =~ "ask_close"
+          refute click =~ "close_drawer"
+          refute click =~ "edit-panel"
+        end
+
+        assert attr(doc, "#edit-panel", "phx-window-keydown") |> hd() =~ "ask_close"
       end
 
       test "opens as it is drawn with show, and not without" do
@@ -102,7 +129,7 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
 
   defp head(doc), do: one(doc, ~s|[data-role="gervaz-panel-head"]|)
 
-  for fun <- [:drawer, :sheet] do
+  for fun <- [:drawer, :sheet, :window] do
     describe "#{fun} head" do
       test "draws the icon tile in its tone, the sub line and the chips under the title" do
         doc =
@@ -170,8 +197,52 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
     assert attr(doc, "#edit", "data-role") == ["gervaz-sheet"]
   end
 
+  test "the window stands in the middle of the screen from 640px and rises from the bottom below" do
+    doc = render(:window, %{})
+    [class] = attr(doc, "#edit-panel", "class")
+
+    assert class =~ "inset-x-0 bottom-0"
+    assert class =~ "sm:inset-0 sm:m-auto sm:h-fit"
+    assert class =~ "sm:w-[min(560px,calc(100vw-48px))]"
+    refute class =~ "sm:end-0"
+    assert attr(doc, "#edit", "data-role") == ["gervaz-window"]
+  end
+
+  test "a window's class replaces its width" do
+    [class] = attr(render(:window, %{class: "sm:w-[720px]"}), "#edit-panel", "class")
+
+    assert class =~ "sm:w-[720px]"
+    refute class =~ "560px"
+  end
+
+  test "a window without a title draws no head and puts its close button in the corner" do
+    doc = render(:window, %{title: nil, on_close: JS.push("close_window")})
+
+    assert head(doc) |> Enum.count() == 0
+    assert attr(doc, "#edit-panel", "aria-labelledby") == []
+    assert attr(doc, "#edit-close", "phx-click") |> hd() =~ "close_window"
+    assert attr(doc, "#edit-close", "aria-label") == ["Close"]
+  end
+
+  test "a drawer without a title keeps its head with the close button" do
+    doc = render(:drawer, %{title: nil})
+
+    assert head(doc) |> LazyHTML.query("#edit-close") |> Enum.count() == 1
+  end
+
   test "show_drawer/2 and hide_drawer/2 move the panel in and out by JS" do
     assert %JS{ops: [_ | _]} = Tailwind.show_drawer("edit")
     assert %JS{ops: [_ | _]} = Tailwind.hide_sheet(JS.push("closed"), "edit")
+  end
+
+  test "show_window/2 opens the window's panel and focuses in it, hide_window/2 hands the focus back" do
+    shown = Jason.encode!(Tailwind.show_window("edit").ops)
+    hidden = Jason.encode!(Tailwind.hide_window(JS.push("closed"), "edit").ops)
+
+    assert shown =~ "#edit-panel"
+    assert shown =~ "focus_first"
+    assert shown =~ "sm:scale-95"
+    assert hidden =~ "closed"
+    assert hidden =~ "pop_focus"
   end
 end
