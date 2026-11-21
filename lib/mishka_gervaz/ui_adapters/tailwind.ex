@@ -67,6 +67,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:autocomplete, fn -> nil end)
+      |> assign_new(:maxlength, fn -> nil end)
       |> assign_new(:prefix, fn -> nil end)
       |> assign_new(:suffix, fn -> nil end)
       |> assign(:placeholder, placeholder)
@@ -97,6 +98,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           disabled={@disabled}
           readonly={@readonly}
           autocomplete={@autocomplete}
+          maxlength={@maxlength}
           aria-label={@aria_label}
           aria-describedby={units_ids(@id, @prefix, @suffix)}
           dir={icon_dir(@search, @dir)}
@@ -129,6 +131,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
+      |> assign_new(:maxlength, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:prefix, fn -> nil end)
       |> assign_new(:suffix, fn -> nil end)
@@ -145,6 +148,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         disabled={@disabled}
         readonly={@readonly}
         autocomplete={@autocomplete}
+        maxlength={@maxlength}
         aria-describedby={units_ids(@id, @prefix, @suffix)}
         dir={@dir}
         class={[
@@ -3272,6 +3276,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:maxlength, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
@@ -3279,6 +3284,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       id={@id}
       name={@name}
       placeholder={@placeholder}
+      maxlength={@maxlength}
       rows={@rows}
       disabled={@disabled}
       readonly={@readonly}

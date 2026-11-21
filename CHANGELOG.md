@@ -72,6 +72,13 @@
   wherever a group goes, the page's own markup between them. It stays one form, one changeset and
   one save; a field's error shows in its group's card, and the unsaved changes and Discard work as
   before. The slot is drawn while the form loads, each group showing that it loads
+- A `:text`, `:textarea`, `:email`, `:password`, `:url` or `:tel` field draws its attribute's
+  `max_length` constraint as the input's `maxlength`; `field ... do max_length 80 end` sets its own
+
+### Bug fixes:
+- A form field with `ui do span 2 end` (3, 4) is the whole row below the breakpoint where the grid
+  has that many columns (`col-span-full md:col-span-2`), so on a phone it no longer makes a second,
+  implicit column that squeezed every other field
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

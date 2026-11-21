@@ -1015,11 +1015,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp ticked?(value), do: value in [true, "true", "on"]
 
+  # A field that spans N columns takes the whole row while the grid has fewer columns than N (one
+  # on a phone), and N columns from the breakpoint where every grid of this template has them: a
+  # bare `col-span-N` on a one-column grid would make the browser add N-1 implicit columns and
+  # squeeze every other field.
   defp nested_span_class(nil), do: nil
   defp nested_span_class(1), do: "col-span-1"
-  defp nested_span_class(2), do: "col-span-2"
-  defp nested_span_class(3), do: "col-span-3"
-  defp nested_span_class(4), do: "col-span-4"
+  defp nested_span_class(2), do: "col-span-full md:col-span-2"
+  defp nested_span_class(3), do: "col-span-full lg:col-span-3"
+  defp nested_span_class(4), do: "col-span-full lg:col-span-4"
   defp nested_span_class(_), do: nil
 
   defp busy_label(button, static) do
@@ -1540,6 +1544,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:extra, get_in_map(field, [:ui, :extra]) || %{})
       |> put_present(:rows, get_in_map(field, [:ui, :rows]))
       |> put_present(:dir, get_in_map(field, [:ui, :extra, :dir]))
+      |> put_present(:maxlength, Map.get(field, :max_length))
 
     case type do
       :password ->

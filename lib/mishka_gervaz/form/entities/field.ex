@@ -89,6 +89,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
           min: bound() | nil,
           max: bound() | nil,
           min_chars: integer() | nil,
+          max_length: pos_integer() | nil,
           auto_fields: boolean(),
           nested_fields: list(),
           add_label: String.t() | nil,
@@ -127,6 +128,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     min: nil,
     max: nil,
     min_chars: nil,
+    max_length: nil,
     auto_fields: false,
     nested_fields: [],
     _nested_field_entities: [],
@@ -325,6 +327,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
                      ]},
                   doc:
                     "Maximum value for number/range fields. For `:date` and `:datetime` fields, the latest day or time the picker offers and the save takes. Given as `min` is; a `Date` takes in the whole day."
+                ],
+                max_length: [
+                  type: :pos_integer,
+                  doc:
+                    "The most characters a `:text`, `:textarea`, `:email`, `:password`, `:url` or `:tel` field takes, drawn as the input's `maxlength` so the browser stops there. Left out, it is the `max_length` constraint of the field's attribute, when it has one."
                 ],
                 min_chars: [
                   type: :integer,

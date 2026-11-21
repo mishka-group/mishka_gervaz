@@ -214,6 +214,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       min: field.min,
       max: field.max,
       min_chars: field.min_chars,
+      max_length: field.max_length,
       nested_fields: field.nested_fields,
       add_label: field.add_label,
       remove_label: field.remove_label,
