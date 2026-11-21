@@ -129,6 +129,25 @@ defmodule MishkaGervaz.Form.Web.Live do
   value. A table's Edit sends `reset: true` with the row's `record_id`. A button that opens the form
   without asking the server uses `reset/2`.
 
+  ## Values the page works out
+
+  A page that works a value out while the form is open, such as the date a price preview was made
+  for, puts it into the mounted form without starting it over:
+
+      MishkaGervaz.Form.Web.Live.put_values("plan-form", %{proration_date: preview.date})
+
+  It is `send_update(MishkaGervaz.Form.Web.Live, id: "plan-form", put_values: %{...})`. Each key
+  names a field of the form, as an atom or a string; a name the form has no field for raises an
+  `ArgumentError`. The form is validated with the values in it, as a change typed into it is (its
+  `on_validate` hook runs, and the errors show as they would), and the save sends them, a `:hidden`
+  field's included. What the reader typed into the other fields stays, and the form's dirty state
+  and step stay as they were: a value the page put is not a change the reader made. A field the
+  reader may not change shows the value, and the save leaves it out, as it leaves out anything typed
+  into such a field.
+
+  Values put while the form is still reading its record, or being built again after a start over,
+  are put once it is ready. An update that carries `put_values` does nothing else.
+
   ## After a save
 
   A create save always returns the form to an empty create form. An update save depends on how the
@@ -167,6 +186,7 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   alias MishkaGervaz.Form.Templates.Standard
   alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
+  alias MishkaGervaz.Form.Web.Events.RelationHandler
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Helpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
@@ -184,12 +204,21 @@ defmodule MishkaGervaz.Form.Web.Live do
   def reset(js \\ %JS{}, id) when is_binary(id),
     do: JS.push(js, "reset", target: "#" <> id <> "-form-wrapper")
 
+  @doc """
+  Puts `values` (`%{field => value}`) into the mounted form with this component `id`, keeping what
+  was typed. See "Values the page works out".
+  """
+  @spec put_values(String.t(), map()) :: :ok
+  def put_values(id, values) when is_binary(id) and is_map(values),
+    do: send_update(__MODULE__, id: id, put_values: values)
+
   @impl true
   def mount(socket) do
     {:ok,
      socket
      |> assign(:form_state, nil)
      |> assign(:question, nil)
+     |> assign(:pending_values, nil)
      |> assign(:initialized, false)}
   end
 
@@ -262,11 +291,14 @@ defmodule MishkaGervaz.Form.Web.Live do
 
     if state && state.loading == :initial && is_nil(state.form) &&
          is_nil(socket.assigns[:record_id]) do
-      {:ok, maybe_load_form(socket, state, nil)}
+      {:ok, socket |> maybe_load_form(state, nil) |> put_pending_values()}
     else
       {:ok, socket}
     end
   end
+
+  defp do_update(%{id: _id, put_values: values}, socket) when is_map(values),
+    do: {:ok, put_form_values(socket, values)}
 
   defp do_update(assigns, socket) do
     id = Map.fetch!(assigns, :id)
@@ -433,8 +465,58 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   @impl true
   def handle_async(name, result, socket) do
-    new_socket = DataLoader.Default.handle_async_result(name, result, socket)
+    new_socket =
+      name
+      |> DataLoader.Default.handle_async_result(result, socket)
+      |> put_pending_values()
+
     {:noreply, announce_dirty(new_socket, dirty?(socket))}
+  end
+
+  # The values a page put (`put_values/2`): into the form once it is built, validated with them as
+  # a typed change is, its dirty state and step untouched; kept until then.
+  defp put_form_values(%{assigns: %{form_state: state}} = socket, values) do
+    values = form_values!(state, values)
+
+    case state do
+      %State{form: %Phoenix.HTML.Form{}} ->
+        new_state =
+          state
+          |> State.update(field_values: Map.merge(state.field_values || %{}, values))
+          |> RelationHandler.revalidate_form(values)
+
+        assign(socket, :form_state, new_state)
+
+      _not_built ->
+        assign(socket, :pending_values, Map.merge(socket.assigns[:pending_values] || %{}, values))
+    end
+  end
+
+  defp put_pending_values(
+         %{assigns: %{pending_values: values, form_state: %State{form: form}}} = socket
+       )
+       when is_map(values) and not is_nil(form) do
+    socket
+    |> assign(:pending_values, nil)
+    |> put_form_values(values)
+  end
+
+  defp put_pending_values(socket), do: socket
+
+  defp form_values!(%State{static: %{fields: fields, id: id}}, values) do
+    names = Map.new(fields, &{Atom.to_string(&1.name), &1.name})
+
+    Map.new(values, fn {key, value} ->
+      case Map.fetch(names, to_string(key)) do
+        {:ok, name} ->
+          {name, value}
+
+        :error ->
+          raise ArgumentError,
+                "the form #{inspect(id)} has no field #{inspect(key)}, it has " <>
+                  inspect(Map.values(names))
+      end
+    end)
   end
 
   defp dirty?(%{assigns: %{form_state: %State{dirty?: dirty?}}}), do: dirty? == true

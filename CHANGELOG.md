@@ -82,6 +82,11 @@
   before. The slot is drawn while the form loads, each group showing that it loads
 - A `:text`, `:textarea`, `:email`, `:password`, `:url` or `:tel` field draws its attribute's
   `max_length` constraint as the input's `maxlength`; `field ... do max_length 80 end` sets its own
+- A page puts a value it worked out into a mounted form without starting it over:
+  `MishkaGervaz.Form.Web.Live.put_values("plan-form", %{proration_date: date})`, which is
+  `send_update/2` with `put_values:`. The form is validated with it as a typed change is and the save
+  sends it, a `:hidden` field's included; what the reader typed stays, and the dirty state and the
+  step are untouched. A form still reading its record takes the values once it has read it
 
 ### Bug fixes:
 - A form field with `ui do span 2 end` (3, 4) is the whole row below the breakpoint where the grid

@@ -3,7 +3,8 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
   A page with one `MishkaGervaz.Form.Web.Live` form of `MishkaGervaz.Test.Web.PlanItem`, mounted the
   way an admin page mounts one, with `notify_dirty`. A saved record's title shows in `#saved`, the
   error flash the form sends in `#flash-error`, and whether the form holds changes in `#dirty`.
-  Opened with `?id=<id>`, the form edits that record.
+  Opened with `?id=<id>`, the form edits that record. Its `#put-discount` button puts a discount of
+  15 into the open form (`MishkaGervaz.Form.Web.Live.put_values/2`), a value the page worked out.
 
   On `/plans/drawer` the form sits in the Tailwind adapter's drawer, `#plan-drawer`, open as the
   page opens. While the form holds changes the drawer asks "Discard your changes?" before it
@@ -24,6 +25,11 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
 
   @impl true
   def handle_event("close_drawer", _params, socket), do: {:noreply, assign(socket, :open?, false)}
+
+  def handle_event("put_discount", _params, socket) do
+    MishkaGervaz.Form.Web.Live.put_values("plan", %{discount: 15})
+    {:noreply, socket}
+  end
 
   @impl true
   def handle_info({:put_flash, kind, message}, socket),
@@ -70,6 +76,7 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
     <p id="flash-error">{Phoenix.Flash.get(@flash, :error)}</p>
     <p id="saved">{@saved}</p>
     <p id="dirty">{to_string(@dirty?)}</p>
+    <button id="put-discount" type="button" phx-click="put_discount">Put a discount</button>
     <.live_component
       module={MishkaGervaz.Form.Web.Live}
       id="plan"
