@@ -83,6 +83,11 @@
   before. The slot is drawn while the form loads, each group showing that it loads
 - A `:text`, `:textarea`, `:email`, `:password`, `:url` or `:tel` field draws its attribute's
   `max_length` constraint as the input's `maxlength`; `field ... do max_length 80 end` sets its own
+- A submit, cancel or discard label, and a field's `description`, may be a function of the form state,
+  so one form names its button for the action it was opened for and its help text for what the
+  mount's defaults hold
+- `submit: :external` on a form's mount hides its submit row for a create and for an edit, for a page
+  whose own buttons carry `form=<form id>`; `submit: false` still hides a create's only
 - A page puts a value it worked out into a mounted form without starting it over:
   `MishkaGervaz.Form.Web.Live.put_values("plan-form", %{proration_date: date})`, which is
   `send_update/2` with `put_values:`. The form is validated with it as a typed change is and the save
@@ -125,7 +130,7 @@
   tabs and its submit row's buttons are 44 px tall
 
 ### Dependencies:
-- phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)
+- phoenix_live_view 1.2.13 => 1.2.15 (EEF-CVE-2026-126334)
 - phoenix 1.8.16 => 1.8.17
 - ex_doc 0.40.4 => 0.40.5
 - rewrite 1.3.0 => 1.3.1
