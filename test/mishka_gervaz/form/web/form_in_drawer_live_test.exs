@@ -40,14 +40,15 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
     doc = view |> render() |> LazyHTML.from_fragment()
     body = ~s|#plan-drawer-body[data-role="gervaz-panel-body"]|
 
-    for {piece, inside} <- [
-          {"gervaz-form-steps", ~s|[role="tablist"]|},
-          {"gervaz-form-submit", ~s|button[type="submit"]|}
+    for {piece, inside, edge} <- [
+          {"gervaz-form-steps", ~s|[role="tablist"]|, "top-0"},
+          {"gervaz-form-submit", ~s|button[type="submit"]|, "bottom-0"}
         ] do
       selector = ~s|#{body} [data-role="#{piece}"]|
       assert has_element?(view, "#{selector} #{inside}")
       [class] = doc |> LazyHTML.query(selector) |> LazyHTML.attribute("class")
       assert class =~ "in-data-[role=gervaz-panel-body]:sticky"
+      assert class =~ "in-data-[role=gervaz-panel-body]:#{edge} "
     end
   end
 

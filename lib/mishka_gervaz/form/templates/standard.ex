@@ -47,8 +47,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   `data-role="gervaz-panel-body"`, as `MishkaGervaz.UIAdapters.Tailwind.drawer/1`, `sheet/1` and
   `window/1` mark theirs) keeps its tabs or steps (`data-role="gervaz-form-steps"`) stuck to the
   body's top and its submit row (`data-role="gervaz-form-submit"`) stuck to the body's bottom, so
-  only the fields scroll and the save button is always in reach, after a failed save too. Outside
-  a panel both stay in the page's flow.
+  only the fields scroll and the save button is always in reach, after a failed save too. Each
+  sticks where it rests, inside the body's padding, so neither moves when the body scrolls, and a
+  white band over that padding hides the fields that scroll past it. Outside a panel both stay in
+  the page's flow.
 
   ## Placed groups
 
@@ -404,7 +406,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       data-role="gervaz-form-steps"
       class={[
         "mb-6",
-        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:-top-5 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:pt-3"
+        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:top-0 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:pt-3",
+        "in-data-[role=gervaz-panel-body]:before:pointer-events-none in-data-[role=gervaz-panel-body]:before:absolute in-data-[role=gervaz-panel-body]:before:inset-x-0 in-data-[role=gervaz-panel-body]:before:-top-5 in-data-[role=gervaz-panel-body]:before:h-5 in-data-[role=gervaz-panel-body]:before:bg-white"
       ]}
     >
       <.dynamic_component
@@ -1160,7 +1163,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       data-role="gervaz-form-submit"
       class={[
         "mt-6 flex items-center justify-end",
-        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:-bottom-5 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:border-t in-data-[role=gervaz-panel-body]:border-[#f0efea] in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:py-4"
+        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:bottom-0 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:border-t in-data-[role=gervaz-panel-body]:border-[#f0efea] in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:py-4",
+        "in-data-[role=gervaz-panel-body]:after:pointer-events-none in-data-[role=gervaz-panel-body]:after:absolute in-data-[role=gervaz-panel-body]:after:inset-x-0 in-data-[role=gervaz-panel-body]:after:-bottom-5 in-data-[role=gervaz-panel-body]:after:h-5 in-data-[role=gervaz-panel-body]:after:bg-white"
       ]}
     >
       <div class="flex flex-wrap items-center justify-end gap-[14px]">
