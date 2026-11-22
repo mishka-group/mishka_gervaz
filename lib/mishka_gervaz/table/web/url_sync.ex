@@ -51,14 +51,20 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   - Template: `?table_template=grid` — the `name/0` of the template the table shows. A URL naming
     one of the table's `switchable_templates` opens the table in it; any other name is ignored
 
+  A parameter that holds anything else than it may, such as `?table_sort[a]=b`, reads as missing
+  (`decode/3`).
+
   See `MishkaGervaz.Table.Web.State`,
   `MishkaGervaz.Table.Web.State.UrlSync` (the in-state sub-builder),
   `MishkaGervaz.Table.Dsl.UrlSync` (resource-level DSL section),
   `MishkaGervaz.Table.Dsl.Defaults` (domain-level defaults).
   """
 
-  import MishkaGervaz.Helpers, only: [positive_integer: 1]
+  import MishkaGervaz.Helpers, only: [find_by_name: 2, positive_integer: 1, strip_tags: 1]
   import MishkaGervaz.Table.Web.State.Helpers, only: [search_filter_name: 1]
+
+  alias MishkaGervaz.Resource.Info.Table, as: TableInfo
+  alias MishkaGervaz.Table.Types.Filter
 
   @default_config %{
     enabled: false,
@@ -67,6 +73,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   }
 
   @default_max_filter_length 500
+  @text_filters [Filter.Text, Filter.Select, Filter.Boolean, Filter.Number, Filter.Date]
 
   @type url_state :: %{
           filters: map(),
@@ -123,10 +130,25 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   missing: page 1, and the table's own page size. A page of any size is kept here; the table opens
   it only when the database can read it (`MishkaGervaz.Table.Web.State.UrlSync`).
 
-  A sort entry whose order is neither `asc` nor `desc`, or whose field names no existing atom, is
-  dropped here. The table then sorts only by the fields it sorts by itself, its sortable columns and
-  its default sort; a URL whose sort keeps none of them opens the table's own sort
-  (`MishkaGervaz.Table.Web.State.UrlSync`).
+  A sort entry whose order is neither `asc` nor `desc`, or whose field is neither one of the
+  resource's nor a column of its table, is dropped here. The table then sorts only by the fields it
+  sorts by itself, its sortable columns and its default sort; a URL whose sort keeps none of them
+  opens the table's own sort (`MishkaGervaz.Table.Web.State.UrlSync`).
+
+  ## What a parameter may hold
+
+  The sort, search, page, page size and template are a text of at most `max_filter_length`
+  characters. Anything else, a map, a list or a longer text, reads as missing. A null byte and bytes
+  that are no UTF-8 are cut from the text. A filter's value is read by its type:
+
+  | filter | value |
+  | --- | --- |
+  | `:text`, `:select`, `:boolean`, `:number`, `:date`, `:relation` | the text |
+  | `:date_range` | a text `from~to`, `from~` or `~to`, as `%{from: _, to: _}` with the sides it has |
+  | `:relation` with `mode :search_multi` | a text, a list for `a,b`, or a list of texts |
+  | a type of your own | a text, a list for `a,b`, `%{from: _, to: _}` for `a~b`, or a list or map of texts |
+
+  A preserved param is a text or a list of texts.
 
   ## Usage
 
@@ -143,7 +165,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   - `:allowed_params` - List of param types to decode (overrides DSL `params`)
   - `:allowed_filters` - List of allowed filter names (overrides DSL filters)
-  - `:max_filter_length` - Max length for filter values (overrides DSL `max_filter_length`)
+  - `:max_filter_length` - Max length of a text in the URL (overrides DSL `max_filter_length`)
   - `:prefix` - URL param prefix (overrides DSL `prefix`)
 
   ## Examples
@@ -163,10 +185,13 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     allowed_params =
       Keyword.get(opts, :allowed_params, [:filters, :sort, :page, :search, :template])
 
-    allowed_filters = Keyword.get(opts, :allowed_filters, nil)
-    max_filter_length = Keyword.get(opts, :max_filter_length, @default_max_filter_length)
+    decoded = %{
+      filters: opts |> Keyword.get(:allowed_filters) |> named_filters(:any),
+      resource: nil,
+      max: Keyword.get(opts, :max_filter_length) || @default_max_filter_length
+    }
 
-    do_decode(params, prefix, allowed_params, allowed_filters, max_filter_length, nil, %{})
+    do_decode(params, prefix, allowed_params, decoded, nil, %{})
   end
 
   @doc """
@@ -177,7 +202,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     * `:allowed_params` — which of `:filters` `:sort` `:page` `:page_size` `:search` `:template`
       to read
     * `:allowed_filters` — the filter names that may arrive from the URL
-    * `:max_filter_length` — values longer than this are ignored
+    * `:max_filter_length` — texts longer than this are ignored
     * `:prefix` — the param prefix
 
   Returns `nil` when the resource has URL sync disabled, exactly as `decode/3` does.
@@ -211,39 +236,30 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   defp do_decode_for_resource(params, resource, opts, uri) do
     {path, query} = split_url(uri)
 
-    alias MishkaGervaz.Resource.Info.Table, as: TableInfo
-
     url_sync_config = TableInfo.url_sync(resource)
 
     if url_sync_config && url_sync_config[:enabled] && is_list(url_sync_config[:params]) do
       prefix = Keyword.get(opts, :prefix, url_sync_config[:prefix])
       allowed_params = Keyword.get(opts, :allowed_params, url_sync_config[:params]) || []
 
-      max_filter_length =
-        Keyword.get(opts, :max_filter_length, url_sync_config[:max_filter_length])
+      max_length =
+        Keyword.get(opts, :max_filter_length, url_sync_config[:max_filter_length]) ||
+          @default_max_filter_length
 
-      allowed_filters =
-        Keyword.get_lazy(opts, :allowed_filters, fn ->
-          resource |> TableInfo.filters() |> Enum.map(& &1.name)
-        end)
+      filters =
+        opts |> Keyword.get(:allowed_filters) |> named_filters(TableInfo.filters(resource))
 
       path_params =
         TableInfo.config(resource)[:identity][:route]
-        |> extract_path_params(path, max_filter_length || @default_max_filter_length)
+        |> extract_path_params(path, max_length)
 
-      preserve_params_config = url_sync_config[:preserve_params]
-      effective_max = max_filter_length || @default_max_filter_length
-
-      url_state =
-        max_filter_length
-        |> then(
-          &do_decode(params, prefix, allowed_params, allowed_filters, &1, path, path_params)
-        )
+      decoded = %{filters: filters, resource: resource, max: max_length}
 
       preserved =
-        extract_preserved_params(params, prefix, preserve_params_config, effective_max)
+        extract_preserved_params(params, prefix, url_sync_config[:preserve_params], max_length)
 
-      url_state
+      params
+      |> do_decode(prefix, allowed_params, decoded, path, path_params)
       |> Map.put(:preserved_params, preserved)
       |> Map.put(:query, query)
     else
@@ -251,41 +267,42 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     end
   end
 
+  # The filters a URL may carry: the named ones, or all there are when none is named.
+  @spec named_filters([atom()] | nil, [map()] | :any) :: [map()] | :any
+  defp named_filters(names, filters) when names in [nil, []], do: filters
+
+  defp named_filters(names, filters),
+    do: Enum.map(names, &(find_by_name(filters, &1) || %{name: &1}))
+
   @spec do_decode(
           map(),
           String.t() | nil,
           list(atom()),
-          list(atom()) | nil,
-          non_neg_integer() | nil,
+          %{filters: [map()] | :any, resource: module() | nil, max: pos_integer()},
           String.t() | nil,
           map()
         ) :: url_state()
-  defp do_decode(
-         params,
-         prefix,
-         allowed_params,
-         allowed_filters,
-         max_filter_length,
-         path,
-         path_params
-       ) do
-    decode_opts = [
-      allowed_filters: allowed_filters,
-      max_filter_length: max_filter_length
-    ]
+  defp do_decode(params, prefix, allowed_params, decoded, path, path_params) do
+    %{filters: filters, resource: resource, max: max} = decoded
 
     %{
       filters:
         decode_if_allowed(:filters, allowed_params, fn ->
-          decode_filters(params, prefix, decode_opts)
+          decode_filters(params, prefix, filters, max)
         end),
-      sort: decode_if_allowed(:sort, allowed_params, fn -> decode_sort(params, prefix) end),
+      sort:
+        decode_if_allowed(:sort, allowed_params, fn ->
+          decode_sort(params, prefix, resource, max)
+        end),
       page: decode_if_allowed(:page, allowed_params, fn -> decode_page(params, prefix) end),
       page_size:
         decode_if_allowed(:page_size, allowed_params, fn -> decode_page_size(params, prefix) end),
-      search: decode_if_allowed(:search, allowed_params, fn -> decode_search(params, prefix) end),
+      search:
+        decode_if_allowed(:search, allowed_params, fn -> decode_search(params, prefix, max) end),
       template:
-        decode_if_allowed(:template, allowed_params, fn -> decode_template(params, prefix) end),
+        decode_if_allowed(:template, allowed_params, fn ->
+          decode_template(params, prefix, max)
+        end),
       path: path,
       path_params: path_params
     }
@@ -351,7 +368,7 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     if params == %{} do
       base_path
     else
-      query = URI.encode_query(params)
+      query = params |> Enum.flat_map(&query_pairs/1) |> URI.encode_query()
       "#{base_path}?#{query}"
     end
   end
@@ -405,11 +422,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
       filters = without_searched(Map.get(state, :filter_values, %{}), config)
 
       Enum.reduce(filters, params, fn {key, value}, acc ->
-        if is_nil(value) or value == "" do
-          acc
-        else
-          param_key = build_key(prefix, "filter_#{key}")
-          Map.put(acc, param_key, encode_value(value))
+        case encode_value(value) do
+          blank when blank in [nil, ""] -> acc
+          text -> Map.put(acc, build_key(prefix, "filter_#{key}"), text)
         end
       end)
     else
@@ -511,64 +526,149 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   defp template_name(_template), do: nil
 
-  @spec decode_filters(map(), String.t() | nil, keyword()) :: map()
-  defp decode_filters(params, prefix, opts) do
+  @spec decode_filters(map(), String.t() | nil, [map()] | :any, pos_integer()) :: map()
+  defp decode_filters(params, prefix, filters, max) do
     filter_prefix = build_key(prefix, "filter_")
-    allowed_filters = Keyword.get(opts, :allowed_filters, nil)
-    max_length = Keyword.get(opts, :max_filter_length, @default_max_filter_length)
 
-    params
-    |> Enum.filter(fn {key, _} -> String.starts_with?(key, filter_prefix) end)
-    |> Enum.reduce(%{}, fn {key, value}, acc ->
-      field_name = String.replace_prefix(key, filter_prefix, "")
-
-      with {:ok, field_atom} <- safe_to_existing_atom(field_name),
-           true <- filter_allowed?(field_atom, allowed_filters),
-           true <- value_length_valid?(value, max_length) do
-        Map.put(acc, field_atom, value |> sanitize() |> decode_value())
-      else
-        _ -> acc
-      end
-    end)
+    for {key, value} <- params,
+        String.starts_with?(key, filter_prefix),
+        {:ok, filter} <- [key |> String.replace_prefix(filter_prefix, "") |> filter(filters)],
+        {:ok, read} <- [decode_filter(value, filter, max)],
+        into: %{},
+        do: {filter.name, read}
   end
 
-  @spec safe_to_existing_atom(String.t()) :: {:ok, atom()} | :error
-  defp safe_to_existing_atom(string) do
-    {:ok, String.to_existing_atom(string)}
+  @spec filter(String.t(), [map()] | :any) :: {:ok, map()} | :error
+  defp filter(name, :any) do
+    with {:ok, existing} <- existing_atom(name), do: {:ok, %{name: existing}}
+  end
+
+  defp filter(name, filters) do
+    case Enum.find(filters, &(Atom.to_string(&1.name) == name)) do
+      nil -> :error
+      filter -> {:ok, filter}
+    end
+  end
+
+  # A filter's value as its type takes it.
+  @spec decode_filter(term(), map(), pos_integer()) :: {:ok, term()} | :error
+  defp decode_filter(value, %{type_module: type}, max) when type in @text_filters,
+    do: text(value, max)
+
+  defp decode_filter(value, %{type_module: Filter.Relation, mode: :search_multi}, max)
+       when is_list(value),
+       do: texts(value, max)
+
+  defp decode_filter(value, %{type_module: Filter.Relation, mode: :search_multi}, max) do
+    with {:ok, text} <- text(value, max), do: {:ok, one_or_many(text)}
+  end
+
+  defp decode_filter(value, %{type_module: Filter.Relation}, max), do: text(value, max)
+
+  defp decode_filter(value, %{type_module: Filter.DateRange}, max) do
+    with {:ok, text} <- text(value, max),
+         %{} = range <- decode_date_range(text) do
+      {:ok, range}
+    else
+      _no_range -> :error
+    end
+  end
+
+  defp decode_filter(value, _own_type, max) when is_list(value), do: texts(value, max)
+
+  defp decode_filter(value, _own_type, max) when is_map(value) do
+    with {:ok, pairs} <- value |> Enum.flat_map(&Tuple.to_list/1) |> texts(max) do
+      {:ok, pairs |> Enum.chunk_every(2) |> Map.new(&List.to_tuple/1)}
+    end
+  end
+
+  defp decode_filter(value, _own_type, max) do
+    with {:ok, text} <- text(value, max), do: {:ok, decode_value(text)}
+  end
+
+  # A text within `max`, its tags taken out.
+  @spec text(term(), pos_integer()) :: {:ok, String.t()} | :error
+  defp text(value, max) do
+    with {:ok, text} <- plain(value, max), do: {:ok, strip_tags(text)}
+  end
+
+  # A list of texts, within `max` together.
+  @spec texts([term()], pos_integer()) :: {:ok, [String.t()]} | :error
+  defp texts([_ | _] = values, max) do
+    with true <- Enum.all?(values, &is_binary/1),
+         {:ok, _whole} <- within(Enum.join(values, ","), max) do
+      {:ok, Enum.map(values, &(&1 |> readable() |> strip_tags()))}
+    else
+      _not_texts -> :error
+    end
+  end
+
+  defp texts(_none, _max), do: :error
+
+  @spec plain(term(), pos_integer()) :: {:ok, String.t()} | :error
+  defp plain(value, max) do
+    with {:ok, text} <- within(value, max), do: {:ok, readable(text)}
+  end
+
+  @spec within(term(), pos_integer()) :: {:ok, String.t()} | :error
+  defp within(value, max) when is_binary(value) and byte_size(value) <= max, do: {:ok, value}
+
+  defp within(value, max) when is_binary(value) and byte_size(value) <= max * 4,
+    do: if(String.length(value) <= max, do: {:ok, value}, else: :error)
+
+  defp within(_value, _max), do: :error
+
+  # The text without its null bytes and the bytes that are no UTF-8, which no database reads.
+  @spec readable(String.t()) :: String.t()
+  defp readable(text), do: text |> String.replace_invalid("") |> String.replace("\0", "")
+
+  # Only for a name no list holds, such as that of a template a mount chose; Erlang answers it with
+  # an exception alone.
+  @spec existing_atom(String.t()) :: {:ok, atom()} | :error
+  defp existing_atom(name) do
+    {:ok, String.to_existing_atom(name)}
   rescue
     ArgumentError -> :error
   end
 
-  @spec filter_allowed?(atom(), list(atom()) | nil) :: boolean()
-  defp filter_allowed?(_field, nil), do: true
-  defp filter_allowed?(_field, []), do: true
-  defp filter_allowed?(field, allowed_filters), do: field in allowed_filters
-
-  @spec value_length_valid?(any(), non_neg_integer()) :: boolean()
-  defp value_length_valid?(value, max_length) when is_binary(value) do
-    String.length(value) <= max_length
-  end
-
-  defp value_length_valid?(value, max_length) when is_list(value) do
-    Enum.all?(value, &value_length_valid?(&1, max_length))
-  end
-
-  defp value_length_valid?(_, _), do: true
-
-  @spec decode_sort(map(), String.t() | nil) :: list({atom(), :asc | :desc})
-  defp decode_sort(params, prefix) do
-    key = build_key(prefix, "sort")
-
-    case Map.get(params, key) do
-      nil ->
-        []
-
-      sort_string ->
-        sort_string
-        |> String.split(",")
-        |> Enum.map(&parse_sort_field/1)
-        |> Enum.reject(&is_nil/1)
+  @spec decode_sort(map(), String.t() | nil, module() | nil, pos_integer()) ::
+          list({atom(), :asc | :desc})
+  defp decode_sort(params, prefix, resource, max) do
+    case params |> Map.get(build_key(prefix, "sort")) |> plain(max) do
+      {:ok, text} -> text |> String.split(",") |> Enum.flat_map(&sort_entry(&1, resource))
+      :error -> []
     end
+  end
+
+  @spec sort_entry(String.t(), module() | nil) :: [{atom(), :asc | :desc}]
+  defp sort_entry(entry, resource) do
+    with {name, order} <- sort_order(String.split(entry, ":")),
+         {:ok, field} <- sort_field(name, resource) do
+      [{field, order}]
+    else
+      _no_sort -> []
+    end
+  end
+
+  defp sort_order([name]), do: {name, :asc}
+  defp sort_order([name, "asc"]), do: {name, :asc}
+  defp sort_order([name, "desc"]), do: {name, :desc}
+  defp sort_order(_entry), do: :error
+
+  @spec sort_field(String.t(), module() | nil) :: {:ok, atom()} | :error
+  defp sort_field(name, nil), do: existing_atom(name)
+
+  defp sort_field(name, resource) do
+    case Ash.Resource.Info.field(resource, name) || table_column(name, resource) do
+      %{name: field} -> {:ok, field}
+      nil -> :error
+    end
+  end
+
+  defp table_column(name, resource) do
+    [nil | Map.keys(TableInfo.views(resource))]
+    |> Enum.flat_map(&TableInfo.columns(resource, &1))
+    |> Enum.find(&(Atom.to_string(&1.name) == name))
   end
 
   @spec decode_page(map(), String.t() | nil) :: pos_integer()
@@ -581,26 +681,22 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
     params |> Map.get(build_key(prefix, "page_size")) |> positive_integer()
   end
 
-  @spec decode_search(map(), String.t() | nil) :: String.t() | nil
-  defp decode_search(params, prefix) do
-    key = build_key(prefix, "search")
-
-    case Map.get(params, key) do
-      nil -> nil
-      value -> sanitize(value)
+  @spec decode_search(map(), String.t() | nil, pos_integer()) :: String.t() | nil
+  defp decode_search(params, prefix, max) do
+    case params |> Map.get(build_key(prefix, "search")) |> text(max) do
+      {:ok, text} -> text
+      :error -> nil
     end
   end
 
-  @spec decode_template(map(), String.t() | nil) :: atom() | nil
-  defp decode_template(params, prefix) do
-    key = build_key(prefix, "template")
-
-    case Map.get(params, key) do
-      nil -> nil
-      template -> String.to_existing_atom(template)
+  @spec decode_template(map(), String.t() | nil, pos_integer()) :: atom() | nil
+  defp decode_template(params, prefix, max) do
+    with {:ok, text} <- params |> Map.get(build_key(prefix, "template")) |> plain(max),
+         {:ok, name} <- existing_atom(text) do
+      name
+    else
+      :error -> nil
     end
-  rescue
-    _ -> nil
   end
 
   @spec maybe_apply_filters(map(), map()) :: map()
@@ -664,51 +760,32 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
   defp extract_preserved_params(params, prefix, :all, max_length) do
     known_prefixes = known_param_prefixes(prefix)
 
-    params
-    |> Enum.reject(fn {key, _} ->
-      Enum.any?(known_prefixes, &String.starts_with?(key, &1))
-    end)
-    |> Enum.filter(fn {_key, value} -> value_length_valid?(value, max_length) end)
-    |> Enum.map(fn {key, value} -> {key, sanitize_preserved(value)} end)
-    |> Map.new()
+    for {key, value} <- params,
+        not Enum.any?(known_prefixes, &String.starts_with?(key, &1)),
+        {:ok, kept} <- [preserved(value, max_length)],
+        into: %{},
+        do: {key, kept}
   end
 
   defp extract_preserved_params(params, _prefix, param_names, max_length)
        when is_list(param_names) do
-    param_names
-    |> Enum.reduce(%{}, fn name, acc ->
-      key = to_string(name)
-
-      case Map.fetch(params, key) do
-        {:ok, value} ->
-          if value_length_valid?(value, max_length) do
-            Map.put(acc, key, sanitize_preserved(value))
-          else
-            acc
-          end
-
-        :error ->
-          acc
-      end
-    end)
+    for name <- param_names,
+        key = to_string(name),
+        {:ok, value} <- [Map.fetch(params, key)],
+        {:ok, kept} <- [preserved(value, max_length)],
+        into: %{},
+        do: {key, kept}
   end
+
+  @spec preserved(term(), pos_integer()) :: {:ok, String.t() | [String.t()]} | :error
+  defp preserved(value, max) when is_list(value), do: texts(value, max)
+  defp preserved(value, max), do: text(value, max)
 
   @spec known_param_prefixes(String.t() | nil) :: list(String.t())
   defp known_param_prefixes(prefix) do
     suffixes = ["filter_", "sort", "page", "page_size", "search", "template"]
     Enum.map(suffixes, &build_key(prefix, &1))
   end
-
-  @spec sanitize_preserved(any()) :: any()
-  defp sanitize_preserved(value) when is_binary(value) do
-    sanitize(value)
-  end
-
-  defp sanitize_preserved(value) when is_list(value) do
-    Enum.map(value, &sanitize_preserved/1)
-  end
-
-  defp sanitize_preserved(value), do: value
 
   @spec merge_preserved_params(map(), map()) :: map()
   defp merge_preserved_params(params, %{preserved_params: preserved})
@@ -718,12 +795,17 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   defp merge_preserved_params(params, _), do: params
 
+  @spec query_pairs({String.t(), term()}) :: [{String.t(), term()}]
+  defp query_pairs({key, values}) when is_list(values), do: Enum.map(values, &{key <> "[]", &1})
+  defp query_pairs(pair), do: [pair]
+
   @spec build_key(String.t() | nil, String.t()) :: String.t()
   defp build_key(nil, suffix), do: suffix
   defp build_key("", suffix), do: suffix
   defp build_key(prefix, suffix), do: "#{prefix}_#{suffix}"
 
-  @spec encode_value(any()) :: String.t()
+  @spec encode_value(any()) :: String.t() | nil
+  defp encode_value(nil), do: nil
   defp encode_value(value) when is_list(value), do: Enum.join(value, ",")
   defp encode_value(value) when is_atom(value), do: to_string(value)
 
@@ -733,22 +815,22 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
 
   defp encode_value(%{from: from}), do: "#{encode_date_value(from)}~"
   defp encode_value(%{to: to}), do: "~#{encode_date_value(to)}"
+  defp encode_value(value) when is_map(value) and not is_struct(value), do: nil
   defp encode_value(value), do: to_string(value)
 
   defp encode_date_value(%Date{} = date), do: Date.to_iso8601(date)
   defp encode_date_value(value) when is_binary(value), do: value
   defp encode_date_value(value), do: to_string(value)
 
-  @spec decode_value(any()) :: any()
-  defp decode_value(value) when is_binary(value) do
-    cond do
-      String.contains?(value, "~") -> decode_date_range(value)
-      String.contains?(value, ",") -> String.split(value, ",")
-      true -> value
-    end
+  @spec decode_value(String.t()) :: String.t() | [String.t()] | map()
+  defp decode_value(text) do
+    if String.contains?(text, "~"), do: decode_date_range(text), else: one_or_many(text)
   end
 
-  defp decode_value(value), do: value
+  @spec one_or_many(String.t()) :: String.t() | [String.t()]
+  defp one_or_many(text) do
+    if String.contains?(text, ","), do: String.split(text, ","), else: text
+  end
 
   defp decode_date_range(value) do
     case String.split(value, "~", parts: 2) do
@@ -758,24 +840,6 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
       _ -> value
     end
   end
-
-  @spec parse_sort_field(String.t()) :: {atom(), :asc | :desc} | nil
-  defp parse_sort_field(field_str) do
-    case String.split(field_str, ":") do
-      [field, "asc"] -> {String.to_existing_atom(field), :asc}
-      [field, "desc"] -> {String.to_existing_atom(field), :desc}
-      [field] -> {String.to_existing_atom(field), :asc}
-      _ -> nil
-    end
-  rescue
-    _ -> nil
-  end
-
-  @spec sanitize(any()) :: any()
-  defp sanitize(value) when is_binary(value), do: MishkaGervaz.Helpers.strip_tags(value)
-
-  defp sanitize(value) when is_list(value), do: Enum.map(value, &sanitize/1)
-  defp sanitize(value), do: value
 
   @spec extract_path_params(String.t() | nil, String.t() | nil, non_neg_integer()) :: map()
   defp extract_path_params(nil, _path, _max_len), do: %{}
@@ -790,9 +854,9 @@ defmodule MishkaGervaz.Table.Web.UrlSync do
       |> Enum.zip(path_segments)
       |> Enum.reduce(%{}, fn
         {":" <> param_name, value}, acc ->
-          with {:ok, atom_name} <- safe_to_existing_atom(param_name),
-               true <- value_length_valid?(value, max_length) do
-            Map.put(acc, atom_name, sanitize(value))
+          with {:ok, atom_name} <- existing_atom(param_name),
+               {:ok, text} <- text(value, max_length) do
+            Map.put(acc, atom_name, text)
           else
             _ -> acc
           end

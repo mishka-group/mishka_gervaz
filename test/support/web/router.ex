@@ -12,6 +12,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       it has loaded, writing its template and page into the URL.
     * `/offset` — the same page with a table of `MishkaGervaz.Test.Web.OffsetItem`, whose read has no
       keyset pagination, so Load more reads from an offset.
+    * `/mixed` — the same page with a table of `MishkaGervaz.Test.Web.MixedItem`, with a filter of
+      every type and everything a URL may carry synced to it.
     * `/shelf` — the same page with a table of `MishkaGervaz.Test.Web.ShelfItem`, whose rows open
       a path.
     * `/desk` — the same page with a table of `MishkaGervaz.Test.Web.DeskItem`, whose rows open in
@@ -46,6 +48,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/plain", MishkaGervaz.Test.Web.TablePageLive, :plain
     live "/offset", MishkaGervaz.Test.Web.TablePageLive, :offset
     live "/kept", MishkaGervaz.Test.Web.TablePageLive, :kept
+    live "/mixed", MishkaGervaz.Test.Web.TablePageLive, :mixed
     live "/shelf", MishkaGervaz.Test.Web.TablePageLive, :shelf
     live "/desk", MishkaGervaz.Test.Web.TablePageLive, :desk
     live "/ledger", MishkaGervaz.Test.Web.TablePageLive, :ledger

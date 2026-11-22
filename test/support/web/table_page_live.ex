@@ -4,7 +4,7 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   `handle_params/3` decodes the URL into `url_state`, and the table gets it together with an
   activity rail of the page's own. The table is of `MishkaGervaz.Test.Web.FeedItem` on `/feed`, of
   `MishkaGervaz.Test.Web.KeptItem` on `/kept`, of `MishkaGervaz.Test.Web.PlainItem` on `/plain`,
-  of `MishkaGervaz.Test.Web.ShelfItem` on `/shelf`,
+  of `MishkaGervaz.Test.Web.ShelfItem` on `/shelf`, of `MishkaGervaz.Test.Web.MixedItem` on `/mixed`,
   of `MishkaGervaz.Test.Web.OffsetItem` on `/offset`, and of `MishkaGervaz.Test.Web.GatedItem`
   everywhere else.
 
@@ -36,6 +36,7 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
     GatedItem,
     KeptItem,
     LedgerItem,
+    MixedItem,
     OffsetItem,
     PlainItem,
     ShelfItem
@@ -110,6 +111,7 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
 
   defp resource(:feed), do: FeedItem
   defp resource(:kept), do: KeptItem
+  defp resource(:mixed), do: MixedItem
   defp resource(:plain), do: PlainItem
   defp resource(:offset), do: OffsetItem
   defp resource(:shelf), do: ShelfItem

@@ -594,12 +594,16 @@ defmodule MishkaGervaz.Helpers do
   The positive whole number a value spells, or `nil` for anything else.
 
   Reads the page numbers and page sizes that arrive in URL params and event params. A string must
-  be the digits of the number and nothing more; an integer is kept when it is above zero.
+  be the digits of the number and nothing more, and no longer than 40 characters, so a long one costs
+  nothing to refuse; an integer is kept when it is above zero.
 
   ## Examples
 
       iex> MishkaGervaz.Helpers.positive_integer("12")
       12
+
+      iex> MishkaGervaz.Helpers.positive_integer(String.duplicate("9", 41))
+      nil
 
       iex> MishkaGervaz.Helpers.positive_integer(7)
       7
@@ -616,7 +620,7 @@ defmodule MishkaGervaz.Helpers do
   @spec positive_integer(term()) :: pos_integer() | nil
   def positive_integer(value) when is_integer(value) and value > 0, do: value
 
-  def positive_integer(value) when is_binary(value) do
+  def positive_integer(value) when is_binary(value) and byte_size(value) <= 40 do
     case Integer.parse(value) do
       {number, ""} when number > 0 -> number
       _not_positive -> nil

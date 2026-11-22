@@ -1581,7 +1581,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
     test "preserves all unknown params" do
       params = %{
         "posts_filter_status" => "active",
-        "posts_sort" => "name:asc",
+        "posts_sort" => "title:asc",
         "return_to" => "some-uuid",
         "utm_source" => "google"
       }
@@ -1589,7 +1589,7 @@ defmodule MishkaGervaz.Table.UrlSyncTest do
       result = UrlSync.decode(params, "/posts", ComplexTestResource)
 
       assert result.filters == %{status: "active"}
-      assert result.sort == [{:name, :asc}]
+      assert result.sort == [{:title, :asc}]
       assert result.preserved_params["return_to"] == "some-uuid"
       assert result.preserved_params["utm_source"] == "google"
     end
