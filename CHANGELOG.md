@@ -99,6 +99,9 @@
 - A table's footer counts the rows the view shows (`shown_ids` of the table state): a row that
   arrives or moves into the list over realtime counts, and a row Load more reads again counts once;
   before, it counted to the offset Load more reads from
+- The `sort` event sorts only by a column declared `sortable`; any other column name changes
+  nothing, where before it sorted by it and could fail the read, as a calculation without
+  `expression/2` does
 - A `:hidden` form field is drawn as a bare `<input type="hidden">` carrying its value, with no
   label and no text box; before it was a labelled text box a reader could see and type into
 

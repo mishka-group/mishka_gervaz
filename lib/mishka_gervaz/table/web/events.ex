@@ -306,13 +306,20 @@ defmodule MishkaGervaz.Table.Web.Events do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def do_handle("sort", %{"column" => column}, state, socket) do
     field_atom = sanitize_column(state, column)
-    socket = DataLoader.apply_sort(socket, state, field_atom)
 
-    updated_state = socket.assigns.table_state
-    sort_info = List.first(updated_state.sort_fields)
-    socket = apply_hook_result(state, :on_sort, [sort_info, socket], socket)
+    case Map.has_key?(state.static.sort_field_map || %{}, field_atom) do
+      true ->
+        socket = DataLoader.apply_sort(socket, state, field_atom)
 
-    {:noreply, socket}
+        updated_state = socket.assigns.table_state
+        sort_info = List.first(updated_state.sort_fields)
+        socket = apply_hook_result(state, :on_sort, [sort_info, socket], socket)
+
+        {:noreply, socket}
+
+      false ->
+        {:noreply, socket}
+    end
   end
 
   def do_handle("sort_by", %{"column" => column, "order" => order}, state, socket)

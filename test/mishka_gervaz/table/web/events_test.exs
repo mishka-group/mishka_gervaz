@@ -173,6 +173,17 @@ defmodule MishkaGervaz.Table.Web.EventsTest do
   end
 
   describe "sort event" do
+    test "a column that is not sortable changes nothing" do
+      create_test_data(SortableResource, 3)
+      state = init_loaded_state(SortableResource, master_user(), sort_fields: [{:name, :asc}])
+      socket = create_socket(state)
+
+      {:noreply, updated_socket} = Events.handle("sort", %{"column" => "id"}, socket)
+
+      assert updated_socket.assigns.table_state.sort_fields == [{:name, :asc}]
+      assert updated_socket.assigns.table_state.loading == state.loading
+    end
+
     test "applies sorting on column" do
       create_test_data(SortableResource, 3)
       state = init_loaded_state(SortableResource, master_user(), sort_fields: [])
