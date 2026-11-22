@@ -255,12 +255,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @impl true
   def render_field(%{field: %{type: :hidden} = field} = assigns) do
-    form_field = assigns.state.form[field.name]
-
     assigns =
       assigns
-      |> assign(:form_field, form_field)
-      |> assign(:value, Phoenix.HTML.Form.normalize_value("hidden", form_field.value))
+      |> assign(:form_field, assigns.state.form[field.name])
+      |> assign(:value, shown_value(:hidden, assigns.state.form, field.name))
 
     ~H"""
     <input

@@ -13,26 +13,40 @@ defmodule MishkaGervaz.Form.Templates.StandardHiddenFieldTest do
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Test.Resources.FormPost
 
-  test "a hidden field is a hidden input with its value and no label" do
+  defp render_hidden(value) do
     field = FormPost |> FormInfo.field(:title) |> Map.put(:type, :hidden)
 
     state =
       build_state(
         static_opts: [id: "post", fields: [field], groups: []],
         mode: :create,
-        form: to_form(%{"title" => "kept"}, as: :form, id: "post-form")
+        form: to_form(%{"title" => value}, as: :form, id: "post-form")
       )
 
     static = %{state.static | notices: []}
 
-    html =
-      render_component(&Standard.render/1, %{
-        static: static,
-        state: %{state | static: static},
-        ui: MishkaGervaz.UIAdapters.Tailwind,
-        myself: nil,
-        uploads: %{}
-      })
+    render_component(&Standard.render/1, %{
+      static: static,
+      state: %{state | static: static},
+      ui: MishkaGervaz.UIAdapters.Tailwind,
+      myself: nil,
+      uploads: %{}
+    })
+  end
+
+  test "a Decimal value is carried as its plain digits" do
+    [input] =
+      Decimal.new("50.00")
+      |> render_hidden()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("input[name='form[title]']")
+      |> Enum.to_list()
+
+    assert LazyHTML.attribute(input, "value") == ["50.00"]
+  end
+
+  test "a hidden field is a hidden input with its value and no label" do
+    html = render_hidden("kept")
 
     doc = LazyHTML.from_fragment(html)
 
