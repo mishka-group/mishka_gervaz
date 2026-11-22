@@ -92,6 +92,8 @@
 - A form field with `ui do span 2 end` (3, 4) is the whole row below the breakpoint where the grid
   has that many columns (`col-span-full md:col-span-2`), so on a phone it no longer makes a second,
   implicit column that squeezed every other field
+- A `:hidden` form field is drawn as a bare `<input type="hidden">` carrying its value, with no
+  label and no text box; before it was a labelled text box a reader could see and type into
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)
