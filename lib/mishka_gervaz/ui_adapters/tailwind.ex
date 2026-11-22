@@ -3458,8 +3458,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   ## Assigns
     * `:name` - the radio inputs' name
     * `:value` - the value chosen, as a string
-    * `:options` - maps of `:label`, `:value`, `:description` and `:icon`, as
-      `MishkaGervaz.Helpers.choice_options/1` gives them
+    * `:options` - maps of `:label`, `:value`, `:description`, `:icon` and `:disabled` (an option
+      that is seen but cannot be picked), as `MishkaGervaz.Helpers.choice_options/1` gives them
     * `:id` - the group's id; each radio is `<id>-<index>`
     * `:label_id` - the id of the label naming the group
     * `:disabled` - no option can be picked
@@ -3491,7 +3491,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           "flex items-start gap-3 rounded-[13px] border border-[#ecebe6] bg-white p-[13px] transition-colors",
           "has-checked:border-[#5b57d6] has-checked:bg-[#f6f5fe] has-checked:shadow-[0_0_0_3px_rgba(91,87,214,0.1)]",
           "has-focus-visible:border-[#5b57d6]",
-          if(@disabled,
+          if(@disabled or option[:disabled] == true,
             do: "cursor-not-allowed opacity-60",
             else: "cursor-pointer hover:bg-[#faf9f6]"
           )
@@ -3503,7 +3503,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           name={@name}
           value={option.value}
           checked={option.value == @value}
-          disabled={@disabled}
+          disabled={@disabled or option[:disabled] == true}
           class="mt-0.5 size-4 flex-none accent-[#5b57d6]"
         />
         <.render_icon
@@ -3562,7 +3562,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           "relative flex min-h-[34px] flex-1 flex-col items-center justify-center rounded-[9px] px-[14px] py-1.5 text-center transition-colors",
           "has-checked:bg-white has-checked:shadow-[0_1px_3px_rgba(30,28,24,0.12)]",
           "has-focus-visible:ring-2 has-focus-visible:ring-[#c3c1f0]",
-          if(@disabled, do: "cursor-not-allowed opacity-60", else: "cursor-pointer")
+          if(@disabled or option[:disabled] == true,
+            do: "cursor-not-allowed opacity-60",
+            else: "cursor-pointer"
+          )
         ]}
       >
         <input
@@ -3571,7 +3574,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           name={@name}
           value={option.value}
           checked={option.value == @value}
-          disabled={@disabled}
+          disabled={@disabled or option[:disabled] == true}
           class="peer sr-only"
         />
         <span class="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8a877f] peer-checked:text-[#1b1a18]">

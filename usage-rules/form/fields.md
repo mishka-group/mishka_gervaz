@@ -78,6 +78,9 @@ field :billing, :segmented do
 end
 ```
 
+An option with `disabled: true` is drawn where it is seen, but its radio cannot be picked, such as
+the plan a subscription is already on.
+
 `options` may also be `fn -> list end` or `fn state -> list end`, read on every draw. Labels and
 second lines are translated. The UI adapter draws them with `choice_cards/1` and
 `segmented_control/1`; see `MishkaGervaz.Helpers.choice_options/1` for the shapes.

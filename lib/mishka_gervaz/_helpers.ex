@@ -449,27 +449,30 @@ defmodule MishkaGervaz.Helpers do
   def exports?(_module, _fun, _arity), do: false
 
   @doc """
-  The options of a choice control, as maps of `:label`, `:value`, `:description` and `:icon`.
+  The options of a choice control, as maps of `:label`, `:value`, `:description`, `:icon` and
+  `:disabled`.
 
   Takes `{label, value}`, a keyword list or a map with `:label`, `:value` and the optional
-  `:description` and `:icon`, or a bare atom or string that is its own label. The label and the
-  description are translated in the caller's locale (`resolve_label/1`, so either may be a
-  function of no arguments), the value is a string, and a missing description or icon is `nil`.
+  `:description`, `:icon` and `:disabled`, or a bare atom or string that is its own label. The label
+  and the description are translated in the caller's locale (`resolve_label/1`, so either may be a
+  function of no arguments), the value is a string, a missing description or icon is `nil`, and
+  `disabled: true` draws the option where it is seen but cannot be picked.
 
   ## Examples
 
       iex> MishkaGervaz.Helpers.choice_options([{"Monthly", :monthly}])
-      [%{label: "Monthly", value: "monthly", description: nil, icon: nil}]
+      [%{label: "Monthly", value: "monthly", description: nil, icon: nil, disabled: false}]
 
-      iex> MishkaGervaz.Helpers.choice_options([[label: "Once", value: :once, description: "Pay one time", icon: "hero-bolt"]])
-      [%{label: "Once", value: "once", description: "Pay one time", icon: "hero-bolt"}]
+      iex> MishkaGervaz.Helpers.choice_options([[label: "Once", value: :once, description: "Pay one time", icon: "hero-bolt", disabled: true]])
+      [%{label: "Once", value: "once", description: "Pay one time", icon: "hero-bolt", disabled: true}]
   """
   @spec choice_options(list() | nil) :: [
           %{
             label: String.t(),
             value: String.t(),
             description: String.t() | nil,
-            icon: String.t() | nil
+            icon: String.t() | nil,
+            disabled: boolean()
           }
         ]
   def choice_options(options) when is_list(options), do: Enum.map(options, &choice_option/1)
@@ -488,7 +491,8 @@ defmodule MishkaGervaz.Helpers do
       label: choice_text(Map.get(option, :label) || humanize_value(value)),
       value: to_string(value),
       description: choice_text(Map.get(option, :description)),
-      icon: Map.get(option, :icon)
+      icon: Map.get(option, :icon),
+      disabled: Map.get(option, :disabled) == true
     }
   end
 

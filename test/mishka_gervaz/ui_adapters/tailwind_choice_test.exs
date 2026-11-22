@@ -1,7 +1,8 @@
 defmodule MishkaGervaz.UIAdapters.TailwindChoiceTest do
   @moduledoc """
   The default adapter's two choice controls, `choice_cards/1` and `segmented_control/1`: a radio
-  per option in a `radiogroup`, the value given checked, every radio off when the field is.
+  per option in a `radiogroup`, the value given checked, every radio off when the field is, and one
+  radio off when its option is.
   """
   use ExUnit.Case, async: true
 
@@ -65,6 +66,22 @@ defmodule MishkaGervaz.UIAdapters.TailwindChoiceTest do
         doc = render(unquote(fun), %{value: "monthly", disabled: true})
 
         assert doc |> radios() |> LazyHTML.attribute("disabled") |> length() == 2
+      end
+
+      test "switches off only an option marked disabled, still drawn with its label" do
+        options =
+          Helpers.choice_options([
+            {"Monthly", :monthly},
+            [label: "Yearly", value: :yearly, disabled: true]
+          ])
+
+        doc = render(unquote(fun), %{value: nil, options: options})
+
+        assert doc |> LazyHTML.query(~s|input[disabled]|) |> LazyHTML.attribute("value") == [
+                 "yearly"
+               ]
+
+        assert doc |> LazyHTML.query(~s|[data-value="yearly"]|) |> LazyHTML.text() =~ "Yearly"
       end
     end
   end

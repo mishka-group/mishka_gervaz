@@ -3,8 +3,9 @@
 ### Features:
 - `field :kind, :choice_cards` and `field :billing, :segmented` hold one of a few values, drawn as a
   radio per option: a card each, or a segment each of one bar. An option may be a keyword list or
-  map with `:description`, a second line under its label, and `:icon`. The UI adapter gains
-  `choice_cards/1` and `segmented_control/1`
+  map with `:description`, a second line under its label, `:icon`, and `disabled: true` for an
+  option that is seen but cannot be picked. The UI adapter gains `choice_cards/1` and
+  `segmented_control/1`
 - `ui do prefix "USD" end` and `ui do suffix "%" end` put a unit at the start or end of a `:text`,
   `:password` or `:number` input, joined to it and named by `aria-describedby`; it is not saved
 - `ui do note "…" end` on a `:toggle` or `:checkbox` field draws the text beside the control, inside

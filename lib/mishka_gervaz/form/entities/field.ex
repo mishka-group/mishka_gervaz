@@ -244,7 +244,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
 
                   A `:choice_cards` or `:segmented` field takes the same list or functions, and each
                   option may also be a keyword list or map with `:label`, `:value`, `:description`
-                  (a second line under the label) and `:icon`. See
+                  (a second line under the label), `:icon` and `:disabled` (`true` draws the
+                  option where it is seen but cannot be picked). See
                   `MishkaGervaz.Helpers.choice_options/1`.
                   """
                 ],
