@@ -5,8 +5,9 @@ defmodule MishkaGervaz.Test.Web.LoadGate do
 
   Start it with `start_supervised!(LoadGate)`; it starts open. After `close/0` every load that
   reaches `load_page/5` waits, until `open/0` lets the waiting ones and every later one through.
-  After `break/0` every load raises, as a read the database refuses does, until `open/0`. With no
-  gate running, loads go straight through.
+  After `refuse/0` every load's read answers with an error, as a read the database refuses does, and
+  after `break/0` every load raises, as a hook with a bug does, until `open/0`. With no gate running,
+  loads go straight through.
 
       LoadGate.close()
       # the reader picks a filter: its load waits here
@@ -30,6 +31,10 @@ defmodule MishkaGervaz.Test.Web.LoadGate do
   @spec open() :: :ok
   def open, do: GenServer.call(__MODULE__, :open)
 
+  @doc "Makes the read of every load that starts from now on answer with an error, until `open/0`."
+  @spec refuse() :: :ok
+  def refuse, do: GenServer.call(__MODULE__, :refuse)
+
   @doc "Makes every load that starts from now on raise, until `open/0`."
   @spec break() :: :ok
   def break, do: GenServer.call(__MODULE__, :break)
@@ -41,24 +46,24 @@ defmodule MishkaGervaz.Test.Web.LoadGate do
   @spec failed() :: [pid()]
   def failed, do: GenServer.call(__MODULE__, :failed)
 
-  @doc "The message of the exception a load raises while the gate is broken."
+  @doc "The message of the error a load answers with, or raises, while the gate refuses or is broken."
   @spec refused() :: String.t()
   def refused, do: @refused
 
   def load_page(state, query, page, action, tenant) do
-    pass()
-    super(state, query, page, action, tenant)
+    super(state, pass(query), page, action, tenant)
   end
 
-  defp pass do
+  defp pass(query) do
     case GenServer.whereis(__MODULE__) do
-      nil -> :ok
-      gate -> gate |> GenServer.call(:pass, :infinity) |> through()
+      nil -> query
+      gate -> gate |> GenServer.call(:pass, :infinity) |> through(query)
     end
   end
 
-  defp through(:ok), do: :ok
-  defp through(:broken), do: raise(@refused)
+  defp through(:ok, query), do: query
+  defp through(:refused, query), do: Ash.Query.add_error(query, @refused)
+  defp through(:broken, _query), do: raise(@refused)
 
   @impl GenServer
   def init(position), do: {:ok, {position, [], []}}
@@ -72,11 +77,16 @@ defmodule MishkaGervaz.Test.Web.LoadGate do
   def handle_call(:pass, {pid, _tag}, {:broken, held, failed}),
     do: {:reply, :broken, {:broken, held, [pid | failed]}}
 
+  def handle_call(:pass, _from, {:refused, _held, _failed} = gate), do: {:reply, :refused, gate}
+
   def handle_call(:close, _from, {_position, held, failed}),
     do: {:reply, :ok, {:closed, held, failed}}
 
   def handle_call(:break, _from, {_position, held, failed}),
     do: {:reply, :ok, {:broken, held, failed}}
+
+  def handle_call(:refuse, _from, {_position, held, failed}),
+    do: {:reply, :ok, {:refused, held, failed}}
 
   def handle_call(:failed, _from, {_position, _held, failed} = gate), do: {:reply, failed, gate}
 

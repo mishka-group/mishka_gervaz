@@ -114,6 +114,8 @@
   value as its type takes it. A map such as `?sort[a]=b` and anything else reads as missing, and null
   bytes and bytes that are no UTF-8 are cut, where before the page failed. A `:text` or `:select`
   filter keeps a `,` or `~` of its text, and a list among the preserved params is written back
+- A table whose read answers with an error shows its error state and logs one warning; before, the
+  load crashed. `PaginationHandler.load_page/5` returns `{:error, error}` then
 - A `:hidden` form field is drawn as a bare `<input type="hidden">` carrying its value, with no
   label and no text box; before it was a labelled text box a reader could see and type into
 - A form in a drawer, sheet or window keeps its tabs or steps at the top of the panel's body and

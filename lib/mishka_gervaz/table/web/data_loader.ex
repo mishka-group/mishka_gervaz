@@ -253,7 +253,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       end
 
       @spec execute_load(State.t(), Ash.Query.t(), pos_integer()) ::
-              {pos_integer(), map(), boolean(), map()}
+              {pos_integer(), map(), boolean(), map()} | {:error, term()}
       defp execute_load(state, query, page) do
         pagination_mod = resolve_pagination_handler(state.static.resource)
         tenant_mod = resolve_tenant_resolver(state.static.resource)
@@ -261,10 +261,11 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         action = tenant_mod.get_read_action(state)
         tenant = tenant_mod.get_tenant(state)
 
-        {page, page_result, reset, pagination_info} =
-          pagination_mod.load_page(state, query, page, action, tenant)
-
-        {page, page_result, reset, put_hidden_ids(pagination_info, state, query, action, tenant)}
+        with {page, page_result, reset, pagination_info} <-
+               pagination_mod.load_page(state, query, page, action, tenant) do
+          {page, page_result, reset,
+           put_hidden_ids(pagination_info, state, query, action, tenant)}
+        end
       end
 
       @spec put_hidden_ids(map(), State.t(), Ash.Query.t(), atom(), term()) :: map()
@@ -718,16 +719,33 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> refresh_total_after_load()
       end
 
-      def handle_async(:load_data, {:exit, reason}, socket) do
-        state = socket.assigns.table_state
+      def handle_async(:load_data, {:ok, {:error, reason}}, socket) do
+        error = load_failed(socket.assigns.table_state, reason)
+        DataLoaderHelpers.log_failed_load(error)
+        show_failed_load(socket, error)
+      end
 
-        error =
-          Errors.Data.LoadFailed.exception(
-            resource: state.static.resource,
-            reason: reason,
-            page: state.page
-          )
+      def handle_async(:load_data, {:exit, reason}, socket),
+        do: show_failed_load(socket, load_failed(socket.assigns.table_state, reason))
 
+      def handle_async(:refresh_total, {:ok, {marker, result}}, socket),
+        do: refresh_total_done(socket, marker, result)
+
+      def handle_async(:refresh_total, {:exit, _reason}, socket),
+        do: refresh_total_done(socket, nil, :skip)
+
+      @spec load_failed(State.t(), term()) :: Exception.t()
+      defp load_failed(state, reason) do
+        Errors.Data.LoadFailed.exception(
+          resource: state.static.resource,
+          reason: reason,
+          page: state.page
+        )
+      end
+
+      @spec show_failed_load(Phoenix.LiveView.Socket.t(), Exception.t()) ::
+              Phoenix.LiveView.Socket.t()
+      defp show_failed_load(%{assigns: %{table_state: state}} = socket, error) do
         state =
           State.update(state,
             loading: :error,
@@ -738,12 +756,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> Phoenix.Component.assign(:table_state, state)
         |> refresh_total_after_load()
       end
-
-      def handle_async(:refresh_total, {:ok, {marker, result}}, socket),
-        do: refresh_total_done(socket, marker, result)
-
-      def handle_async(:refresh_total, {:exit, _reason}, socket),
-        do: refresh_total_done(socket, nil, :skip)
 
       @spec page_state(State.t(), pos_integer(), map()) :: keyword()
       defp page_state(
