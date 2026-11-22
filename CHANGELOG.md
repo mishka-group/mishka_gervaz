@@ -104,6 +104,10 @@
   `expression/2` does
 - A `:hidden` form field is drawn as a bare `<input type="hidden">` carrying its value, with no
   label and no text box; before it was a labelled text box a reader could see and type into
+- A form in a drawer, sheet or window keeps its tabs or steps at the top of the panel's body and
+  its submit row at the bottom while only its fields scroll, so Save is in reach on a short screen
+  and after a failed save; the body is marked `data-role="gervaz-panel-body"`. On a phone the form's
+  tabs and its submit row's buttons are 44 px tall
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.14 (EEF-CVE-2026-126334)

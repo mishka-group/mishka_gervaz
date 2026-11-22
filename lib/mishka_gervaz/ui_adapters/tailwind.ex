@@ -2908,7 +2908,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-value-step={step.name}
         phx-target={@target}
         class={[
-          "-mb-px inline-flex flex-none items-center gap-2 border-b-2 px-[14px] py-[10px] text-[12.5px] font-semibold transition-colors",
+          "-mb-px inline-flex flex-none items-center gap-2 border-b-2 px-[14px] py-[10px] text-[12.5px] font-semibold transition-colors max-[640px]:min-h-11",
           "disabled:cursor-not-allowed disabled:opacity-50",
           if(step.name == @current_step,
             do: "border-[#5b57d6] text-[#1b1a18]",
@@ -3044,7 +3044,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @spec primary_button_class(boolean()) :: list()
   def primary_button_class(enabled?) do
     [
-      "inline-flex h-[42px] items-center gap-2 rounded-[11px] px-[18px] text-[12.5px] font-bold",
+      "inline-flex h-[42px] items-center gap-2 rounded-[11px] px-[18px] text-[12.5px] font-bold max-[640px]:h-11",
       "text-white transition-opacity",
       if(enabled?,
         do:
@@ -3060,7 +3060,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   """
   @spec secondary_button_class() :: String.t()
   def secondary_button_class do
-    "inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] " <>
+    "inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] max-[640px]:h-11 " <>
       "bg-white px-[15px] text-[12.5px] font-semibold text-[#5c5a54] transition-colors " <>
       "hover:bg-[#f7f6f3]"
   end
@@ -4291,7 +4291,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       whether the panel closes (it may ask "Discard your changes?" first) and then closes it with
       `hide_drawer/2` or takes it away; `nil` (the default) closes at once
     * `:class` - replaces the panel's width classes (`sm:w-[min(520px,100vw)]`)
-    * `:inner_block` - its body, which scrolls
+    * `:inner_block` - its body, which scrolls; it is marked `data-role="gervaz-panel-body"`, and a
+      gervaz form in it keeps its tabs at the body's top and its submit row at the body's bottom
+      while its fields scroll between them (see `MishkaGervaz.Form.Templates.Standard`)
     * `:actions` - an optional slot of buttons; drawn in the foot unless `:actions_at` is `:head`
     * `:actions_at` - `:foot` (the default), the row pinned under the body, or `:head`, beside
       the close button
@@ -4548,7 +4550,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
             <.render_icon name="hero-x-mark" class="size-5" />
           </button>
         </div>
-        <div id={@id <> "-body"} class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div
+          id={@id <> "-body"}
+          data-role="gervaz-panel-body"
+          class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        >
           {render_slot(@inner_block)}
         </div>
         <div

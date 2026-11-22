@@ -53,7 +53,10 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
         assert attr(doc, "#edit-panel", "aria-modal") == ["true"]
         assert attr(doc, "#edit-panel", "aria-labelledby") == ["edit-title"]
         assert one(doc, "#edit-title") |> LazyHTML.text() =~ "Edit product"
-        assert one(doc, "#edit-panel #edit-body #body") |> Enum.count() == 1
+
+        assert one(doc, ~s|#edit-panel #edit-body[data-role="gervaz-panel-body"] #body|)
+               |> Enum.count() == 1
+
         assert one(doc, "#edit-backdrop[aria-hidden]") |> Enum.count() == 1
       end
 

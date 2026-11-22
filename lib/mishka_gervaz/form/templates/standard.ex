@@ -41,6 +41,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   holds the submit button on every tab, with no Back or Next; with `:sequential` the visited tabs
   open and the submit row is a wizard's.
 
+  ## In a drawer, a sheet or a window
+
+  A form drawn in the body of a UI adapter's panel (an element marked
+  `data-role="gervaz-panel-body"`, as `MishkaGervaz.UIAdapters.Tailwind.drawer/1`, `sheet/1` and
+  `window/1` mark theirs) keeps its tabs or steps (`data-role="gervaz-form-steps"`) stuck to the
+  body's top and its submit row (`data-role="gervaz-form-submit"`) stuck to the body's bottom, so
+  only the fields scroll and the save button is always in reach, after a failed save too. Outside
+  a panel both stay in the page's flow.
+
   ## Placed groups
 
   A `:standard` form mounted with a `:body` slot draws that slot in place of its groups, inside the
@@ -391,7 +400,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
-    <div class="mb-6">
+    <div
+      data-role="gervaz-form-steps"
+      class={[
+        "mb-6",
+        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:-top-5 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:pt-3"
+      ]}
+    >
       <.dynamic_component
         :if={!@tabs?}
         module={@ui}
@@ -1141,7 +1156,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:cancel_js, cancel_js)
 
     ~H"""
-    <div class="mt-6 flex items-center justify-end">
+    <div
+      data-role="gervaz-form-submit"
+      class={[
+        "mt-6 flex items-center justify-end",
+        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:-bottom-5 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:border-t in-data-[role=gervaz-panel-body]:border-[#f0efea] in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:py-4"
+      ]}
+    >
       <div class="flex flex-wrap items-center justify-end gap-[14px]">
         <.dynamic_component
           :if={@show_cancel}
@@ -1149,7 +1170,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           function={:button}
           label={@cancel_label}
           type="button"
-          class="px-1.5 py-2 text-[13px] font-semibold text-[#8a877f] transition-colors hover:text-[#1b1a18]"
+          class="px-1.5 py-2 text-[13px] font-semibold text-[#8a877f] transition-colors hover:text-[#1b1a18] max-[640px]:min-h-11"
           disabled={@cancel_disabled}
           data_confirm={@cancel_confirm || nil}
           phx_click={@cancel_js}
@@ -1164,7 +1185,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           disabled={@discard_disabled}
           phx-click="discard"
           phx-target={@myself}
-          class="inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] bg-white px-[15px] text-[12.5px] font-semibold text-[#5c5a54] transition-colors hover:bg-[#f7f6f3] disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] bg-white px-[15px] text-[12.5px] font-semibold text-[#5c5a54] transition-colors hover:bg-[#f7f6f3] disabled:cursor-not-allowed disabled:opacity-60 max-[640px]:h-11"
         >
           {@discard_label}
         </button>
@@ -1185,7 +1206,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             data-confirm={@submit_confirm || nil}
             phx-disable-with={@submit_busy_label}
             class={[
-              "inline-flex h-[42px] items-center gap-2 px-[18px] text-[12.5px] font-bold text-white transition-opacity",
+              "inline-flex h-[42px] items-center gap-2 px-[18px] text-[12.5px] font-bold text-white transition-opacity max-[640px]:h-11",
               (@alternatives == [] && "rounded-[11px]") || "rounded-s-[11px]",
               "disabled:cursor-wait disabled:opacity-70",
               if(@submit_disabled,
@@ -1216,7 +1237,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             id={@alt_menu_id <> "-toggle"}
             phx-click={JS.toggle(to: "#" <> @alt_menu_id)}
             title={dgettext("mishka_gervaz", "Other ways to create this")}
-            class="grid h-[42px] w-8 flex-none place-items-center rounded-e-[11px] border-s border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95"
+            class="grid h-[42px] w-8 flex-none place-items-center rounded-e-[11px] border-s border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95 max-[640px]:h-11 max-[640px]:w-11"
           >
             <svg
               width="12"

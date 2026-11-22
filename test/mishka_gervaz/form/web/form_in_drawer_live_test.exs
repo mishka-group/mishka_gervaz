@@ -5,7 +5,7 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
 
   The drawer's close button and backdrop ask "Discard your changes?" only while the form holds
   changes, and Escape closes it only while it holds none. Its close runs the page's `close_drawer`,
-  which takes it away.
+  which takes it away. Its tabs and its submit row stay in view while its fields scroll.
   """
   use ExUnit.Case, async: false
 
@@ -33,6 +33,22 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
 
     assert has_element?(view, "#plan-drawer-panel[role=dialog] #plan-form")
     assert has_element?(view, "#plan-drawer-title", "Edit plan")
+  end
+
+  test "keeps its tabs at the top of the drawer's body and its submit row at the bottom" do
+    view = open()
+    doc = view |> render() |> LazyHTML.from_fragment()
+    body = ~s|#plan-drawer-body[data-role="gervaz-panel-body"]|
+
+    for {piece, inside} <- [
+          {"gervaz-form-steps", ~s|[role="tablist"]|},
+          {"gervaz-form-submit", ~s|button[type="submit"]|}
+        ] do
+      selector = ~s|#{body} [data-role="#{piece}"]|
+      assert has_element?(view, "#{selector} #{inside}")
+      [class] = doc |> LazyHTML.query(selector) |> LazyHTML.attribute("class")
+      assert class =~ "in-data-[role=gervaz-panel-body]:sticky"
+    end
   end
 
   test "asks before it closes only while the form holds changes" do
