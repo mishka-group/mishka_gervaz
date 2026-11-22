@@ -6,7 +6,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
   ## Priority rules
 
     * Resource is the first priority; domain is the second.
-    * For each button kind (`:create`, `:update`, `:cancel`):
+    * For each button kind (`:create`, `:update`, `:cancel`, `:discard`):
       - If the resource defines the button, the resource wins. The label
         falls back through resource → domain → hard default for the kind.
       - If the resource does not define the button, the domain button is used.
@@ -27,7 +27,8 @@ defmodule MishkaGervaz.Form.SubmitMerger do
   @default_labels %{
     create: "Create",
     update: "Save Changes",
-    cancel: "Cancel"
+    cancel: "Cancel",
+    discard: "Discard"
   }
 
   @doc """
@@ -36,9 +37,10 @@ defmodule MishkaGervaz.Form.SubmitMerger do
   Returns the merged map with this shape:
 
       %{
-        create: %{label, loading_label, active, disabled, restricted, visible} | nil,
+        create: %{label, loading_label, confirm, active, disabled, restricted, visible} | nil,
         update: %{...} | nil,
         cancel: %{...} | nil,
+        discard: %{...} | nil,
         position: :top | :bottom | :both,
         ui: map() | nil
       }
@@ -54,6 +56,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
       create: merge_button(:create, resource.create, domain_button(domain, :create)),
       update: merge_button(:update, resource.update, domain_button(domain, :update)),
       cancel: merge_button(:cancel, resource.cancel, domain_button(domain, :cancel)),
+      discard: merge_button(:discard, resource.discard, domain_button(domain, :discard)),
       position: resource.position || domain_value(domain, :position) || :bottom,
       ui: merged_ui(resource.ui, domain_value(domain, :ui))
     }
@@ -67,6 +70,12 @@ defmodule MishkaGervaz.Form.SubmitMerger do
         merge_resource_map_button(:update, resource_map[:update], domain_button(domain, :update)),
       cancel:
         merge_resource_map_button(:cancel, resource_map[:cancel], domain_button(domain, :cancel)),
+      discard:
+        merge_resource_map_button(
+          :discard,
+          resource_map[:discard],
+          domain_button(domain, :discard)
+        ),
       position: resource_map[:position] || domain_value(domain, :position) || :bottom,
       ui: merged_ui(resource_map[:ui], domain_value(domain, :ui))
     }
@@ -77,6 +86,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
       create: domain_only_button(:create, domain[:create]),
       update: domain_only_button(:update, domain[:update]),
       cancel: domain_only_button(:cancel, domain[:cancel]),
+      discard: domain_only_button(:discard, domain[:discard]),
       position: domain[:position] || :bottom,
       ui: domain[:ui]
     }
@@ -88,6 +98,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
     %{
       label: domain_btn[:label] || Map.fetch!(@default_labels, kind),
       loading_label: domain_btn[:loading_label],
+      confirm: domain_btn[:confirm],
       active: true,
       disabled: domain_btn[:disabled] || false,
       restricted: domain_btn[:restricted] || false,
@@ -103,6 +114,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
     %{
       label: resolve_label(resource_btn.label, domain_btn, kind),
       loading_label: resource_btn.loading_label || (domain_btn && domain_btn[:loading_label]),
+      confirm: resource_btn.confirm || (domain_btn && domain_btn[:confirm]),
       active: resource_btn.active,
       disabled: resource_btn.disabled,
       restricted: resource_btn.restricted,
@@ -121,6 +133,7 @@ defmodule MishkaGervaz.Form.SubmitMerger do
     %{
       label: resolve_label(resource_btn[:label], domain_btn, kind),
       loading_label: resource_btn[:loading_label] || (domain_btn && domain_btn[:loading_label]),
+      confirm: resource_btn[:confirm] || (domain_btn && domain_btn[:confirm]),
       active: Map.get(resource_btn, :active, true),
       disabled: Map.get(resource_btn, :disabled, false),
       restricted: Map.get(resource_btn, :restricted, false),

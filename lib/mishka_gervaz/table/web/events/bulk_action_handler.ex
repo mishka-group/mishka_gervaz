@@ -651,6 +651,11 @@ defmodule MishkaGervaz.Table.Web.Events.BulkActionHandler do
           state
           |> MishkaGervaz.Table.Web.Events.drop_from_total(summary.succeeded_count)
           |> State.update(loaded_records: kept)
+          |> then(
+            &Enum.reduce(gone, &1, fn row, acc ->
+              MishkaGervaz.Table.Web.Events.unshow(acc, row.id)
+            end)
+          )
 
         gone
         |> Enum.reduce(socket, &Phoenix.LiveView.stream_delete(&2, state.static.stream_name, &1))

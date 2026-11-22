@@ -52,6 +52,7 @@ defmodule MyAppWeb.Templates.PostCard do
     ~H"""
     <div id={@static.id}>
       …
+      {Shared.render_overlays(assigns)}
     </div>
     """
   end
@@ -101,6 +102,10 @@ end
 
 Read config out of `@static`, never re-derive it from the resource.
 
+The root element carries `@static.id` and ends with `Shared.render_overlays(assigns)`: it draws
+what the table opens over its rows, the drawer of a `:drawer` row action
+([../table/row-actions.md](../table/row-actions.md)), and nothing while none is open.
+
 ## `Shared` — do not re-implement the furniture
 
 `MishkaGervaz.Table.Templates.Shared` is public API. The pieces a custom template reaches for
@@ -116,6 +121,12 @@ most:
 | `action_visible?/3` | the `:active` / `:archived` / `fn record, state` rule |
 | `render_filters/1`, `render_pagination/1`, `render_bulk_actions/1` | the standard bars |
 | `render_load_earlier/1` | the Load earlier button above the rows, for a `:load_more` / `:infinite` table opened past its first page; a template that draws its own pager draws it, or a button sending `"load_earlier"` |
+| `table_counts/1` | the `%{shown:, total:, more?:, loading?:}` the `table_footer` slot receives |
+| `render_overlays/1` | the last thing in the root element: the row drawer and the question window, while one is open |
+| `render_load_more/1`, `load_more_at_footer?/1` | the Load more button, for a template that draws it outside the pager, and whether the resource asked for it in the footer row |
+| `reading_with_no_rows?/1`, `skeleton_rows/2` | whether the table reads with no rows to show, and how many placeholder rows (`skeleton/1`) stand where its rows go meanwhile |
+| `across_tenants?/1` | whether the table reads across tenants, as a master's read of every site does: when a template says whose each row is |
+| `row_path/3` | the path a row opens, from `row do path … end` |
 | `render_pagination_row/1`, `range_label/1` | the one row every pager is laid out in (`:leading`, `:center` and `:trailing` slots), and the `Showing 1–40 of 136` of a growing list; a template that draws its own pager lays it out with them |
 | `render_empty_state/1`, `render_error_state/1`, `render_loading/1` | the standard states |
 | `record_checked?/2` | selection state, including `select_all?` + `excluded_ids` |

@@ -11,6 +11,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   - The total after realtime changes (`refresh_total/1`)
   - The realtime rows that belong in the view, read as the table reads (`rows_in_view/2`), and
     whether one row does (`in_view?/2`)
+  - The rows the view shows, read again from its first page in the table's order
+    (`rows_in_window/2`)
   - The query the table reads its rows with (`read_query/1`)
 
   ## Sub-builders
@@ -104,6 +106,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.Record.t()]} | :error
   defdelegate rows_in_view(state, ids), to: __MODULE__.Default
 
+  @spec rows_in_window(State.t(), non_neg_integer()) ::
+          {:ok, [Ash.Resource.Record.t()], [Ash.Resource.Record.t()]} | :error
+  defdelegate rows_in_window(state, more), to: __MODULE__.Default
+
   @spec read_query(State.t()) :: Ash.Query.t()
   defdelegate read_query(state), to: __MODULE__.Default
 
@@ -112,6 +118,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
   @spec load_more(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate load_more(socket, state), to: __MODULE__.Default
+
+  @spec read_tenant(State.t()) :: term()
+  defdelegate read_tenant(state), to: __MODULE__.Default
 
   @spec load_earlier(Phoenix.LiveView.Socket.t(), State.t()) :: Phoenix.LiveView.Socket.t()
   defdelegate load_earlier(socket, state), to: __MODULE__.Default
@@ -210,6 +219,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       - `:reset` - Whether to reset the stream (default: false)
       - `:earlier` - Whether the page goes above the rows shown, as Load earlier reads it
         (default: false)
+      - `:history` - How a bidirectional table writes the URL of the load: `:push` adds a history
+        entry, so the browser's Back returns to the page before, as Previous, Next and a page
+        number do; `:replace` (the default) swaps the entry, as a filter, a sort or a search does
       """
       @spec load_async(Phoenix.LiveView.Socket.t(), State.t(), keyword()) ::
               Phoenix.LiveView.Socket.t()
@@ -225,6 +237,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         socket
         |> Phoenix.Component.assign(:table_state, state)
         |> Phoenix.Component.assign(:skip_next_url_sync?, !sync_url?)
+        |> Phoenix.Component.assign(:url_history, Keyword.get(opts, :history, :replace))
         |> MishkaGervaz.Messages.start_async(:load_data, fn ->
           execute_load(state, query, page)
         end)
@@ -240,7 +253,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       end
 
       @spec execute_load(State.t(), Ash.Query.t(), pos_integer()) ::
-              {pos_integer(), map(), boolean(), map()}
+              {pos_integer(), map(), boolean(), map()} | {:error, term()}
       defp execute_load(state, query, page) do
         pagination_mod = resolve_pagination_handler(state.static.resource)
         tenant_mod = resolve_tenant_resolver(state.static.resource)
@@ -248,10 +261,11 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         action = tenant_mod.get_read_action(state)
         tenant = tenant_mod.get_tenant(state)
 
-        {page, page_result, reset, pagination_info} =
-          pagination_mod.load_page(state, query, page, action, tenant)
-
-        {page, page_result, reset, put_hidden_ids(pagination_info, state, query, action, tenant)}
+        with {page, page_result, reset, pagination_info} <-
+               pagination_mod.load_page(state, query, page, action, tenant) do
+          {page, page_result, reset,
+           put_hidden_ids(pagination_info, state, query, action, tenant)}
+        end
       end
 
       @spec put_hidden_ids(map(), State.t(), Ash.Query.t(), atom(), term()) :: map()
@@ -427,6 +441,100 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         end)
       end
 
+      @doc """
+      As many rows as the view shows, read again from its first page as the table's read returns
+      them now and in its order, and up to `more` rows that come after them.
+
+      The rows the view shows are those of `shown_ids`, or the rows a table with
+      `keep_loaded_records true` holds (`MishkaGervaz.Table.Web.State`), and they are read from
+      the first row of the view's first page.
+
+      The table reads with it the rows of `MishkaGervaz.Table.Web.Live.reorder/2`. It is one read,
+      and one more for each preload; a read action that paginates reads up to its `max_page_size`
+      rows at a time.
+
+      Returns `{:ok, covered, after}`, or `:error` when the read cannot answer: a manual read, or a
+      read that returns an error, such as an action that pages by keyset only. A hook or read that
+      raises raises here too, as it does when the table loads.
+      """
+      @spec rows_in_window(State.t(), non_neg_integer()) ::
+              {:ok, [Ash.Resource.Record.t()], [Ash.Resource.Record.t()]} | :error
+      def rows_in_window(state, more) do
+        tenant_mod = resolve_tenant_resolver(state.static.resource)
+        action_name = tenant_mod.get_read_action(state)
+        {offset, count} = window(state)
+
+        with %{manual: nil} = action <-
+               Ash.Resource.Info.action(state.static.resource, action_name),
+             opts = [actor: state.current_user, tenant: tenant_mod.get_tenant(state)],
+             {:ok, rows} <- read_from(read_query(state), action, opts, offset, count + more) do
+          {:ok, Enum.take(rows, count), Enum.drop(rows, count)}
+        else
+          _cannot_answer -> :error
+        end
+      end
+
+      @spec window(State.t()) :: {non_neg_integer(), non_neg_integer()}
+      defp window(%State{static: %{keep_loaded_records: true}, loaded_records: rows}),
+        do: {0, length(rows)}
+
+      defp window(%State{first_page: first} = state) do
+        before = (first - 1) * (state.current_page_size || state.static.page_size || 0)
+        {before, MapSet.size(state.shown_ids || MapSet.new())}
+      end
+
+      @spec read_from(Ash.Query.t(), map(), keyword(), non_neg_integer(), non_neg_integer()) ::
+              {:ok, list()} | :error
+      defp read_from(_query, _action, _opts, _offset, 0), do: {:ok, []}
+
+      defp read_from(query, %{pagination: %{}} = action, opts, offset, limit) do
+        size = page_limit(action, limit)
+
+        with {:ok, page} <-
+               query
+               |> Ash.Query.for_read(action.name, %{}, opts)
+               |> Ash.read(page: [offset: offset, limit: size, count: false]),
+             rows = MishkaGervaz.Table.Web.DataLoader.PaginationHandler.extract_results(page),
+             {:ok, rest} <-
+               read_more(query, action, opts, offset + size, limit - size, length(rows) == size) do
+          {:ok, rows ++ rest}
+        else
+          _error -> :error
+        end
+      end
+
+      defp read_from(query, action, opts, offset, limit) do
+        query
+        |> Ash.Query.offset(offset)
+        |> Ash.Query.limit(limit)
+        |> Ash.Query.for_read(action.name, %{}, opts)
+        |> Ash.read()
+        |> case do
+          {:ok, rows} -> {:ok, rows}
+          {:error, _error} -> :error
+        end
+      end
+
+      @spec read_more(
+              Ash.Query.t(),
+              map(),
+              keyword(),
+              non_neg_integer(),
+              non_neg_integer(),
+              boolean()
+            ) ::
+              {:ok, list()} | :error
+      defp read_more(query, action, opts, offset, limit, true),
+        do: read_from(query, action, opts, offset, limit)
+
+      defp read_more(_query, _action, _opts, _offset, _limit, false), do: {:ok, []}
+
+      @spec page_limit(map(), pos_integer()) :: pos_integer()
+      defp page_limit(%{pagination: %{max_page_size: max}}, limit) when is_integer(max),
+        do: min(limit, max)
+
+      defp page_limit(_action, limit), do: limit
+
       @spec rows_per_read(map(), [term()]) :: pos_integer()
       defp rows_per_read(%{pagination: %{max_page_size: max}}, _ids) when is_integer(max), do: max
       defp rows_per_read(_action, ids), do: length(ids)
@@ -596,6 +704,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
               loaded_records: accumulate_records(state, records, reset),
               next_offset: next_offset(state, page_result, records),
               removed_ids: removed_ids(state),
+              shown_ids: shown_ids(state, records, reset),
               hidden_ids: pagination_info[:hidden_ids] || state.hidden_ids
             ] ++ page_state(state, page, page_result)
           )
@@ -610,16 +719,33 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> refresh_total_after_load()
       end
 
-      def handle_async(:load_data, {:exit, reason}, socket) do
-        state = socket.assigns.table_state
+      def handle_async(:load_data, {:ok, {:error, reason}}, socket) do
+        error = load_failed(socket.assigns.table_state, reason)
+        DataLoaderHelpers.log_failed_load(error)
+        show_failed_load(socket, error)
+      end
 
-        error =
-          Errors.Data.LoadFailed.exception(
-            resource: state.static.resource,
-            reason: reason,
-            page: state.page
-          )
+      def handle_async(:load_data, {:exit, reason}, socket),
+        do: show_failed_load(socket, load_failed(socket.assigns.table_state, reason))
 
+      def handle_async(:refresh_total, {:ok, {marker, result}}, socket),
+        do: refresh_total_done(socket, marker, result)
+
+      def handle_async(:refresh_total, {:exit, _reason}, socket),
+        do: refresh_total_done(socket, nil, :skip)
+
+      @spec load_failed(State.t(), term()) :: Exception.t()
+      defp load_failed(state, reason) do
+        Errors.Data.LoadFailed.exception(
+          resource: state.static.resource,
+          reason: reason,
+          page: state.page
+        )
+      end
+
+      @spec show_failed_load(Phoenix.LiveView.Socket.t(), Exception.t()) ::
+              Phoenix.LiveView.Socket.t()
+      defp show_failed_load(%{assigns: %{table_state: state}} = socket, error) do
         state =
           State.update(state,
             loading: :error,
@@ -630,12 +756,6 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         |> Phoenix.Component.assign(:table_state, state)
         |> refresh_total_after_load()
       end
-
-      def handle_async(:refresh_total, {:ok, {marker, result}}, socket),
-        do: refresh_total_done(socket, marker, result)
-
-      def handle_async(:refresh_total, {:exit, _reason}, socket),
-        do: refresh_total_done(socket, nil, :skip)
 
       @spec page_state(State.t(), pos_integer(), map()) :: keyword()
       defp page_state(
@@ -737,6 +857,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
            do: ids
 
       defp removed_ids(_state), do: MapSet.new()
+
+      @spec shown_ids(State.t(), list(), boolean()) :: MapSet.t()
+      defp shown_ids(_state, records, true), do: MapSet.new(records, & &1.id)
+
+      defp shown_ids(%State{shown_ids: shown}, records, false),
+        do: Enum.reduce(records, shown || MapSet.new(), &MapSet.put(&2, &1.id))
 
       @spec keyset(Ash.Resource.Record.t() | nil) :: String.t() | nil
       defp keyset(%{__metadata__: %{keyset: keyset}}) when is_binary(keyset), do: keyset
@@ -880,7 +1006,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           true ->
             socket
             |> Phoenix.Component.assign(:url_sync_pending, path)
-            |> Phoenix.LiveView.push_patch(to: path, replace: true)
+            |> Phoenix.LiveView.push_patch(
+              to: path,
+              replace: socket.assigns[:url_history] != :push
+            )
         end
       end
 
@@ -919,6 +1048,14 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         Map.get(dsl_config, :pagination, pagination_handler())
       end
 
+      @doc """
+      The tenant the table reads with, from the resource's tenant resolver (`data_loader do
+      tenant … end`, `TenantResolver` by default): `nil` for a read across every tenant, as a
+      master's read is.
+      """
+      @spec read_tenant(State.t()) :: term()
+      def read_tenant(state), do: resolve_tenant_resolver(state.static.resource).get_tenant(state)
+
       @spec resolve_tenant_resolver(module() | nil) :: module()
       defp resolve_tenant_resolver(nil), do: tenant_resolver()
 
@@ -955,11 +1092,13 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_total: 1,
                      in_view?: 2,
                      rows_in_view: 2,
+                     rows_in_window: 2,
                      read_query: 1,
                      refresh_total: 1,
                      handle_async: 3,
                      reload: 2,
                      load_more: 2,
+                     read_tenant: 1,
                      load_earlier: 2,
                      apply_filters: 3,
                      apply_sort: 3,

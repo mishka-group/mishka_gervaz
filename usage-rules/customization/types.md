@@ -131,7 +131,20 @@ through the **`ui` adapter** rather than emitting raw markup, or the action stop
 design system.
 
 Built-ins: `Table.Types.Action.{Link, Event, Edit, Destroy, Update, Unarchive, PermanentDestroy,
-RowClick, Accordion}`.
+RowClick, Accordion, Drawer}`.
+
+A type whose button sends an event takes the action's `confirm` with
+`MishkaGervaz.Question.bind/4`, after its `:phx_click` and `phx_value_*` values: a string becomes
+`data-confirm`, and a keyword list makes the press ask in the table's question window first and
+then send the very event with the very values:
+
+```elixir
+assigns
+|> assign(:phx_click, "archive")
+|> assign(:phx_value_id, record.id)
+|> assign(:phx_target, target)
+|> MishkaGervaz.Question.bind(action, record, "Archive this record?")
+```
 
 ## Field type — `MishkaGervaz.Form.Behaviours.FieldType`
 

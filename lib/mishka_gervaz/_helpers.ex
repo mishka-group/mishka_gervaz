@@ -177,7 +177,9 @@ defmodule MishkaGervaz.Helpers do
 
   `confirm` is declared as `String.t() | (map() -> String.t()) | nil`; the function form lets a
   prompt name what it is about to act on ("Delete the draft “Autosave”?"). A string is translated
-  in the caller's locale (`translate_text/1`); a function's result is returned as it is.
+  in the caller's locale (`translate_text/1`); a function's result is returned as it is. A
+  `confirm` that is a question for the question window (a keyword list, see
+  `MishkaGervaz.Question`) is not a browser question: it resolves to `nil`.
 
   ## Examples
 
@@ -190,7 +192,9 @@ defmodule MishkaGervaz.Helpers do
       iex> MishkaGervaz.Helpers.resolve_confirm(nil, %{id: 1})
       nil
   """
-  @spec resolve_confirm(String.t() | (map() -> String.t()) | nil, map()) :: String.t() | nil
+  @spec resolve_confirm(String.t() | (map() -> String.t()) | keyword() | nil, map()) ::
+          String.t() | nil
+  def resolve_confirm([{_key, _value} | _rest], _record), do: nil
   def resolve_confirm(confirm, record) when is_function(confirm, 1), do: confirm.(record)
   def resolve_confirm(confirm, _record), do: translate_text(confirm)
 
@@ -198,8 +202,9 @@ defmodule MishkaGervaz.Helpers do
   Resolves a bulk action's `confirm`.
 
   A string is translated in the caller's locale (`translate_text/1`), then every `{count}` in it
-  becomes `count`. With no `count`, the text keeps `{count}` as written. Anything else is returned
-  as it is.
+  becomes `count`. With no `count`, the text keeps `{count}` as written. A question for the
+  question window (a keyword list, see `MishkaGervaz.Question`) resolves to `nil`. Anything else is
+  returned as it is.
 
   ## Examples
 
@@ -217,6 +222,8 @@ defmodule MishkaGervaz.Helpers do
   """
   @spec resolve_bulk_confirm(boolean() | String.t() | nil, non_neg_integer() | nil) ::
           boolean() | String.t() | nil
+  def resolve_bulk_confirm([{_key, _value} | _rest], _count), do: nil
+
   def resolve_bulk_confirm(confirm, count) do
     case translate_text(confirm) do
       text when is_binary(text) and is_integer(count) ->
@@ -442,6 +449,66 @@ defmodule MishkaGervaz.Helpers do
   def exports?(_module, _fun, _arity), do: false
 
   @doc """
+  The options of a choice control, as maps of `:label`, `:value`, `:description`, `:icon` and
+  `:disabled`.
+
+  Takes `{label, value}`, a keyword list or a map with `:label`, `:value` and the optional
+  `:description`, `:icon` and `:disabled`, or a bare atom or string that is its own label. The label
+  and the description are translated in the caller's locale (`resolve_label/1`, so either may be a
+  function of no arguments), the value is a string, a missing description or icon is `nil`, and
+  `disabled: true` draws the option where it is seen but cannot be picked.
+
+  ## Examples
+
+      iex> MishkaGervaz.Helpers.choice_options([{"Monthly", :monthly}])
+      [%{label: "Monthly", value: "monthly", description: nil, icon: nil, disabled: false}]
+
+      iex> MishkaGervaz.Helpers.choice_options([[label: "Once", value: :once, description: "Pay one time", icon: "hero-bolt", disabled: true]])
+      [%{label: "Once", value: "once", description: "Pay one time", icon: "hero-bolt", disabled: true}]
+  """
+  @spec choice_options(list() | nil) :: [
+          %{
+            label: String.t(),
+            value: String.t(),
+            description: String.t() | nil,
+            icon: String.t() | nil,
+            disabled: boolean()
+          }
+        ]
+  def choice_options(options) when is_list(options), do: Enum.map(options, &choice_option/1)
+  def choice_options(_options), do: []
+
+  defp choice_option({label, value}), do: choice_option(%{label: label, value: value})
+
+  defp choice_option(option) when is_list(option) and option != [] do
+    if Keyword.keyword?(option),
+      do: choice_option(Map.new(option)),
+      else: choice_option(to_string(option))
+  end
+
+  defp choice_option(%{value: value} = option) do
+    %{
+      label: choice_text(Map.get(option, :label) || humanize_value(value)),
+      value: to_string(value),
+      description: choice_text(Map.get(option, :description)),
+      icon: Map.get(option, :icon),
+      disabled: Map.get(option, :disabled) == true
+    }
+  end
+
+  defp choice_option(%{label: label} = option),
+    do: choice_option(Map.put(option, :value, label))
+
+  defp choice_option(value), do: choice_option(%{value: value})
+
+  defp humanize_value(value) when is_atom(value), do: humanize(value)
+  defp humanize_value(value), do: to_string(value)
+
+  defp choice_text(nil), do: nil
+  defp choice_text(text) when is_function(text, 0) or is_binary(text), do: resolve_label(text)
+  defp choice_text(text), do: to_string(text)
+
+  @doc """
   Normalizes a list of options for HTML select elements.
 
   Converts various option formats to `{label, value}` tuples with string values,
@@ -527,12 +594,16 @@ defmodule MishkaGervaz.Helpers do
   The positive whole number a value spells, or `nil` for anything else.
 
   Reads the page numbers and page sizes that arrive in URL params and event params. A string must
-  be the digits of the number and nothing more; an integer is kept when it is above zero.
+  be the digits of the number and nothing more, and no longer than 40 characters, so a long one costs
+  nothing to refuse; an integer is kept when it is above zero.
 
   ## Examples
 
       iex> MishkaGervaz.Helpers.positive_integer("12")
       12
+
+      iex> MishkaGervaz.Helpers.positive_integer(String.duplicate("9", 41))
+      nil
 
       iex> MishkaGervaz.Helpers.positive_integer(7)
       7
@@ -549,7 +620,7 @@ defmodule MishkaGervaz.Helpers do
   @spec positive_integer(term()) :: pos_integer() | nil
   def positive_integer(value) when is_integer(value) and value > 0, do: value
 
-  def positive_integer(value) when is_binary(value) do
+  def positive_integer(value) when is_binary(value) and byte_size(value) <= 40 do
     case Integer.parse(value) do
       {number, ""} when number > 0 -> number
       _not_positive -> nil

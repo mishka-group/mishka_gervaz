@@ -50,11 +50,13 @@ defmodule MishkaGervaz.Form.Entities.Field do
   @type position :: integer() | :first | :last | {:before, atom()} | {:after, atom()}
 
   @type bound ::
-          Date.t()
+          number()
+          | Decimal.t()
+          | Date.t()
           | DateTime.t()
           | NaiveDateTime.t()
-          | (-> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | nil)
-          | (map() -> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | nil)
+          | (-> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | Decimal.t() | nil)
+          | (map() -> Date.t() | DateTime.t() | NaiveDateTime.t() | number() | Decimal.t() | nil)
 
   @type t :: %__MODULE__{
           name: atom(),
@@ -78,15 +80,17 @@ defmodule MishkaGervaz.Form.Entities.Field do
           search_field: atom() | nil,
           value_field: atom() | nil,
           readonly: boolean() | (map() -> boolean()),
+          live_errors: boolean(),
           mode: :static | :load_more | :search | :search_multi,
           page_size: pos_integer(),
           load_action: atom() | {atom(), atom()} | nil,
           load: (Ash.Query.t(), map() -> Ash.Query.t()) | nil,
           position: position() | nil,
           include_nil: boolean() | String.t() | (-> String.t()),
-          min: integer() | bound() | nil,
-          max: integer() | bound() | nil,
+          min: bound() | nil,
+          max: bound() | nil,
           min_chars: integer() | nil,
+          max_length: pos_integer() | nil,
           auto_fields: boolean(),
           nested_fields: list(),
           add_label: String.t() | nil,
@@ -116,6 +120,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     search_field: nil,
     value_field: nil,
     readonly: false,
+    live_errors: false,
     mode: :static,
     page_size: 20,
     load_action: nil,
@@ -125,6 +130,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     min: nil,
     max: nil,
     min_chars: nil,
+    max_length: nil,
     auto_fields: false,
     nested_fields: [],
     _nested_field_entities: [],
@@ -158,7 +164,9 @@ defmodule MishkaGervaz.Form.Entities.Field do
     :toggle,
     :range,
     :upload,
-    :combobox
+    :combobox,
+    :choice_cards,
+    :segmented
   ]
 
   @opt_schema [
@@ -233,6 +241,12 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   what the form holds (`state.form`, `state.defaults`, `state.current_user`). It
                   runs on every draw, so read what it needs from the state or a cache rather than
                   querying. Its options are returned as it gives them, labels untranslated.
+
+                  A `:choice_cards` or `:segmented` field takes the same list or functions, and each
+                  option may also be a keyword list or map with `:label`, `:value`, `:description`
+                  (a second line under the label), `:icon` and `:disabled` (`true` draws the
+                  option where it is seen but cannot be picked). See
+                  `MishkaGervaz.Helpers.choice_options/1`.
                   """
                 ],
                 display_field: [
@@ -253,6 +267,12 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   type: {:or, [:boolean, {:fun, 1}]},
                   default: false,
                   doc: "Render as read-only. Boolean or `fn state -> boolean end`."
+                ],
+                live_errors: [
+                  type: :boolean,
+                  default: false,
+                  doc:
+                    "Show this field's own errors as it is typed, before the first save of a new record, once it holds a value: a check that helps while typing, such as the shape of an IBAN. Other fields still wait for the save."
                 ],
                 mode: [
                   type: {:in, [:static, :load_more, :search, :search_multi]},
@@ -290,6 +310,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                     {:or,
                      [
                        :integer,
+                       :float,
+                       {:struct, Decimal},
                        {:struct, Date},
                        {:struct, DateTime},
                        {:struct, NaiveDateTime},
@@ -297,13 +319,15 @@ defmodule MishkaGervaz.Form.Entities.Field do
                        {:fun, 1}
                      ]},
                   doc:
-                    "Minimum value for number/range fields. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound."
+                    "Minimum value for number/range fields: an integer, a float or a `Decimal`, so `min Decimal.new(\"0.50\")` bounds a price. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound."
                 ],
                 max: [
                   type:
                     {:or,
                      [
                        :integer,
+                       :float,
+                       {:struct, Decimal},
                        {:struct, Date},
                        {:struct, DateTime},
                        {:struct, NaiveDateTime},
@@ -312,6 +336,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
                      ]},
                   doc:
                     "Maximum value for number/range fields. For `:date` and `:datetime` fields, the latest day or time the picker offers and the save takes. Given as `min` is; a `Date` takes in the whole day."
+                ],
+                max_length: [
+                  type: :pos_integer,
+                  doc:
+                    "The most characters a `:text`, `:textarea`, `:email`, `:password`, `:url` or `:tel` field takes, drawn as the input's `maxlength` so the browser stops there. Left out, it is the `max_length` constraint of the field's attribute, when it has one."
                 ],
                 min_chars: [
                   type: :integer,
@@ -410,7 +439,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
           placeholder: String.t() | nil,
-          description: String.t() | (-> String.t()) | nil,
+          description: String.t() | (-> String.t()) | (map() -> String.t()) | nil,
+          note: String.t() | (-> String.t()) | nil,
           icon: String.t() | nil,
           class: String.t() | nil,
           wrapper_class: String.t() | nil,
@@ -421,6 +451,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
           first_day_of_week:
             :monday | :tuesday | :wednesday | :thursday | :friday | :saturday | :sunday | nil,
           autocomplete: String.t() | nil,
+          prefix: String.t() | (-> String.t()) | nil,
+          suffix: String.t() | (-> String.t()) | nil,
           add_label: String.t() | (-> String.t()) | nil,
           remove_label: String.t() | (-> String.t()) | nil,
           disabled_prompt: String.t() | (-> String.t()) | nil,
@@ -431,6 +463,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
   defstruct label: nil,
             placeholder: nil,
             description: nil,
+            note: nil,
             icon: nil,
             class: nil,
             wrapper_class: nil,
@@ -440,6 +473,8 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
             step: nil,
             first_day_of_week: nil,
             autocomplete: nil,
+            prefix: nil,
+            suffix: nil,
             add_label: nil,
             remove_label: nil,
             disabled_prompt: nil,
@@ -456,8 +491,14 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
       doc: "Placeholder text. String or `fn -> gettext(...) end` for i18n."
     ],
     description: [
+      type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
+      doc:
+        "Help text below the field, drawn under any field type. String, `fn -> gettext(...) end` for i18n, or `fn state -> text end` given the form state each time the field is drawn, so the help can name what the mount's `defaults` hold (`\"Up to $12.00.\"`)."
+    ],
+    note: [
       type: {:or, [:string, {:fun, 0}]},
-      doc: "Help text below the field. String or `fn -> gettext(...) end` for i18n."
+      doc:
+        "Text beside a `:toggle` or `:checkbox` field's control, inside its label, so a click on it flips the control: what switching it on does. String or `fn -> gettext(...) end`."
     ],
     icon: [
       type: :string,
@@ -496,6 +537,16 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
     autocomplete: [
       type: :string,
       doc: "HTML autocomplete attribute value."
+    ],
+    prefix: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "A unit drawn at the start of a `:text`, `:password` or `:number` field's input, such as `\"USD\"` or `\"https://\"`. Only shown: it is not part of the value. String or `fn -> gettext(...) end`."
+    ],
+    suffix: [
+      type: {:or, [:string, {:fun, 0}]},
+      doc:
+        "A unit drawn at the end of a `:text`, `:password` or `:number` field's input, such as `\"%\"` or `\"days\"`. Only shown: it is not part of the value. String or `fn -> gettext(...) end`."
     ],
     add_label: [
       type: {:or, [:string, {:fun, 0}]},

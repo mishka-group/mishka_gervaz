@@ -10,6 +10,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   - Relation field search/select
   - Cancel
   - Reset — starts the form over as an empty create form, see `MishkaGervaz.Form.Web.Live.reset/2`
+  - Discard — puts the form back to its starting values, see `MishkaGervaz.Form.Web.Live.discard/1`
   - Nested/array field management
 
   ## Sub-builders
@@ -60,6 +61,7 @@ defmodule MishkaGervaz.Form.Web.Events do
   use MishkaGervaz.Messages
 
   alias MishkaGervaz.Form.Web.{State, DataLoader}
+  alias MishkaGervaz.Question
 
   alias MishkaGervaz.Form.Web.Events.{
     SanitizationHandler,
@@ -179,14 +181,60 @@ defmodule MishkaGervaz.Form.Web.Events do
     socket =
       validation_handler(state).validate(state, params, socket, forced_errors, target)
 
-    {:noreply, socket |> reload_dependents_of(picked) |> search_typed(target, params)}
+    new_socket =
+      socket
+      |> reload_dependents_of(picked)
+      |> search_typed(target, params)
+      |> clear_fixed_tabs()
+
+    {:noreply, new_socket}
   end
 
   def do_handle("save", params, state, socket) do
-    if before_last_step?(state),
-      do: {:noreply, next_step(params, state, socket)},
-      else: {:noreply, save(params, state, socket)}
+    cond do
+      before_last_step?(state) ->
+        {:noreply, next_step(params, state, socket)}
+
+      question = submit_question(state) ->
+        question = Question.pending(question, "save", params)
+        {:noreply, Phoenix.Component.assign(socket, :question, question)}
+
+      true ->
+        {:noreply, save(params, state, socket)}
+    end
   end
+
+  def do_handle("question_typed", %{"answer" => typed}, _state, socket) do
+    case socket.assigns[:question] do
+      %{} = question ->
+        {:noreply,
+         Phoenix.Component.assign(socket, :question, Question.put_typed(question, typed))}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_confirm", params, state, socket) do
+    with %{} = question <- socket.assigns[:question],
+         question = Question.put_typed(question, params["answer"]),
+         true <- Question.answered?(question) do
+      socket = Phoenix.Component.assign(socket, :question, nil)
+      {:noreply, save(question.params, state, socket)}
+    else
+      false ->
+        refused =
+          socket.assigns.question |> Question.put_typed(params["answer"]) |> Question.refuse()
+
+        {:noreply, Phoenix.Component.assign(socket, :question, refused)}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_cancel", _params, _state, socket),
+    do: {:noreply, Phoenix.Component.assign(socket, :question, nil)}
 
   def do_handle("cancel", _params, state, socket) do
     cancel_button = state.static.submit[:cancel]
@@ -206,6 +254,12 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def do_handle("reset", _params, _state, socket),
     do: {:noreply, MishkaGervaz.Form.Web.Live.start_over(socket, nil)}
+
+  def do_handle("discard", _params, state, socket) do
+    if submit_button_allowed?(state.static.submit[:discard], state),
+      do: {:noreply, MishkaGervaz.Form.Web.Live.discard(socket)},
+      else: {:noreply, socket}
+  end
 
   def do_handle("next_step", _params, state, socket),
     do: {:noreply, next_step(%{}, state, socket)}
@@ -767,6 +821,23 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   defp settable_field?(_name, _state), do: false
 
+  # The question a save asks first: the `confirm` of the mode's submit button when it is a
+  # question (a keyword list), about the record the form edits (`nil` on create).
+  @spec submit_question(State.t()) :: Question.t() | nil
+  defp submit_question(state) do
+    button =
+      if state.mode == :create,
+        do: state.static.submit[:create],
+        else: state.static.submit[:update]
+
+    if button != nil and Question.question?(button[:confirm]) and
+         submit_button_allowed?(button, state),
+       do: Question.build(button[:confirm], edited_record(state))
+  end
+
+  defp edited_record(%{mode: :update, form: %{data: record}}), do: record
+  defp edited_record(_state), do: nil
+
   defp save(params, state, socket) do
     submit_button =
       if state.mode == :create,
@@ -826,6 +897,32 @@ defmodule MishkaGervaz.Form.Web.Events do
     validated = socket.assigns.form_state
     step_handler(validated).advance(validated, socket)
   end
+
+  # A save on a step before the last moves a wizard on, and a tabs form whose steps open in order;
+  # a tabs form with `navigation :free` saves from any tab.
+  # A tab marked `:error` by a save that failed loses the mark once none of its fields shows an
+  # error any more.
+  defp clear_fixed_tabs(
+         %{assigns: %{form_state: %{static: %{layout_mode: :tabs}} = state}} = socket
+       ) do
+    step_states =
+      Map.new(state.step_states, fn
+        {step, :error} -> {step, if(tab_errors?(state, step), do: :error, else: :pending)}
+        other -> other
+      end)
+
+    Phoenix.Component.assign(socket, :form_state, State.update(state, step_states: step_states))
+  end
+
+  defp clear_fixed_tabs(socket), do: socket
+
+  defp tab_errors?(state, step) do
+    state
+    |> StepHandler.step_fields(step)
+    |> Enum.any?(&(Map.get(state.errors || %{}, &1, []) not in [[], nil]))
+  end
+
+  defp before_last_step?(%{static: %{layout_mode: :tabs, layout_navigation: :free}}), do: false
 
   defp before_last_step?(%{static: %{layout_mode: mode, steps: [_ | _] = steps}} = state)
        when mode in [:wizard, :tabs],

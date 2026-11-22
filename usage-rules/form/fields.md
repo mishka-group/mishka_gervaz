@@ -26,7 +26,7 @@ end
 `:text` · `:password` · `:textarea` · `:number` · `:checkbox` · `:toggle` · `:date` · `:datetime` ·
 `:range` · `:select` · `:multi_select` · `:combobox` · `:relation` · `:json` · `:nested` ·
 `:key_map` · `:key_list` · `:array_of_maps` · `:string_list` · `:file` · `:upload` · `:hidden` ·
-or a module implementing `MishkaGervaz.Form.Behaviours.FieldType`
+`:choice_cards` · `:segmented` · or a module implementing `MishkaGervaz.Form.Behaviours.FieldType`
 ([../customization/types.md](../customization/types.md)).
 
 Omit `type` and it is inferred from the Ash attribute:
@@ -45,8 +45,45 @@ An attribute with `constraints one_of:` still needs its `options` written out.
 
 `:multi_select` draws one checkbox per option, all named `form[<field>][]`, so a save sends the
 ticked values as a list, for an `{:array, :string}` or `{:array, :atom}` attribute or argument.
-With nothing ticked it sends an empty list. To pick records of another resource, use a `:relation`
-field with `mode :search_multi` instead.
+With nothing ticked it sends an empty list. An option may carry a second line, drawn under its
+label, as a choice field's does:
+
+```elixir
+field :channels, :multi_select do
+  options [
+    [label: "Store", value: :store, description: "The public store page"],
+    [label: "Email", value: :email, description: "The newsletter"]
+  ]
+end
+```
+
+To pick records of another resource, use a `:relation` field with `mode :search_multi` instead.
+
+## Choice cards and segmented control
+
+`:choice_cards` and `:segmented` hold one of a few values, as a `:select` does, drawn as a radio per
+option: a card each, or a segment each of one bar. An option may carry a second line and an icon,
+written as a keyword list or a map; `{label, value}` still works:
+
+```elixir
+field :kind, :choice_cards do
+  options [
+    [label: "One-time", value: :one_time, description: "Pay once, keep it", icon: "hero-bolt"],
+    [label: "Subscription", value: :subscription, description: "Billed every period"]
+  ]
+end
+
+field :billing, :segmented do
+  options [{"Monthly", :monthly}, {"Yearly", :yearly}]
+end
+```
+
+An option with `disabled: true` is drawn where it is seen, but its radio cannot be picked, such as
+the plan a subscription is already on.
+
+`options` may also be `fn -> list end` or `fn state -> list end`, read on every draw. Labels and
+second lines are translated. The UI adapter draws them with `choice_cards/1` and
+`segmented_control/1`; see `MishkaGervaz.Helpers.choice_options/1` for the shapes.
 
 ## Options
 
@@ -55,6 +92,7 @@ field with `mode :search_multi` instead.
 | `source` | atom | field name | attribute when it differs from the field name |
 | `required` | bool | `false` | |
 | `visible` / `restricted` / `readonly` | bool \| `fn state ->` | `true` / `false` / `false` | arity **1**; `restricted true` is masters only, `restricted fn` decides alone — `true` hides the field and leaves it out of the save for every user |
+| `live_errors` | bool | `false` | a new record's form shows this field's own errors as it is typed, once it holds a value, instead of after the first save: a check that helps while typing, such as an IBAN's shape |
 | `show_on` | `:create` \| `:update` | — | show only in that mode |
 | `default` | any | — | the value a create form starts with; the mount's `defaults` win |
 | `depends_on` | atom | — | cascading select; must be a field in this form |
@@ -71,7 +109,7 @@ field with `mode :search_multi` instead.
 | `load` | `fn query, state -> query` | — | scopes the option list |
 | `position` | int \| `:first` \| `:last` \| `{:before, f}` \| `{:after, f}` | — | |
 | `include_nil` | bool \| string \| `fn -> string` | `false` | adds a nil option; the string is its label |
-| `min` / `max` | int \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` \| `fn state -> value` | — | `:number` / `:range`; on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now). `fn state ->` gets the form state as `visible` does, so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record; `nil` is no bound |
+| `min` / `max` | int \| float \| `Decimal` \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` \| `fn state -> value` | — | `:number` / `:range`, compared as `Decimal`s, so `min Decimal.new("0.50")` bounds a price exactly and the input carries `min="0.50"`; on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now). `fn state ->` gets the form state as `visible` does, so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record; `nil` is no bound |
 | `min_chars` | int | — | before search fires |
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |
@@ -79,10 +117,43 @@ field with `mode :search_multi` instead.
 
 ## `ui do … end`
 
-`label` · `placeholder` · `description` · `icon` · `class` · `wrapper_class` · `debounce` ·
-`span` · `rows` · `step` · `first_day_of_week` · `autocomplete` · `add_label` · `remove_label` ·
-`disabled_prompt` · `extra`. On a `:datetime` field `step` is the minutes between the times its
-picker offers; `first_day_of_week` (`:monday` when not set) is the day a calendar's weeks start on.
+`label` · `placeholder` · `description` · `note` · `icon` · `class` · `wrapper_class` · `debounce` ·
+`span` · `rows` · `step` · `first_day_of_week` · `autocomplete` · `prefix` · `suffix` ·
+`add_label` · `remove_label` · `disabled_prompt` · `extra`. On a `:datetime` field `step` is the
+minutes between the times its picker offers; `first_day_of_week` (`:monday` when not set) is the day
+a calendar's weeks start on.
+
+`prefix` and `suffix` put a unit at the start or end of a `:text`, `:password` or `:number` input,
+joined to it as one box and named to a screen reader by `aria-describedby`. The unit is only shown:
+what is typed is saved without it. String or `fn -> dgettext(…) end`:
+
+```elixir
+field :discount, :number do
+  ui do suffix "%" end
+end
+
+field :price, :number do
+  ui do prefix "USD" end
+end
+```
+
+The adapter's `text_input/1`, `password_input/1` and `number_input/1` take them as `:prefix` and
+`:suffix`.
+
+`description` is help text under any field. `note` is text beside a `:toggle` or `:checkbox`
+control, inside its label, so a click on it flips the control; say there what switching it on does:
+
+```elixir
+field :listed, :toggle do
+  ui do
+    label "Listed"
+    note "Buyers find it in the store"
+    description "Turn it off to keep a draft"
+  end
+end
+```
+
+The adapter's `toggle_input/1` takes it as `:note`, `checkbox/1` as `:label`.
 
 ## Relation fields — the pattern that recurs
 

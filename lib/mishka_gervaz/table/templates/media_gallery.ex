@@ -179,6 +179,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
         state={@state}
         myself={@myself}
       />
+      {Shared.render_overlays(assigns)}
     </div>
     """
   end
@@ -204,7 +205,7 @@ defmodule MishkaGervaz.Table.Templates.MediaGallery do
           myself={@myself}
         />
         <Shared.render_template_switcher
-          :if={@static.switchable_templates not in [nil, []]}
+          :if={Shared.show_switcher?(@static)}
           switchable_templates={@static.switchable_templates}
           current_template={@state.template}
           ui_adapter={@static.ui_adapter}

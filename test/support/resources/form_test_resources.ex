@@ -2689,3 +2689,117 @@ defmodule MishkaGervaz.Test.Resources.ScheduledEntry do
     end
   end
 end
+
+defmodule MishkaGervaz.Test.Resources.LengthEntry do
+  @moduledoc """
+  A form whose `:title` takes its attribute's `max_length` as its `maxlength`, whose `:code` names
+  its own, and whose `:summary` spans two columns, for the drawn attributes of a field.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :length_entry
+        route "/admin/length-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :code, :text do
+          max_length(8)
+        end
+
+        field :summary, :textarea do
+          ui do
+            span 2
+          end
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true, constraints: [max_length: 120]
+    attribute :code, :string, public?: true, constraints: [max_length: 24]
+    attribute :summary, :string, public?: true
+  end
+
+  actions do
+    defaults [
+      :read,
+      :destroy,
+      create: [:title, :code, :summary],
+      update: [:title, :code, :summary]
+    ]
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.LiveCheckEntry do
+  @moduledoc """
+  A form whose `:code` shows its own error as it is typed (`live_errors true`) while `:title`,
+  required, waits for the first save, for the errors a create form shows before it is saved.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :live_check_entry
+        route "/admin/live-check-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text do
+          required true
+        end
+
+        field :code, :text do
+          live_errors true
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true, allow_nil?: false
+    attribute :code, :string, public?: true, constraints: [match: ~r/\A[A-Z]{3}\z/]
+  end
+
+  actions do
+    defaults [:read, :destroy, create: [:title, :code], update: [:title, :code]]
+  end
+end

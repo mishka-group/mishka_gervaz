@@ -67,44 +67,52 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:autocomplete, fn -> nil end)
+      |> assign_new(:maxlength, fn -> nil end)
+      |> assign_new(:prefix, fn -> nil end)
+      |> assign_new(:suffix, fn -> nil end)
       |> assign(:placeholder, placeholder)
       |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
-    <div class="relative">
-      <svg
-        :if={@search}
-        class="pointer-events-none absolute start-[13px] top-1/2 size-[15px] -translate-y-1/2 text-[#a8a5a0]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.9"
-        stroke-linecap="round"
-        aria-hidden="true"
-      >
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.2-3.2" />
-      </svg>
-      <input
-        type="text"
-        id={@id}
-        name={@name}
-        value={@value}
-        placeholder={@placeholder}
-        disabled={@disabled}
-        readonly={@readonly}
-        autocomplete={@autocomplete}
-        aria-label={@aria_label}
-        dir={icon_dir(@search, @dir)}
-        class={[
-          @class,
-          "placeholder:text-[#a8a5a0]",
-          @search && "ps-[38px]! [unicode-bidi:plaintext]",
-          (@disabled || @readonly) && disabled_class()
-        ]}
-        phx-debounce={@phx_debounce}
-      />
-    </div>
+    <.with_units id={@id} prefix={@prefix} suffix={@suffix}>
+      <div class="relative">
+        <svg
+          :if={@search}
+          class="pointer-events-none absolute start-[13px] top-1/2 size-[15px] -translate-y-1/2 text-[#a8a5a0]"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.2-3.2" />
+        </svg>
+        <input
+          type="text"
+          id={@id}
+          name={@name}
+          value={@value}
+          placeholder={@placeholder}
+          disabled={@disabled}
+          readonly={@readonly}
+          autocomplete={@autocomplete}
+          maxlength={@maxlength}
+          aria-label={@aria_label}
+          aria-describedby={units_ids(@id, @prefix, @suffix)}
+          dir={icon_dir(@search, @dir)}
+          class={[
+            @class,
+            "placeholder:text-[#a8a5a0]",
+            @search && "ps-[38px]! [unicode-bidi:plaintext]",
+            units_class(@prefix, @suffix),
+            (@disabled || @readonly) && disabled_class()
+          ]}
+          phx-debounce={@phx_debounce}
+        />
+      </div>
+    </.with_units>
     """
   end
 
@@ -123,24 +131,88 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
+      |> assign_new(:maxlength, fn -> nil end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:prefix, fn -> nil end)
+      |> assign_new(:suffix, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
-    <input
-      type="password"
-      id={@id}
-      name={@name}
-      value={@value}
-      placeholder={@placeholder}
-      disabled={@disabled}
-      readonly={@readonly}
-      autocomplete={@autocomplete}
-      dir={@dir}
-      class={[@class, (@disabled || @readonly) && disabled_class()]}
-      phx-debounce={@phx_debounce}
-    />
+    <.with_units id={@id} prefix={@prefix} suffix={@suffix}>
+      <input
+        type="password"
+        id={@id}
+        name={@name}
+        value={@value}
+        placeholder={@placeholder}
+        disabled={@disabled}
+        readonly={@readonly}
+        autocomplete={@autocomplete}
+        maxlength={@maxlength}
+        aria-describedby={units_ids(@id, @prefix, @suffix)}
+        dir={@dir}
+        class={[
+          @class,
+          units_class(@prefix, @suffix),
+          (@disabled || @readonly) && disabled_class()
+        ]}
+        phx-debounce={@phx_debounce}
+      />
+    </.with_units>
     """
+  end
+
+  attr :id, :string, default: nil
+  attr :prefix, :string, default: nil
+  attr :suffix, :string, default: nil
+  slot :inner_block, required: true
+
+  # An input with a unit at its start, its end, or both: the units stand joined to the input as
+  # one box. Without either, the input alone.
+  defp with_units(%{prefix: nil, suffix: nil} = assigns) do
+    ~H"""
+    {render_slot(@inner_block)}
+    """
+  end
+
+  defp with_units(assigns) do
+    ~H"""
+    <div data-role="gervaz-input-units" class="flex items-stretch">
+      <span
+        :if={@prefix}
+        id={@id && @id <> "-prefix"}
+        data-role="gervaz-input-prefix"
+        class={[unit_class(), "rounded-s-[11px] border-e-0"]}
+      >
+        {@prefix}
+      </span>
+      <div class="min-w-0 flex-1">{render_slot(@inner_block)}</div>
+      <span
+        :if={@suffix}
+        id={@id && @id <> "-suffix"}
+        data-role="gervaz-input-suffix"
+        class={[unit_class(), "rounded-e-[11px] border-s-0"]}
+      >
+        {@suffix}
+      </span>
+    </div>
+    """
+  end
+
+  defp unit_class,
+    do:
+      "flex flex-none items-center whitespace-nowrap border border-[#ecebe6] bg-[#f6f5f2] px-3 text-[12.5px] font-semibold text-[#8a877f]"
+
+  defp units_class(prefix, suffix),
+    do: [prefix && "rounded-s-none", suffix && "rounded-e-none"]
+
+  defp units_ids(nil, _prefix, _suffix), do: nil
+
+  defp units_ids(id, prefix, suffix) do
+    case Enum.reject([prefix && id <> "-prefix", suffix && id <> "-suffix"], &is_nil/1) do
+      [] -> nil
+      ids -> Enum.join(ids, " ")
+    end
   end
 
   @doc false
@@ -948,6 +1020,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A checkbox in its label, the label's text beside it.
+
+  ## Assigns
+    * `:name`, `:value`, `:id` - the checkbox's attributes
+    * `:checked`, `:disabled` - its state
+    * `:label` - the text beside the box
+    * `:description` - a second, quieter line under the label
+    * `:icon` - an icon before the box
+    * `:hidden_input` - send `false` for an unticked box, through a hidden input before it
+    * `:class` - replaces the box's classes
+  """
   @impl true
   def checkbox(assigns) do
     label = resolve_label(assigns[:label])
@@ -957,6 +1041,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:class, fn -> "size-4 cursor-pointer accent-[#5b57d6]" end)
       |> assign(:label, label)
+      |> assign_new(:description, fn -> nil end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:checked, fn -> false end)
       |> assign_new(:hidden_input, fn -> false end)
@@ -966,7 +1051,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
 
     ~H"""
-    <label class="flex items-center gap-[9px]">
+    <label class={["flex gap-[9px]", if(@description, do: "items-start", else: "items-center")]}>
       <.render_icon :if={@icon} name={@icon} class="w-4 h-4 text-[#a8a5a0]" />
       <input :if={@hidden_input} type="hidden" name={@name} value="false" />
       <input
@@ -976,12 +1061,23 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         value={@value}
         checked={@checked}
         disabled={@disabled}
-        class={[@class, @disabled && "cursor-not-allowed"]}
+        class={[@class, @description && "mt-0.5 flex-none", @disabled && "cursor-not-allowed"]}
         phx-click={@phx_click}
         phx-target={@phx_target}
         phx-value-id={@phx_value_id}
       />
-      <span :if={@label} class="text-[12.5px] font-semibold text-[#5c5a54]">{@label}</span>
+      <span :if={@label && is_nil(@description)} class="text-[12.5px] font-semibold text-[#5c5a54]">
+        {@label}
+      </span>
+      <span :if={@description} class="flex min-w-0 flex-col gap-0.5">
+        <span :if={@label} class="text-[12.5px] font-semibold text-[#5c5a54]">{@label}</span>
+        <span
+          data-role="gervaz-checkbox-description"
+          class="text-[11.5px] font-medium leading-[1.45] text-[#8a877f]"
+        >
+          {@description}
+        </span>
+      </span>
     </label>
     """
   end
@@ -1116,30 +1212,40 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:prefix, fn -> nil end)
+      |> assign_new(:suffix, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "ltr"))
 
     ~H"""
-    <div class="relative">
-      <.render_icon
-        :if={@icon}
-        name={@icon}
-        class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
-      />
-      <input
-        type="number"
-        id={@id}
-        name={@name}
-        value={@value}
-        placeholder={@placeholder}
-        min={@min}
-        max={@max}
-        step={@step}
-        disabled={@disabled}
-        readonly={@readonly}
-        dir={@dir}
-        class={[@class, @icon && "ps-9", (@disabled || @readonly) && disabled_class()]}
-      />
-    </div>
+    <.with_units id={@id} prefix={@prefix} suffix={@suffix}>
+      <div class="relative">
+        <.render_icon
+          :if={@icon}
+          name={@icon}
+          class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
+        />
+        <input
+          type="number"
+          id={@id}
+          name={@name}
+          value={@value}
+          placeholder={@placeholder}
+          min={@min}
+          max={@max}
+          step={@step}
+          disabled={@disabled}
+          readonly={@readonly}
+          aria-describedby={units_ids(@id, @prefix, @suffix)}
+          dir={@dir}
+          class={[
+            @class,
+            @icon && "ps-9",
+            units_class(@prefix, @suffix),
+            (@disabled || @readonly) && disabled_class()
+          ]}
+        />
+      </div>
+    </.with_units>
     """
   end
 
@@ -2153,6 +2259,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:myself` - LiveComponent target
     * `:count` - The number of rows the action runs on, or `nil` when the table cannot tell.
       `{count}` in the action's `confirm` becomes this number.
+
+  A `confirm` that is a question (a keyword list, see `MishkaGervaz.Question`) makes the press send
+  `"ask"` with the action, and the table asks it in its question window before the action runs.
   """
   @impl true
   def bulk_action_button(assigns) do
@@ -2168,12 +2277,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         resolve_ui_label(action) || translate_text(Phoenix.Naming.humanize(action.name))
       )
       |> assign(:confirm, resolve_bulk_confirm(action.confirm, assigns[:count]))
+      |> assign(:ask?, MishkaGervaz.Question.question?(action.confirm))
       |> assign(:btn_class, (action.ui && action.ui.class) || bulk_button_class(variant))
 
     ~H"""
     <button
       type="button"
-      phx-click="bulk_action"
+      phx-click={(@ask? && "ask") || "bulk_action"}
+      phx-value-ask={@ask? && "bulk_action"}
+      phx-value-question={@ask? && @action.name}
+      phx-value-scope={@ask? && "bulk"}
       phx-value-action={@action.name}
       phx-target={@myself}
       class={@btn_class}
@@ -2448,6 +2561,92 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   end
 
   @doc """
+  Placeholder rows, or a placeholder block, that stand where content goes while it loads and hold
+  its room, so the page does not shrink and grow again: a table's rows while it reads with none to
+  show, a card's body while its `assign_async` read runs. Its bars pulse; it is marked busy, and a
+  screen reader hears its `text`.
+
+  ## Assigns
+    * `:type` - `:rows` (the default), rows the height of a table row, or `:block`, one box
+    * `:rows` - how many rows (default 5); draw as many as the content will likely show, such as
+      the rows shown before a reload
+    * `:row_class` - replaces a row's height and rule (`h-[49px] border-b border-[#f4f3ee]`), for
+      rows taller than a table's
+    * `:lines` - how many lines a block draws (default 3)
+    * `:class` - extra classes of the whole, such as a block's height (`h-[180px]`)
+    * `:text` - what a screen reader hears (default "Loading...")
+
+  ## Example
+
+      <.async_result :let={orders} assign={@orders}>
+        <:loading>
+          <MishkaGervaz.UIAdapters.Tailwind.skeleton rows={@orders_shown || 5} />
+        </:loading>
+        ...
+      </.async_result>
+  """
+  @impl true
+  def skeleton(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:type, fn -> :rows end)
+      |> assign_new(:rows, fn -> 5 end)
+      |> assign_new(:row_class, fn -> "h-[49px] border-b border-[#f4f3ee] last:border-b-0" end)
+      |> assign_new(:lines, fn -> 3 end)
+      |> assign_new(:class, fn -> nil end)
+      |> assign_new(:text, fn -> nil end)
+
+    assigns =
+      assigns
+      |> assign(:text, assigns.text || dgettext("mishka_gervaz", "Loading..."))
+      |> assign(
+        :widths,
+        skeleton_widths(if(assigns.type == :block, do: assigns.lines, else: assigns.rows))
+      )
+
+    ~H"""
+    <div
+      data-role="gervaz-skeleton"
+      data-type={@type}
+      data-rows={@type == :rows && @rows}
+      aria-busy="true"
+      class={[
+        @type == :block &&
+          "flex flex-col gap-3 rounded-[14px] border border-[#ecebe6] bg-white p-5",
+        @class
+      ]}
+    >
+      <span class="sr-only">{@text}</span>
+      <div
+        :for={width <- @widths}
+        :if={@type != :block}
+        data-role="gervaz-skeleton-row"
+        aria-hidden="true"
+        class={["flex items-center px-[16px]", @row_class]}
+      >
+        <span class="block h-3 animate-pulse rounded-full bg-[#efeee9]" style={"width: #{width}"} />
+      </div>
+      <span
+        :for={width <- @widths}
+        :if={@type == :block}
+        data-role="gervaz-skeleton-line"
+        aria-hidden="true"
+        class="block h-3 animate-pulse rounded-full bg-[#efeee9]"
+        style={"width: #{width}"}
+      />
+    </div>
+    """
+  end
+
+  defp skeleton_widths(count) when is_integer(count) and count > 0 do
+    ["92%", "78%", "86%", "70%", "96%", "82%"]
+    |> Stream.cycle()
+    |> Enum.take(count)
+  end
+
+  defp skeleton_widths(_count), do: []
+
+  @doc """
   The list/grid switch — one recessed tray with the active view lifted onto a white tile. The single
   switcher every admin page (and every `fallback: __MODULE__` adapter) uses.
 
@@ -2668,8 +2867,67 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:class` - the `<nav>`'s classes
 
   A completed step shows a check, a step with an error is drawn in the error colour.
+
+  ## Tabs
+
+  Given `tabs: true`, as a `:tabs` form gives it, the steps are a `tablist` of buttons instead, each
+  a `tab` sending `goto_step` with its step's name. Its own assigns:
+
+    * `:id` - the form's id: each tab is `<id>-tab-<step>` and controls the panel `<id>-step-<step>`
+    * `:navigable` - the names of the steps the reader may open; the others are disabled
+    * `:target` - the form's LiveComponent, which `goto_step` is sent to
+
+  The current tab is `aria-selected`; a tab whose step holds an error carries a dot in the error
+  colour.
   """
   @impl true
+  def step_indicator(%{tabs: true} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:steps, fn -> [] end)
+      |> assign_new(:current_step, fn -> nil end)
+      |> assign_new(:navigable, fn -> [] end)
+      |> assign_new(:target, fn -> nil end)
+      |> assign_new(:class, fn ->
+        "flex gap-1 overflow-x-auto border-b border-[#ecebe6]"
+      end)
+
+    ~H"""
+    <div role="tablist" data-role="gervaz-step-tabs" class={@class}>
+      <button
+        :for={step <- @steps}
+        type="button"
+        role="tab"
+        id={"#{@id}-tab-#{step.name}"}
+        aria-selected={to_string(step.name == @current_step)}
+        aria-controls={"#{@id}-step-#{step.name}"}
+        data-step={step.name}
+        data-status={step.status}
+        disabled={step.name not in @navigable}
+        phx-click="goto_step"
+        phx-value-step={step.name}
+        phx-target={@target}
+        class={[
+          "-mb-px inline-flex flex-none items-center gap-2 border-b-2 px-[14px] py-[10px] text-[12.5px] font-semibold transition-colors max-[640px]:min-h-11",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          if(step.name == @current_step,
+            do: "border-[#5b57d6] text-[#1b1a18]",
+            else: "border-transparent text-[#8a877f] hover:text-[#1b1a18]"
+          )
+        ]}
+      >
+        <.render_icon :if={step[:icon]} name={step.icon} class="size-4" />
+        {step.label}
+        <span
+          :if={step.status == :error}
+          data-role="gervaz-step-error"
+          class="size-1.5 rounded-full bg-[#c0392b]"
+        />
+      </button>
+    </div>
+    """
+  end
+
   def step_indicator(assigns) do
     assigns =
       assigns
@@ -2786,7 +3044,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   @spec primary_button_class(boolean()) :: list()
   def primary_button_class(enabled?) do
     [
-      "inline-flex h-[42px] items-center gap-2 rounded-[11px] px-[18px] text-[12.5px] font-bold",
+      "inline-flex h-[42px] items-center gap-2 rounded-[11px] px-[18px] text-[12.5px] font-bold max-[640px]:h-11",
       "text-white transition-opacity",
       if(enabled?,
         do:
@@ -2802,7 +3060,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   """
   @spec secondary_button_class() :: String.t()
   def secondary_button_class do
-    "inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] " <>
+    "inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] max-[640px]:h-11 " <>
       "bg-white px-[15px] text-[12.5px] font-semibold text-[#5c5a54] transition-colors " <>
       "hover:bg-[#f7f6f3]"
   end
@@ -2908,6 +3166,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A switch: a checkbox drawn as a track and a knob, after a hidden `false` so an unticked switch
+  still sends the field.
+
+  ## Assigns
+    * `:name`, `:id` - the checkbox's attributes
+    * `:checked` - the switch is on
+    * `:disabled` - the switch cannot be flipped
+    * `:note` - text beside the switch, inside its label, so a click on it flips the switch
+  """
   @impl true
   def toggle_input(assigns) do
     assigns =
@@ -2915,14 +3183,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:checked, fn -> false end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:note, fn -> nil end)
 
     ~H"""
     <label class={[
-      "inline-flex cursor-pointer items-center",
+      "inline-flex cursor-pointer items-center gap-3",
       @disabled && "opacity-50 cursor-not-allowed"
     ]}>
       <input type="hidden" name={@name} value="false" />
-      <div class="relative w-11 h-6">
+      <div class="relative h-6 w-11 flex-none">
         <input
           type="checkbox"
           id={@id}
@@ -2943,6 +3212,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           if(@checked, do: "translate-x-5", else: "translate-x-0")
         ]} />
       </div>
+      <span
+        :if={@note}
+        data-role="gervaz-toggle-note"
+        class="text-[12.5px] font-medium leading-[1.45] text-[#5c5a54]"
+      >
+        {@note}
+      </span>
     </label>
     """
   end
@@ -3000,6 +3276,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
+      |> assign_new(:maxlength, fn -> nil end)
       |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
@@ -3007,6 +3284,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       id={@id}
       name={@name}
       placeholder={@placeholder}
+      maxlength={@maxlength}
       rows={@rows}
       disabled={@disabled}
       readonly={@readonly}
@@ -3169,6 +3447,148 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           {@add_label}
         </button>
       </div>
+    </div>
+    """
+  end
+
+  @doc """
+  One choice drawn as a card per option: a radio input in each card, the option's icon and label,
+  and its second line under them. The chosen card is drawn in the accent colour.
+
+  ## Assigns
+    * `:name` - the radio inputs' name
+    * `:value` - the value chosen, as a string
+    * `:options` - maps of `:label`, `:value`, `:description`, `:icon` and `:disabled` (an option
+      that is seen but cannot be picked), as `MishkaGervaz.Helpers.choice_options/1` gives them
+    * `:id` - the group's id; each radio is `<id>-<index>`
+    * `:label_id` - the id of the label naming the group
+    * `:disabled` - no option can be picked
+    * `:class` - replaces the grid's classes
+  """
+  @impl true
+  def choice_cards(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:options, fn -> [] end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:class, fn -> "grid grid-cols-1 gap-2.5 sm:grid-cols-2" end)
+
+    ~H"""
+    <div
+      id={@id}
+      role="radiogroup"
+      aria-labelledby={@label_id}
+      data-role="gervaz-choice-cards"
+      class={@class}
+    >
+      <label
+        :for={{option, index} <- Enum.with_index(@options)}
+        data-value={option.value}
+        class={[
+          "flex items-start gap-3 rounded-[13px] border border-[#ecebe6] bg-white p-[13px] transition-colors",
+          "has-checked:border-[#5b57d6] has-checked:bg-[#f6f5fe] has-checked:shadow-[0_0_0_3px_rgba(91,87,214,0.1)]",
+          "has-focus-visible:border-[#5b57d6]",
+          if(@disabled or option[:disabled] == true,
+            do: "cursor-not-allowed opacity-60",
+            else: "cursor-pointer hover:bg-[#faf9f6]"
+          )
+        ]}
+      >
+        <input
+          type="radio"
+          id={"#{@id}-#{index}"}
+          name={@name}
+          value={option.value}
+          checked={option.value == @value}
+          disabled={@disabled or option[:disabled] == true}
+          class="mt-0.5 size-4 flex-none accent-[#5b57d6]"
+        />
+        <.render_icon
+          :if={option.icon}
+          name={option.icon}
+          class="mt-px size-[18px] flex-none text-[#5b57d6]"
+        />
+        <span class="min-w-0 flex-1">
+          <span class="block text-[13px] font-bold text-[#1b1a18]">{option.label}</span>
+          <span
+            :if={option.description}
+            data-role="gervaz-choice-description"
+            class="mt-0.5 block text-[11.5px] font-medium leading-[1.45] text-[#8a877f]"
+          >
+            {option.description}
+          </span>
+        </span>
+      </label>
+    </div>
+    """
+  end
+
+  @doc """
+  One choice drawn as a segmented control: every option a segment of one bar, the chosen one
+  raised. Each segment holds a radio input, hidden from sight but not from the keyboard, its icon,
+  its label and, smaller, its second line.
+
+  ## Assigns
+    Those of `choice_cards/1`; `:class` replaces the bar's classes.
+  """
+  @impl true
+  def segmented_control(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:options, fn -> [] end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:class, fn ->
+        "inline-flex max-w-full flex-wrap gap-1 rounded-[12px] border border-[#ecebe6] bg-[#f6f5f2] p-1"
+      end)
+
+    ~H"""
+    <div
+      id={@id}
+      role="radiogroup"
+      aria-labelledby={@label_id}
+      data-role="gervaz-segmented-control"
+      class={@class}
+    >
+      <label
+        :for={{option, index} <- Enum.with_index(@options)}
+        data-value={option.value}
+        class={[
+          "relative flex min-h-[34px] flex-1 flex-col items-center justify-center rounded-[9px] px-[14px] py-1.5 text-center transition-colors",
+          "has-checked:bg-white has-checked:shadow-[0_1px_3px_rgba(30,28,24,0.12)]",
+          "has-focus-visible:ring-2 has-focus-visible:ring-[#c3c1f0]",
+          if(@disabled or option[:disabled] == true,
+            do: "cursor-not-allowed opacity-60",
+            else: "cursor-pointer"
+          )
+        ]}
+      >
+        <input
+          type="radio"
+          id={"#{@id}-#{index}"}
+          name={@name}
+          value={option.value}
+          checked={option.value == @value}
+          disabled={@disabled or option[:disabled] == true}
+          class="peer sr-only"
+        />
+        <span class="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8a877f] peer-checked:text-[#1b1a18]">
+          <.render_icon :if={option.icon} name={option.icon} class="size-4" />
+          {option.label}
+        </span>
+        <span
+          :if={option.description}
+          data-role="gervaz-choice-description"
+          class="text-[10.5px] font-medium text-[#a8a5a0]"
+        >
+          {option.description}
+        </span>
+      </label>
     </div>
     """
   end
@@ -3835,6 +4255,497 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @drawer_motion {"transition-transform",
+                  "translate-y-full sm:translate-y-0 sm:translate-x-full sm:rtl:-translate-x-full",
+                  "translate-y-0 sm:translate-x-0"}
+  @sheet_motion {"transition-transform", "translate-y-full", "translate-y-0"}
+  @window_motion {"transition-[translate,scale,opacity]",
+                  "translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0",
+                  "translate-y-0 sm:scale-100 sm:opacity-100"}
+
+  @doc """
+  A drawer from the right side (the left in a right-to-left page), for a form or a page. Below
+  640px it is a bottom sheet instead, rising from the bottom edge.
+
+  It is drawn hidden and opens through `show_drawer/2`: render it with `show` (as
+  `:if={@open?} show`, so it opens as it is drawn), or keep it rendered and run
+  `show_drawer(id)` from a click. The close button and the backdrop run `hide_drawer/2` after
+  `:on_close`; Escape closes it too, unless `:confirm_close` is given.
+
+  ## Assigns
+    * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`, its sub line `<id>-sub`,
+      its body `<id>-body` and its close button `<id>-close`
+    * `:show` - open it as it is drawn
+    * `:title` - the heading at its top
+    * `:icon` - a heroicon name drawn in a tile before the title, such as `"hero-receipt-percent"`
+    * `:tone` - the tile's colours: `:info` (the default), `:ok`, `:warn`, `:danger` or `:mute`
+    * `:sub` - a line under the title, such as the record's number and owner; the dialog is
+      described by it
+    * `:chips` - chips under the title, each a label or a `{tone, label}` pair, tones as `:tone`
+    * `:on_close` - a `Phoenix.LiveView.JS` run as it closes, such as `JS.push("close_drawer")`
+    * `:confirm_close` - a question the close button and the backdrop ask first through
+      `data-confirm`, such as "Discard your changes?" while the form in it holds changes (see
+      `MishkaGervaz.Form.Web.Live`'s `notify_dirty`); `nil` closes at once
+    * `:request_close` - a `Phoenix.LiveView.JS` the close button, the backdrop and Escape run
+      instead of closing, such as `JS.push("close_editor")`, for a page that decides on the server
+      whether the panel closes (it may ask "Discard your changes?" first) and then closes it with
+      `hide_drawer/2` or takes it away; `nil` (the default) closes at once
+    * `:class` - replaces the panel's width classes (`sm:w-[min(520px,100vw)]`)
+    * `:inner_block` - its body, which scrolls; it is marked `data-role="gervaz-panel-body"`, and a
+      gervaz form in it keeps its tabs at the body's top and its submit row at the body's bottom
+      while its fields scroll between them (see `MishkaGervaz.Form.Templates.Standard`)
+    * `:actions` - an optional slot of buttons; drawn in the foot unless `:actions_at` is `:head`
+    * `:actions_at` - `:foot` (the default), the row pinned under the body, or `:head`, beside
+      the close button
+    * `:footer` - an optional slot pinned under the body, before the foot's actions
+  """
+  @impl true
+  def drawer(assigns) do
+    assigns
+    |> assign(:kind, :drawer)
+    |> assign_new(:class, fn -> "sm:w-[min(520px,100vw)]" end)
+    |> side_panel()
+  end
+
+  @doc """
+  A bottom sheet, rising from the bottom edge at every width, for a form or a page.
+
+  It opens and closes as `drawer/1` does, through `show_sheet/2` and `hide_sheet/2`, and takes its
+  assigns; `:class` replaces the panel's width classes (`sm:mx-auto sm:max-w-[640px]`).
+  """
+  @impl true
+  def sheet(assigns) do
+    assigns
+    |> assign(:kind, :sheet)
+    |> assign_new(:class, fn -> "sm:mx-auto sm:max-w-[640px]" end)
+    |> side_panel()
+  end
+
+  @doc """
+  A window in the middle of the screen, for a form or a short page, that is a bottom sheet below
+  640px. It grows from a little smaller as it opens and rises from the bottom edge on a phone.
+
+  It opens and closes as `drawer/1` does, through `show_window/2` and `hide_window/2`, and takes its
+  assigns. Its body scrolls when it is taller than the screen, its head and its foot stay. Without
+  a `:title`, `:icon`, `:sub` or `:chips` it draws no head and its close button stands in the top
+  corner, for a body that draws its own head, such as a gervaz form with a header. `:class`
+  replaces the panel's width classes (`sm:w-[min(560px,calc(100vw-48px))]`).
+  """
+  @impl true
+  def window(assigns) do
+    assigns
+    |> assign(:kind, :window)
+    |> assign_new(:class, fn -> "sm:w-[min(560px,calc(100vw-48px))]" end)
+    |> side_panel()
+  end
+
+  @doc "The `Phoenix.LiveView.JS` that opens the drawer `id`: its backdrop fades in, its panel slides in."
+  @spec show_drawer(JS.t(), String.t()) :: JS.t()
+  def show_drawer(js \\ %JS{}, id), do: show_panel(js, id, @drawer_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that closes the drawer `id`."
+  @spec hide_drawer(JS.t(), String.t()) :: JS.t()
+  def hide_drawer(js \\ %JS{}, id), do: hide_panel(js, id, @drawer_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that opens the bottom sheet `id`."
+  @spec show_sheet(JS.t(), String.t()) :: JS.t()
+  def show_sheet(js \\ %JS{}, id), do: show_panel(js, id, @sheet_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that closes the bottom sheet `id`."
+  @spec hide_sheet(JS.t(), String.t()) :: JS.t()
+  def hide_sheet(js \\ %JS{}, id), do: hide_panel(js, id, @sheet_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that opens the window `id`: its backdrop fades in, its panel grows in."
+  @spec show_window(JS.t(), String.t()) :: JS.t()
+  def show_window(js \\ %JS{}, id), do: show_panel(js, id, @window_motion)
+
+  @doc "The `Phoenix.LiveView.JS` that closes the window `id`."
+  @spec hide_window(JS.t(), String.t()) :: JS.t()
+  def hide_window(js \\ %JS{}, id), do: hide_panel(js, id, @window_motion)
+
+  defp show_panel(js, id, {property, away, shown}) do
+    js
+    |> JS.push_focus()
+    |> JS.show(to: "#" <> id)
+    |> JS.show(
+      to: "#" <> id <> "-backdrop",
+      time: 200,
+      transition: {"transition-opacity ease-out duration-200", "opacity-0", "opacity-100"}
+    )
+    |> JS.show(
+      to: "#" <> id <> "-panel",
+      display: "flex",
+      time: 200,
+      transition:
+        {property <> " ease-out duration-200 motion-reduce:transition-none", away, shown}
+    )
+    |> JS.add_class("overflow-hidden", to: "body")
+    |> JS.focus_first(to: "#" <> id <> "-panel")
+  end
+
+  defp hide_panel(js, id, {property, away, shown}) do
+    js
+    |> JS.hide(
+      to: "#" <> id <> "-backdrop",
+      time: 200,
+      transition: {"transition-opacity ease-in duration-200", "opacity-100", "opacity-0"}
+    )
+    |> JS.hide(
+      to: "#" <> id <> "-panel",
+      time: 200,
+      transition: {property <> " ease-in duration-200 motion-reduce:transition-none", shown, away}
+    )
+    |> JS.hide(to: "#" <> id, time: 200, transition: {"block", "block", "block"})
+    |> JS.remove_class("overflow-hidden", to: "body")
+    |> JS.pop_focus()
+  end
+
+  defp side_panel(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:show, fn -> false end)
+      |> assign_new(:title, fn -> nil end)
+      |> assign_new(:icon, fn -> nil end)
+      |> assign_new(:tone, fn -> :info end)
+      |> assign_new(:sub, fn -> nil end)
+      |> assign_new(:chips, fn -> [] end)
+      |> assign_new(:on_close, fn -> %JS{} end)
+      |> assign_new(:confirm_close, fn -> nil end)
+      |> assign_new(:request_close, fn -> nil end)
+      |> assign_new(:footer, fn -> [] end)
+      |> assign_new(:actions, fn -> [] end)
+      |> assign_new(:actions_at, fn -> :foot end)
+
+    assigns =
+      assigns
+      |> assign(:open_js, open_js(assigns.kind, assigns.id))
+      |> assign(
+        :close_js,
+        assigns.request_close || close_js(assigns.kind, assigns.on_close, assigns.id)
+      )
+      |> assign(:hide_js, close_js(assigns.kind, %JS{}, assigns.id))
+      |> assign(:confirm_close, assigns.confirm_close || nil)
+      |> assign(
+        :head?,
+        assigns.kind != :window or
+          Enum.any?([assigns.title, assigns.icon, assigns.sub], & &1) or assigns.chips != [] or
+          (assigns.actions != [] and assigns.actions_at == :head)
+      )
+
+    ~H"""
+    <div
+      id={@id}
+      data-role={"gervaz-#{@kind}"}
+      phx-mounted={@show && @open_js}
+      phx-remove={@hide_js}
+      class="relative z-50 hidden"
+    >
+      <div
+        id={@id <> "-backdrop"}
+        data-role="gervaz-panel-backdrop"
+        class="fixed inset-0 bg-[#17161a]/40 transition-opacity"
+        aria-hidden="true"
+        data-confirm={@confirm_close}
+        phx-click={@close_js}
+      />
+      <.focus_wrap
+        id={@id <> "-panel"}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={@title && @id <> "-title"}
+        aria-describedby={@sub && @id <> "-sub"}
+        tabindex="-1"
+        phx-window-keydown={is_nil(@confirm_close) && @close_js}
+        phx-key="escape"
+        class={[
+          "fixed inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[18px] bg-white shadow-[0_-12px_40px_rgba(20,18,26,.18)]",
+          @kind == :drawer &&
+            "sm:inset-y-0 sm:start-auto sm:end-0 sm:max-h-none sm:rounded-none sm:rounded-s-[18px] sm:shadow-[-12px_0_40px_rgba(20,18,26,.18)]",
+          @kind == :window &&
+            "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[min(88vh,820px)] sm:rounded-[18px] sm:shadow-[0_30px_80px_rgba(23,22,26,0.32)]",
+          @class
+        ]}
+      >
+        <div
+          :if={@kind != :drawer}
+          aria-hidden="true"
+          class={[
+            "mx-auto mt-2.5 h-1 w-10 flex-none rounded-full bg-[#dcdad2]",
+            @kind == :window && "sm:hidden"
+          ]}
+        />
+        <button
+          :if={not @head?}
+          id={@id <> "-close"}
+          type="button"
+          data-role="gervaz-panel-close"
+          aria-label={dgettext("mishka_gervaz", "Close")}
+          data-confirm={@confirm_close}
+          phx-click={@close_js}
+          class="absolute end-3 top-3 z-10 grid size-11 place-items-center rounded-[10px] text-[#8a877f] transition-colors hover:bg-[#f6f5f2] hover:text-[#1b1a18]"
+        >
+          <.render_icon name="hero-x-mark" class="size-5" />
+        </button>
+        <div
+          :if={@head?}
+          data-role="gervaz-panel-head"
+          class="flex flex-none items-start justify-between gap-3 border-b border-[#f0efea] px-5 py-4"
+        >
+          <span
+            :if={@icon}
+            data-role="gervaz-panel-tile"
+            data-tone={panel_tone(@tone)}
+            class={[
+              "grid size-10 flex-none place-items-center rounded-[12px]",
+              panel_tile_class(panel_tone(@tone))
+            ]}
+          >
+            <.render_icon name={@icon} class="size-[18px]" />
+          </span>
+          <div class="min-w-0 flex-1 self-center">
+            <h2
+              :if={@title}
+              id={@id <> "-title"}
+              class="text-[15px] font-bold text-[#17161a] [overflow-wrap:anywhere]"
+            >
+              {@title}
+            </h2>
+            <p
+              :if={@sub}
+              id={@id <> "-sub"}
+              class="mt-0.5 text-[12px] font-medium text-[#6f6d68] [overflow-wrap:anywhere]"
+            >
+              {@sub}
+            </p>
+            <div :if={@chips != []} class="mt-2 flex flex-wrap gap-1.5">
+              <span
+                :for={{chip_tone, label} <- Enum.map(@chips, &panel_chip/1)}
+                data-role="gervaz-panel-chip"
+                data-tone={chip_tone}
+                class={[
+                  "inline-flex items-center rounded-[7px] px-2 py-[3px] text-[10.5px] font-bold",
+                  panel_tile_class(chip_tone)
+                ]}
+              >
+                {label}
+              </span>
+            </div>
+          </div>
+          <div
+            :if={@actions != [] and @actions_at == :head}
+            data-role="gervaz-panel-actions"
+            class="flex flex-none items-center gap-2"
+          >
+            {render_slot(@actions)}
+          </div>
+          <button
+            id={@id <> "-close"}
+            type="button"
+            data-role="gervaz-panel-close"
+            aria-label={dgettext("mishka_gervaz", "Close")}
+            data-confirm={@confirm_close}
+            phx-click={@close_js}
+            class="grid size-8 flex-none place-items-center rounded-[9px] text-[#8a877f] transition-colors hover:bg-[#f6f5f2] hover:text-[#1b1a18] max-[640px]:-m-1.5 max-[640px]:size-11"
+          >
+            <.render_icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
+        <div
+          id={@id <> "-body"}
+          data-role="gervaz-panel-body"
+          class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        >
+          {render_slot(@inner_block)}
+        </div>
+        <div
+          :if={@footer != [] or (@actions != [] and @actions_at != :head)}
+          data-role="gervaz-panel-footer"
+          class="flex flex-none flex-wrap items-center justify-end gap-3 border-t border-[#f0efea] px-5 py-4 max-[640px]:[&>*]:min-h-[48px] max-[640px]:[&>*]:flex-1"
+        >
+          {render_slot(@footer)}
+          {@actions_at != :head && render_slot(@actions)}
+        </div>
+      </.focus_wrap>
+    </div>
+    """
+  end
+
+  defp panel_tone(tone) when tone in [:ok, :success], do: :ok
+  defp panel_tone(tone) when tone in [:warn, :warning], do: :warn
+  defp panel_tone(tone) when tone in [:danger, :error], do: :danger
+  defp panel_tone(:mute), do: :mute
+  defp panel_tone(_info), do: :info
+
+  defp panel_chip({tone, label}), do: {panel_tone(tone), label}
+  defp panel_chip(label), do: {:mute, label}
+
+  defp panel_tile_class(:ok), do: "bg-[#edf7f1] text-[#177a53]"
+  defp panel_tile_class(:warn), do: "bg-[#fdf3dc] text-[#8a5a00]"
+  defp panel_tile_class(:danger), do: "bg-[#fbeef1] text-[#a23a52]"
+  defp panel_tile_class(:mute), do: "bg-[#f2f1ec] text-[#5c5a54]"
+  defp panel_tile_class(_info), do: "bg-[#f2f1fc] text-[#4f4bcc]"
+
+  defp open_js(:drawer, id), do: show_drawer(id)
+  defp open_js(:sheet, id), do: show_sheet(id)
+  defp open_js(:window, id), do: show_window(id)
+
+  defp close_js(:drawer, on_close, id), do: hide_drawer(on_close, id)
+  defp close_js(:sheet, on_close, id), do: hide_sheet(on_close, id)
+  defp close_js(:window, on_close, id), do: hide_window(on_close, id)
+
+  @doc """
+  A question window, the confirm dialog a row action, a bulk action or a form's submit button asks
+  before it acts (see `MishkaGervaz.Question`): an alert dialog in the middle of the screen, a
+  bottom sheet below 640px, over a backdrop. It is drawn while the server holds the question and
+  taken away when it does not; nothing in it is JavaScript.
+
+  The window is a form: its button submits it with `on_confirm`, so Enter answers too. With an
+  `answer`, a field named `answer` asks the reader to type it, each change is sent with
+  `on_change`, and the button stays off until what was typed is the answer.
+
+  ## Assigns
+    * `:id` - required; the dialog is `<id>-dialog`, its title `<id>-title`, the field `<id>-answer`
+    * `:title` - the question
+    * `:body` - a sentence under it
+    * `:tone` - `:danger` (the default), `:warn` or `:info`: the colour of the answering button
+    * `:answer` - the word to type before the button answers, or `nil`
+    * `:answer_label` - the field's label (default "Type <answer> to confirm")
+    * `:typed` - what was typed so far
+    * `:error` - a refusal, said under the field
+    * `:confirm_label` / `:cancel_label` - the buttons' words (default "Confirm" and "Cancel")
+    * `:on_confirm` - the event the form submits with
+    * `:on_change` - the event the field's typing sends
+    * `:on_cancel` - the event or `Phoenix.LiveView.JS` of Cancel, the backdrop and Escape
+    * `:target` - the `phx-target` of its events
+  """
+  @impl true
+  def question(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:tone, fn -> :danger end)
+      |> assign_new(:body, fn -> nil end)
+      |> assign_new(:answer, fn -> nil end)
+      |> assign_new(:answer_label, fn -> nil end)
+      |> assign_new(:typed, fn -> "" end)
+      |> assign_new(:error, fn -> nil end)
+      |> assign_new(:confirm_label, fn -> nil end)
+      |> assign_new(:cancel_label, fn -> nil end)
+      |> assign_new(:on_change, fn -> nil end)
+      |> assign_new(:target, fn -> nil end)
+
+    assigns =
+      assigns
+      |> assign(:confirm_label, assigns.confirm_label || dgettext("mishka_gervaz", "Confirm"))
+      |> assign(:cancel_label, assigns.cancel_label || dgettext("mishka_gervaz", "Cancel"))
+      |> assign(
+        :answer_label,
+        assigns.answer && (assigns.answer_label || answer_label(assigns.answer))
+      )
+      |> assign(
+        :answered?,
+        is_nil(assigns.answer) or String.trim(assigns.typed || "") == assigns.answer
+      )
+
+    ~H"""
+    <div
+      id={@id}
+      data-role="gervaz-question"
+      data-tone={@tone}
+      phx-window-keydown={@on_cancel}
+      phx-key="escape"
+      phx-target={@target}
+      class="fixed inset-0 z-[60] flex items-center justify-center px-6 py-8 max-[640px]:items-end max-[640px]:p-0"
+    >
+      <div
+        id={@id <> "-backdrop"}
+        aria-hidden="true"
+        phx-click={@on_cancel}
+        phx-target={@target}
+        class="absolute inset-0 bg-[#17161a]/40"
+      />
+      <form
+        id={@id <> "-dialog"}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={@id <> "-title"}
+        aria-describedby={@body && @id <> "-body"}
+        phx-submit={@on_confirm}
+        phx-change={@answer && @on_change}
+        phx-target={@target}
+        class="relative w-[440px] max-w-full rounded-[18px] bg-white px-[22px] pt-[22px] pb-[18px] shadow-[0_30px_80px_rgba(23,22,26,0.32)] max-[640px]:w-full max-[640px]:rounded-b-none"
+      >
+        <h2 id={@id <> "-title"} class="text-[17px] font-semibold text-[#17161a]">{@title}</h2>
+        <p
+          :if={@body}
+          id={@id <> "-body"}
+          class="mt-[7px] text-[12.5px] font-medium leading-[1.6] text-[#5c5a54]"
+        >
+          {@body}
+        </p>
+        <div :if={@answer} class="mt-[13px]">
+          <label
+            for={@id <> "-answer"}
+            class="mb-[5px] block text-[12px] font-bold text-[#3a382f]"
+          >
+            {@answer_label}
+          </label>
+          <input
+            id={@id <> "-answer"}
+            type="text"
+            name="answer"
+            value={@typed}
+            autocomplete="off"
+            aria-invalid={@error && "true"}
+            aria-describedby={@error && @id <> "-error"}
+            phx-mounted={JS.focus()}
+            class="box-border h-[42px] w-full rounded-[11px] border border-[#e2e0d9] px-3 text-[13px] font-semibold text-[#17161a] outline-none focus:border-[#8b87ea] focus:shadow-[0_0_0_3px_rgba(109,105,230,0.16)]"
+          />
+          <p
+            :if={@error}
+            id={@id <> "-error"}
+            role="alert"
+            class="mt-[6px] text-[12px] font-semibold text-[#a23a52]"
+          >
+            {@error}
+          </p>
+        </div>
+        <div class="mt-[18px] flex justify-end gap-2 max-[640px]:flex-col-reverse">
+          <button
+            type="button"
+            data-role="gervaz-question-cancel"
+            phx-click={@on_cancel}
+            phx-target={@target}
+            class="h-10 rounded-[11px] border border-[#ecebe6] bg-white px-[15px] text-[12.5px] font-semibold text-[#3a382f] transition-colors hover:bg-[#f7f6f3] max-[640px]:min-h-[48px]"
+          >
+            {@cancel_label}
+          </button>
+          <button
+            type="submit"
+            data-role="gervaz-question-confirm"
+            disabled={not @answered?}
+            class={[
+              "h-10 rounded-[11px] px-[17px] text-[13px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:min-h-[48px]",
+              question_tone_class(@tone)
+            ]}
+          >
+            {@confirm_label}
+          </button>
+        </div>
+      </form>
+    </div>
+    """
+  end
+
+  defp answer_label(answer),
+    do: dgettext("mishka_gervaz", "Type %{answer} to confirm", answer: answer)
+
+  defp question_tone_class(:warn), do: "bg-[#a5691a] hover:bg-[#8a5a00]"
+
+  defp question_tone_class(:info),
+    do: "bg-[linear-gradient(140deg,#625ee0,#4f4bcc)] hover:opacity-95"
+
+  defp question_tone_class(_danger), do: "bg-[#b3445c] hover:bg-[#9c3a50]"
+
   @doc """
   Render a static alert/notice.
 
@@ -3948,6 +4859,92 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       title: "text-[#17161a]",
       body: "text-[#6d6a63]"
     }
+
+  @doc """
+  One toast, a short dark note at the bottom of the screen (see `MishkaGervaz.Toast`): a dot in its
+  tone's colour, its sentence, an Undo button and a link when it has them, and a Close. Its buttons
+  send `gervaz_toast_undo` and `gervaz_toast_close` with the toast's id to the page, whose
+  `MishkaGervaz.Toast.attach/1` hook answers them.
+
+  ## Assigns
+    * `:id` - the toast's DOM id
+    * `:toast_id` - the toast's id, sent with its buttons' events
+    * `:tone` - `:ok`, `:info`, `:warn` or `:error`
+    * `:text` - its sentence
+    * `:undo_label` - the Undo button's words; no button when `nil`
+    * `:navigate` - a path inside the app it links to
+    * `:href` - a plain address it links to instead, such as a file
+    * `:link_label` - the link's words
+  """
+  @impl true
+  def toast(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:tone, fn -> :ok end)
+      |> assign_new(:undo_label, fn -> nil end)
+      |> assign_new(:navigate, fn -> nil end)
+      |> assign_new(:href, fn -> nil end)
+      |> assign_new(:link_label, fn -> nil end)
+
+    ~H"""
+    <div
+      id={@id}
+      role="status"
+      data-role="gervaz-toast"
+      data-tone={@tone}
+      class="pointer-events-auto flex max-w-[420px] items-center gap-2.5 rounded-[13px] bg-[#17161a] px-3.5 py-[11px] text-[12.5px] font-semibold leading-[1.45] text-white shadow-[0_14px_34px_rgba(23,22,26,0.3)] max-[640px]:max-w-none max-[640px]:w-full"
+    >
+      <span aria-hidden="true" class={["size-2 flex-none rounded-full", toast_dot(@tone)]}></span>
+      <span data-role="gervaz-toast-text" class="flex-1">{@text}</span>
+      <button
+        :if={@undo_label}
+        type="button"
+        data-role="gervaz-toast-undo"
+        phx-click="gervaz_toast_undo"
+        phx-value-id={@toast_id}
+        class="flex-none rounded-[8px] border border-white/20 px-[9px] py-[3px] text-[11.5px] font-extrabold text-white hover:bg-white/10"
+      >
+        {@undo_label}
+      </button>
+      <.link
+        :if={@navigate}
+        navigate={@navigate}
+        data-role="gervaz-toast-link"
+        class={["flex-none text-[11.5px] font-extrabold no-underline", toast_link(@tone)]}
+      >
+        {@link_label}
+      </.link>
+      <a
+        :if={is_nil(@navigate) and @href}
+        href={@href}
+        data-role="gervaz-toast-link"
+        class={["flex-none text-[11.5px] font-extrabold no-underline", toast_link(@tone)]}
+      >
+        {@link_label}
+      </a>
+      <button
+        type="button"
+        data-role="gervaz-toast-close"
+        phx-click="gervaz_toast_close"
+        phx-value-id={@toast_id}
+        aria-label={dgettext("mishka_gervaz", "Close")}
+        class="grid size-5 flex-none place-items-center text-white/60 hover:text-white"
+      >
+        <.render_icon name="hero-x-mark" class="size-[13px]" />
+      </button>
+    </div>
+    """
+  end
+
+  defp toast_dot(:warn), do: "bg-[#e0a23a]"
+  defp toast_dot(:error), do: "bg-[#c8546d]"
+  defp toast_dot(:info), do: "bg-[#6d69e6]"
+  defp toast_dot(_ok), do: "bg-[#1f9d6b]"
+
+  defp toast_link(:warn), do: "text-[#f0b453]"
+  defp toast_link(:error), do: "text-[#f08aa0]"
+  defp toast_link(:info), do: "text-[#a5a1ff]"
+  defp toast_link(_ok), do: "text-[#4fd39f]"
 
   @doc """
   Render the form header (title + description).

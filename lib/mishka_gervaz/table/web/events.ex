@@ -5,7 +5,9 @@ defmodule MishkaGervaz.Table.Web.Events do
   This module centralizes event handling for:
   - Sorting
   - Filtering
-  - Row actions (delete, edit, custom events)
+  - Row actions (delete, edit, custom events, the row drawer's `open_drawer` and `close_drawer`)
+  - The question window a row or bulk action's `confirm` asks (`ask`, `question_typed`,
+    `question_confirm`, `question_cancel`; see `MishkaGervaz.Question`)
   - Bulk actions
   - Row expansion
   - Archive status changes
@@ -74,6 +76,8 @@ defmodule MishkaGervaz.Table.Web.Events do
   alias MishkaGervaz.Resource.Info.Table, as: Info
   alias MishkaGervaz.Resource.Info.Form, as: FormInfo
   alias MishkaGervaz.Errors
+  alias MishkaGervaz.Question
+  alias MishkaGervaz.Table.Templates.Shared
   alias MishkaGervaz.Table.Types.Filter.DateRange
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -302,13 +306,20 @@ defmodule MishkaGervaz.Table.Web.Events do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def do_handle("sort", %{"column" => column}, state, socket) do
     field_atom = sanitize_column(state, column)
-    socket = DataLoader.apply_sort(socket, state, field_atom)
 
-    updated_state = socket.assigns.table_state
-    sort_info = List.first(updated_state.sort_fields)
-    socket = apply_hook_result(state, :on_sort, [sort_info, socket], socket)
+    case Map.has_key?(state.static.sort_field_map || %{}, field_atom) do
+      true ->
+        socket = DataLoader.apply_sort(socket, state, field_atom)
 
-    {:noreply, socket}
+        updated_state = socket.assigns.table_state
+        sort_info = List.first(updated_state.sort_fields)
+        socket = apply_hook_result(state, :on_sort, [sort_info, socket], socket)
+
+        {:noreply, socket}
+
+      false ->
+        {:noreply, socket}
+    end
   end
 
   def do_handle("sort_by", %{"column" => column, "order" => order}, state, socket)
@@ -443,7 +454,9 @@ defmodule MishkaGervaz.Table.Web.Events do
 
   def do_handle("prev_page", _params, state, socket) do
     if state.page > 1 do
-      socket = DataLoader.load_async(socket, state, page: state.page - 1, reset: true)
+      socket =
+        DataLoader.load_async(socket, state, page: state.page - 1, reset: true, history: :push)
+
       {:noreply, socket}
     else
       {:noreply, socket}
@@ -454,7 +467,9 @@ defmodule MishkaGervaz.Table.Web.Events do
     has_more = state.has_more? or (state.total_pages && state.page < state.total_pages)
 
     if has_more do
-      socket = DataLoader.load_async(socket, state, page: state.page + 1, reset: true)
+      socket =
+        DataLoader.load_async(socket, state, page: state.page + 1, reset: true, history: :push)
+
       {:noreply, socket}
     else
       {:noreply, socket}
@@ -602,6 +617,63 @@ defmodule MishkaGervaz.Table.Web.Events do
     {:noreply, socket}
   end
 
+  def do_handle("open_drawer", %{"action" => name, "id" => id}, state, socket) do
+    with %{type: :drawer} = action <- find_row_action(state, name),
+         %{} = record <- get_record(state, sanitize(state, id), state.archive_status) do
+      {:noreply, Phoenix.Component.assign(socket, :row_drawer, %{action: action, record: record})}
+    else
+      _no_row -> {:noreply, Phoenix.Component.assign(socket, :row_drawer, nil)}
+    end
+  end
+
+  def do_handle("close_drawer", _params, _state, socket),
+    do: {:noreply, Phoenix.Component.assign(socket, :row_drawer, nil)}
+
+  def do_handle("ask", %{"ask" => event, "question" => name} = params, state, socket)
+      when is_binary(event) do
+    values = Map.drop(params, ["ask", "question", "record", "scope"])
+
+    question =
+      case ask(params["scope"], name, params, state) do
+        %{} = question -> Question.pending(question, event, values)
+        nil -> nil
+      end
+
+    {:noreply, Phoenix.Component.assign(socket, :question, question)}
+  end
+
+  def do_handle("question_typed", %{"answer" => typed}, _state, socket) do
+    case socket.assigns[:question] do
+      %{} = question ->
+        {:noreply,
+         Phoenix.Component.assign(socket, :question, Question.put_typed(question, typed))}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_confirm", params, state, socket) do
+    with %{} = question <- socket.assigns[:question],
+         question = Question.put_typed(question, params["answer"]),
+         true <- Question.answered?(question) do
+      socket = Phoenix.Component.assign(socket, :question, nil)
+      do_handle(question.event, question.params, state, socket)
+    else
+      false ->
+        refused =
+          socket.assigns.question |> Question.put_typed(params["answer"]) |> Question.refuse()
+
+        {:noreply, Phoenix.Component.assign(socket, :question, refused)}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  def do_handle("question_cancel", _params, _state, socket),
+    do: {:noreply, Phoenix.Component.assign(socket, :question, nil)}
+
   def do_handle("row_action", params, state, socket) do
     event_name = sanitize(state, params["event"])
     payload = params
@@ -612,10 +684,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_insert, record} ->
-        socket =
-          Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record, at: 0)
-
-        {:noreply, socket}
+        {:noreply, show_row(socket, state, record)}
 
       {:ok, :stream_delete, record} ->
         {:noreply, remove_row(socket, state, record)}
@@ -681,10 +750,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_insert, record} ->
-        socket =
-          Phoenix.LiveView.stream_insert(socket, state.static.stream_name, record, at: 0)
-
-        {:noreply, socket}
+        {:noreply, show_row(socket, state, record)}
 
       {:ok, :stream_delete, record} ->
         {:noreply, remove_row(socket, state, record)}
@@ -902,7 +968,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   defp go_to_page(page, %State{page: page}, socket), do: {:noreply, socket}
 
   defp go_to_page(page, state, socket),
-    do: {:noreply, DataLoader.load_async(socket, state, page: page, reset: true)}
+    do: {:noreply, DataLoader.load_async(socket, state, page: page, reset: true, history: :push)}
 
   @spec change_page_size(pos_integer() | nil, State.t(), socket()) :: {:noreply, socket()}
   defp change_page_size(nil, _state, socket), do: {:noreply, socket}
@@ -938,6 +1004,40 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
 
     {:noreply, socket}
+  end
+
+  # The question a press asks: a bulk action's about the rows it runs on, a row action's about
+  # its row, read again under the table's read so a row that is gone asks nothing.
+  @spec ask(String.t() | nil, String.t(), map(), State.t()) :: Question.t() | nil
+  defp ask("bulk", name, _params, state) do
+    count = Shared.bulk_selection_count(state)
+
+    case Enum.find(state.static.bulk_actions, &(to_string(&1.name) == name)) do
+      %{confirm: confirm} -> Question.build(confirm, count, count: count)
+      nil -> nil
+    end
+  end
+
+  defp ask(_row, name, %{"record" => id}, state) do
+    with %{confirm: confirm} <- find_row_action(state, name),
+         %{} = record <- get_record(state, sanitize(state, id), state.archive_status) do
+      Question.build(confirm, record)
+    end
+  end
+
+  defp ask(_scope, _name, _params, _state), do: nil
+
+  @doc """
+  The row action named `name` (a string from the page or an atom), dropdown items included, or
+  `nil` when the table has none of that name.
+  """
+  @spec find_row_action(State.t(), String.t() | atom()) :: map() | nil
+  def find_row_action(state, name) do
+    name = to_string(name)
+    matcher = &(is_map_key(&1, :name) and to_string(&1.name) == name)
+
+    Enum.find(state.static.row_actions, matcher) ||
+      Enum.find_value(state.static.row_action_dropdowns, &Enum.find(&1.items, matcher))
   end
 
   @doc false
@@ -1120,6 +1220,20 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
+  @doc """
+  Draws `record` at the top of the list with the arrival highlight, or again in its place when the
+  view shows it already, and counts it among the rows the view shows (`shown_ids`).
+  """
+  @spec show_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def show_row(socket, state, record) do
+    table_state = socket.assigns.table_state
+    shown = MapSet.put(table_state.shown_ids || MapSet.new(), record.id)
+
+    socket
+    |> Phoenix.LiveView.stream_insert(state.static.stream_name, Shared.arrived(record), at: 0)
+    |> Phoenix.Component.assign(:table_state, %{table_state | shown_ids: shown})
+  end
+
   @spec remove_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
   defp remove_row(socket, state, record) do
     socket
@@ -1151,24 +1265,34 @@ defmodule MishkaGervaz.Table.Web.Events do
   pagination; a Load more by keyset reads after the last row's keyset and does not use it. A row
   the view removes itself (`:self`) is held by its id in `removed_ids` until its own realtime
   removal (`:realtime`) arrives, which then moves nothing, so the row is counted once whether
-  realtime is on or off.
+  realtime is on or off. Every table takes it out of `shown_ids`, the rows its footer counts.
   """
   @spec drop_shown_row(State.t(), term(), :self | :realtime) :: State.t()
-  def drop_shown_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
+  def drop_shown_row(state, id, by), do: state |> unshow(id) |> drop_row(id, by)
+
+  @spec drop_row(State.t(), term(), :self | :realtime) :: State.t()
+  defp drop_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
     do: %{state | loaded_records: Enum.reject(state.loaded_records, &(&1.id == id))}
 
-  def drop_shown_row(%State{} = state, id, :self),
+  defp drop_row(%State{} = state, id, :self),
     do: %{
       state
       | next_offset: max(state.next_offset - 1, 0),
         removed_ids: MapSet.put(state.removed_ids, id)
     }
 
-  def drop_shown_row(%State{removed_ids: removed} = state, id, :realtime) do
+  defp drop_row(%State{removed_ids: removed} = state, id, :realtime) do
     if MapSet.member?(removed, id),
       do: %{state | removed_ids: MapSet.delete(removed, id)},
       else: %{state | next_offset: max(state.next_offset - 1, 0)}
   end
+
+  @doc false
+  @spec unshow(State.t(), term()) :: State.t()
+  def unshow(%State{shown_ids: %MapSet{} = shown} = state, id),
+    do: %{state | shown_ids: MapSet.delete(shown, id)}
+
+  def unshow(state, _id), do: state
 
   @doc false
   @spec drop_from_total(State.t(), non_neg_integer()) :: State.t()

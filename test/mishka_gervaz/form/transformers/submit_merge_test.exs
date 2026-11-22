@@ -126,4 +126,33 @@ defmodule MishkaGervaz.Form.Transformers.SubmitMergeTest do
       assert submit.cancel.active == true
     end
   end
+
+  describe "the discard button" do
+    alias MishkaGervaz.Form.SubmitMerger
+
+    test "is nil unless one side declares it" do
+      assert FormInfo.submit(SubmitMergeNoBlock).discard == nil
+    end
+
+    test "a resource discard wins, labelled Discard when it names no label" do
+      resource = %MishkaGervaz.Form.Entities.Submit{
+        discard: %MishkaGervaz.Form.Entities.Submit.Button{}
+      }
+
+      assert %{discard: %{label: "Discard", active: true}} = SubmitMerger.merge(resource, nil)
+    end
+
+    test "a domain discard is inherited, and active false on the resource drops it" do
+      domain = %{discard: %{label: "Throw away"}}
+
+      assert %{discard: %{label: "Throw away"}} =
+               SubmitMerger.merge(%MishkaGervaz.Form.Entities.Submit{}, domain)
+
+      resource = %MishkaGervaz.Form.Entities.Submit{
+        discard: %MishkaGervaz.Form.Entities.Submit.Button{active: false}
+      }
+
+      assert %{discard: nil} = SubmitMerger.merge(resource, domain)
+    end
+  end
 end

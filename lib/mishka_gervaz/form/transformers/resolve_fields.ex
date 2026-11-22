@@ -12,6 +12,9 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       omit `type:` or use `:nested`.
     * `resolve_field_sources/1` — defaults `field.source` to the
       field's `name` when not set.
+    * `resolve_max_lengths/1` — gives a text-like field the `max_length`
+      constraint of its attribute when the field names none, so the input
+      draws it as `maxlength`.
     * `resolve_relation_resources/1` — links `:relation` fields to
       their target resource via the Ash relationship table.
     * `resolve_field_positions/1` — applies `field_order` and the
@@ -51,6 +54,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       |> resolve_auto_fields()
       |> resolve_explicit_field_types()
       |> resolve_field_sources()
+      |> resolve_max_lengths()
       |> resolve_relation_resources()
       |> resolve_field_positions()
       |> detect_preloads()
@@ -626,6 +630,37 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
         acc
     end)
   end
+
+  @text_types [:text, :textarea, :email, :password, :url, :tel, nil]
+
+  @spec resolve_max_lengths(Spark.Dsl.t()) :: Spark.Dsl.t()
+  defp resolve_max_lengths(dsl_state) do
+    ash_attrs = get_ash_attributes(dsl_state)
+
+    dsl_state
+    |> get_entities(@fields_path)
+    |> filter_fields()
+    |> Enum.reduce(dsl_state, fn
+      %Field{max_length: nil, type: type, source: source} = field, acc
+      when type in @text_types ->
+        case ash_attrs |> Map.get(source, %{}) |> Map.get(:constraints) |> constraint_max() do
+          nil -> acc
+          max -> Transformer.replace_entity(acc, @fields_path, %{field | max_length: max})
+        end
+
+      _field, acc ->
+        acc
+    end)
+  end
+
+  defp constraint_max(constraints) when is_list(constraints) do
+    case Keyword.get(constraints, :max_length) do
+      max when is_integer(max) and max > 0 -> max
+      _none -> nil
+    end
+  end
+
+  defp constraint_max(_none), do: nil
 
   @spec resolve_relation_resources(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp resolve_relation_resources(dsl_state) do

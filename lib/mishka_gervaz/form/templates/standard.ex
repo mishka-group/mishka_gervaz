@@ -36,6 +36,31 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   button, so Enter in a field presses it: see `MishkaGervaz.Form.Web.Events.StepHandler` for what
   a submit does on each step.
 
+  A `:tabs` form draws its steps as tabs (`render_step_indicator/1`) and each step's container as
+  the tab's panel, `"<id>-step-<name>"`. With `navigation :free` any tab opens and the submit row
+  holds the submit button on every tab, with no Back or Next; with `:sequential` the visited tabs
+  open and the submit row is a wizard's.
+
+  ## In a drawer, a sheet or a window
+
+  A form drawn in the body of a UI adapter's panel (an element marked
+  `data-role="gervaz-panel-body"`, as `MishkaGervaz.UIAdapters.Tailwind.drawer/1`, `sheet/1` and
+  `window/1` mark theirs) keeps its tabs or steps (`data-role="gervaz-form-steps"`) stuck to the
+  body's top and its submit row (`data-role="gervaz-form-submit"`) stuck to the body's bottom, so
+  only the fields scroll and the save button is always in reach, after a failed save too. Each
+  sticks where it rests, inside the body's padding, so neither moves when the body scrolls, and a
+  white band over that padding hides the fields that scroll past it. Outside a panel both stay in
+  the page's flow.
+
+  ## Placed groups
+
+  A `:standard` form mounted with a `:body` slot draws that slot in place of its groups, inside the
+  one `<form>`, and the page puts each group where it wants with `MishkaGervaz.Form.Web.Live.group/1`.
+  The header, notices, upload section, form errors and submit row stay where they are; the fields
+  no group holds are drawn after the slot. While the form loads, and when the reader may not use
+  it, the slot is still drawn, outside the `<form>`, so the page around the groups never goes away.
+  A `:wizard` or `:tabs` form ignores the slot.
+
   ## Two-axis composition
 
     * **Template** (this module) — *where* things go: groups, steps,
@@ -117,12 +142,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @impl true
   def render(assigns) do
-    assigns = assign(assigns, :init_js, resolve_js_hook(assigns, :on_init))
+    assigns =
+      assigns
+      |> assign(:init_js, resolve_js_hook(assigns, :on_init))
+      |> assign(:placed?, placed?(assigns))
 
     ~H"""
-    <div id={@static.id <> "-form-wrapper"} phx-mounted={@init_js} hidden={@state.loading == :denied}>
+    <div
+      id={@static.id <> "-form-wrapper"}
+      data-dirty={to_string(@state.dirty? == true)}
+      phx-mounted={@init_js}
+      hidden={@state.loading == :denied and not @placed?}
+    >
       <%= cond do %>
         <% @state.loading == :denied -> %>
+          <%= if @placed? do %>
+            {render_slot(@body, placed_form(assigns))}
+          <% end %>
         <% @state.loading == :loaded and @state.form -> %>
           <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
             {render_step_indicator(assigns)}
@@ -143,10 +179,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_notices_at(assigns, :after_header)}
             {render_notices_at(assigns, :before_groups)}
 
-            <%= if @state.static.layout_mode == :standard do %>
-              {render_groups(assigns)}
-            <% else %>
-              {render_steps(assigns)}
+            <%= cond do %>
+              <% @placed? -> %>
+                {render_slot(@body, placed_form(assigns))}
+                {render_ungrouped(assigns)}
+              <% @state.static.layout_mode == :standard -> %>
+                {render_groups(assigns)}
+              <% true -> %>
+                {render_steps(assigns)}
             <% end %>
 
             {render_uploads_section(assigns)}
@@ -155,12 +195,50 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
           </.form>
+          <MishkaGervaz.Question.window
+            question={assigns[:question]}
+            id={@static.id <> "-question"}
+            ui={@static.ui_adapter}
+            target={@myself}
+          />
           {render_form_footer(assigns)}
           {render_notices_at(assigns, :form_footer)}
+        <% @placed? -> %>
+          {render_slot(@body, placed_form(assigns))}
         <% true -> %>
           {render_loading(assigns)}
       <% end %>
     </div>
+    """
+  end
+
+  # A page that mounts the form with a `:body` slot places the groups itself, in a `:standard` form.
+  defp placed?(%{body: [_ | _], static: %{layout_mode: :standard}}), do: true
+  defp placed?(_assigns), do: false
+
+  # What the `:body` slot is given: what `MishkaGervaz.Form.Web.Live.group/1` needs to draw a group.
+  defp placed_form(assigns) do
+    %{
+      __changed__: nil,
+      static: assigns.static,
+      state: assigns.state,
+      myself: assigns[:myself],
+      uploads: assigns[:uploads] || %{}
+    }
+  end
+
+  # The fields no group holds, drawn after a placed body as `render_groups/1` draws them after the
+  # groups.
+  defp render_ungrouped(assigns) do
+    grouped = MapSet.new(Enum.flat_map(assigns.static.groups, &Map.get(&1, :fields, [])))
+    ungrouped = Enum.reject(assigns.static.fields, &MapSet.member?(grouped, &1.name))
+    assigns = assign(assigns, :ungrouped_fields, ungrouped)
+
+    ~H"""
+    <%= if @ungrouped_fields != [] do %>
+      {render_notices_at(assigns, :before_fields)}
+      {render_group_fields(assigns, @ungrouped_fields, nil)}
+    <% end %>
     """
   end
 
@@ -187,6 +265,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   @impl true
+  def render_field(%{field: %{type: :hidden} = field} = assigns) do
+    assigns =
+      assigns
+      |> assign(:form_field, assigns.state.form[field.name])
+      |> assign(:value, shown_value(:hidden, assigns.state.form, field.name))
+
+    ~H"""
+    <input
+      type="hidden"
+      id={@form_field.id}
+      name={@form_field.name}
+      value={@value}
+      data-role="gervaz-hidden-field"
+    />
+    """
+  end
+
   def render_field(assigns) do
     field = assigns.field
     form = assigns.state.form
@@ -277,6 +372,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp open_group, do: JS.set_attribute({"open", ""}, to: {:closest, "details"})
 
+  @doc """
+  The steps of a wizard or tabs form, through the UI adapter's `step_indicator`.
+
+  A `:tabs` form draws them as tabs (`tabs: true`): each a button sending `goto_step`, those the
+  reader may open listed in `navigable` (every step with `navigation :free`, the steps already
+  visited with `:sequential`), each naming the panel of its step, `"<id>-step-<name>"`.
+  """
   @impl true
   def render_step_indicator(assigns) do
     steps = assigns.static.steps
@@ -286,6 +388,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         %{
           name: step.name,
           label: translate_text(Map.get(step, :resolved_label, to_string(step.name))),
+          icon: get_in_map(step, [:ui, :icon]),
           status: Map.get(assigns.state.step_states, step.name, :pending)
         }
       end)
@@ -294,19 +397,45 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns
       |> assign(:step_data, step_data)
       |> assign(:current_step, assigns.state.current_step)
+      |> assign(:tabs?, assigns.static.layout_mode == :tabs)
+      |> assign(:navigable, navigable_steps(assigns.static, assigns.state))
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
-    <div class="mb-6">
+    <div
+      data-role="gervaz-form-steps"
+      class={[
+        "mb-6",
+        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:top-0 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:pt-3",
+        "in-data-[role=gervaz-panel-body]:before:pointer-events-none in-data-[role=gervaz-panel-body]:before:absolute in-data-[role=gervaz-panel-body]:before:inset-x-0 in-data-[role=gervaz-panel-body]:before:-top-5 in-data-[role=gervaz-panel-body]:before:h-5 in-data-[role=gervaz-panel-body]:before:bg-white"
+      ]}
+    >
       <.dynamic_component
+        :if={!@tabs?}
         module={@ui}
         function={:step_indicator}
         steps={@step_data}
         current_step={@current_step}
       />
+      <.dynamic_component
+        :if={@tabs?}
+        module={@ui}
+        function={:step_indicator}
+        steps={@step_data}
+        current_step={@current_step}
+        tabs={true}
+        id={@static.id}
+        navigable={@navigable}
+        target={@myself}
+      />
     </div>
     """
   end
+
+  defp navigable_steps(%{layout_navigation: :free, steps: steps}, _state),
+    do: Enum.map(steps, & &1.name)
+
+  defp navigable_steps(_static, state), do: state.wizard_history || []
 
   # Draws the groups in order, then the fields no group holds, with the `:before_fields` notices
   # ahead of those fields.
@@ -366,11 +495,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
     assigns = assign(assigns, :steps, steps)
 
+    assigns = assign(assigns, :tabs?, assigns.static.layout_mode == :tabs)
+
     ~H"""
     <div>
       <div
         :for={{step, groups} <- @steps}
+        id={@static.id <> "-step-" <> to_string(step.name)}
         data-step={step.name}
+        role={@tabs? && "tabpanel"}
+        aria-labelledby={@tabs? && @static.id <> "-tab-" <> to_string(step.name)}
         hidden={step.name != @state.current_step}
       >
         <%= for group <- groups do %>
@@ -848,12 +982,23 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     """
   end
 
-  # A checkbox or toggle, centred in the 44px height of the inputs beside it.
-  defp boolean_box(control) do
+  # A checkbox or toggle, centred in the 44px height of the inputs beside it. One with a note beside
+  # it grows with the note's lines.
+  defp boolean_box(control, note \\ nil)
+
+  defp boolean_box(control, nil) do
     assigns = %{control: control}
 
     ~H"""
     <div data-role="gervaz-boolean-control" class="flex h-11 items-center">{@control}</div>
+    """
+  end
+
+  defp boolean_box(control, _note) do
+    assigns = %{control: control}
+
+    ~H"""
+    <div data-role="gervaz-boolean-control" class="flex min-h-11 items-center py-1">{@control}</div>
     """
   end
 
@@ -905,11 +1050,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp ticked?(value), do: value in [true, "true", "on"]
 
+  # A field that spans N columns takes the whole row while the grid has fewer columns than N (one
+  # on a phone), and N columns from the breakpoint where every grid of this template has them: a
+  # bare `col-span-N` on a one-column grid would make the browser add N-1 implicit columns and
+  # squeeze every other field.
   defp nested_span_class(nil), do: nil
   defp nested_span_class(1), do: "col-span-1"
-  defp nested_span_class(2), do: "col-span-2"
-  defp nested_span_class(3), do: "col-span-3"
-  defp nested_span_class(4), do: "col-span-4"
+  defp nested_span_class(2), do: "col-span-full md:col-span-2"
+  defp nested_span_class(3), do: "col-span-full lg:col-span-3"
+  defp nested_span_class(4), do: "col-span-full lg:col-span-4"
   defp nested_span_class(_), do: nil
 
   defp busy_label(button, static) do
@@ -929,14 +1078,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     ~H""
   end
 
+  defp render_submit(%{static: %{submit_external?: true}} = assigns) do
+    ~H""
+  end
+
   defp render_submit(assigns) do
     submit = assigns.static.submit
     mode = assigns.state.mode
     state = assigns.state
-    layout_mode = assigns.static.layout_mode
 
     submit_button = if mode == :create, do: submit[:create], else: submit[:update]
     cancel_button = submit[:cancel]
+    discard_button = submit[:discard]
 
     show_submit =
       submit_button != nil and
@@ -951,14 +1104,20 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         evaluate_button_visible(cancel_button, state) and
         not evaluate_button_restricted(cancel_button, state)
 
+    show_discard =
+      discard_button != nil and state.dirty? == true and
+        evaluate_button_active(discard_button, state) and
+        evaluate_button_visible(discard_button, state) and
+        not evaluate_button_restricted(discard_button, state)
+
     submit_label =
       if show_submit,
-        do: resolve_label(submit_button[:label]) || dgettext("mishka_gervaz", "Submit"),
+        do: resolve_dynamic(submit_button[:label], state) || dgettext("mishka_gervaz", "Submit"),
         else: ""
 
     cancel_label =
       if show_cancel,
-        do: resolve_label(cancel_button[:label]) || dgettext("mishka_gervaz", "Cancel"),
+        do: resolve_dynamic(cancel_button[:label], state) || dgettext("mishka_gervaz", "Cancel"),
         else: ""
 
     submit_disabled = show_submit and evaluate_button_disabled(submit_button, state)
@@ -974,11 +1133,24 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:submit_label, submit_label)
       |> assign(:submit_busy_label, busy_label(submit_button, assigns.static))
       |> assign(:cancel_label, cancel_label)
+      |> assign(:show_discard, show_discard)
+      |> assign(
+        :discard_label,
+        show_discard &&
+          (resolve_dynamic(discard_button[:label], state) || dgettext("mishka_gervaz", "Discard"))
+      )
+      |> assign(
+        :discard_disabled,
+        show_discard and evaluate_button_disabled(discard_button, state)
+      )
+      |> assign(:submit_confirm, show_submit && browser_confirm(submit_button[:confirm]))
+      |> assign(:cancel_confirm, show_cancel && dirty_confirm(cancel_button, state))
+      |> assign(:discard_confirm, show_discard && dirty_confirm(discard_button, state))
       |> assign(:show_submit, show_submit)
       |> assign(:show_cancel, show_cancel)
       |> assign(:submit_disabled, submit_disabled)
       |> assign(:cancel_disabled, cancel_disabled)
-      |> assign(:show_step_nav, layout_mode in [:wizard, :tabs])
+      |> assign(:show_step_nav, stepwise?(assigns.static))
       |> assign(:last_step?, last_step?(assigns))
       |> assign(:first_step?, first_step?(assigns))
       |> assign(:alternatives, alternatives_for(assigns.static, state, submit_disabled))
@@ -987,7 +1159,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:cancel_js, cancel_js)
 
     ~H"""
-    <div class="mt-6 flex items-center justify-end">
+    <div
+      data-role="gervaz-form-submit"
+      class={[
+        "mt-6 flex items-center justify-end",
+        "in-data-[role=gervaz-panel-body]:sticky in-data-[role=gervaz-panel-body]:bottom-0 in-data-[role=gervaz-panel-body]:z-[1] in-data-[role=gervaz-panel-body]:-mx-5 in-data-[role=gervaz-panel-body]:border-t in-data-[role=gervaz-panel-body]:border-[#f0efea] in-data-[role=gervaz-panel-body]:bg-white in-data-[role=gervaz-panel-body]:px-5 in-data-[role=gervaz-panel-body]:py-4",
+        "in-data-[role=gervaz-panel-body]:after:pointer-events-none in-data-[role=gervaz-panel-body]:after:absolute in-data-[role=gervaz-panel-body]:after:inset-x-0 in-data-[role=gervaz-panel-body]:after:-bottom-5 in-data-[role=gervaz-panel-body]:after:h-5 in-data-[role=gervaz-panel-body]:after:bg-white"
+      ]}
+    >
       <div class="flex flex-wrap items-center justify-end gap-[14px]">
         <.dynamic_component
           :if={@show_cancel}
@@ -995,11 +1174,25 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           function={:button}
           label={@cancel_label}
           type="button"
-          class="px-1.5 py-2 text-[13px] font-semibold text-[#8a877f] transition-colors hover:text-[#1b1a18]"
+          class="px-1.5 py-2 text-[13px] font-semibold text-[#8a877f] transition-colors hover:text-[#1b1a18] max-[640px]:min-h-11"
           disabled={@cancel_disabled}
+          data_confirm={@cancel_confirm || nil}
           phx_click={@cancel_js}
           phx_target={@myself}
         />
+
+        <button
+          :if={@show_discard}
+          type="button"
+          data-role="gervaz-discard"
+          data-confirm={@discard_confirm || nil}
+          disabled={@discard_disabled}
+          phx-click="discard"
+          phx-target={@myself}
+          class="inline-flex h-[42px] items-center gap-[7px] rounded-[11px] border border-[#ecebe6] bg-white px-[15px] text-[12.5px] font-semibold text-[#5c5a54] transition-colors hover:bg-[#f7f6f3] disabled:cursor-not-allowed disabled:opacity-60 max-[640px]:h-11"
+        >
+          {@discard_label}
+        </button>
 
         <.dynamic_component
           :if={@show_step_nav}
@@ -1014,9 +1207,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <button
             type="submit"
             disabled={@submit_disabled}
+            data-confirm={@submit_confirm || nil}
             phx-disable-with={@submit_busy_label}
             class={[
-              "inline-flex h-[42px] items-center gap-2 px-[18px] text-[12.5px] font-bold text-white transition-opacity",
+              "inline-flex h-[42px] items-center gap-2 px-[18px] text-[12.5px] font-bold text-white transition-opacity max-[640px]:h-11",
               (@alternatives == [] && "rounded-[11px]") || "rounded-s-[11px]",
               "disabled:cursor-wait disabled:opacity-70",
               if(@submit_disabled,
@@ -1047,7 +1241,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             id={@alt_menu_id <> "-toggle"}
             phx-click={JS.toggle(to: "#" <> @alt_menu_id)}
             title={dgettext("mishka_gervaz", "Other ways to create this")}
-            class="grid h-[42px] w-8 flex-none place-items-center rounded-e-[11px] border-s border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95"
+            class="grid h-[42px] w-8 flex-none place-items-center rounded-e-[11px] border-s border-white/25 bg-[linear-gradient(140deg,#6d69e6,#4f4bcc)] text-white hover:opacity-95 max-[640px]:h-11 max-[640px]:w-11"
           >
             <svg
               width="12"
@@ -1078,6 +1272,22 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
+
+  # A cancel or discard button asks its `confirm` only while the form holds changes.
+  defp dirty_confirm(button, %{dirty?: true}), do: browser_confirm(button[:confirm])
+  defp dirty_confirm(_button, _state), do: nil
+
+  # A `confirm` the browser asks through `data-confirm`; a question for the question window is
+  # asked by the form's save instead.
+  defp browser_confirm(confirm) do
+    if MishkaGervaz.Question.question?(confirm), do: nil, else: resolve_label(confirm)
+  end
+
+  # A wizard, and a tabs form whose steps open in order, move with Back and Next and save on their
+  # last step; a tabs form with `navigation :free` saves from any tab.
+  defp stepwise?(%{layout_mode: :wizard}), do: true
+  defp stepwise?(%{layout_mode: :tabs, layout_navigation: navigation}), do: navigation != :free
+  defp stepwise?(_static), do: false
 
   defp alternatives_for(%{submit_alternatives: alternatives}, %{mode: :create}, false)
        when is_list(alternatives),
@@ -1211,7 +1421,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_label, label)
         |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
-        |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
+        |> assign(
+          :wrapper_description,
+          resolve_dynamic(get_in_map(field, [:ui, :description]), assigns.state)
+        )
         |> assign(:disabled_prompt, disabled_prompt)
         |> assign(:is_loading, is_loading)
 
@@ -1249,7 +1462,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:wrapper_label, label)
         |> assign(:wrapper_errors, errors)
         |> assign(:wrapper_required, Map.get(field, :required, false))
-        |> assign(:wrapper_description, resolve_label(get_in_map(field, [:ui, :description])))
+        |> assign(
+          :wrapper_description,
+          resolve_dynamic(get_in_map(field, [:ui, :description]), assigns.state)
+        )
         |> assign(:wrapper_for, labelled_control(field, form_field, assigns))
         |> assign(:rendered_input, render_input(ui, field, form_field, assigns))
 
@@ -1270,7 +1486,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     end
   end
 
-  @grouped_controls [:string_list, :key_map, :key_list, :nested]
+  @grouped_controls [:string_list, :key_map, :key_list, :nested, :choice_cards, :segmented]
   @one_value_types ~w(password text email url tel hidden number textarea select date datetime range search_select combobox)a
 
   # The id of the one element a field's label names: none for a control that is a group of
@@ -1370,6 +1586,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:extra, get_in_map(field, [:ui, :extra]) || %{})
       |> put_present(:rows, get_in_map(field, [:ui, :rows]))
       |> put_present(:dir, get_in_map(field, [:ui, :extra, :dir]))
+      |> put_present(:maxlength, Map.get(field, :max_length))
 
     case type do
       :password ->
@@ -1378,6 +1595,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:readonly, is_readonly)
         |> assign(:function, :password_input)
         |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
+        |> put_units(field)
         |> dynamic_component()
 
       t when t in [:text, :email, :url, :tel, :hidden] ->
@@ -1386,6 +1604,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:readonly, is_readonly)
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
+        |> put_units(field)
         |> dynamic_component()
 
       :number ->
@@ -1396,6 +1615,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> put_present(:min, number_bound(Map.get(field, :min)))
         |> put_present(:max, number_bound(Map.get(field, :max)))
         |> put_present(:step, get_in_map(field, [:ui, :step]))
+        |> put_units(field)
         |> dynamic_component()
 
       :textarea ->
@@ -1414,34 +1634,43 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:prompt, MishkaGervaz.Form.Types.Field.Select.prompt(field))
         |> dynamic_component()
 
-      :multi_select ->
-        options = resolve_field_options(field, assigns.state)
-
+      kind when kind in [:choice_cards, :segmented] ->
         base
-        |> assign(:options, MishkaGervaz.Helpers.normalize_options(options))
+        |> assign(:function, choice_component(kind))
+        |> assign(:options, choice_options(field, assigns.state))
+        |> assign(:value, chosen_value(assigns.state.form, field.name))
+        |> dynamic_component()
+
+      :multi_select ->
+        base
+        |> assign(:options, choice_options(field, assigns.state))
         |> assign(:picked, picked_values(assigns.state.form, field.name))
         |> render_multi_select()
 
       :checkbox ->
         form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+        note = resolve_label(get_in_map(field, [:ui, :note]))
 
         base
         |> assign(:value, "true")
         |> assign(:checked, form_value in [true, "true"])
         |> assign(:hidden_input, true)
         |> assign(:function, :checkbox)
+        |> put_present(:label, note)
         |> dynamic_component()
-        |> boolean_box()
+        |> boolean_box(note)
 
       :toggle ->
         form_value = Phoenix.HTML.Form.input_value(assigns.state.form, field.name)
+        note = resolve_label(get_in_map(field, [:ui, :note]))
 
         base
         |> assign(:value, "true")
         |> assign(:checked, form_value in [true, "true"])
         |> assign(:function, :toggle_input)
+        |> put_present(:note, note)
         |> dynamic_component()
-        |> boolean_box()
+        |> boolean_box(note)
 
       kind when kind in [:date, :datetime] ->
         base
@@ -1541,25 +1770,49 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   # A `:multi_select` draws one checkbox per option, each named `name[]`, so a save sends the ticked
-  # values as a list. The empty value before them stands for none: with nothing ticked the save
+  # values as a list. An option's second line stands under its label. The empty value before them stands for none: with nothing ticked the save
   # still sends the field, as an empty list. A read-only field leaves it out, so its values are kept.
   defp render_multi_select(assigns) do
     ~H"""
     <div id={@id} data-role="gervaz-multi-select" class="flex flex-col gap-2 py-1">
       <input :if={!@disabled} type="hidden" name={@name <> "[]"} value="" />
       <.dynamic_component
-        :for={{{label, value}, index} <- Enum.with_index(@options)}
+        :for={{option, index} <- Enum.with_index(@options)}
         module={@module}
         function={:checkbox}
         id={"#{@id}-#{index}"}
         name={@name <> "[]"}
-        value={value}
-        label={label}
-        checked={value in @picked}
+        value={option.value}
+        label={option.label}
+        description={option.description}
+        icon={option.icon}
+        checked={option.value in @picked}
         disabled={@disabled}
       />
     </div>
     """
+  end
+
+  defp choice_component(:choice_cards), do: :choice_cards
+  defp choice_component(:segmented), do: :segmented_control
+
+  # The options of a `:choice_cards`, `:segmented` or `:multi_select` field, with the second line and
+  # the icon each may carry: a list, or a function of no arguments or of the form state, read on every draw.
+  defp choice_options(%{options: options}, state) when is_function(options, 1),
+    do: MishkaGervaz.Helpers.choice_options(options.(state))
+
+  defp choice_options(%{options: options}, _state) when is_function(options, 0),
+    do: MishkaGervaz.Helpers.choice_options(options.())
+
+  defp choice_options(field, _state),
+    do: MishkaGervaz.Helpers.choice_options(Map.get(field, :options))
+
+  defp chosen_value(form, name) do
+    case Phoenix.HTML.Form.input_value(form, name) do
+      value when is_binary(value) or is_number(value) -> to_string(value)
+      value when is_atom(value) and not is_nil(value) -> Atom.to_string(value)
+      _none -> nil
+    end
   end
 
   defp picked_values(form, name) do
@@ -2486,8 +2739,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   defp number_bound(bound) when is_number(bound), do: bound
+  defp number_bound(%Decimal{} = bound), do: Decimal.to_string(bound, :normal)
   defp number_bound(bound) when is_function(bound, 0), do: number_bound(bound.())
   defp number_bound(_bound), do: nil
+
+  # The `ui` `prefix` and `suffix` a text, password or number input draws beside its value.
+  defp put_units(assigns, field) do
+    assigns
+    |> put_present(:prefix, resolve_label(get_in_map(field, [:ui, :prefix])))
+    |> put_present(:suffix, resolve_label(get_in_map(field, [:ui, :suffix])))
+  end
 
   defp put_present(assigns, _key, nil), do: assigns
   defp put_present(assigns, key, value), do: assign(assigns, key, value)

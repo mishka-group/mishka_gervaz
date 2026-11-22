@@ -20,6 +20,8 @@ defmodule MishkaGervaz.Table.Types.Column do
   - `:tags` - List values as chips, with a `+N` expand toggle
   - `:avatars` - Related people as an overlapping avatar stack, with a `+N` expand toggle
   - `:link` - Clickable links
+  - `:site` - The site a row of a multi-tenant table belongs to, drawn only while the table reads
+    across tenants
 
   ## Usage in DSL
 
@@ -50,7 +52,8 @@ defmodule MishkaGervaz.Table.Types.Column do
       bars: {Column.Bars, []},
       tags: {Column.Tags, []},
       avatars: {Column.Avatars, []},
-      link: {Column.Link, []}
+      link: {Column.Link, []},
+      site: {Column.Site, []}
     },
     default: Column.Text
 

@@ -1,8 +1,8 @@
 defmodule MishkaGervaz.Form.Entities.Submit.Button do
   @moduledoc """
-  Single submit / cancel button configuration.
+  Single submit / cancel / discard button configuration.
 
-  Each button (create / update / cancel) is an independent entity with
+  Each button (create / update / cancel / discard) is an independent entity with
   its own `label`, `loading_label`, `active`, `disabled`, `restricted`, and `visible`
   options. Every option except the two labels accepts a boolean or a
   `fn state -> boolean() end` predicate.
@@ -21,6 +21,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
   @type t :: %__MODULE__{
           label: String.t() | (-> String.t()) | nil,
           loading_label: String.t() | (-> String.t()) | nil,
+          confirm: String.t() | (-> String.t()) | keyword() | nil,
           active: boolean() | (map() -> boolean()),
           disabled: boolean() | (map() -> boolean()),
           restricted: boolean() | (map() -> boolean()),
@@ -30,6 +31,7 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
 
   defstruct label: nil,
             loading_label: nil,
+            confirm: nil,
             active: true,
             disabled: false,
             restricted: false,
@@ -38,13 +40,26 @@ defmodule MishkaGervaz.Form.Entities.Submit.Button do
 
   @opt_schema [
                 label: [
-                  type: {:or, [:string, {:fun, 0}]},
-                  doc: "Button label. String or zero-arity function."
+                  type: {:or, [:string, {:fun, 0}, {:fun, 1}]},
+                  doc:
+                    "Button label. String, zero-arity function, or `fn state -> label end` given the form state each time the buttons are drawn, so one form names its button for what the mount's `defaults` ask it to do (`Pause`, `End now`)."
                 ],
                 loading_label: [
                   type: {:or, [:string, {:fun, 0}]},
                   doc:
                     "What the submit button reads while its save runs, such as \"Checking the connection…\". String or zero-arity function. Without it the button reads \"Uploading…\" on a form with uploads and \"Saving…\" on any other."
+                ],
+                confirm: [
+                  type:
+                    {:or,
+                     [
+                       :string,
+                       {:fun, 0},
+                       {:keyword_list,
+                        MishkaGervaz.Question.schema("the record the form edits, `nil` on create")}
+                     ]},
+                  doc:
+                    "A question the browser asks before the button acts, such as \"Discard your changes?\", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function. On `create` and `update`, a keyword list is asked in the UI adapter's question window instead, before the save: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label` (see `MishkaGervaz.Question`)."
                 ],
                 active: [
                   type: {:or, [:boolean, {:fun, 1}]},
@@ -70,7 +85,7 @@ end
 defmodule MishkaGervaz.Form.Entities.Submit do
   @moduledoc """
   Submit / cancel button block — the singleton entity that owns the
-  three button sub-entities (`create`, `update`, `cancel`), the `ui`
+  button sub-entities (`create`, `update`, `cancel`, `discard`), the `ui`
   styling sub-entity, and the `position` field (`:top`, `:bottom`, or
   `:both`).
 
@@ -109,6 +124,7 @@ defmodule MishkaGervaz.Form.Entities.Submit do
           create: Button.t() | nil,
           update: Button.t() | nil,
           cancel: Button.t() | nil,
+          discard: Button.t() | nil,
           position: :top | :bottom | :both,
           ui: __MODULE__.Ui.t() | nil,
           __spark_metadata__: map() | nil
@@ -117,6 +133,7 @@ defmodule MishkaGervaz.Form.Entities.Submit do
   defstruct create: nil,
             update: nil,
             cancel: nil,
+            discard: nil,
             position: :bottom,
             ui: nil,
             __spark_metadata__: nil
@@ -143,7 +160,8 @@ defmodule MishkaGervaz.Form.Entities.Submit do
      |> Helpers.extract_singleton_entity(:ui)
      |> Helpers.extract_singleton_entity(:create)
      |> Helpers.extract_singleton_entity(:update)
-     |> Helpers.extract_singleton_entity(:cancel)}
+     |> Helpers.extract_singleton_entity(:cancel)
+     |> Helpers.extract_singleton_entity(:discard)}
   end
 
   def transform(submit), do: {:ok, submit}

@@ -205,6 +205,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       search_field: field.search_field,
       value_field: field.value_field,
       readonly: field.readonly,
+      live_errors: Map.get(field, :live_errors, false),
       mode: field.mode,
       page_size: field.page_size,
       load_action: field.load_action || :read,
@@ -214,6 +215,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       min: field.min,
       max: field.max,
       min_chars: field.min_chars,
+      max_length: field.max_length,
       nested_fields: field.nested_fields,
       add_label: field.add_label,
       remove_label: field.remove_label,
@@ -396,6 +398,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       create: button_to_map(entity.create),
       update: button_to_map(entity.update),
       cancel: button_to_map(entity.cancel),
+      discard: button_to_map(entity.discard),
       position: entity.position,
       ui: maybe_ui(entity.ui)
     }
@@ -407,6 +410,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
     %{
       label: btn.label,
       loading_label: btn.loading_label,
+      confirm: btn.confirm,
       active: btn.active,
       disabled: btn.disabled,
       restricted: btn.restricted,

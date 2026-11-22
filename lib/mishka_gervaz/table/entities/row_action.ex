@@ -21,6 +21,7 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
           | :unarchive
           | :permanent_destroy
           | :row_click
+          | :drawer
 
   @type t :: %__MODULE__{
           name: atom(),
@@ -29,12 +30,14 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
           event: atom() | String.t() | nil,
           action: atom() | {atom(), atom()} | nil,
           payload: (map() -> map()) | nil,
-          confirm: String.t() | (map() -> String.t()) | nil,
+          confirm: String.t() | (map() -> String.t()) | keyword() | nil,
           restricted: boolean(),
           visible: boolean() | :active | :archived | (map(), map() -> boolean()),
           js: (map() -> Phoenix.LiveView.JS.t()) | nil,
           render:
             (map() -> any()) | (map(), map() -> any()) | (map(), map(), any() -> any()) | nil,
+          open: :form | (map() -> any()) | (map(), map() -> any()) | nil,
+          drawer: keyword(),
           ui: __MODULE__.Ui.t() | nil,
           type_module: module() | nil,
           __spark_metadata__: map() | nil
@@ -53,6 +56,8 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
     visible: :active,
     js: nil,
     render: nil,
+    open: nil,
+    drawer: [],
     ui: nil,
     type_module: nil,
     __spark_metadata__: nil
@@ -68,8 +73,11 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
     :accordion,
     :unarchive,
     :permanent_destroy,
-    :row_click
+    :row_click,
+    :drawer
   ]
+
+  @drawer_tones [:info, :ok, :warn, :danger, :mute]
 
   @opt_schema [
     name: [
@@ -87,7 +95,8 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
 
       Built-in types: #{Enum.map_join(@builtin_action_types, ", ", &inspect/1)}
 
-      Use :row_click to make entire row clickable.
+      Use :row_click to make entire row clickable, and :drawer to open the row in the table's
+      drawer (see `open` and `drawer`).
 
       Custom type example:
           action :archive, type: MyApp.Table.Actions.Archive
@@ -118,8 +127,14 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
       doc: "Event payload function `fn record -> payload`."
     ],
     confirm: [
-      type: {:or, [:string, {:fun, 1}]},
-      doc: "Confirmation message (supports {field} interpolation)."
+      type: {:or, [:string, {:fun, 1}, {:keyword_list, MishkaGervaz.Question.schema("the row")}]},
+      doc: """
+      A question asked before the action runs. A string or `fn record -> string end` is the
+      browser's own question (`data-confirm`). A keyword list is asked in the UI adapter's question
+      window: `title`, `body`, `tone` (`:danger`, `:warn`, `:info`), `answer` (a word to type before
+      the button answers, such as the row's name), `answer_label`, `confirm_label` and
+      `cancel_label`, each a string or `fn record -> string end`. See `MishkaGervaz.Question`.
+      """
     ],
     restricted: [
       type: :boolean,
@@ -140,6 +155,56 @@ defmodule MishkaGervaz.Table.Entities.RowAction do
       type: {:or, [{:fun, 1}, {:fun, 2}, {:fun, 3}]},
       doc:
         "Custom HEEx render function. `fn record -> ... end`, `fn record, action -> ... end`, or `fn record, action, target -> ... end`."
+    ],
+    open: [
+      type: {:or, [{:in, [:form]}, {:fun, 1}, {:fun, 2}]},
+      doc: """
+      What a `:drawer` action opens in the table's drawer for the row: `:form`, the resource's
+      own form editing the row, or a record view, `fn record -> ~H"..." end` (or
+      `fn record, state -> ... end`).
+      """
+    ],
+    drawer: [
+      type: :keyword_list,
+      default: [],
+      doc: """
+      The head of a `:drawer` action's drawer: `kind` (`:drawer`, the default, or `:sheet`),
+      `title`, `sub` (the line under it), `icon` (a heroicon drawn in a tile), `tone` (`:info`,
+      `:ok`, `:warn`, `:danger` or `:mute`), `chips` (labels or `{tone, label}` pairs),
+      `actions` (buttons, `fn record -> ~H"..." end`) and `actions_at` (`:foot` or `:head`).
+      Each value but `kind` and `actions_at` is a value or `fn record -> value end`; a string is
+      translated.
+      """,
+      keys: [
+        kind: [
+          type: {:in, [:drawer, :sheet]},
+          default: :drawer,
+          doc: "`:drawer`, a panel from the side, or `:sheet`, a bottom sheet."
+        ],
+        title: [type: {:or, [:string, {:fun, 1}]}, doc: "The heading."],
+        sub: [type: {:or, [:string, {:fun, 1}]}, doc: "The line under the heading."],
+        icon: [
+          type: {:or, [:string, {:fun, 1}]},
+          doc: "A heroicon name drawn in a tile before the heading."
+        ],
+        tone: [
+          type: {:or, [{:in, @drawer_tones}, {:fun, 1}]},
+          doc: "The tile's colours: #{Enum.map_join(@drawer_tones, ", ", &inspect/1)}."
+        ],
+        chips: [
+          type: {:or, [{:list, :any}, {:fun, 1}]},
+          doc: "Chips under the heading, each a label or a `{tone, label}` pair."
+        ],
+        actions: [
+          type: {:or, [{:fun, 1}, {:fun, 2}]},
+          doc: "Buttons, `fn record -> ~H\"...\" end`, drawn in the drawer's foot."
+        ],
+        actions_at: [
+          type: {:in, [:foot, :head]},
+          default: :foot,
+          doc: "Where the buttons go: `:foot` or `:head`, beside the close button."
+        ]
+      ]
     ]
   ]
 

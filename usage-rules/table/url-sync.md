@@ -54,6 +54,12 @@ The table sorts by the URL's sort fields that it sorts by itself: a sortable col
 not `sortable`, is left out. A sort that keeps no field opens the table's own sort, and a
 `:bidirectional` table writes the URL without it.
 
+A parameter that holds anything else than it may reads as missing: a map (`?t_sort[a]=b`), a list
+where a text belongs, or a text longer than `max_filter_length`. Null bytes and bytes that are no
+UTF-8 are cut. A filter takes a list (`a,b` or `[]=a&[]=b`) only as a `:relation` with
+`mode :search_multi`, and `%{from: _, to: _}` (`from~to`) only as a `:date_range`; a filter type of
+your own takes either, and a map of texts.
+
 A distinct `prefix` per table is what lets two tables share one page — and lets another page
 deep-link into this one:
 

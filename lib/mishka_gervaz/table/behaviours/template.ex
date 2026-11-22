@@ -42,6 +42,15 @@ defmodule MishkaGervaz.Table.Behaviours.Template do
         # ... implement other callbacks
       end
 
+  A template's root element carries the table's id and ends with
+  `MishkaGervaz.Table.Templates.Shared.render_overlays/1`, which draws what the table opens over
+  its rows, such as the drawer of a `:drawer` row action:
+
+      <div id={@static.id}>
+        ...
+        {MishkaGervaz.Table.Templates.Shared.render_overlays(assigns)}
+      </div>
+
   ## Using in DSL
 
       mishka_gervaz do

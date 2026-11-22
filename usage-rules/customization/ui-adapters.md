@@ -1,7 +1,7 @@
 # Custom UI adapters
 
 A **UI adapter** answers *how things look*: the button, the select, the badge, the cell. It is one
-module implementing `MishkaGervaz.Behaviours.UIAdapter` — 69 one-arity component functions, all
+module implementing `MishkaGervaz.Behaviours.UIAdapter` — 73 one-arity component functions, all
 supplied with defaults, so you override only what differs.
 
 Wire it in either DSL:
@@ -35,7 +35,7 @@ end
 ### The worked example that ships with the library
 
 `MishkaGervaz.UIAdapters.MediaGallery` is the smallest useful adapter — it changes exactly one
-component and inherits the other 68:
+component and inherits the other 72:
 
 ```elixir
 defmodule MishkaGervaz.UIAdapters.MediaGallery do
@@ -155,14 +155,15 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 
 ## The component list
 
-69 callbacks, grouped by what they render. Introspect the live list with
+77 callbacks, grouped by what they render. Introspect the live list with
 `MishkaGervaz.Behaviours.UIAdapter.component_functions/0`.
 
 - **Inputs** — `text_input` `select` `multi_select` `search_select` `load_more_select` `checkbox`
   `date_input` `datetime_input` `number_input` `textarea` `json_editor` `toggle_input`
-  `range_input` `string_list_input` `password_input` `combobox`
+  `range_input` `string_list_input` `password_input` `combobox` `choice_cards` `segmented_control`
 - **Actions & display** — `button` `icon` `badge` `copy_button` `spinner` `nav_link` `dropdown`
-- **State & status** — `empty_state` `error_state` `loading_state` `alert`
+- **State & status** — `empty_state` `error_state` `loading_state` `skeleton` `alert` `toast`
+- **Panels** — `drawer` `sheet` `window` `question`
 - **Table** — `table` `table_header` `th` `tr` `td` `date_range_container` `cell_empty`
   `cell_text` `cell_number` `cell_date` `cell_datetime` `cell_code` `cell_array` `cell_tags`
   `cell_avatars` `cell_stacked` `cell_stats` `cell_bars` `filter_reset_button` `archive_toggle`
@@ -174,8 +175,142 @@ All three end up behind the same `ui_adapter` DSL option, and all three fall bac
 
 One adapter serves **both** the table and the form — there is no separate form adapter.
 
+## Drawer and bottom sheet
+
+`drawer/1` is a panel from the right side (the left in a right-to-left page) that is a bottom
+sheet below 640px; `sheet/1` is a bottom sheet at every width. Both hold a form or any page
+content, are drawn hidden and open with `Phoenix.LiveView.JS` — no hook. Draw one with `show` under
+an `:if`, or keep it and run the Tailwind adapter's `show_drawer/2` / `show_sheet/2`:
+
+```heex
+<MishkaGervaz.Helpers.dynamic_component
+  :if={@editing?}
+  module={MishkaGervaz.UIAdapters.Tailwind}
+  function={:drawer}
+  id="product-drawer"
+  show
+  title={dgettext("mishka_gervaz", "Edit product")}
+  on_close={JS.push("close_editor")}
+  confirm_close={@product_form_dirty? && dgettext("mishka_gervaz", "Discard your changes?")}
+>
+  <.live_component module={MishkaGervaz.Form.Web.Live} id="product-form" … notify_dirty />
+  <:footer>…</:footer>
+</MishkaGervaz.Helpers.dynamic_component>
+```
+
+The close button and the backdrop run `on_close` and the close; with `confirm_close` they ask it
+first (`data-confirm`), and Escape closes only a panel without one. Keep `confirm_close` from the
+form's `{:form_dirty, id, dirty?}` ([../mounting.md](../mounting.md)). `:class` replaces the
+panel's width classes.
+
+### The head and the actions row
+
+The head can say what the panel is about: an icon in a tile (`icon`, coloured by `tone`: `:info`,
+`:ok`, `:warn`, `:danger`, `:mute`), the `title`, a `sub` line under it, which also describes the
+dialog, and `chips` under that, each a label or a `{tone, label}` pair. The `:actions` slot holds
+its buttons, in the foot (`actions_at: :foot`, the default) or in the head beside the close button
+(`actions_at: :head`); below 640px the foot's buttons are 48px tall and share the row.
+
+```heex
+<MishkaGervaz.Helpers.dynamic_component
+  module={MishkaGervaz.UIAdapters.Tailwind}
+  function={:drawer}
+  id="order-drawer"
+  show
+  icon="hero-receipt-percent"
+  tone={:info}
+  title={@order.number}
+  sub={@order.customer_name}
+  chips={[{:ok, "Paid"}, "Card"]}
+  on_close={JS.push("close_order")}
+>
+  <MyAppWeb.OrderViews.order order={@order} />
+  <:actions>
+    <button phx-click="refund" phx-value-id={@order.id}>Refund</button>
+  </:actions>
+</MishkaGervaz.Helpers.dynamic_component>
+```
+
+A table opens a row in this drawer with a `:drawer` row action
+([../table/row-actions.md](../table/row-actions.md)).
+
+## Window
+
+`window/1` is a window in the middle of the screen, for a form or a short page, that is a bottom
+sheet below 640px. It takes the drawer's assigns and opens and closes the same way, through
+`show_window/2` and `hide_window/2`: it grows in from a little smaller on a desktop and rises from
+the bottom on a phone. Its head and its foot stay while its body scrolls. `:class` replaces its
+width (`sm:w-[min(560px,calc(100vw-48px))]`).
+
+```heex
+<MishkaGervaz.Helpers.dynamic_component
+  :if={@noting?}
+  module={MishkaGervaz.UIAdapters.Tailwind}
+  function={:window}
+  id="order-note"
+  show
+  icon="hero-pencil-square"
+  title={dgettext("mishka_gervaz", "Note on the order")}
+  on_close={JS.push("close_note")}
+>
+  <form id="order-note-form" phx-submit="save_note">…</form>
+  <:footer>
+    <button type="submit" form="order-note-form">Save</button>
+  </:footer>
+</MishkaGervaz.Helpers.dynamic_component>
+```
+
+A window without a `title`, `icon`, `sub` or `chips` draws no head and puts its close button in the
+top corner, for a body that draws its own head (a gervaz form with a `header`). A window that stays
+rendered and holds a form whose page decides whether it may close takes `request_close`: the close
+button, the backdrop and Escape run it instead of closing, the page asks "Discard your changes?"
+when it must, and closes the window with `hide_window/2`, pushed to the
+client. Every panel keeps the focus inside it (`Phoenix.Component.focus_wrap/1`), puts it on its
+first field as it opens and gives it back as it closes; its close button is `<id>-close` and its
+body `<id>-body`.
+
+## Question window
+
+`question/1` is the confirm dialog a `confirm` keyword list asks (`MishkaGervaz.Question`): an alert
+dialog in the middle of the screen, a bottom sheet below 640px, with `title`, `body`, a `tone`
+(`:danger`, `:warn`, `:info`) that colours its button, and its `confirm_label` and
+`cancel_label`. It is a form: its button submits `on_confirm`, so Enter answers too, and Cancel,
+the backdrop and Escape send `on_cancel`. With an `answer`, a field named `answer` asks for it,
+each change sends `on_change`, and the button stays off until what was typed is the answer; an
+`error` is said under the field. The server draws it and takes it away: tables and forms draw it
+for their own questions, and a page draws one for its own with `MishkaGervaz.Question.window/1`.
+
+## Skeleton
+
+`skeleton/1` stands where content goes while it loads and holds its room: `type: :rows` (the
+default), `rows` placeholder rows the height of a table row (`row_class` for taller ones), or
+`type: :block`, a box of `lines` with its height in `class`. It is marked `aria-busy` and a screen
+reader hears its `text`. The table template draws it while it reads with no rows to show
+([../table/states.md](../table/states.md)); a page draws it for a block it reads with
+`assign_async`, as many rows as the block showed before, so a reload does not collapse it:
+
+```heex
+<.async_result :let={orders} assign={@latest_orders}>
+  <:loading>
+    <MishkaGervaz.UIAdapters.Tailwind.skeleton rows={@latest_shown || 5} />
+  </:loading>
+  <.order_row :for={order <- orders} order={order} />
+</.async_result>
+
+<MishkaGervaz.UIAdapters.Tailwind.skeleton type={:block} lines={4} class="h-[180px]" />
+```
+
+## Toast
+
+`toast/1` is one toast of a page's `MishkaGervaz.Toast.toasts/1` ([../mounting.md](../mounting.md)):
+a short dark note with a dot in its `tone`'s colour (`:ok`, `:info`, `:warn`, `:error`), its `text`,
+an Undo button when it has an `undo_label`, a link (`navigate`, or `href`, with `link_label`) and a
+Close. Its buttons send `gervaz_toast_undo` and `gervaz_toast_close` with `phx-value-id` set to its
+`toast_id`; the page's `Toast.attach/1` hook answers them. An adapter that draws its own keeps those
+two events and that value.
+
 ## TODO
-- [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 69 stubs
+- [ ] `use MishkaGervaz.Behaviours.UIAdapter` rather than `@behaviour` + 73 stubs
 - [ ] Only the components that genuinely differ are defined
 - [ ] A caller-supplied `class` wins over the adapter's default
 - [ ] `attr`/`:rest` declared so `phx-*` and `data-confirm` reach the DOM

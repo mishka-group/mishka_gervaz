@@ -22,7 +22,7 @@ defmodule MishkaGervaz.Table.Entities.BulkAction do
           name: atom(),
           type: action_type() | nil,
           action: atom() | {atom(), atom()} | nil,
-          confirm: boolean() | String.t() | nil,
+          confirm: boolean() | String.t() | keyword() | nil,
           event: atom() | nil,
           payload: (MapSet.t() -> map()) | nil,
           restricted: boolean(),
@@ -79,9 +79,16 @@ defmodule MishkaGervaz.Table.Entities.BulkAction do
       """
     ],
     confirm: [
-      type: {:or, [:boolean, :string]},
+      type:
+        {:or,
+         [
+           :boolean,
+           :string,
+           {:keyword_list,
+            MishkaGervaz.Question.schema("the number of rows, `nil` when the table cannot tell")}
+         ]},
       doc:
-        "Confirmation text shown before the action runs. `{count}` becomes the number of rows the action runs on: the checked rows, or with select all the table's total minus the unchecked rows. With select all, `{count}` stays as written for a `:load_more` or `:infinite` table with `show_total false` while rows are left to load."
+        "Confirmation text shown before the action runs. `{count}` becomes the number of rows the action runs on: the checked rows, or with select all the table's total minus the unchecked rows. With select all, `{count}` stays as written for a `:load_more` or `:infinite` table with `show_total false` while rows are left to load. A keyword list is asked in the UI adapter's question window instead of the browser's: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label`, `{count}` in each (see `MishkaGervaz.Question`)."
     ],
     event: [
       type: :atom,

@@ -86,7 +86,8 @@ end
 `class` · `header_class` · `extra` (map).
 
 **`ui.type` values with a built-in renderer:** `:text` (default) · `:boolean` · `:number` ·
-`:date` · `:datetime` · `:uuid` · `:array` · `:badge` · `:bars` · `:tags` · `:avatars` · `:link`.
+`:date` · `:datetime` · `:uuid` · `:array` · `:badge` · `:bars` · `:tags` · `:avatars` · `:link` ·
+`:site`.
 
 The schema also accepts `:currency` `:percentage` `:time` `:image` `:avatar` `:progress` `:json`
 `:custom` — **these have no renderer module**. Use them only alongside your own `render`, or point
@@ -110,6 +111,30 @@ ui do type :avatars; extra %{max_items: 3, label_field: :display_name, tints: %{
 ```
 
 Inline form works too: `column :inserted_at, sortable: true, visible: false, label: fn -> … end`.
+
+## The Site column of a multi-tenant table
+
+A table that reads across tenants, as a master's read of every site does, shows rows of many sites.
+`ui do type :site end` names the site of each row, and is drawn only while the table reads with no
+tenant (`Shared.across_tenants?/1`): a site's admin, and any read under one tenant, never gets the
+column. Read the site with the row for masters only, so nobody else pays for it:
+
+```elixir
+source do
+  preload do
+    master [:site]
+  end
+end
+
+columns do
+  column :site do
+    source {:site, :name}           # or the site itself when it has a :name
+    ui do type :site; width "130px" end
+  end
+end
+```
+
+A `visible` function of its own replaces the rule; `fn _state -> true end` always draws it.
 
 ## Five ways to change what a cell shows — compared
 

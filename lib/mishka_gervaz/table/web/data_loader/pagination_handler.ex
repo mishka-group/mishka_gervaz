@@ -51,7 +51,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
 
       @doc """
       Load a page of data with the given query, action, and tenant.
-      Returns tuple of {page, page_result, reset?, pagination_info}.
+      Returns tuple of {page, page_result, reset?, pagination_info}, or `{:error, error}` when the
+      read answers with an error: the table then shows its error state and logs one line.
 
       The page holds every row its page options ask for. A read action whose `max_page_size` is
       smaller returns at most that many rows a read, so the rest are read after them, as many reads
@@ -78,19 +79,22 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       bulk action, reads the first N pages, so the rows the reader had stay.
       """
       @spec load_page(State.t(), Ash.Query.t(), integer(), atom(), any()) ::
-              {integer(), Ash.Page.page() | map(), boolean(), map()}
+              {integer(), Ash.Page.page() | map(), boolean(), map()} | {:error, Ash.Error.t()}
       def load_page(state, query, page, action, tenant) do
         page_size = state.current_page_size || state.static.page_size
 
         if is_nil(state.static.config[:pagination]) or is_nil(page_size) do
-          read_result =
-            query
-            |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
-            |> Ash.read!()
+          query
+          |> Ash.Query.for_read(action, %{}, actor: state.current_user, tenant: tenant)
+          |> Ash.read()
+          |> case do
+            {:ok, read_result} ->
+              results = extract_results(read_result)
+              {1, %{results: results, count: length(results), more?: false}, true, %{}}
 
-          results = extract_results(read_result)
-          page_result = %{results: results, count: length(results), more?: false}
-          {1, page_result, true, %{}}
+            {:error, error} ->
+              {:error, error}
+          end
         else
           pagination_type = get_pagination_type(state)
           count? = count_requested?(state, pagination_type)
@@ -100,17 +104,20 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
           read_query =
             Ash.Query.for_read(query, action, %{}, actor: state.current_user, tenant: tenant)
 
-          page_result =
-            read_page(
-              read_query,
-              keyset_opts(state, kind, read_query, page_size, count?),
-              page_opts(state, kind, page, page_size, pagination_type, count?, keep?)
-            )
+          read_query
+          |> read_page(
+            keyset_opts(state, kind, read_query, page_size, count?),
+            page_opts(state, kind, page, page_size, pagination_type, count?, keep?)
+          )
+          |> case do
+            {:ok, page_result} ->
+              {page, page_result,
+               kind == :reset and (reset_stream?(pagination_type, page) or keep?),
+               build_pagination_info(pagination_type, page_result, page_size, count?)}
 
-          pagination_info = build_pagination_info(pagination_type, page_result, page_size, count?)
-
-          {page, page_result, kind == :reset and (reset_stream?(pagination_type, page) or keep?),
-           pagination_info}
+            {:error, error} ->
+              {:error, error}
+          end
         end
       end
 
@@ -178,19 +185,23 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
       defp cursor(%State{before_keyset: keyset}, :earlier), do: {:before, keyset}
       defp cursor(_state, :reset), do: nil
 
-      @spec read_page(Ash.Query.t(), keyword() | nil, keyword()) :: Ash.Page.page()
-      defp read_page(query, nil, page_opts),
-        do: query |> Ash.read!(page: page_opts) |> read_rest(query, page_opts)
+      @spec read_page(Ash.Query.t(), keyword() | nil, keyword()) ::
+              {:ok, Ash.Page.page()} | {:error, Ash.Error.t()}
+      defp read_page(query, nil, page_opts) do
+        with {:ok, page} <- Ash.read(query, page: page_opts),
+             do: read_rest(page, query, page_opts)
+      end
 
       defp read_page(query, keyset_opts, page_opts) do
         case Ash.read(query, page: keyset_opts) do
           {:ok, page} -> read_rest(page, query, keyset_opts)
           {:error, %Ash.Error.Invalid{}} -> read_page(query, nil, page_opts)
-          {:error, error} -> raise Ash.Error.to_error_class(error)
+          {:error, error} -> {:error, error}
         end
       end
 
-      @spec read_rest(Ash.Page.page(), Ash.Query.t(), keyword()) :: Ash.Page.page()
+      @spec read_rest(Ash.Page.page(), Ash.Query.t(), keyword()) ::
+              {:ok, Ash.Page.page()} | {:error, Ash.Error.t()}
       defp read_rest(page, query, opts),
         do: read_rest(page, query, opts, direction(opts), opts[:limit])
 
@@ -202,12 +213,14 @@ defmodule MishkaGervaz.Table.Web.DataLoader.PaginationHandler do
              limit
            )
            when length(rows) < limit do
-        rest = Ash.read!(query, page: rest_opts(direction, rows, opts, limit - length(rows)))
-        rows = join_rows(direction, rows, rest.results)
-        read_rest(%{page | results: rows, more?: rest.more?}, query, opts, direction, limit)
+        with {:ok, rest} <-
+               Ash.read(query, page: rest_opts(direction, rows, opts, limit - length(rows))) do
+          rows = join_rows(direction, rows, rest.results)
+          read_rest(%{page | results: rows, more?: rest.more?}, query, opts, direction, limit)
+        end
       end
 
-      defp read_rest(page, _query, _opts, _direction, _limit), do: page
+      defp read_rest(page, _query, _opts, _direction, _limit), do: {:ok, page}
 
       @spec direction(keyword()) :: :after | :before | :offset
       defp direction(opts) do

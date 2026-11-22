@@ -15,6 +15,29 @@ defmodule MishkaGervaz.Table.Web.DataLoader.Helpers do
           select_all?: boolean()
         }
 
+  require Logger
+
+  alias MishkaGervaz.Errors.Data.LoadFailed
+
+  @log_length 500
+
+  @doc """
+  Logs a load whose read answered with an error as one warning: the resource, the page and the start
+  of the error's message.
+  """
+  @spec log_failed_load(Exception.t()) :: :ok
+  def log_failed_load(%LoadFailed{reason: reason} = error) do
+    summary = reason |> reason_text() |> String.split() |> Enum.join(" ")
+
+    Logger.warning(
+      "[mishka_gervaz] " <>
+        Exception.message(%{error | reason: String.slice(summary, 0, @log_length)})
+    )
+  end
+
+  defp reason_text(reason) when is_exception(reason), do: Exception.message(reason)
+  defp reason_text(reason), do: inspect(reason)
+
   @doc """
   Rewrites the order of every entry in `sorts` whose field belongs to
   `db_fields`, leaving the rest untouched.

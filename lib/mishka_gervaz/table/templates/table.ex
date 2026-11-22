@@ -68,7 +68,15 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
   @impl true
   def default_options do
-    [show_header: true, striped: false, hoverable: true, bordered: false, compact: false]
+    [
+      show_header: true,
+      striped: false,
+      hoverable: true,
+      bordered: false,
+      compact: false,
+      highlight_arrivals: true,
+      skeleton_rows: nil
+    ]
   end
 
   @impl true
@@ -90,8 +98,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
     show_pagination = :paginate in features
     show_bulk_actions = :bulk_actions in features and show_checkboxes
 
-    show_template_switcher =
-      static.switchable_templates != nil and static.switchable_templates != []
+    show_template_switcher = Shared.show_switcher?(static)
 
     show_expand = :expand in features and Shared.expandable_rows?(static.row_actions, state)
 
@@ -102,6 +109,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
       pagination_type(static) == :infinite and state.has_more?
 
     viewport_event = if is_infinite_scroll?, do: "load_more", else: nil
+    footer_load_more? = Shared.load_more_at_footer?(static)
+    reading_with_no_rows? = Shared.reading_with_no_rows?(state)
 
     grid_template =
       grid_template_columns(
@@ -124,9 +133,12 @@ defmodule MishkaGervaz.Table.Templates.Table do
       |> assign(:features, features)
       |> assign(:infinite_scroll?, is_infinite_scroll?)
       |> assign(:viewport_event, viewport_event)
+      |> assign(:footer_load_more?, footer_load_more? and show_pagination)
+      |> assign(:reading_with_no_rows?, reading_with_no_rows?)
       |> assign_new(:before_table, fn -> nil end)
       |> assign_new(:rail, fn -> nil end)
       |> assign_new(:filter_actions, fn -> nil end)
+      |> assign_new(:table_footer, fn -> nil end)
 
     ~H"""
     <div id={@static.id} class="mishka-gervaz-table">
@@ -195,7 +207,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
             <.render_loading_overlay
               :if={
                 @state.has_initial_data? and @state.loading == :loading and
-                  @state.loading_type == :reset
+                  @state.loading_type == :reset and not @reading_with_no_rows?
               }
               static={@static}
               state={@state}
@@ -231,7 +243,35 @@ defmodule MishkaGervaz.Table.Templates.Table do
                   myself={@myself}
                 />
               </div>
+              <div :if={@reading_with_no_rows?} class="min-[980px]:col-span-full">
+                <.dynamic_component
+                  module={@static.ui_adapter}
+                  function={:skeleton}
+                  rows={Shared.skeleton_rows(@static, @state)}
+                  text={translate_text(@static.pagination_ui.loading_text)}
+                />
+              </div>
             </div>
+          </div>
+
+          <div
+            :if={
+              (@table_footer not in [nil, []] or @footer_load_more?) and not @empty? and
+                not @failed?
+            }
+            data-role="gervaz-table-footer"
+            class="mt-3 flex flex-wrap items-center justify-between gap-3 px-1 text-[12.5px] font-semibold text-[#8a877f]"
+          >
+            <%= if @table_footer not in [nil, []] do %>
+              {render_slot(@table_footer, Shared.table_counts(@state))}
+            <% end %>
+            <Shared.render_load_more
+              :if={@footer_load_more?}
+              static={@static}
+              state={@state}
+              myself={@myself}
+              class="ms-auto h-[38px] rounded-[11px] border border-[#dcdbf5] bg-[#f2f1fc] px-[18px] text-[12.5px] font-bold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+            />
           </div>
 
           <div
@@ -257,6 +297,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
             static={@static}
             state={@state}
             myself={@myself}
+            footer_load_more?={@footer_load_more?}
           />
           {render_notices_at(assigns, :after_pagination)}
 
@@ -265,6 +306,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
       </div>
 
       {render_chrome_footer(assigns)}
+      {Shared.render_overlays(assigns)}
     </div>
     """
   end
@@ -632,6 +674,25 @@ defmodule MishkaGervaz.Table.Templates.Table do
     end
   end
 
+  # A row that arrived by a stream insert after the table loaded wears a highlight that fades in a
+  # few seconds: an overlay that starts opaque (`starting:`, CSS `@starting-style`) and fades as it is
+  # first drawn. `template_options highlight_arrivals: false` turns it off.
+  defp highlight_arrival?(static, record) do
+    (static.template_options || [])[:highlight_arrivals] != false and Shared.arrived?(record)
+  end
+
+  # What the row's link reads to a screen reader: the first shown column's value when it is plain
+  # text or a number, "Open" otherwise.
+  defp row_link_label(%{visible_columns: [column | _], record: record}) do
+    case get_cell_value(record, column) do
+      value when is_binary(value) and value != "" -> value
+      value when is_number(value) -> to_string(value)
+      _other -> dgettext("mishka_gervaz", "Open")
+    end
+  end
+
+  defp row_link_label(_assigns), do: dgettext("mishka_gervaz", "Open")
+
   defp find_matching_override([], _record), do: nil
 
   defp find_matching_override(overrides, record) do
@@ -692,11 +753,17 @@ defmodule MishkaGervaz.Table.Templates.Table do
     is_expanded = expandable? and assigns.state.expanded_id == to_string(assigns.record.id)
     filtered_row_actions = Shared.non_accordion_actions(assigns.static.row_actions)
 
+    row_path = Shared.row_path(assigns.static, assigns.record, assigns.state)
+
     assigns =
       assigns
       |> assign(:expandable?, expandable?)
       |> assign(:is_expanded, is_expanded)
       |> assign(:filtered_row_actions, filtered_row_actions)
+      |> assign(:row_path, row_path)
+      |> assign(:above_link, row_path && "relative z-[1]")
+      |> assign(:row_link_label, row_path && row_link_label(assigns))
+      |> assign(:arrived?, highlight_arrival?(assigns.static, assigns.record))
 
     ~H"""
     <div
@@ -710,10 +777,29 @@ defmodule MishkaGervaz.Table.Templates.Table do
       <div class={[
         "gervaz-row grid py-[14px] items-center transition-colors",
         subgrid_class(),
+        @row_path && "relative cursor-pointer",
+        @arrived? && "relative",
         "max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
         | row_classes(@static, @state, @record, @is_checked)
       ]}>
-        <div :if={@show_checkboxes} class="flex items-center ps-[16px] max-[980px]:ps-0!">
+        <.link
+          :if={@row_path}
+          navigate={@row_path}
+          data-role="gervaz-row-link"
+          class="absolute inset-0 z-0 rounded-[inherit] outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5b57d6]"
+        >
+          <span class="sr-only">{@row_link_label}</span>
+        </.link>
+        <span
+          :if={@arrived?}
+          aria-hidden="true"
+          data-role="gervaz-row-arrived"
+          class="pointer-events-none absolute inset-0 z-0 bg-[#fff1c2] opacity-0 mix-blend-multiply transition-opacity duration-[2400ms] ease-out starting:opacity-100"
+        />
+        <div
+          :if={@show_checkboxes}
+          class={["flex items-center ps-[16px] max-[980px]:ps-0!", @above_link]}
+        >
           <.dynamic_component
             module={@static.ui_adapter}
             function={:checkbox}
@@ -725,7 +811,10 @@ defmodule MishkaGervaz.Table.Templates.Table do
         </div>
         <div
           :if={@show_expand}
-          class="flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:end-[12px]"
+          class={[
+            "flex items-center max-[980px]:absolute max-[980px]:top-[12px] max-[980px]:end-[12px]",
+            @row_path && "z-[1] min-[980px]:relative"
+          ]}
         >
           <button
             :if={@expandable?}
@@ -768,7 +857,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
           data-role="gervaz-row-actions"
           class={[
             "flex items-center justify-end px-[16px] max-[980px]:px-0!",
-            sticky_actions_class(@static, true)
+            sticky_actions_class(@static, true),
+            @above_link
           ]}
         >
           <Shared.render_row_actions
@@ -837,9 +927,12 @@ defmodule MishkaGervaz.Table.Templates.Table do
   defp expanded_content(content), do: Phoenix.HTML.raw(content)
 
   @doc """
-  The default loading state: the table's own header, and a spinner where the rows will be.
+  The default loading state, before the table's first read returns: the table's own header, and its
+  frame with placeholder rows (the UI adapter's `skeleton/1`, `Shared.skeleton_rows/2` of them)
+  where the rows will be, so the table holds about the room its rows will take. A screen reader
+  hears the pagination's `loading_text`.
 
-  Without a state there is no header to draw, and this is the spinner alone.
+  Without a state there is no header to draw, and the frame holds five placeholder rows.
   """
   @impl true
   def render_loading(assigns) do
@@ -849,14 +942,29 @@ defmodule MishkaGervaz.Table.Templates.Table do
 
     assigns = assign(assigns, :loading_text, loading_text)
 
+    assigns =
+      assigns
+      |> assign(:skeleton_rows, Shared.skeleton_rows(assigns[:static], assigns[:state]))
+      |> assign(
+        :ui,
+        (assigns[:static] && assigns.static.ui_adapter) || MishkaGervaz.UIAdapters.Tailwind
+      )
+
     ~H"""
     <div class="mishka-gervaz-table">
       {@static && @state && render_chrome_header(assigns)}
 
-      <div class="py-12 text-center">
-        <div class="inline-block size-8 animate-spin rounded-full border-4 border-[#dcdbf5] border-t-[#5b57d6]">
-        </div>
-        <p class="mt-2 text-[12.5px] font-medium text-[#8a877f]">{@loading_text}</p>
+      <div
+        data-role="gervaz-table-frame"
+        class="overflow-hidden rounded-[16px] border border-[#ecebe6] bg-white shadow-[0_1px_2px_rgba(30,28,24,0.04)]"
+      >
+        <div aria-hidden="true" class="h-[45px] border-b border-[#ecebe6] bg-[#faf9f6]"></div>
+        <.dynamic_component
+          module={@ui}
+          function={:skeleton}
+          rows={@skeleton_rows}
+          text={@loading_text}
+        />
       </div>
     </div>
     """

@@ -32,7 +32,7 @@ end
 | `type` | `:event` \| `:destroy` \| `:update` \| `:unarchive` \| `:permanent_destroy` | — | resolves the handler automatically |
 | `action` | atom \| `{master, tenant}` | — | the Ash action for `:update` |
 | `handler` | `:parent` \| `fn ids, state -> {:ok, state}` \| atom \| `{master, tenant}` | `:parent` | explicit handler wins over `type` |
-| `confirm` | bool \| string | — | `{count}` becomes the number of rows the action runs on; with select all on a `:load_more` or `:infinite` table with `show_total false`, it stays as written while rows are left to load |
+| `confirm` | bool \| string \| keyword list | — | `{count}` becomes the number of rows the action runs on; with select all on a `:load_more` or `:infinite` table with `show_total false`, it stays as written while rows are left to load. A keyword list asks in the question window, below |
 | `event` | atom | action name | for `:event` type |
 | `payload` | `fn selected_ids -> map` | — | |
 | `restricted` | bool | `false` | master-only |
@@ -81,6 +81,23 @@ handler's default flash fires. See [hooks.md](hooks.md).
 
 - A `bulk_actions do … end` block must define at least one action.
 - Any bulk action makes `source.actions.get` required; a `:destroy` one makes `destroy` required.
+
+## Asking in the question window
+
+A `confirm` given as a keyword list is asked in the UI adapter's question window, drawn by the
+table, instead of the browser's dialog: the same keys as a row action's
+([row-actions.md](row-actions.md)), `{count}` in each string, and a function is given the count
+(`nil` when the table cannot tell). The action runs on the rows picked when its window answers.
+
+```elixir
+action :purge, type: :permanent_destroy,
+  confirm: [
+    title: "Delete {count} products for good?",
+    body: "Their files and sales history go with them.",
+    answer: "DELETE",
+    confirm_label: "Delete {count}"
+  ]
+```
 
 ## TODO
 - [ ] `row do selectable true end` declared

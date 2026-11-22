@@ -505,6 +505,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       visible: action.visible,
       js: action.js,
       render: action.render,
+      open: action.open,
+      drawer: action.drawer || [],
       type_module: action.type_module,
       ui: maybe_ui(ui, &action_ui_to_map/1, &has_action_ui_values?/1)
     }
@@ -538,11 +540,12 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
 
     event = get_opt(dsl_state, path, :event)
     payload = get_opt(dsl_state, path, :payload)
+    row_path = get_opt(dsl_state, path, :path)
     selectable = get_opt(dsl_state, path, :selectable)
     class_possible = get_opt(dsl_state, class_path, :possible)
     class_apply = get_opt(dsl_state, class_path, :apply)
 
-    if overrides != [] or any_set?([event, selectable, class_possible, class_apply]) do
+    if overrides != [] or any_set?([event, row_path, selectable, class_possible, class_apply]) do
       class_section =
         if class_possible != nil or class_apply != nil,
           do: %{possible: class_possible || [], apply: class_apply},
@@ -553,6 +556,7 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
         overrides: Enum.map(overrides, &row_override_to_map/1),
         event: event,
         payload: payload,
+        path: row_path,
         selectable: default_if_nil(selectable, false)
       }
     else
@@ -644,7 +648,8 @@ defmodule MishkaGervaz.Table.Transformers.BuildRuntimeConfig do
       next_label: ui.next_label,
       first_label: ui.first_label,
       last_label: ui.last_label,
-      page_info_format: ui.page_info_format
+      page_info_format: ui.page_info_format,
+      load_more_at: ui.load_more_at
     }
   end
 

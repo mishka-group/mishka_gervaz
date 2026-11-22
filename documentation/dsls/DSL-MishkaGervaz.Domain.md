@@ -121,6 +121,7 @@ MishkaGervaz domain configuration for shared table and form defaults.
      * create
      * update
      * cancel
+     * discard
      * ui
    * actions
    * theme
@@ -325,6 +326,7 @@ UI/presentation configuration for pagination.
 | [`first_label`](#mishka_gervaz-table-pagination-ui-first_label){: #mishka_gervaz-table-pagination-ui-first_label } | `String.t` | `"First"` | First page button text. |
 | [`last_label`](#mishka_gervaz-table-pagination-ui-last_label){: #mishka_gervaz-table-pagination-ui-last_label } | `String.t` | `"Last"` | Last page button text. |
 | [`page_info_format`](#mishka_gervaz-table-pagination-ui-page_info_format){: #mishka_gervaz-table-pagination-ui-page_info_format } | `String.t` | `"Page {page} of {total}"` | Page info format. Placeholders: {page}, {total} and {count}. |
+| [`load_more_at`](#mishka_gervaz-table-pagination-ui-load_more_at){: #mishka_gervaz-table-pagination-ui-load_more_at } | `:pager \| :footer` | `:pager` | Where a `:load_more` table draws its Load more: `:pager`, in the middle of the pager, or `:footer`, at the end of the table's footer row, beside the `table_footer` slot. |
 
 
 
@@ -353,6 +355,7 @@ Form configuration inherited by all resources in this domain.
    * create
    * update
    * cancel
+   * discard
    * ui
 
 
@@ -441,6 +444,7 @@ Submit and cancel button configuration.
  * [create](#mishka_gervaz-form-submit-create)
  * [update](#mishka_gervaz-form-submit-update)
  * [cancel](#mishka_gervaz-form-submit-cancel)
+ * [discard](#mishka_gervaz-form-submit-discard)
  * [ui](#mishka_gervaz-form-submit-ui)
 
 
@@ -468,8 +472,9 @@ create button configuration.
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`label`](#mishka_gervaz-form-submit-create-label){: #mishka_gervaz-form-submit-create-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`label`](#mishka_gervaz-form-submit-create-label){: #mishka_gervaz-form-submit-create-label } | `String.t \| (-> any) \| (any -> any)` |  | Button label. String, zero-arity function, or `fn state -> label end` given the form state each time the buttons are drawn, so one form names its button for what the mount's `defaults` ask it to do (`Pause`, `End now`). |
 | [`loading_label`](#mishka_gervaz-form-submit-create-loading_label){: #mishka_gervaz-form-submit-create-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
+| [`confirm`](#mishka_gervaz-form-submit-create-confirm){: #mishka_gervaz-form-submit-create-confirm } | `String.t \| (-> any) \| [title: String.t \| (any -> any), body: String.t \| (any -> any), tone: :danger \| :warn \| :info, answer: String.t \| (any -> any), answer_label: String.t \| (any -> any), confirm_label: String.t \| (any -> any), cancel_label: String.t \| (any -> any)]` |  | A question the browser asks before the button acts, such as "Discard your changes?", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function. On `create` and `update`, a keyword list is asked in the UI adapter's question window instead, before the save: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label` (see `MishkaGervaz.Question`). |
 | [`active`](#mishka_gervaz-form-submit-create-active){: #mishka_gervaz-form-submit-create-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-create-disabled){: #mishka_gervaz-form-submit-create-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-create-visible){: #mishka_gervaz-form-submit-create-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
@@ -497,8 +502,9 @@ update button configuration.
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`label`](#mishka_gervaz-form-submit-update-label){: #mishka_gervaz-form-submit-update-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`label`](#mishka_gervaz-form-submit-update-label){: #mishka_gervaz-form-submit-update-label } | `String.t \| (-> any) \| (any -> any)` |  | Button label. String, zero-arity function, or `fn state -> label end` given the form state each time the buttons are drawn, so one form names its button for what the mount's `defaults` ask it to do (`Pause`, `End now`). |
 | [`loading_label`](#mishka_gervaz-form-submit-update-loading_label){: #mishka_gervaz-form-submit-update-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
+| [`confirm`](#mishka_gervaz-form-submit-update-confirm){: #mishka_gervaz-form-submit-update-confirm } | `String.t \| (-> any) \| [title: String.t \| (any -> any), body: String.t \| (any -> any), tone: :danger \| :warn \| :info, answer: String.t \| (any -> any), answer_label: String.t \| (any -> any), confirm_label: String.t \| (any -> any), cancel_label: String.t \| (any -> any)]` |  | A question the browser asks before the button acts, such as "Discard your changes?", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function. On `create` and `update`, a keyword list is asked in the UI adapter's question window instead, before the save: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label` (see `MishkaGervaz.Question`). |
 | [`active`](#mishka_gervaz-form-submit-update-active){: #mishka_gervaz-form-submit-update-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-update-disabled){: #mishka_gervaz-form-submit-update-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-update-visible){: #mishka_gervaz-form-submit-update-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
@@ -526,12 +532,43 @@ cancel button configuration.
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`label`](#mishka_gervaz-form-submit-cancel-label){: #mishka_gervaz-form-submit-cancel-label } | `String.t \| (-> any)` |  | Button label. String or zero-arity function. |
+| [`label`](#mishka_gervaz-form-submit-cancel-label){: #mishka_gervaz-form-submit-cancel-label } | `String.t \| (-> any) \| (any -> any)` |  | Button label. String, zero-arity function, or `fn state -> label end` given the form state each time the buttons are drawn, so one form names its button for what the mount's `defaults` ask it to do (`Pause`, `End now`). |
 | [`loading_label`](#mishka_gervaz-form-submit-cancel-loading_label){: #mishka_gervaz-form-submit-cancel-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
+| [`confirm`](#mishka_gervaz-form-submit-cancel-confirm){: #mishka_gervaz-form-submit-cancel-confirm } | `String.t \| (-> any) \| [title: String.t \| (any -> any), body: String.t \| (any -> any), tone: :danger \| :warn \| :info, answer: String.t \| (any -> any), answer_label: String.t \| (any -> any), confirm_label: String.t \| (any -> any), cancel_label: String.t \| (any -> any)]` |  | A question the browser asks before the button acts, such as "Discard your changes?", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function. On `create` and `update`, a keyword list is asked in the UI adapter's question window instead, before the save: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label` (see `MishkaGervaz.Question`). |
 | [`active`](#mishka_gervaz-form-submit-cancel-active){: #mishka_gervaz-form-submit-cancel-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
 | [`disabled`](#mishka_gervaz-form-submit-cancel-disabled){: #mishka_gervaz-form-submit-cancel-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
 | [`visible`](#mishka_gervaz-form-submit-cancel-visible){: #mishka_gervaz-form-submit-cancel-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
 | [`restricted`](#mishka_gervaz-form-submit-cancel-restricted){: #mishka_gervaz-form-submit-cancel-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
+
+
+
+
+
+### Introspection
+
+Target: `MishkaGervaz.Form.Entities.Submit.Button`
+
+### mishka_gervaz.form.submit.discard
+
+
+discard button configuration.
+
+
+
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`label`](#mishka_gervaz-form-submit-discard-label){: #mishka_gervaz-form-submit-discard-label } | `String.t \| (-> any) \| (any -> any)` |  | Button label. String, zero-arity function, or `fn state -> label end` given the form state each time the buttons are drawn, so one form names its button for what the mount's `defaults` ask it to do (`Pause`, `End now`). |
+| [`loading_label`](#mishka_gervaz-form-submit-discard-loading_label){: #mishka_gervaz-form-submit-discard-loading_label } | `String.t \| (-> any)` |  | What the submit button reads while its save runs, such as "Checking the connection…". String or zero-arity function. Without it the button reads "Uploading…" on a form with uploads and "Saving…" on any other. |
+| [`confirm`](#mishka_gervaz-form-submit-discard-confirm){: #mishka_gervaz-form-submit-discard-confirm } | `String.t \| (-> any) \| [title: String.t \| (any -> any), body: String.t \| (any -> any), tone: :danger \| :warn \| :info, answer: String.t \| (any -> any), answer_label: String.t \| (any -> any), confirm_label: String.t \| (any -> any), cancel_label: String.t \| (any -> any)]` |  | A question the browser asks before the button acts, such as "Discard your changes?", through `data-confirm`. A `cancel` or `discard` button asks it only while the form holds changes; `create` and `update` ask it on every save. String or zero-arity function. On `create` and `update`, a keyword list is asked in the UI adapter's question window instead, before the save: `title`, `body`, `tone`, `answer`, `answer_label`, `confirm_label` and `cancel_label` (see `MishkaGervaz.Question`). |
+| [`active`](#mishka_gervaz-form-submit-discard-active){: #mishka_gervaz-form-submit-discard-active } | `boolean \| (any -> any)` | `true` | Whether the button is active. Boolean or `fn state -> boolean end`. Set to `false` to suppress a button inherited from the domain. Resource-only. |
+| [`disabled`](#mishka_gervaz-form-submit-discard-disabled){: #mishka_gervaz-form-submit-discard-disabled } | `boolean \| (any -> any)` | `false` | Disable button. Boolean or `fn state -> boolean end`. |
+| [`visible`](#mishka_gervaz-form-submit-discard-visible){: #mishka_gervaz-form-submit-discard-visible } | `boolean \| (any -> any)` | `true` | Static or dynamic visibility. `fn state -> boolean() end`. |
+| [`restricted`](#mishka_gervaz-form-submit-discard-restricted){: #mishka_gervaz-form-submit-discard-restricted } | `boolean \| (any -> any)` | `false` | Restrict to master users with `true`, or decide with `fn state -> boolean() end`, whose `true` restricts it for every user, masters included, and whose `false` allows it for every user. |
 
 
 

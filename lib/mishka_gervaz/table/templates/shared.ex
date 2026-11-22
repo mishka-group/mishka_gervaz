@@ -1152,6 +1152,305 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     do: MapSet.member?(selected, record_id)
 
   @doc """
+  Marks `record` as a row that arrived by a stream insert after the table loaded: a realtime
+  notification, or a row action's `{:ok, :stream_insert, record}`. The default table template draws
+  such a row with a short highlight that fades in a few seconds (`arrived?/1`).
+
+  The mark is the record's `:gervaz_arrived` metadata, so a row read again from the data layer
+  comes back without it. A value that is not an Ash record is returned unmarked.
+  """
+  @spec arrived(term()) :: term()
+  def arrived(%{__metadata__: metadata} = record) when is_map(metadata),
+    do: %{record | __metadata__: Map.put(metadata, :gervaz_arrived, true)}
+
+  def arrived(record), do: record
+
+  @doc """
+  Whether `record` arrived by a stream insert after the table loaded, see `arrived/1`.
+  """
+  @spec arrived?(term()) :: boolean()
+  def arrived?(%{__metadata__: %{gervaz_arrived: true}}), do: true
+  def arrived?(_record), do: false
+
+  @doc """
+  The table's counts, as the `:table_footer` slot of `MishkaGervaz.Table.Web.Live` receives them:
+  `shown`, how many rows the view shows, and `total`, how many the table's read finds under its
+  filters, `nil` when the table keeps no count (`show_total false`).
+
+  `shown` is the rows the view shows: the rows kept, for a table that keeps its loaded rows, or the
+  rows of `shown_ids` otherwise, the rows the loads read and the rows that came in over realtime or
+  from a row action, less those taken out. A row moved into the list counts, and a row Load more
+  reads again counts once. `more?` is whether rows are left for Load more to read, and `loading?`
+  whether a read runs.
+  """
+  @spec table_counts(map()) :: %{
+          shown: non_neg_integer(),
+          total: non_neg_integer() | nil,
+          more?: boolean(),
+          loading?: boolean()
+        }
+  def table_counts(state),
+    do: %{
+      shown: shown_count(state),
+      total: state.total_count,
+      more?: Map.get(state, :has_more?) == true,
+      loading?: Map.get(state, :loading) == :loading
+    }
+
+  defp shown_count(%{static: %{keep_loaded_records: true}, loaded_records: rows})
+       when is_list(rows),
+       do: length(rows)
+
+  defp shown_count(%{shown_ids: %MapSet{} = shown}), do: MapSet.size(shown)
+
+  defp shown_count(_state), do: 0
+
+  @doc """
+  How many placeholder rows a table draws while it reads with no rows to show: the template's
+  `template_options skeleton_rows: n`, else its page size up to five, so the table holds about the
+  room its rows will take.
+  """
+  @spec skeleton_rows(map() | nil, map() | nil) :: pos_integer()
+  def skeleton_rows(%{template_options: options} = static, state) when is_list(options) do
+    case options[:skeleton_rows] do
+      rows when is_integer(rows) and rows > 0 -> rows
+      _unset -> skeleton_rows(Map.delete(static, :template_options), state)
+    end
+  end
+
+  def skeleton_rows(%{page_size: page_size}, state) do
+    case (state && Map.get(state, :current_page_size)) || page_size do
+      size when is_integer(size) and size > 0 -> min(size, 5)
+      _unknown -> 5
+    end
+  end
+
+  def skeleton_rows(_static, _state), do: 5
+
+  @doc """
+  Whether a table is reading with no rows to show: a read that starts the list afresh, after a
+  first read that found rows or none, while the view shows no row, as after a filter that found
+  nothing. The default table template then stands placeholder rows (`skeleton_rows/2`) where the
+  rows go, in place of its empty state; over rows shown it keeps them, under a veil.
+  """
+  @spec reading_with_no_rows?(map()) :: boolean()
+  def reading_with_no_rows?(
+        %{has_initial_data?: true, loading: :loading, loading_type: :reset} = state
+      ),
+      do: table_counts(state).shown == 0
+
+  def reading_with_no_rows?(_state), do: false
+
+  @doc """
+  Whether the table reads across tenants: its resource is multi-tenant and the table reads with no
+  tenant (`MishkaGervaz.Table.Web.DataLoader.read_tenant/1`), as a master's read of every site
+  does. A `:site` column is drawn only then; a column or template that says whose each row is uses
+  it the same way:
+
+      column :store, visible: &Shared.across_tenants?/1, render: &MyAppWeb.Cells.store/1
+  """
+  @spec across_tenants?(map()) :: boolean()
+  def across_tenants?(%{static: %{resource: resource}} = state) when is_atom(resource) do
+    not is_nil(Ash.Resource.Info.multitenancy_strategy(resource)) and
+      is_nil(MishkaGervaz.Table.Web.DataLoader.read_tenant(state))
+  end
+
+  def across_tenants?(_state), do: false
+
+  @doc """
+  The Load more button of a `:load_more` table, as the pager draws it: a press sends the table
+  `"load_more"`, which streams the page after the last row shown, read by keyset when the read
+  action allows it. Drawn only while rows are left and no read runs.
+
+  The default table template draws it at the end of its footer row with
+  `pagination do ui do load_more_at :footer end end`; a custom template draws it wherever its
+  design puts it. `label` replaces the table's `load_more_label`.
+
+      <Shared.render_load_more static={@static} state={@state} myself={@myself} />
+  """
+  attr :static, :map, required: true
+  attr :state, :map, required: true
+  attr :myself, :any, default: nil
+  attr :label, :string, default: nil
+  attr :class, :any, default: nil
+
+  @spec render_load_more(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_load_more(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :label,
+        assigns.label || translate_text(assigns.static.pagination_ui.load_more_label) ||
+          dgettext("mishka_gervaz", "Load More")
+      )
+
+    ~H"""
+    <button
+      :if={@state.has_more? and @state.loading != :loading}
+      type="button"
+      data-role="gervaz-load-more"
+      phx-click="load_more"
+      phx-target={@myself}
+      class={
+        @class ||
+          "h-[38px] rounded-[11px] border border-[#dcdbf5] bg-[#f2f1fc] px-[18px] text-[12.5px] font-bold text-[#4f4bcc] transition-colors hover:bg-[#e9e7fb]"
+      }
+    >
+      {@label}
+    </button>
+    """
+  end
+
+  @doc """
+  Whether a `:load_more` table draws its Load more in the footer row instead of the pager
+  (`pagination do ui do load_more_at :footer end end`).
+  """
+  @spec load_more_at_footer?(map()) :: boolean()
+  def load_more_at_footer?(static) do
+    pagination_type(static) == :load_more and
+      Map.get(static.pagination_ui || %{}, :load_more_at) == :footer
+  end
+
+  @doc """
+  The path the row of `record` opens, from the resource's `row do path … end`, or `nil` when it
+  declares none or its function gives `nil` for this record.
+  """
+  @spec row_path(map(), map(), map()) :: String.t() | nil
+  def row_path(%{config: config}, record, state) do
+    case get_in(config, [:row, :path]) do
+      path_fn when is_function(path_fn, 1) -> path_fn.(record)
+      path_fn when is_function(path_fn, 2) -> path_fn.(record, state)
+      _absent -> nil
+    end
+  end
+
+  def row_path(_static, _record, _state), do: nil
+
+  @doc """
+  Draws what the table opens over its rows, inside the template's root element: the row drawer a
+  `:drawer` row action opened (`render_row_drawer/1`) and the question window a row or bulk action
+  asks (`MishkaGervaz.Question.window/1`, with the id `"<table id>-question"`). Nothing while none
+  is open.
+
+  The default templates call it last in their root element; a custom template does the same, so its
+  table's `:drawer` row actions open and its questions are asked:
+
+      <div id={@static.id}>
+        ...
+        {Shared.render_overlays(assigns)}
+      </div>
+  """
+  @spec render_overlays(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_overlays(assigns) do
+    assigns =
+      assigns
+      |> assign(:row_drawer, assigns[:row_drawer])
+      |> assign(:question, assigns[:question])
+
+    ~H"""
+    <.render_row_drawer
+      :if={@row_drawer}
+      static={@static}
+      state={@state}
+      row_drawer={@row_drawer}
+      myself={@myself}
+    />
+    <MishkaGervaz.Question.window
+      question={@question}
+      id={@static.id <> "-question"}
+      ui={@static.ui_adapter}
+      target={@myself}
+    />
+    """
+  end
+
+  @doc """
+  Draws the row drawer a `:drawer` row action opened (`MishkaGervaz.Table.Types.Action.Drawer`):
+  the UI adapter's `drawer/1`, or `sheet/1` for `kind: :sheet`, open as it is drawn, with the id
+  `"<table id>-row-drawer"`. Its head is the action's `drawer` options read for the row; its body is
+  the record view of the action's `open`, or with `open: :form` the resource's form editing the row
+  (`MishkaGervaz.Form.Web.Live`, id `"<table id>-drawer-form"`). Its close sends the table
+  `"close_drawer"`.
+
+  `render_overlays/1` draws it while the table's `@row_drawer` holds
+  `%{action: action, record: record}`.
+  """
+  @spec render_row_drawer(map()) :: Phoenix.LiveView.Rendered.t()
+  def render_row_drawer(%{row_drawer: %{action: action, record: record}} = assigns) do
+    head = action[:drawer] || []
+
+    assigns =
+      assigns
+      |> assign(:ui, assigns.static.ui_adapter)
+      |> assign(:kind, Keyword.get(head, :kind, :drawer))
+      |> assign(:panel_id, assigns.static.id <> "-row-drawer")
+      |> assign(:form_id, assigns.static.id <> "-drawer-form")
+      |> assign(:record, record)
+      |> assign(:open, action[:open])
+      |> assign(:title, drawer_text(head[:title], record))
+      |> assign(:sub, drawer_text(head[:sub], record))
+      |> assign(:icon, drawer_value(head[:icon], record))
+      |> assign(:tone, drawer_value(head[:tone], record) || :info)
+      |> assign(:chips, drawer_chips(head[:chips], record))
+      |> assign(:head_actions, head[:actions])
+      |> assign(:actions_at, Keyword.get(head, :actions_at, :foot))
+      |> assign(:on_close, JS.push("close_drawer", target: assigns.myself))
+
+    ~H"""
+    <.dynamic_component
+      module={@ui}
+      function={@kind}
+      id={@panel_id}
+      show={true}
+      title={@title}
+      sub={@sub}
+      icon={@icon}
+      tone={@tone}
+      chips={@chips}
+      actions_at={@actions_at}
+      on_close={@on_close}
+    >
+      <.live_component
+        :if={@open == :form}
+        module={MishkaGervaz.Form.Web.Live}
+        id={@form_id}
+        resource={@static.resource}
+        current_user={@state.current_user}
+        record_id={@record.id}
+      />
+      <%= if @open != :form do %>
+        {drawer_view(@open, @record, @state)}
+      <% end %>
+      <:actions :if={@head_actions}>{drawer_view(@head_actions, @record, @state)}</:actions>
+    </.dynamic_component>
+    """
+  end
+
+  defp drawer_value(value, record) when is_function(value, 1), do: value.(record)
+  defp drawer_value(value, _record), do: value
+
+  defp drawer_text(value, record) do
+    case drawer_value(value, record) do
+      text when is_binary(text) -> translate_text(text)
+      other -> other
+    end
+  end
+
+  defp drawer_chips(chips, record) do
+    chips
+    |> drawer_value(record)
+    |> List.wrap()
+    |> Enum.map(fn
+      {tone, label} -> {tone, translate_text(label)}
+      label -> translate_text(label)
+    end)
+  end
+
+  defp drawer_view(view, record, _state) when is_function(view, 1), do: view.(record)
+  defp drawer_view(view, record, state) when is_function(view, 2), do: view.(record, state)
+  defp drawer_view(_view, _record, _state), do: nil
+
+  @doc """
   The extra classes the resource asks this record's row to wear, if any.
 
   `row do class do apply … end end` is where a resource says which records look different.
@@ -1192,11 +1491,22 @@ defmodule MishkaGervaz.Table.Templates.Shared do
       :paginate in features and is_integer(state.total_count) and state.total_count > 0
     )
     |> assign(:show_bulk_actions, :bulk_actions in features and show_checkboxes)
-    |> assign(
-      :show_switcher,
-      static.switchable_templates != nil and static.switchable_templates != []
-    )
+    |> assign(:show_switcher, show_switcher?(static))
   end
+
+  @doc """
+  Whether the table draws its template switcher: the resource declared `switchable_templates`, and
+  its `template_options` do not say `switcher: false`.
+
+  `switcher: false` keeps the templates reachable, by the URL's template param or a mount's
+  `template`, and only leaves the reader without the buttons. A mount's `switchable_templates={[]}`
+  turns the switcher off for that mount alone.
+  """
+  @spec show_switcher?(map()) :: boolean()
+  def show_switcher?(%{switchable_templates: [_ | _]} = static),
+    do: (Map.get(static, :template_options) || [])[:switcher] != false
+
+  def show_switcher?(_static), do: false
 
   defp bulk_action_visible_for_status?(%{visible: :active}, :active), do: true
   defp bulk_action_visible_for_status?(%{visible: :active}, _status), do: false
@@ -1260,7 +1570,8 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   numbered table or the `range_label/1` of a growing list.
 
   Reads its labels from `static.pagination_ui`, so `pagination do ui do … end end` on the
-  resource is honoured without the template knowing about it.
+  resource is honoured without the template knowing about it. A template that draws Load more in
+  its footer row passes `footer_load_more?={true}`, and the pager draws none.
   """
   def render_pagination(assigns) do
     static = assigns.static
@@ -1270,6 +1581,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
     assigns =
       assigns
       |> assign_new(:pagination_type, fn -> pagination_type(static) end)
+      |> assign_new(:footer_load_more?, fn -> false end)
       |> assign(:static_id, static.id)
       |> assign(:page, state.page)
       |> assign(:has_more?, state.has_more?)
@@ -1345,7 +1657,10 @@ defmodule MishkaGervaz.Table.Templates.Shared do
           myself={@myself}
         />
       </:leading>
-      <:center :if={@pagination_type == :load_more and @has_more? and @loading != :loading}>
+      <:center :if={
+        @pagination_type == :load_more and @has_more? and @loading != :loading and
+          not @footer_load_more?
+      }>
         <button
           type="button"
           phx-click="load_more"

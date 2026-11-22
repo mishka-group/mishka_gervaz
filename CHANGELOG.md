@@ -1,3 +1,140 @@
+# Changelog for MishkaGervaz 0.0.12
+
+### Features:
+- `field :kind, :choice_cards` and `field :billing, :segmented` hold one of a few values, drawn as a
+  radio per option: a card each, or a segment each of one bar. An option may be a keyword list or
+  map with `:description`, a second line under its label, `:icon`, and `disabled: true` for an
+  option that is seen but cannot be picked. The UI adapter gains `choice_cards/1` and
+  `segmented_control/1`
+- `ui do prefix "USD" end` and `ui do suffix "%" end` put a unit at the start or end of a `:text`,
+  `:password` or `:number` input, joined to it and named by `aria-describedby`; it is not saved
+- `ui do note "…" end` on a `:toggle` or `:checkbox` field draws the text beside the control, inside
+  its label; `description` stays the help text under any field
+- A `:multi_select` option may carry a `:description`, drawn under its label; the field still saves
+  the ticked values as a list, an empty list when none is ticked
+- A `:tabs` form draws its steps as a tablist over their panels. With `navigation :free` any tab
+  opens and Save stands on every tab: a save runs `before_save` and the action, and one that fails
+  on another tab's field moves there, marks the tab and flashes its name. With `:sequential` only
+  visited tabs open and the submit row is a wizard's
+- `submit do discard label: "Discard" end` draws a button beside Save while the form holds changes,
+  putting the form back to its starting values (`MishkaGervaz.Form.Web.Live.discard/1`); a tabs form
+  stays on its tab
+- A form mounted with `notify_dirty={true}` sends its page `{:form_dirty, id, dirty?}` when it comes
+  to hold changes and when it holds none; its wrapper carries `data-dirty`. A submit button takes
+  `confirm`, asked through `data-confirm`, on `cancel` and `discard` only while the form holds changes
+- A `:number` or `:range` field takes a `Decimal` or a float `min` and `max`, compared as `Decimal`s
+  and drawn on the input as plain digits
+- `row do path fn record -> … end end` makes a whole table row open a path: a link over the row,
+  reached with Tab, the checkbox, caret and actions above it
+- A `:table_footer` slot on the table, drawn under the rows, receives `%{shown: n, total: n}` and
+  carries the page's own text and buttons (`Shared.table_counts/1`)
+- A row that arrives by a stream insert after the table loaded, over realtime or from a row
+  action, fades from a highlight in a few seconds through CSS `@starting-style`;
+  `template_options highlight_arrivals: false` turns it off
+- `template_options switcher: false` keeps a table's `switchable_templates` and draws no switcher
+  (`Shared.show_switcher?/1`)
+- The UI adapter gains `drawer/1`, a right-side panel that is a bottom sheet below 640px, and
+  `sheet/1`, a bottom sheet, for a form or a page. They open and close with `Phoenix.LiveView.JS`
+  (`show_drawer/2`, `hide_drawer/2`, `show_sheet/2`, `hide_sheet/2`) and ask `confirm_close` before
+  they close. Their head takes an `icon` in a tile coloured by `tone`, a `sub` line and `chips`
+  under the title, and an `:actions` slot of buttons in the foot or, with `actions_at: :head`, in
+  the head
+- `field :iban, :text do live_errors true end` shows that field's own errors as it is typed, once it
+  holds a value, in a form for a new record, which otherwise shows errors only after its first save
+- The UI adapter gains `window/1`, a window in the middle of the screen that is a bottom sheet below
+  640px, for a form or a short page. It takes the drawer's assigns and opens and closes through
+  `show_window/2` and `hide_window/2`; without a title it draws no head and its close button stands
+  in the corner. Every panel (drawer, sheet, window) keeps the focus inside it, its close button is
+  `<id>-close` and 44px tall on a phone, and `request_close` runs in place of the close, for a page
+  that decides on the server whether a panel may close
+- A row action `type: :drawer` opens the row in the table's drawer: a record view
+  (`open: fn record -> ~H"…" end`) or the resource's form editing it (`open: :form`), its head
+  built from the row (`drawer: [title:, sub:, icon:, tone:, chips:, actions:, kind: :sheet]`).
+  `MishkaGervaz.Table.Web.Live.close_drawer/2` closes it after a save and puts the saved row back
+  in its place; a custom template draws it with `Shared.render_overlays/1`
+- A `confirm` given as a keyword list (`title`, `body`, `tone: :danger | :warn | :info`, `answer`,
+  `answer_label`, `confirm_label`, `cancel_label`) asks in the UI adapter's new `question/1` window
+  instead of the browser's dialog, on a row action, a bulk action (`{count}` in its strings) and a
+  form's `create` or `update` button. The server draws it: the action runs, or the form saves what
+  was submitted, once it is answered, and with `answer` only once that word is typed
+  (`MishkaGervaz.Question`, `Question.bind/4` for a custom action type)
+- Toasts: the UI adapter gains `toast/1`, a short note in a tone (`:ok`, `:info`, `:warn`,
+  `:error`) with an optional Undo and link, and `MishkaGervaz.Toast` keeps a page's toasts:
+  `attach/1` in `mount/3`, `push/4` (`undo:`, `navigate:` or `href:`, `ms:`), `send_toast/3` from a
+  component and `toasts/1` to draw them. Each leaves by itself through a timer message in the page's
+  own process, no JavaScript, and an Undo sends the page `{:toast_undo, undo}`
+- A column `ui do type :site end` names the site of each row of a multi-tenant table, and is drawn
+  only while the table reads across tenants, as a master's read of every site does
+  (`Shared.across_tenants?/1`, `DataLoader.read_tenant/1`)
+- `pagination do ui do load_more_at :footer end end` draws a `:load_more` table's Load more at the
+  end of its footer row, beside the `table_footer` slot, instead of in the pager. The slot's counts
+  gain `more?` and `loading?`, `Shared.render_load_more/1` draws the button in a custom template and
+  `MishkaGervaz.Table.Web.Live.load_more/2` is the JS of a page's own button; each press streams the
+  next page, read by keyset when the read action allows it
+- The UI adapter gains `skeleton/1`, placeholder rows or a block that hold the room of what loads.
+  The default table template draws its frame with placeholder rows before its first read, and in
+  place of its empty state while a read with no rows shown runs, as after a filter that found
+  nothing, so the table keeps its height; `template_options skeleton_rows: n` sets how many
+  (`Shared.skeleton_rows/2`, `Shared.reading_with_no_rows?/1`)
+- A `:standard` form mounted with a `:body` slot lets the page place its groups in its own cards or
+  steps: `<:body :let={form}>` with `<MishkaGervaz.Form.Web.Live.group form={form} name={:keys} />`
+  wherever a group goes, the page's own markup between them. It stays one form, one changeset and
+  one save; a field's error shows in its group's card, and the unsaved changes and Discard work as
+  before. The slot is drawn while the form loads, each group showing that it loads
+- A `:text`, `:textarea`, `:email`, `:password`, `:url` or `:tel` field draws its attribute's
+  `max_length` constraint as the input's `maxlength`; `field ... do max_length 80 end` sets its own
+- A submit, cancel or discard label, and a field's `description`, may be a function of the form state,
+  so one form names its button for the action it was opened for and its help text for what the
+  mount's defaults hold
+- `submit: :external` on a form's mount hides its submit row for a create and for an edit, for a page
+  whose own buttons carry `form=<form id>`; `submit: false` still hides a create's only
+- A page puts a value it worked out into a mounted form without starting it over:
+  `MishkaGervaz.Form.Web.Live.put_values("plan-form", %{proration_date: date})`, which is
+  `send_update/2` with `put_values:`. The form is validated with it as a typed change is and the save
+  sends it, a `:hidden` field's included; what the reader typed stays, and the dirty state and the
+  step are untouched. A form still reading its record takes the values once it has read it
+- A page draws a table's rows in its order again after a row's sort field changed, such as a file
+  moved up or down a list ordered by its position: `MishkaGervaz.Table.Web.Live.reorder("files-table",
+  moved)`, which is `send_update/2` with `reorder:`. The table reads as many rows as it shows again
+  from its first page, in its order, with one more for each moved row
+  (`DataLoader.rows_in_window/2`), and draws them afresh in that order, so the rows stand in the
+  DOM where they belong with no CSS `order`. A row moved in from a later page stands in its place, a
+  row shown that now stands just past them stays below them, and the calls of a burst are read once
+
+### Bug fixes:
+- A form field with `ui do span 2 end` (3, 4) is the whole row below the breakpoint where the grid
+  has that many columns (`col-span-full md:col-span-2`), so on a phone it no longer makes a second,
+  implicit column that squeezed every other field
+- A bidirectional table's Previous, Next and page numbers add a history entry when they write the
+  URL, so the browser's Back returns to the page before; a filter, a sort or a search still
+  replaces the entry there
+- A table's footer counts the rows the view shows (`shown_ids` of the table state): a row that
+  arrives or moves into the list over realtime counts, and a row Load more reads again counts once;
+  before, it counted to the offset Load more reads from
+- The `sort` event sorts only by a column declared `sortable`; any other column name changes
+  nothing, where before it sorted by it and could fail the read, as a calculation without
+  `expression/2` does
+- A table reads from the URL only what each parameter may hold (`UrlSync.decode/3`): a text of at most
+  `max_filter_length` characters for the sort, search, page, page size and template, and a filter's
+  value as its type takes it. A map such as `?sort[a]=b` and anything else reads as missing, and null
+  bytes and bytes that are no UTF-8 are cut, where before the page failed. A `:text` or `:select`
+  filter keeps a `,` or `~` of its text, and a list among the preserved params is written back
+- A table whose read answers with an error shows its error state and logs one warning; before, the
+  load crashed. `PaginationHandler.load_page/5` returns `{:error, error}` then
+- A `:hidden` form field is drawn as a bare `<input type="hidden">` carrying its value, with no
+  label and no text box; before it was a labelled text box a reader could see and type into
+- A form in a drawer, sheet or window keeps its tabs or steps at the top of the panel's body and
+  its submit row at the bottom while only its fields scroll, so Save is in reach on a short screen
+  and after a failed save; each sticks where it rests, so neither slides when the body scrolls. The
+  body is marked `data-role="gervaz-panel-body"`. On a phone the form's
+  tabs and its submit row's buttons are 44 px tall
+
+### Dependencies:
+- phoenix_live_view 1.2.13 => 1.2.15 (EEF-CVE-2026-126334)
+- phoenix 1.8.16 => 1.8.17
+- ex_doc 0.40.4 => 0.40.5
+- rewrite 1.3.0 => 1.3.1
+
 # Changelog for MishkaGervaz 0.0.11
 
 ### Features:

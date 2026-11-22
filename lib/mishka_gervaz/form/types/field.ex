@@ -64,7 +64,9 @@ defmodule MishkaGervaz.Form.Types.Field do
       toggle: {Field.Toggle, []},
       range: {Field.Range, []},
       upload: {Field.Upload, []},
-      combobox: {Field.Combobox, [Ash.Type.String]}
+      combobox: {Field.Combobox, [Ash.Type.String]},
+      choice_cards: {Field.ChoiceCards, []},
+      segmented: {Field.Segmented, []}
     },
     default: Field.Text
 end

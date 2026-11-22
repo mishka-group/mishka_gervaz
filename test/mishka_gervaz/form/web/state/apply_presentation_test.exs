@@ -112,6 +112,14 @@ defmodule MishkaGervaz.Form.Web.State.ApplyPresentationTest do
       refute State.apply_presentation(state([]), %{submit: false}).static.submit_visible?
     end
 
+    test ":external hides it for a create and for an edit, and says the page draws the buttons" do
+      result = State.apply_presentation(state([]), %{submit: :external})
+
+      refute result.static.submit_visible?
+      assert result.static.submit_external?
+      refute State.apply_presentation(state([]), %{submit: false}).static.submit_external?
+    end
+
     # THE BUTTON GOES, THE ACTION STAYS. `Events.do_handle("save", …)` asks the SUBMIT CONFIG whether
     # the save is allowed; clearing that instead of the flag would make a dropzone-submitted form
     # silently unsubmittable.
@@ -216,6 +224,12 @@ defmodule MishkaGervaz.Form.Web.State.ApplyPresentationTest do
 
       assert source =~
                "defp render_submit(%{static: %{submit_visible?: false}, state: %{mode: :create}} = assigns)"
+    end
+
+    test "the standard template hides the submit row of a mount that draws its own buttons, in every mode" do
+      source = File.read!("lib/mishka_gervaz/form/templates/standard.ex")
+
+      assert source =~ "defp render_submit(%{static: %{submit_external?: true}} = assigns)"
     end
 
     test "the component applies a mount's choices at init" do

@@ -29,6 +29,7 @@ defmodule MishkaGervaz.TranslateTextTest do
       get_ui_label: 1,
       resolve_translated_options: 1,
       translate_options: 1,
+      choice_options: 1,
       action_label: 1
     ]
 

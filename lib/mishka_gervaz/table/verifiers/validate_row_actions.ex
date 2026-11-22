@@ -55,6 +55,9 @@ defmodule MishkaGervaz.Table.Verifiers.ValidateRowActions do
   defp validate_action(%{type: :event, event: nil, name: name}),
     do: ["Action #{inspect(name)} of type :event requires an :event option"]
 
+  defp validate_action(%{type: :drawer, open: nil, name: name}),
+    do: ["Action #{inspect(name)} of type :drawer requires an :open option"]
+
   defp validate_action(_), do: []
 
   @spec validate_dropdown(map()) :: list(String.t())

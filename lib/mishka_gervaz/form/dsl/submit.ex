@@ -1,6 +1,6 @@
 defmodule MishkaGervaz.Form.Dsl.Submit do
   @moduledoc """
-  Submit entity — configures the create / update / cancel buttons.
+  Submit entity — configures the create / update / cancel / discard buttons.
 
   The `submit` block is a singleton composed of three button
   sub-entities (`create`, `update`, `cancel`), an optional `ui`
@@ -38,6 +38,17 @@ defmodule MishkaGervaz.Form.Dsl.Submit do
 
         cancel label: "Go Back", visible: false
         position :top
+      end
+
+  ## Discard
+
+  `discard` draws a button beside Save, shown while the form holds changes (`state.dirty?`), that
+  puts the form back to its starting values: an edit reads its record again, a create starts over
+  empty with its `defaults`. A `:tabs` form stays on the tab it is on. Without a `discard` block
+  there is no such button.
+
+      submit do
+        discard label: "Discard"
       end
 
   ## Inheritance
@@ -89,6 +100,7 @@ defmodule MishkaGervaz.Form.Dsl.Submit do
         create: [button_entity(:create)],
         update: [button_entity(:update)],
         cancel: [button_entity(:cancel)],
+        discard: [button_entity(:discard)],
         ui: [submit_ui_entity()]
       ],
       transform: {Submit, :transform, []}

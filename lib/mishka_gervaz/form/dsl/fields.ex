@@ -63,7 +63,8 @@ defmodule MishkaGervaz.Form.Dsl.Fields do
   Built-in types live under `MishkaGervaz.Form.Types.Field.*` —
   `:text`, `:textarea`, `:select`, `:multi_select`, `:combobox`,
   `:relation`, `:nested`, `:upload`, `:toggle`, `:checkbox`, `:date`,
-  `:datetime`, `:number`, `:json`, `:string_list`, `:password`, `:range`.
+  `:datetime`, `:number`, `:json`, `:string_list`, `:password`, `:range`,
+  `:choice_cards`, `:segmented`.
   When `type` is omitted, it is inferred from the matching Ash
   attribute.
 

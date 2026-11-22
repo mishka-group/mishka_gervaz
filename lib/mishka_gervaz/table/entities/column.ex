@@ -188,6 +188,7 @@ defmodule MishkaGervaz.Table.Entities.Column do
       |> extract_ui()
       |> maybe_set_source()
       |> resolve_type_module()
+      |> site_visibility()
 
     {:ok, column}
   end
@@ -210,6 +211,12 @@ defmodule MishkaGervaz.Table.Entities.Column do
   end
 
   defp resolve_type_module(column), do: column
+
+  # A `:site` column left visible is drawn only while the table reads across tenants.
+  defp site_visibility(%{ui: %{type: :site}, visible: true} = column),
+    do: %{column | visible: &MishkaGervaz.Table.Templates.Shared.across_tenants?/1}
+
+  defp site_visibility(column), do: column
 end
 
 defmodule MishkaGervaz.Table.Entities.Column.Ui do
@@ -235,6 +242,7 @@ defmodule MishkaGervaz.Table.Entities.Column.Ui do
           | :json
           | :uuid
           | :array
+          | :site
           | :custom
 
   @type align :: :left | :center | :right
@@ -283,6 +291,7 @@ defmodule MishkaGervaz.Table.Entities.Column.Ui do
     :json,
     :uuid,
     :array,
+    :site,
     :custom
   ]
 
@@ -300,6 +309,10 @@ defmodule MishkaGervaz.Table.Entities.Column.Ui do
       Display type. Can be a built-in type atom or a custom module implementing ColumnType behaviour.
 
       Built-in types: #{Enum.map_join(@builtin_column_types, ", ", &inspect/1)}
+
+      `:site` names the site (tenant) a row of a multi-tenant table belongs to, and is drawn only
+      while the table reads across tenants, as a master's read of every site does, unless the
+      column sets its own `visible` function.
 
       Custom type example:
           column :color do

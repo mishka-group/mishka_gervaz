@@ -46,6 +46,11 @@ defmodule MishkaGervaz.Table.Dsl.Row do
       type: {:or, [{:fun, 1}, :map]},
       doc: "Payload for row click. Map or `fn record -> map`."
     ],
+    path: [
+      type: {:or, [{:fun, 1}, {:fun, 2}]},
+      doc:
+        "The path the whole row opens, `fn record -> path end` or `fn record, state -> path end`; `nil` leaves that row without one. The default table template draws it as a link over the row, reached with Tab and opened with Enter; the row's checkbox, caret and actions stay above it."
+    ],
     selectable: [
       type: :boolean,
       default: false,

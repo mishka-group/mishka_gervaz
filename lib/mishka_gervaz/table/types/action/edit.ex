@@ -32,23 +32,31 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
 
   @behaviour MishkaGervaz.Table.Behaviours.ActionType
   use Phoenix.Component
+  alias MishkaGervaz.Question
   alias Phoenix.LiveView.JS
 
   import MishkaGervaz.Helpers,
-    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3, resolve_confirm: 2]
+    only: [action_label: 1, dynamic_component: 1, maybe_assign: 3]
 
   @impl true
   def render(_assigns, action, record, ui, target) do
     event_name = to_string(action[:name])
     push_value = %{event: event_name, id: record.id}
 
+    {event, value} =
+      if Question.question?(action[:confirm]),
+        do:
+          {"ask",
+           Map.merge(push_value, %{ask: "row_action", question: event_name, record: record.id})},
+        else: {"row_action", push_value}
+
     click_js =
       case action[:js] do
         func when is_function(func, 1) ->
-          record |> func.() |> JS.push("row_action", value: push_value, target: target)
+          record |> func.() |> JS.push(event, value: value, target: target)
 
         _ ->
-          JS.push("row_action", value: push_value, target: target)
+          JS.push(event, value: value, target: target)
       end
 
     assigns =
@@ -60,7 +68,7 @@ defmodule MishkaGervaz.Table.Types.Action.Edit do
       |> assign(:icon, action[:ui][:icon] || "hero-pencil-square")
       |> maybe_assign(:class, action[:ui][:class])
       |> assign(:phx_click, click_js)
-      |> assign(:data_confirm, resolve_confirm(action[:confirm], record))
+      |> assign(:data_confirm, MishkaGervaz.Helpers.resolve_confirm(action[:confirm], record))
 
     ~H"""
     <.dynamic_component {assigns} />
