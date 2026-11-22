@@ -88,6 +88,13 @@
   `send_update/2` with `put_values:`. The form is validated with it as a typed change is and the save
   sends it, a `:hidden` field's included; what the reader typed stays, and the dirty state and the
   step are untouched. A form still reading its record takes the values once it has read it
+- A page draws a table's rows in its order again after a row's sort field changed, such as a file
+  moved up or down a list ordered by its position: `MishkaGervaz.Table.Web.Live.reorder("files-table",
+  moved)`, which is `send_update/2` with `reorder:`. The table reads as many rows as it shows again
+  from its first page, in its order, with one more for each moved row
+  (`DataLoader.rows_in_window/2`), and draws them afresh in that order, so the rows stand in the
+  DOM where they belong with no CSS `order`. A row moved in from a later page stands in its place, a
+  row shown that now stands just past them stays below them, and the calls of a burst are read once
 
 ### Bug fixes:
 - A form field with `ui do span 2 end` (3, 4) is the whole row below the breakpoint where the grid

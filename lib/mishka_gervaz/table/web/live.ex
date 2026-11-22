@@ -177,6 +177,33 @@ defmodule MishkaGervaz.Table.Web.Live do
   def close_drawer(id, saved \\ nil) when is_binary(id),
     do: send_update(__MODULE__, id: id, close_drawer: true, saved: saved)
 
+  @doc """
+  Draws the rows of the table with this component `id` in the table's order again, after `moved`
+  (a record or a list) changed a field the table sorts by, such as a file moved up or down a list
+  ordered by its position. A realtime update leaves a row where it stands, so a page calls this
+  for the change instead.
+
+  The table reads as many rows as it shows again from its first page, in its order
+  (`MishkaGervaz.Table.Web.DataLoader.rows_in_window/2`), with one row more after them for each
+  moved one, and draws them in that order. A moved row that came among them from a later page is
+  drawn in its place, and a row shown that now stands just past them stays below them, so the row
+  a person moved down past the last one stays in sight. A moved row past them that the view did not
+  show is not drawn, and a row shown further on, such as one drawn at the top as it arrived, leaves
+  until Load more reads its page. The footer counts the rows drawn.
+
+  The calls of a burst, with the realtime notifications around them, are read together after it, in
+  one read; the two rows of a swap heard in two bursts end in the same rows. A table whose read
+  cannot answer, such as a manual read, places the moved rows as a realtime update does.
+
+      def handle_info(%Phoenix.Socket.Broadcast{payload: %{action: %{name: :reposition}} = n}, socket) do
+        MishkaGervaz.Table.Web.Live.reorder("files-table", n.data)
+        {:noreply, socket}
+      end
+  """
+  @spec reorder(String.t(), Ash.Resource.Record.t() | [Ash.Resource.Record.t()]) :: :ok
+  def reorder(id, moved) when is_binary(id),
+    do: send_update(__MODULE__, id: id, reorder: List.wrap(moved))
+
   @impl true
   def mount(socket) do
     {:ok,
@@ -219,6 +246,11 @@ defmodule MishkaGervaz.Table.Web.Live do
   end
 
   def update(%{realtime_flush: true}, socket), do: {:ok, flush_realtime(socket)}
+
+  def update(%{reorder: moved}, %{assigns: %{table_state: %State{}}} = socket),
+    do: {:ok, place_in_order(socket, moved)}
+
+  def update(%{reorder: _moved}, socket), do: {:ok, socket}
 
   def update(%{close_drawer: true} = assigns, socket) do
     socket = assign(socket, :row_drawer, nil)
@@ -454,8 +486,14 @@ defmodule MishkaGervaz.Table.Web.Live do
   end
 
   @spec refresh_total_unless_waiting(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  defp refresh_total_unless_waiting(%{assigns: %{realtime_pending: [_ | _]}} = socket), do: socket
-  defp refresh_total_unless_waiting(socket), do: DataLoader.refresh_total(socket)
+  defp refresh_total_unless_waiting(socket) do
+    if flush_due?(socket), do: socket, else: DataLoader.refresh_total(socket)
+  end
+
+  @spec flush_due?(Phoenix.LiveView.Socket.t()) :: boolean()
+  defp flush_due?(%{assigns: %{realtime_pending: [_ | _]}}), do: true
+  defp flush_due?(%{assigns: %{realtime_moved: [_ | _]}}), do: true
+  defp flush_due?(_socket), do: false
 
   @spec apply_notification_action(
           Phoenix.LiveView.Socket.t(),
@@ -514,22 +552,129 @@ defmodule MishkaGervaz.Table.Web.Live do
   @spec queue_row(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   defp queue_row(socket, record) do
     pending = socket.assigns[:realtime_pending] || []
-
-    if pending == [],
-      do: send_update(self(), __MODULE__, id: socket.assigns.id, realtime_flush: true)
-
+    schedule_flush(socket)
     assign(socket, :realtime_pending, [record | Enum.reject(pending, &(&1.id == record.id))])
   end
 
-  @spec flush_realtime(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  defp flush_realtime(%{assigns: %{realtime_pending: [_ | _] = pending}} = socket) do
-    socket
-    |> assign(:realtime_pending, [])
-    |> place_rows(socket.assigns.table_state, Enum.reverse(pending))
-    |> DataLoader.refresh_total()
+  @spec place_in_order(Phoenix.LiveView.Socket.t(), [map()]) :: Phoenix.LiveView.Socket.t()
+  defp place_in_order(socket, moved) do
+    if connected?(socket),
+      do: queue_moved(socket, moved),
+      else: socket |> reorder_rows(moved) |> DataLoader.refresh_total()
   end
 
-  defp flush_realtime(socket), do: socket
+  @spec queue_moved(Phoenix.LiveView.Socket.t(), [map()]) :: Phoenix.LiveView.Socket.t()
+  defp queue_moved(socket, moved) do
+    ids = MapSet.new(moved, & &1.id)
+    earlier = Enum.reject(socket.assigns[:realtime_moved] || [], &MapSet.member?(ids, &1.id))
+    schedule_flush(socket)
+    assign(socket, :realtime_moved, earlier ++ moved)
+  end
+
+  @spec schedule_flush(Phoenix.LiveView.Socket.t()) :: :ok
+  defp schedule_flush(socket) do
+    case flush_due?(socket) do
+      true -> :ok
+      false -> send_update(self(), __MODULE__, id: socket.assigns.id, realtime_flush: true)
+    end
+  end
+
+  @spec flush_realtime(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp flush_realtime(socket) do
+    if flush_due?(socket) do
+      moved = socket.assigns[:realtime_moved] || []
+      moved_ids = MapSet.new(moved, & &1.id)
+
+      pending =
+        (socket.assigns[:realtime_pending] || [])
+        |> Enum.reject(&MapSet.member?(moved_ids, &1.id))
+        |> Enum.reverse()
+
+      socket
+      |> assign(:realtime_pending, [])
+      |> assign(:realtime_moved, [])
+      |> reorder_rows(moved)
+      |> place_pending(pending)
+      |> DataLoader.refresh_total()
+    else
+      socket
+    end
+  end
+
+  @spec place_pending(Phoenix.LiveView.Socket.t(), [map()]) :: Phoenix.LiveView.Socket.t()
+  defp place_pending(socket, []), do: socket
+  defp place_pending(socket, records), do: place_rows(socket, socket.assigns.table_state, records)
+
+  @spec reorder_rows(Phoenix.LiveView.Socket.t(), [map()]) :: Phoenix.LiveView.Socket.t()
+  defp reorder_rows(socket, []), do: socket
+
+  defp reorder_rows(
+         %{assigns: %{table_state: %State{loading: :loading, loading_type: :reset}}} = socket,
+         _moved
+       ),
+       do: socket
+
+  defp reorder_rows(socket, moved) do
+    state = socket.assigns.table_state
+
+    case DataLoader.rows_in_window(state, length(moved)) do
+      {:ok, covered, next} -> draw_in_order(socket, state, covered ++ moved_out(state, next))
+      :error -> place_rows(socket, state, moved)
+    end
+  end
+
+  @spec moved_out(State.t(), list()) :: list()
+  defp moved_out(state, next) do
+    shown = state.shown_ids || MapSet.new()
+    Enum.take_while(next, &MapSet.member?(shown, &1.id))
+  end
+
+  @spec draw_in_order(Phoenix.LiveView.Socket.t(), State.t(), list()) ::
+          Phoenix.LiveView.Socket.t()
+  defp draw_in_order(socket, state, rows) do
+    rows = Helpers.inject_preload_aliases(rows, state.preload_aliases)
+    drawn = MapSet.new(rows, & &1.id)
+    left = MapSet.difference(state.shown_ids || MapSet.new(), drawn)
+
+    new_state =
+      state
+      |> State.update(shown_ids: drawn, hidden_ids: picks_hidden(state, drawn, left))
+      |> keep_drawn(rows)
+      |> close_left_expansion(drawn)
+
+    socket
+    |> stream(state.static.stream_name, rows, reset: true)
+    |> assign(:table_state, new_state)
+  end
+
+  @spec picks_hidden(State.t(), MapSet.t(), MapSet.t()) :: MapSet.t()
+  defp picks_hidden(%State{selected_ids: selected, hidden_ids: hidden}, drawn, left) do
+    Enum.reduce(selected, hidden, &pick_view(&2, &1, drawn, left))
+  end
+
+  @spec pick_view(MapSet.t(), term(), MapSet.t(), MapSet.t()) :: MapSet.t()
+  defp pick_view(hidden_ids, id, drawn, left) do
+    case {MapSet.member?(drawn, id), MapSet.member?(left, id)} do
+      {true, _left?} -> hidden(hidden_ids, id, :shown)
+      {false, true} -> hidden(hidden_ids, id, :hidden)
+      {false, false} -> hidden_ids
+    end
+  end
+
+  @spec keep_drawn(State.t(), list()) :: State.t()
+  defp keep_drawn(%State{static: %{keep_loaded_records: true}} = state, rows),
+    do: State.update(state, loaded_records: rows)
+
+  defp keep_drawn(state, _rows), do: state
+
+  @spec close_left_expansion(State.t(), MapSet.t()) :: State.t()
+  defp close_left_expansion(%State{expanded_id: nil} = state, _drawn), do: state
+
+  defp close_left_expansion(%State{expanded_id: id} = state, drawn) do
+    if MapSet.member?(drawn, id),
+      do: state,
+      else: State.update(state, expanded_id: nil, expanded_data: nil)
+  end
 
   @spec place_rows(Phoenix.LiveView.Socket.t(), State.t(), [map()]) ::
           Phoenix.LiveView.Socket.t()

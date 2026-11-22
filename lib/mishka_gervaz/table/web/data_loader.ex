@@ -11,6 +11,8 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
   - The total after realtime changes (`refresh_total/1`)
   - The realtime rows that belong in the view, read as the table reads (`rows_in_view/2`), and
     whether one row does (`in_view?/2`)
+  - The rows the view shows, read again from its first page in the table's order
+    (`rows_in_window/2`)
   - The query the table reads its rows with (`read_query/1`)
 
   ## Sub-builders
@@ -103,6 +105,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
 
   @spec rows_in_view(State.t(), [term()]) :: {:ok, [Ash.Resource.Record.t()]} | :error
   defdelegate rows_in_view(state, ids), to: __MODULE__.Default
+
+  @spec rows_in_window(State.t(), non_neg_integer()) ::
+          {:ok, [Ash.Resource.Record.t()], [Ash.Resource.Record.t()]} | :error
+  defdelegate rows_in_window(state, more), to: __MODULE__.Default
 
   @spec read_query(State.t()) :: Ash.Query.t()
   defdelegate read_query(state), to: __MODULE__.Default
@@ -433,6 +439,100 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           end
         end)
       end
+
+      @doc """
+      As many rows as the view shows, read again from its first page as the table's read returns
+      them now and in its order, and up to `more` rows that come after them.
+
+      The rows the view shows are those of `shown_ids`, or the rows a table with
+      `keep_loaded_records true` holds (`MishkaGervaz.Table.Web.State`), and they are read from
+      the first row of the view's first page.
+
+      The table reads with it the rows of `MishkaGervaz.Table.Web.Live.reorder/2`. It is one read,
+      and one more for each preload; a read action that paginates reads up to its `max_page_size`
+      rows at a time.
+
+      Returns `{:ok, covered, after}`, or `:error` when the read cannot answer: a manual read, or a
+      read that returns an error, such as an action that pages by keyset only. A hook or read that
+      raises raises here too, as it does when the table loads.
+      """
+      @spec rows_in_window(State.t(), non_neg_integer()) ::
+              {:ok, [Ash.Resource.Record.t()], [Ash.Resource.Record.t()]} | :error
+      def rows_in_window(state, more) do
+        tenant_mod = resolve_tenant_resolver(state.static.resource)
+        action_name = tenant_mod.get_read_action(state)
+        {offset, count} = window(state)
+
+        with %{manual: nil} = action <-
+               Ash.Resource.Info.action(state.static.resource, action_name),
+             opts = [actor: state.current_user, tenant: tenant_mod.get_tenant(state)],
+             {:ok, rows} <- read_from(read_query(state), action, opts, offset, count + more) do
+          {:ok, Enum.take(rows, count), Enum.drop(rows, count)}
+        else
+          _cannot_answer -> :error
+        end
+      end
+
+      @spec window(State.t()) :: {non_neg_integer(), non_neg_integer()}
+      defp window(%State{static: %{keep_loaded_records: true}, loaded_records: rows}),
+        do: {0, length(rows)}
+
+      defp window(%State{first_page: first} = state) do
+        before = (first - 1) * (state.current_page_size || state.static.page_size || 0)
+        {before, MapSet.size(state.shown_ids || MapSet.new())}
+      end
+
+      @spec read_from(Ash.Query.t(), map(), keyword(), non_neg_integer(), non_neg_integer()) ::
+              {:ok, list()} | :error
+      defp read_from(_query, _action, _opts, _offset, 0), do: {:ok, []}
+
+      defp read_from(query, %{pagination: %{}} = action, opts, offset, limit) do
+        size = page_limit(action, limit)
+
+        with {:ok, page} <-
+               query
+               |> Ash.Query.for_read(action.name, %{}, opts)
+               |> Ash.read(page: [offset: offset, limit: size, count: false]),
+             rows = MishkaGervaz.Table.Web.DataLoader.PaginationHandler.extract_results(page),
+             {:ok, rest} <-
+               read_more(query, action, opts, offset + size, limit - size, length(rows) == size) do
+          {:ok, rows ++ rest}
+        else
+          _error -> :error
+        end
+      end
+
+      defp read_from(query, action, opts, offset, limit) do
+        query
+        |> Ash.Query.offset(offset)
+        |> Ash.Query.limit(limit)
+        |> Ash.Query.for_read(action.name, %{}, opts)
+        |> Ash.read()
+        |> case do
+          {:ok, rows} -> {:ok, rows}
+          {:error, _error} -> :error
+        end
+      end
+
+      @spec read_more(
+              Ash.Query.t(),
+              map(),
+              keyword(),
+              non_neg_integer(),
+              non_neg_integer(),
+              boolean()
+            ) ::
+              {:ok, list()} | :error
+      defp read_more(query, action, opts, offset, limit, true),
+        do: read_from(query, action, opts, offset, limit)
+
+      defp read_more(_query, _action, _opts, _offset, _limit, false), do: {:ok, []}
+
+      @spec page_limit(map(), pos_integer()) :: pos_integer()
+      defp page_limit(%{pagination: %{max_page_size: max}}, limit) when is_integer(max),
+        do: min(limit, max)
+
+      defp page_limit(_action, limit), do: limit
 
       @spec rows_per_read(map(), [term()]) :: pos_integer()
       defp rows_per_read(%{pagination: %{max_page_size: max}}, _ids) when is_integer(max), do: max
@@ -980,6 +1080,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
                      load_total: 1,
                      in_view?: 2,
                      rows_in_view: 2,
+                     rows_in_window: 2,
                      read_query: 1,
                      refresh_total: 1,
                      handle_async: 3,
