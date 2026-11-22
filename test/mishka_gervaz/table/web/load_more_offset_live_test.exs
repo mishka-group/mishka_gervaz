@@ -13,6 +13,8 @@ defmodule MishkaGervaz.Table.Web.LoadMoreOffsetLiveTest do
   drawn again is drawn once, in its place. A row that leaves without having been shown, or one that
   arrives, makes that click read a row already shown again, so it adds fewer new rows; a table whose
   read allows keyset pagination reads a full page instead (`MishkaGervaz.Table.Web.LoadMoreLiveTest`).
+  The footer counts the rows the view shows all the while: a row that arrives or moves into the list
+  counts, and a row Load more reads again counts once.
   """
   use ExUnit.Case, async: false
 
@@ -43,6 +45,9 @@ defmodule MishkaGervaz.Table.Web.LoadMoreOffsetLiveTest do
   end
 
   defp more?(view), do: has_element?(view, "#items button[phx-click=load_more]")
+
+  defp counts(view),
+    do: view |> element("#counts") |> render() |> LazyHTML.from_fragment() |> LazyHTML.text()
 
   defp listed(view, items) do
     titles = Map.new(items, &{"items_offset_items-#{&1.id}", &1.title})
@@ -177,12 +182,15 @@ defmodule MishkaGervaz.Table.Web.LoadMoreOffsetLiveTest do
 
       notify(view, :create, aa)
       assert listed(view, items) == ~w(aa a b c d)
+      assert counts(view) == "5 of 11"
 
       load_more(view)
       assert listed(view, items) == ~w(aa a b c d e f g)
+      assert counts(view) == "8 of 11"
 
       load_more(view)
       assert listed(view, items) == ~w(aa a b c d e f g h i j)
+      assert counts(view) == "11 of 11"
       refute more?(view)
     end
 
@@ -193,14 +201,35 @@ defmodule MishkaGervaz.Table.Web.LoadMoreOffsetLiveTest do
 
       notify(view, :create, z)
       assert listed(view, items) == ~w(z a b c d)
+      assert counts(view) == "5 of 11"
 
       load_more(view)
       assert listed(view, items) == ~w(z a b c d e f g h)
+      assert counts(view) == "9 of 11"
 
       load_more(view)
       assert listed(view, items) == ~w(z a b c d e f g h i j)
+      assert counts(view) == "11 of 11"
       refute more?(view)
     end
+  end
+
+  test "after a row changed elsewhere moves in from after the rows shown, counts it", %{
+    items: items
+  } do
+    view = open("/offset")
+    h = Enum.find(items, &(&1.title == "h"))
+    bb = Ash.update!(h, %{title: "bb"})
+    items = Enum.map(items, &if(&1.id == h.id, do: bb, else: &1))
+    assert counts(view) == "4 of 10"
+
+    notify(view, :update, bb)
+    assert listed(view, items) == ~w(bb a b c d)
+    assert counts(view) == "5 of 10"
+
+    load_more(view)
+    assert listed(view, items) == ~w(bb a b c d e f g)
+    assert counts(view) == "8 of 10"
   end
 
   test "after a row it shows is changed elsewhere, passes no row", %{items: [_a, b | _] = items} do

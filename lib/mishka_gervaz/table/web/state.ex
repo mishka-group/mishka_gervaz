@@ -24,7 +24,10 @@ defmodule MishkaGervaz.Table.Web.State do
   keyset pagination. On a read action without keyset, Load more on a table that keeps no rows
   reads from `next_offset` instead: the end of the rows the view shows, one less for each row taken
   out of the list. `removed_ids` holds the ids of the rows the view took out itself until their own
-  realtime removal arrives, so each is counted once.
+  realtime removal arrives, so each is counted once. `shown_ids` holds the ids of the rows the view
+  shows: the rows the loads read, the rows that arrive or move into the list over realtime or from a
+  row action, less the rows taken out. The footer counts them (`MishkaGervaz.Table.Templates.Shared.table_counts/1`),
+  so a row that comes in is counted once, and a row read again by Load more is not counted twice.
 
   `hidden_ids` holds the picked rows, of `selected_ids`, that the table's read no longer finds, such
   as rows a search hides. A bulk action reaches only the rows the read finds, so the bulk bar counts
@@ -228,6 +231,7 @@ defmodule MishkaGervaz.Table.Web.State do
     :loaded_records,
     :next_offset,
     :removed_ids,
+    :shown_ids,
     :after_keyset,
     :before_keyset,
     :first_page
@@ -272,6 +276,7 @@ defmodule MishkaGervaz.Table.Web.State do
           loaded_records: list(),
           next_offset: non_neg_integer(),
           removed_ids: MapSet.t(),
+          shown_ids: MapSet.t(),
           after_keyset: String.t() | nil,
           before_keyset: String.t() | nil,
           first_page: pos_integer()
@@ -491,6 +496,7 @@ defmodule MishkaGervaz.Table.Web.State do
           loaded_records: [],
           next_offset: 0,
           removed_ids: MapSet.new(),
+          shown_ids: MapSet.new(),
           after_keyset: nil,
           before_keyset: nil,
           first_page: 1

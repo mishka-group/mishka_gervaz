@@ -96,6 +96,9 @@
 - A bidirectional table's Previous, Next and page numbers add a history entry when they write the
   URL, so the browser's Back returns to the page before; a filter, a sort or a search still
   replaces the entry there
+- A table's footer counts the rows the view shows (`shown_ids` of the table state): a row that
+  arrives or moves into the list over realtime counts, and a row Load more reads again counts once;
+  before, it counted to the offset Load more reads from
 - A `:hidden` form field is drawn as a bare `<input type="hidden">` carrying its value, with no
   label and no text box; before it was a labelled text box a reader could see and type into
 

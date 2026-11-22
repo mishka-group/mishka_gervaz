@@ -8,8 +8,8 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
   of `MishkaGervaz.Test.Web.OffsetItem` on `/offset`, and of `MishkaGervaz.Test.Web.GatedItem`
   everywhere else.
 
-  On `/shelf` the table's footer shows its counts in `#counts`, beside an Add item button whose
-  click the page counts in `#activity`.
+  On `/shelf` and `/offset` the table's footer shows its counts in `#counts`, beside an Add item
+  button whose click the page counts in `#activity`.
 
   On `/desk` the table is of `MishkaGervaz.Test.Web.DeskItem`, whose rows open in the table's
   drawer. The drawer's Copy button and its rows' Mark are counted in `#activity`, and a save of the
@@ -91,7 +91,7 @@ defmodule MishkaGervaz.Test.Web.TablePageLive do
       <:rail>
         <p id="activity">{@activity}</p>
       </:rail>
-      <:table_footer :let={counts} :if={@live_action in [:shelf, :ledger]}>
+      <:table_footer :let={counts} :if={@live_action in [:shelf, :offset, :ledger]}>
         <span id="counts">{counts.shown} of {counts.total}</span>
         <span :if={counts.more?} id="more">more</span>
         <button id="add-item" type="button" phx-click="add_item">Add item</button>

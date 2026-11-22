@@ -1177,9 +1177,11 @@ defmodule MishkaGervaz.Table.Templates.Shared do
   `shown`, how many rows the view shows, and `total`, how many the table's read finds under its
   filters, `nil` when the table keeps no count (`show_total false`).
 
-  `shown` is the rows the loads put in the view, less those it took out: the rows kept, for a table
-  that keeps its loaded rows, or the rows from the view's first page to its last otherwise. `more?`
-  is whether rows are left for Load more to read, and `loading?` whether a read runs.
+  `shown` is the rows the view shows: the rows kept, for a table that keeps its loaded rows, or the
+  rows of `shown_ids` otherwise, the rows the loads read and the rows that came in over realtime or
+  from a row action, less those taken out. A row moved into the list counts, and a row Load more
+  reads again counts once. `more?` is whether rows are left for Load more to read, and `loading?`
+  whether a read runs.
   """
   @spec table_counts(map()) :: %{
           shown: non_neg_integer(),
@@ -1199,16 +1201,7 @@ defmodule MishkaGervaz.Table.Templates.Shared do
        when is_list(rows),
        do: length(rows)
 
-  defp shown_count(%{next_offset: last} = state) when is_integer(last) do
-    page_size = state.current_page_size || state.static.page_size || 0
-    before_first = ((state.first_page || 1) - 1) * page_size
-    shown = max(last - before_first, 0)
-
-    case state.total_count do
-      total when is_integer(total) -> min(shown, max(total - before_first, 0))
-      _no_count -> shown
-    end
-  end
+  defp shown_count(%{shown_ids: %MapSet{} = shown}), do: MapSet.size(shown)
 
   defp shown_count(_state), do: 0
 

@@ -63,24 +63,12 @@ defmodule MishkaGervaz.Table.Web.TableFooterLiveTest do
   end
 
   describe "Shared.table_counts/1" do
-    test "counts the rows from the view's first page to its last" do
-      static = %{keep_loaded_records: false, page_size: 10}
-
-      assert %{shown: 10, total: 25} =
+    test "counts the rows the view shows, whatever offset Load more reads from" do
+      assert %{shown: 3, total: 25} =
                Shared.table_counts(%{
-                 static: static,
+                 static: %{keep_loaded_records: false, page_size: 10},
+                 shown_ids: MapSet.new([1, 2, 3]),
                  next_offset: 20,
-                 first_page: 2,
-                 current_page_size: nil,
-                 total_count: 25
-               })
-
-      assert %{shown: 5, total: 25} =
-               Shared.table_counts(%{
-                 static: static,
-                 next_offset: 25,
-                 first_page: 3,
-                 current_page_size: nil,
                  total_count: 25
                })
     end

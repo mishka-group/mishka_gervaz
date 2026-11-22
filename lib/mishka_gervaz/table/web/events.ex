@@ -677,15 +677,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_insert, record} ->
-        socket =
-          Phoenix.LiveView.stream_insert(
-            socket,
-            state.static.stream_name,
-            Shared.arrived(record),
-            at: 0
-          )
-
-        {:noreply, socket}
+        {:noreply, show_row(socket, state, record)}
 
       {:ok, :stream_delete, record} ->
         {:noreply, remove_row(socket, state, record)}
@@ -751,15 +743,7 @@ defmodule MishkaGervaz.Table.Web.Events do
         {:noreply, socket}
 
       {:ok, :stream_insert, record} ->
-        socket =
-          Phoenix.LiveView.stream_insert(
-            socket,
-            state.static.stream_name,
-            Shared.arrived(record),
-            at: 0
-          )
-
-        {:noreply, socket}
+        {:noreply, show_row(socket, state, record)}
 
       {:ok, :stream_delete, record} ->
         {:noreply, remove_row(socket, state, record)}
@@ -1229,6 +1213,20 @@ defmodule MishkaGervaz.Table.Web.Events do
     end
   end
 
+  @doc """
+  Draws `record` at the top of the list with the arrival highlight, or again in its place when the
+  view shows it already, and counts it among the rows the view shows (`shown_ids`).
+  """
+  @spec show_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def show_row(socket, state, record) do
+    table_state = socket.assigns.table_state
+    shown = MapSet.put(table_state.shown_ids || MapSet.new(), record.id)
+
+    socket
+    |> Phoenix.LiveView.stream_insert(state.static.stream_name, Shared.arrived(record), at: 0)
+    |> Phoenix.Component.assign(:table_state, %{table_state | shown_ids: shown})
+  end
+
   @spec remove_row(Phoenix.LiveView.Socket.t(), State.t(), map()) :: Phoenix.LiveView.Socket.t()
   defp remove_row(socket, state, record) do
     socket
@@ -1260,24 +1258,34 @@ defmodule MishkaGervaz.Table.Web.Events do
   pagination; a Load more by keyset reads after the last row's keyset and does not use it. A row
   the view removes itself (`:self`) is held by its id in `removed_ids` until its own realtime
   removal (`:realtime`) arrives, which then moves nothing, so the row is counted once whether
-  realtime is on or off.
+  realtime is on or off. Every table takes it out of `shown_ids`, the rows its footer counts.
   """
   @spec drop_shown_row(State.t(), term(), :self | :realtime) :: State.t()
-  def drop_shown_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
+  def drop_shown_row(state, id, by), do: state |> unshow(id) |> drop_row(id, by)
+
+  @spec drop_row(State.t(), term(), :self | :realtime) :: State.t()
+  defp drop_row(%State{static: %{keep_loaded_records: true}} = state, id, _by),
     do: %{state | loaded_records: Enum.reject(state.loaded_records, &(&1.id == id))}
 
-  def drop_shown_row(%State{} = state, id, :self),
+  defp drop_row(%State{} = state, id, :self),
     do: %{
       state
       | next_offset: max(state.next_offset - 1, 0),
         removed_ids: MapSet.put(state.removed_ids, id)
     }
 
-  def drop_shown_row(%State{removed_ids: removed} = state, id, :realtime) do
+  defp drop_row(%State{removed_ids: removed} = state, id, :realtime) do
     if MapSet.member?(removed, id),
       do: %{state | removed_ids: MapSet.delete(removed, id)},
       else: %{state | next_offset: max(state.next_offset - 1, 0)}
   end
+
+  @doc false
+  @spec unshow(State.t(), term()) :: State.t()
+  def unshow(%State{shown_ids: %MapSet{} = shown} = state, id),
+    do: %{state | shown_ids: MapSet.delete(shown, id)}
+
+  def unshow(state, _id), do: state
 
   @doc false
   @spec drop_from_total(State.t(), non_neg_integer()) :: State.t()

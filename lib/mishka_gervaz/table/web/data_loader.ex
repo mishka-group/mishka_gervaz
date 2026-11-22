@@ -603,6 +603,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
               loaded_records: accumulate_records(state, records, reset),
               next_offset: next_offset(state, page_result, records),
               removed_ids: removed_ids(state),
+              shown_ids: shown_ids(state, records, reset),
               hidden_ids: pagination_info[:hidden_ids] || state.hidden_ids
             ] ++ page_state(state, page, page_result)
           )
@@ -744,6 +745,12 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
            do: ids
 
       defp removed_ids(_state), do: MapSet.new()
+
+      @spec shown_ids(State.t(), list(), boolean()) :: MapSet.t()
+      defp shown_ids(_state, records, true), do: MapSet.new(records, & &1.id)
+
+      defp shown_ids(%State{shown_ids: shown}, records, false),
+        do: Enum.reduce(records, shown || MapSet.new(), &MapSet.put(&2, &1.id))
 
       @spec keyset(Ash.Resource.Record.t() | nil) :: String.t() | nil
       defp keyset(%{__metadata__: %{keyset: keyset}}) when is_binary(keyset), do: keyset
