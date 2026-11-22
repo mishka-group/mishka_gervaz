@@ -213,6 +213,9 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
       - `:reset` - Whether to reset the stream (default: false)
       - `:earlier` - Whether the page goes above the rows shown, as Load earlier reads it
         (default: false)
+      - `:history` - How a bidirectional table writes the URL of the load: `:push` adds a history
+        entry, so the browser's Back returns to the page before, as Previous, Next and a page
+        number do; `:replace` (the default) swaps the entry, as a filter, a sort or a search does
       """
       @spec load_async(Phoenix.LiveView.Socket.t(), State.t(), keyword()) ::
               Phoenix.LiveView.Socket.t()
@@ -228,6 +231,7 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
         socket
         |> Phoenix.Component.assign(:table_state, state)
         |> Phoenix.Component.assign(:skip_next_url_sync?, !sync_url?)
+        |> Phoenix.Component.assign(:url_history, Keyword.get(opts, :history, :replace))
         |> MishkaGervaz.Messages.start_async(:load_data, fn ->
           execute_load(state, query, page)
         end)
@@ -883,7 +887,10 @@ defmodule MishkaGervaz.Table.Web.DataLoader do
           true ->
             socket
             |> Phoenix.Component.assign(:url_sync_pending, path)
-            |> Phoenix.LiveView.push_patch(to: path, replace: true)
+            |> Phoenix.LiveView.push_patch(
+              to: path,
+              replace: socket.assigns[:url_history] != :push
+            )
         end
       end
 

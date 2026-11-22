@@ -447,7 +447,9 @@ defmodule MishkaGervaz.Table.Web.Events do
 
   def do_handle("prev_page", _params, state, socket) do
     if state.page > 1 do
-      socket = DataLoader.load_async(socket, state, page: state.page - 1, reset: true)
+      socket =
+        DataLoader.load_async(socket, state, page: state.page - 1, reset: true, history: :push)
+
       {:noreply, socket}
     else
       {:noreply, socket}
@@ -458,7 +460,9 @@ defmodule MishkaGervaz.Table.Web.Events do
     has_more = state.has_more? or (state.total_pages && state.page < state.total_pages)
 
     if has_more do
-      socket = DataLoader.load_async(socket, state, page: state.page + 1, reset: true)
+      socket =
+        DataLoader.load_async(socket, state, page: state.page + 1, reset: true, history: :push)
+
       {:noreply, socket}
     else
       {:noreply, socket}
@@ -973,7 +977,7 @@ defmodule MishkaGervaz.Table.Web.Events do
   defp go_to_page(page, %State{page: page}, socket), do: {:noreply, socket}
 
   defp go_to_page(page, state, socket),
-    do: {:noreply, DataLoader.load_async(socket, state, page: page, reset: true)}
+    do: {:noreply, DataLoader.load_async(socket, state, page: page, reset: true, history: :push)}
 
   @spec change_page_size(pos_integer() | nil, State.t(), socket()) :: {:noreply, socket()}
   defp change_page_size(nil, _state, socket), do: {:noreply, socket}

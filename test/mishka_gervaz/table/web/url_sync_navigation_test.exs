@@ -3,7 +3,8 @@ defmodule MishkaGervaz.Table.Web.UrlSyncNavigationTest do
   A bidirectional table writes its state into the URL after a load, and takes the next URL the page
   hands it as that write coming back only when it is the very URL it wrote. Any other URL is the
   reader's navigation — a link to the bare page, the Back button — and the table follows it. A URL
-  that is already the one in the address bar is not written again, so no write is left waiting.
+  that is already the one in the address bar is not written again, so no write is left waiting. A
+  move to another page adds a history entry; any other write replaces the one there.
   """
   use ExUnit.Case, async: false
 
@@ -111,6 +112,23 @@ defmodule MishkaGervaz.Table.Web.UrlSyncNavigationTest do
 
       assert {:live, :patch, %{to: "/posts?sort=title%3Aasc", kind: :replace}} = socket.redirected
       assert socket.assigns.url_sync_pending == "/posts?sort=title%3Aasc"
+    end
+
+    test "a load of another page adds a history entry, so Back returns to the page before" do
+      socket =
+        [filter_values: %{}, sort_fields: [{:title, :asc}]]
+        |> state()
+        |> socket(%{url_seen: {"/posts", %{"sort" => "title:asc"}}, url_history: :push})
+        |> then(fn socket ->
+          DataLoader.handle_async(
+            :load_data,
+            {:ok, {2, %{results: [], more?: false}, true, %{total_count: 40, total_pages: 2}}},
+            socket
+          )
+        end)
+
+      assert {:live, :patch, %{to: to, kind: :push}} = socket.redirected
+      assert to =~ "page=2"
     end
   end
 end
