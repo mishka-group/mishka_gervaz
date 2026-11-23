@@ -3175,6 +3175,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:checked` - the switch is on
     * `:disabled` - the switch cannot be flipped
     * `:note` - text beside the switch, inside its label, so a click on it flips the switch
+
+  The checkbox lies unseen over the whole label, so the switch and its note are one target, at
+  least 44 px tall on a touch screen.
   """
   @impl true
   def toggle_input(assigns) do
@@ -3187,22 +3190,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
     ~H"""
     <label class={[
-      "inline-flex cursor-pointer items-center gap-3",
+      "relative inline-flex cursor-pointer items-center gap-3 pointer-coarse:min-h-11",
       @disabled && "opacity-50 cursor-not-allowed"
     ]}>
       <input type="hidden" name={@name} value="false" />
+      <input
+        type="checkbox"
+        id={@id}
+        name={@name}
+        value="true"
+        checked={@checked}
+        disabled={@disabled}
+        class="absolute inset-0 z-[1] m-0 size-full cursor-pointer appearance-none opacity-0 disabled:cursor-not-allowed"
+        role="switch"
+        aria-checked={to_string(@checked)}
+      />
       <div class="relative h-6 w-11 flex-none">
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value="true"
-          checked={@checked}
-          disabled={@disabled}
-          class="sr-only"
-          role="switch"
-          aria-checked={to_string(@checked)}
-        />
         <div class={[
           "h-6 w-11 rounded-full transition-colors duration-200 ease-in-out",
           if(@checked, do: "bg-[#5b57d6]", else: "bg-[#dcdad2]")
@@ -3453,7 +3456,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   One choice drawn as a card per option: a radio input in each card, the option's icon and label,
-  and its second line under them. The chosen card is drawn in the accent colour.
+  and its second line under them. The chosen card is drawn in the accent colour. The radio itself
+  lies unseen over its whole card, so the card is what a finger or a pointer presses, and a drawn
+  dot shows the choice; the keyboard reaches the radio as before.
 
   ## Assigns
     * `:name` - the radio inputs' name
@@ -3488,7 +3493,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :for={{option, index} <- Enum.with_index(@options)}
         data-value={option.value}
         class={[
-          "flex items-start gap-3 rounded-[13px] border border-[#ecebe6] bg-white p-[13px] transition-colors",
+          "relative flex items-start gap-3 rounded-[13px] border border-[#ecebe6] bg-white p-[13px] transition-colors",
           "has-checked:border-[#5b57d6] has-checked:bg-[#f6f5fe] has-checked:shadow-[0_0_0_3px_rgba(91,87,214,0.1)]",
           "has-focus-visible:border-[#5b57d6]",
           if(@disabled or option[:disabled] == true,
@@ -3504,8 +3509,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           value={option.value}
           checked={option.value == @value}
           disabled={@disabled or option[:disabled] == true}
-          class="mt-0.5 size-4 flex-none accent-[#5b57d6]"
+          class="peer absolute inset-0 z-[1] m-0 size-full cursor-pointer appearance-none rounded-[13px] opacity-0 disabled:cursor-not-allowed"
         />
+        <span
+          aria-hidden="true"
+          data-role="gervaz-choice-dot"
+          class="mt-0.5 grid size-4 flex-none place-items-center rounded-full border-[1.5px] border-[#c2bfb6] bg-white transition-colors peer-checked:border-[#5b57d6] peer-checked:[&>span]:scale-100"
+        >
+          <span class="size-2 scale-0 rounded-full bg-[#5b57d6] transition-transform duration-150 motion-reduce:transition-none"></span>
+        </span>
         <.render_icon
           :if={option.icon}
           name={option.icon}
@@ -3528,8 +3540,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   One choice drawn as a segmented control: every option a segment of one bar, the chosen one
-  raised. Each segment holds a radio input, hidden from sight but not from the keyboard, its icon,
-  its label and, smaller, its second line.
+  raised. Each segment holds a radio input, unseen over the whole segment (the segment is what is
+  pressed, 44 px tall on a touch screen) but reached by the keyboard, its icon, its label on one
+  line and, smaller, its second line.
 
   ## Assigns
     Those of `choice_cards/1`; `:class` replaces the bar's classes.
@@ -3559,7 +3572,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :for={{option, index} <- Enum.with_index(@options)}
         data-value={option.value}
         class={[
-          "relative flex min-h-[34px] flex-1 flex-col items-center justify-center rounded-[9px] px-[14px] py-1.5 text-center transition-colors",
+          "relative flex min-h-[34px] flex-1 flex-col items-center justify-center rounded-[9px] px-[14px] py-1.5 text-center transition-colors pointer-coarse:min-h-11",
           "has-checked:bg-white has-checked:shadow-[0_1px_3px_rgba(30,28,24,0.12)]",
           "has-focus-visible:ring-2 has-focus-visible:ring-[#c3c1f0]",
           if(@disabled or option[:disabled] == true,
@@ -3575,9 +3588,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           value={option.value}
           checked={option.value == @value}
           disabled={@disabled or option[:disabled] == true}
-          class="peer sr-only"
+          class="peer absolute inset-0 m-0 size-full cursor-pointer appearance-none rounded-[9px] opacity-0 disabled:cursor-not-allowed"
         />
-        <span class="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8a877f] peer-checked:text-[#1b1a18]">
+        <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12.5px] font-semibold text-[#8a877f] peer-checked:text-[#1b1a18]">
           <.render_icon :if={option.icon} name={option.icon} class="size-4" />
           {option.label}
         </span>
@@ -4902,7 +4915,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         data-role="gervaz-toast-undo"
         phx-click="gervaz_toast_undo"
         phx-value-id={@toast_id}
-        class="flex-none rounded-[8px] border border-white/20 px-[9px] py-[3px] text-[11.5px] font-extrabold text-white hover:bg-white/10"
+        class="flex-none rounded-[8px] border border-white/20 px-[9px] py-[3px] text-[11.5px] font-extrabold text-white hover:bg-white/10 pointer-coarse:-my-2.5 pointer-coarse:min-h-11"
       >
         {@undo_label}
       </button>
@@ -4910,7 +4923,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :if={@navigate}
         navigate={@navigate}
         data-role="gervaz-toast-link"
-        class={["flex-none text-[11.5px] font-extrabold no-underline", toast_link(@tone)]}
+        class={[
+          "flex-none text-[11.5px] font-extrabold no-underline pointer-coarse:-my-2.5 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center",
+          toast_link(@tone)
+        ]}
       >
         {@link_label}
       </.link>
@@ -4918,7 +4934,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :if={is_nil(@navigate) and @href}
         href={@href}
         data-role="gervaz-toast-link"
-        class={["flex-none text-[11.5px] font-extrabold no-underline", toast_link(@tone)]}
+        class={[
+          "flex-none text-[11.5px] font-extrabold no-underline pointer-coarse:-my-2.5 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center",
+          toast_link(@tone)
+        ]}
       >
         {@link_label}
       </a>
@@ -4928,7 +4947,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         phx-click="gervaz_toast_close"
         phx-value-id={@toast_id}
         aria-label={dgettext("mishka_gervaz", "Close")}
-        class="grid size-5 flex-none place-items-center text-white/60 hover:text-white"
+        class="grid size-5 flex-none place-items-center text-white/60 hover:text-white pointer-coarse:-my-3 pointer-coarse:-me-3 pointer-coarse:size-11"
       >
         <.render_icon name="hero-x-mark" class="size-[13px]" />
       </button>

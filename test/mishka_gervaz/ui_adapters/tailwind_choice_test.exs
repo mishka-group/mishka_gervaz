@@ -36,6 +36,19 @@ defmodule MishkaGervaz.UIAdapters.TailwindChoiceTest do
         assert LazyHTML.query(doc, ~s|[role="radiogroup"]|) |> Enum.count() == 1
       end
 
+      test "lays the radio unseen over its whole option, so the option is what is pressed" do
+        doc = render(unquote(fun), %{value: "yearly"})
+
+        for class <- LazyHTML.attribute(radios(doc), "class") do
+          assert class =~ "absolute inset-0"
+          assert class =~ "size-full"
+          assert class =~ "opacity-0"
+        end
+
+        for class <- doc |> LazyHTML.query("label[data-value]") |> LazyHTML.attribute("class"),
+            do: assert(class =~ "relative")
+      end
+
       test "checks the value given and no other" do
         doc = render(unquote(fun), %{value: "yearly"})
 
@@ -83,6 +96,24 @@ defmodule MishkaGervaz.UIAdapters.TailwindChoiceTest do
 
         assert doc |> LazyHTML.query(~s|[data-value="yearly"]|) |> LazyHTML.text() =~ "Yearly"
       end
+    end
+  end
+
+  describe "toggle_input" do
+    test "lays the switch's checkbox over its whole label, 44 px tall on a touch screen" do
+      doc =
+        %{__changed__: nil, name: "form[listed]", id: "f-listed", checked: true, note: "Listed"}
+        |> Tailwind.toggle_input()
+        |> rendered_to_string()
+        |> LazyHTML.from_fragment()
+
+      [class] = doc |> LazyHTML.query(~s|input[role="switch"]|) |> LazyHTML.attribute("class")
+      assert class =~ "absolute inset-0"
+      assert class =~ "opacity-0"
+
+      [label] = doc |> LazyHTML.query("label") |> LazyHTML.attribute("class")
+      assert label =~ "relative"
+      assert label =~ "pointer-coarse:min-h-11"
     end
   end
 end
