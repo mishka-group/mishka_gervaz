@@ -8,6 +8,7 @@ defmodule MishkaGervaz.Test.Web.ToastPageLive do
     * `#deleted` — "Item deleted.", in the info tone, with an Undo that stands for `"item-42"`;
       the page shows what an Undo handed it in `#undone`;
     * `#exported` — "Your file is ready.", with a link to a file;
+    * `#counted` — "Saved 1.", "Saved 2.", ..., a new sentence on each press;
     * `#from-component` — a button in `MishkaGervaz.Test.Web.ToastPageLive.Saver`, a component that
       sends "Could not save." in the error tone with `MishkaGervaz.Toast.send_toast/3`.
   """
@@ -42,7 +43,7 @@ defmodule MishkaGervaz.Test.Web.ToastPageLive do
   def mount(_params, _session, socket) do
     new_socket =
       socket
-      |> assign(:undone, nil)
+      |> assign(undone: nil, count: 0)
       |> Toast.attach()
 
     {:ok, new_socket}
@@ -53,6 +54,12 @@ defmodule MishkaGervaz.Test.Web.ToastPageLive do
 
   def handle_event("brief", _params, socket),
     do: {:noreply, Toast.push(socket, :ok, "Copied.", ms: 0)}
+
+  def handle_event("counted", _params, socket) do
+    count = socket.assigns.count + 1
+    new_socket = socket |> assign(:count, count) |> Toast.push(:ok, "Saved #{count}.")
+    {:noreply, new_socket}
+  end
 
   def handle_event("deleted", _params, socket),
     do: {:noreply, Toast.push(socket, :info, "Item deleted.", undo: "item-42")}
@@ -72,7 +79,7 @@ defmodule MishkaGervaz.Test.Web.ToastPageLive do
   def render(assigns) do
     ~H"""
     <p id="undone">{@undone}</p>
-    <button :for={id <- ~w(saved brief deleted exported)} id={id} type="button" phx-click={id}>
+    <button :for={id <- ~w(saved brief deleted exported counted)} id={id} type="button" phx-click={id}>
       {id}
     </button>
     <.live_component module={Saver} id="saver" />
