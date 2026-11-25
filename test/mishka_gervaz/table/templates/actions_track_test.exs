@@ -26,7 +26,7 @@ defmodule MishkaGervaz.Table.Templates.ActionsTrackTest do
 
   @row_group_cards ~w|max-[980px]:mb-3 max-[980px]:overflow-hidden max-[980px]:rounded-[14px] max-[980px]:border max-[980px]:border-[#ecebe6] max-[980px]:bg-white max-[980px]:shadow-[0_1px_3px_rgba(30,28,24,0.06)]|
 
-  @row_cards ~w|max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4|
+  @row_cards ~w|max-[980px]:relative! max-[640px]:flex! max-[640px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4 min-[641px]:max-[980px]:grid! min-[641px]:max-[980px]:grid-cols-2|
 
   defp table_state(updates \\ []) do
     "actions-track"

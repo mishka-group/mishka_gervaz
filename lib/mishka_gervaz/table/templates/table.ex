@@ -16,6 +16,11 @@ defmodule MishkaGervaz.Table.Templates.Table do
   - `:paginate` - Pagination controls
   - `:expand` - Expandable row details
 
+  ## Narrow screens
+  From 980px up the rows are a grid of columns. Below it every row is a card with each value under
+  its column's label: on a tablet (641px to 980px) the values sit in two columns, the checkbox and
+  the actions on lines of their own, so a card is half as tall; on a phone they are one column.
+
   ## Performance
   Uses `@static.*` for columns, ui_adapter, etc. (no re-render on user interaction)
   Uses `@state.*` for page, filter_values, etc. (re-renders when changed)
@@ -779,7 +784,8 @@ defmodule MishkaGervaz.Table.Templates.Table do
         subgrid_class(),
         @row_path && "relative cursor-pointer",
         @arrived? && "relative",
-        "max-[980px]:relative! max-[980px]:flex! max-[980px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4"
+        "max-[980px]:relative! max-[640px]:flex! max-[640px]:flex-col! max-[980px]:items-stretch! max-[980px]:gap-[12px] max-[980px]:p-4",
+        "min-[641px]:max-[980px]:grid! min-[641px]:max-[980px]:grid-cols-2 min-[641px]:max-[980px]:gap-x-6"
         | row_classes(@static, @state, @record, @is_checked)
       ]}>
         <.link
@@ -798,7 +804,10 @@ defmodule MishkaGervaz.Table.Templates.Table do
         />
         <div
           :if={@show_checkboxes}
-          class={["flex items-center ps-[16px] max-[980px]:ps-0!", @above_link]}
+          class={[
+            "flex items-center ps-[16px] max-[980px]:ps-0! min-[641px]:max-[980px]:col-span-full",
+            @above_link
+          ]}
         >
           <.dynamic_component
             module={@static.ui_adapter}
@@ -856,7 +865,7 @@ defmodule MishkaGervaz.Table.Templates.Table do
           :if={@show_actions}
           data-role="gervaz-row-actions"
           class={[
-            "flex items-center justify-end px-[16px] max-[980px]:px-0!",
+            "flex items-center justify-end px-[16px] max-[980px]:px-0! min-[641px]:max-[980px]:col-span-full",
             sticky_actions_class(@static, true),
             @above_link
           ]}

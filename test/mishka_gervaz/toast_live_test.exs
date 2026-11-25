@@ -95,15 +95,45 @@ defmodule MishkaGervaz.ToastLiveTest do
     assert has_element?(view, ~s|#{@toast}[data-tone="error"]|, "Could not save.")
   end
 
+  defp shown(view), do: view |> render() |> LazyHTML.from_fragment() |> LazyHTML.query(@toast)
+
   test "keeps the four newest" do
     view = open()
 
-    for _press <- 1..5, do: press(view, "saved")
+    for _press <- 1..5, do: press(view, "counted")
     press(view, "deleted")
 
-    assert view |> render() |> LazyHTML.from_fragment() |> LazyHTML.query(@toast) |> Enum.count() ==
-             4
-
+    assert Enum.count(shown(view)) == 4
     assert has_element?(view, @toast, "Item deleted.")
+    assert has_element?(view, @toast, "Saved 5.")
+    refute has_element?(view, @toast, "Saved 2.")
+  end
+
+  test "the same sentence again takes the place of the one shown, as the newest" do
+    view = open()
+
+    for _press <- 1..3, do: press(view, "saved")
+    assert Enum.count(shown(view)) == 1
+
+    press(view, "deleted")
+    press(view, "saved")
+
+    assert view |> shown() |> Enum.map(&(LazyHTML.text(&1) =~ "Saved.")) == [false, true]
+  end
+
+  test "the timer of the toast it took the place of does not take it away" do
+    view = open()
+
+    press(view, "saved")
+    [first] = view |> shown() |> LazyHTML.attribute("id")
+    press(view, "saved")
+    [second] = view |> shown() |> LazyHTML.attribute("id")
+    assert first != second
+
+    "gervaz-toasts-" <> id = first
+    send(view.pid, {:gervaz_toast_expire, String.to_integer(id)})
+    handled(view)
+
+    assert has_element?(view, "##{second}", "Saved.")
   end
 end

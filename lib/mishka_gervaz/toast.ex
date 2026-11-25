@@ -30,7 +30,9 @@ defmodule MishkaGervaz.Toast do
   the push gave; the page's `handle_info/2` does what it stands for.
 
   The toasts are kept in the socket's `:gervaz_toasts` assign, the newest last, at most four. A
-  toast stays 5 seconds, 8 with an Undo or a link; `ms:` sets its own time.
+  toast with the same words as one already shown takes its place, so a button pressed twice shows
+  its sentence once, with its time starting again. A toast stays 5 seconds, 8 with an Undo or a
+  link; `ms:` sets its own time.
   """
 
   use Phoenix.Component
@@ -68,7 +70,8 @@ defmodule MishkaGervaz.Toast do
   end
 
   @doc """
-  Shows a toast in `tone` (`:ok`, `:info`, `:warn`, `:error`) saying `text`.
+  Shows a toast in `tone` (`:ok`, `:info`, `:warn`, `:error`) saying `text`. A toast already shown
+  with the same `text` is taken away first, so the same sentence never stacks.
 
   ## Options
     * `:undo` - what its Undo button stands for, any term; no button without it. The page is sent
@@ -87,7 +90,8 @@ defmodule MishkaGervaz.Toast do
     if Phoenix.LiveView.connected?(socket),
       do: Process.send_after(self(), {:gervaz_toast_expire, toast.id}, opts[:ms] || ms(toast))
 
-    assign(socket, :gervaz_toasts, Enum.take(list(socket) ++ [toast], -@max))
+    kept = Enum.reject(list(socket), &(&1.text == text))
+    assign(socket, :gervaz_toasts, Enum.take(kept ++ [toast], -@max))
   end
 
   @doc """
