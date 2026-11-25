@@ -1,3 +1,53 @@
+# Changelog for MishkaGervaz 0.0.13
+
+### Features:
+- A refused save moves the reader to the first field with an error, in the order the form draws
+  them: the field is focused and scrolled into view, and a collapsed group or another step that
+  holds it opens first. A refusal no field shows moves the reader to the message above the submit
+  row. It runs on `Phoenix.LiveView.JS`, so the page needs no hook
+- A form mounted with `notify_failed={true}` sends its page `{:form_failed, id, failure}` each time a
+  save is refused, `failure` being `%{mode:, fields:, messages:}`, for a toast of the page's own
+- A `:number` or `:range` field that names no `min` or `max` takes the `min` and `max` constraints of
+  its attribute, as a text field takes its `max_length`
+- A form group draws its `ui` `description` under its label
+
+### Bug fixes:
+- An error under a field names the field: "is required" under Name reads "Name is required". A
+  message that already ends a sentence is shown as written (`MishkaGervaz.Errors.label_message/2`)
+- A number past its `min` or `max` shows one sentence that names the limit, "Seats must be 10 or
+  less" or "Price must be 0.50 or more", where before it read "is too large" or "is too small"; the
+  action's own sentence for the field still comes first
+- A `:text`, `:textarea` or `:password` value past its `max_length` is refused in words, "Name must be
+  20 characters or fewer", where it was accepted when it got past the input's `maxlength`
+- A `:text`, `:combobox` or `:string_list` value that holds an HTML tag, such as `<b>Ann</b>`, stays
+  as typed and is refused with "must be plain text, without HTML tags"; before, the tags were
+  removed under the reader and the changed text was saved. A bare `<` or `>` is text and is taken. A
+  custom field type refuses a value in `validate/2`, not by rewriting it in `sanitize/2`
+- A `:number` field is a text input with the phone's decimal keyboard, so a typed `3-1` reads "must
+  be a number"; before, the browser sent it as an empty value and the form said "is required"
+- A required field's text, password, number, textarea or select input carries `required`, and every
+  form is `novalidate`, so the browser never shows a message of its own or blocks a save: each
+  message comes from the form, under its field, in the reader's language
+- A form group with neither a label nor a description starts with its fields, with no gap above them
+- On a tablet (641px to 980px) a table's rows are cards with their values in two columns, the
+  checkbox and the actions on lines of their own, so a card is half as tall; on a phone they stay
+  one column
+- A toast with the same words as one already shown takes its place, so a button pressed twice shows
+  its sentence once, with its time starting again
+- On a touch screen a switch, a choice card and a segment of a segmented control are pressed over
+  their whole area, at least 44 px tall, and a toast's Undo, link and close are 44 px targets; the
+  radio of a choice card is drawn as a dot of its own
+- The copy button (`copy_button/1`) keeps its size: while the host's `CopyToClipboard` hook marks
+  it `data-copied`, a check icon of the same size takes the copy icon's place and a polite live
+  region says "Copied". Before, the hook's "Copied!" text replaced the 12 px icon, so an icon-only
+  button grew and its table cell moved. It needs the host hook that sets `data-copied` instead of
+  writing into the button
+
+### Dependencies:
+- ash 3.37.7 => 3.38.1
+- lazy_html 0.1.14 => 0.1.15
+- igniter 0.8.5 => 0.8.6
+
 # Changelog for MishkaGervaz 0.0.12
 
 ### Features:
@@ -128,11 +178,6 @@
   and after a failed save; each sticks where it rests, so neither slides when the body scrolls. The
   body is marked `data-role="gervaz-panel-body"`. On a phone the form's
   tabs and its submit row's buttons are 44 px tall
-- The copy button (`copy_button/1`) keeps its size: while the host's `CopyToClipboard` hook marks
-  it `data-copied`, a check icon of the same size takes the copy icon's place and a polite live
-  region says "Copied". Before, the hook's "Copied!" text replaced the 12 px icon, so an icon-only
-  button grew and its table cell moved. It needs the host hook that sets `data-copied` instead of
-  writing into the button
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.15 (EEF-CVE-2026-126334)
