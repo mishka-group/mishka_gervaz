@@ -28,7 +28,7 @@ msgstr ""
 msgid "must be a JSON object"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/number.ex:47
+#: lib/mishka_gervaz/form/types/field/number.ex:120
 #: lib/mishka_gervaz/form/types/field/range.ex:31
 #, elixir-autogen, elixir-format
 msgid "must be a number"
@@ -44,8 +44,8 @@ msgstr ""
 msgid "must be a valid date and time"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/number.ex:30
-#: lib/mishka_gervaz/form/types/field/number.ex:43
+#: lib/mishka_gervaz/form/types/field/number.ex:41
+#: lib/mishka_gervaz/form/types/field/number.ex:119
 #, elixir-autogen, elixir-format
 msgid "must be a whole number"
 msgstr ""
@@ -55,7 +55,7 @@ msgstr ""
 msgid "must be valid JSON"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:2093
+#: lib/mishka_gervaz/form/templates/standard.ex:2496
 #, elixir-autogen, elixir-format
 msgid "is required"
 msgstr ""
@@ -70,12 +70,22 @@ msgstr ""
 msgid "is too late"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/number.ex:66
+#: lib/mishka_gervaz/form/types/field/text.ex:84
 #, elixir-autogen, elixir-format
-msgid "is too large"
+msgid "must be %{count} characters or fewer"
 msgstr ""
 
-#: lib/mishka_gervaz/form/types/field/number.ex:65
+#: lib/mishka_gervaz/form/types/field/number.ex:85
 #, elixir-autogen, elixir-format
-msgid "is too small"
+msgid "must be %{max} or less"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/number.ex:82
+#, elixir-autogen, elixir-format
+msgid "must be %{min} or more"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/text.ex:62
+#, elixir-autogen, elixir-format
+msgid "must be plain text, without HTML tags"
 msgstr ""
