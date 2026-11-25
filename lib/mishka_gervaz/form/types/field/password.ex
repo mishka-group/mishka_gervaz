@@ -5,7 +5,8 @@ defmodule MishkaGervaz.Form.Types.Field.Password do
   Renders as a text input with `type="password"` for masked entry. Sanitize
   trims surrounding whitespace; values are otherwise passed through
   unchanged so trailing/leading characters that matter for hashing aren't
-  silently stripped.
+  silently stripped. A value longer than the field's `max_length` is refused in words, as a
+  `:text` field's is (`MishkaGervaz.Form.Types.Field.Text.within_length/2`).
 
   ## Example
 
@@ -23,7 +24,7 @@ defmodule MishkaGervaz.Form.Types.Field.Password do
   def render(assigns, _config), do: assigns
 
   @impl true
-  def validate(value, _config), do: {:ok, value}
+  def validate(value, config), do: MishkaGervaz.Form.Types.Field.Text.within_length(value, config)
 
   @impl true
   def parse_params(value, _config), do: value

@@ -108,4 +108,30 @@ defmodule MishkaGervaz.Form.Web.FieldRulesLiveTest do
       assert [%{name: "a < b > c"}] = Ash.read!(RuleItem)
     end
   end
+
+  describe "a value longer than the field's max_length" do
+    test "the input carries the limit" do
+      view = open()
+
+      assert has_element?(view, ~s|#{@form} input[name="form[name]"][maxlength="20"]|)
+      assert has_element?(view, ~s|#{@form} textarea[name="form[note]"][maxlength="40"]|)
+    end
+
+    test "that still reaches the form is refused in one sentence that names the limit" do
+      view =
+        open()
+        |> save(%{
+          "name" => String.duplicate("a", 25),
+          "note" => String.duplicate("b", 50),
+          "seats" => "2"
+        })
+
+      errors = field_errors(view)
+
+      assert "Name must be 20 characters or fewer" in errors
+      assert "Note must be 40 characters or fewer" in errors
+      refute Enum.any?(errors, &(&1 =~ "less than or equal to"))
+      assert Ash.read!(RuleItem) == []
+    end
+  end
 end

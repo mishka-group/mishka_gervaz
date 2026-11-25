@@ -4,7 +4,7 @@ defmodule MishkaGervaz.Form.Types.Field.TextTest do
 
   alias MishkaGervaz.Form.Types.Field.Text
 
-  doctest MishkaGervaz.Form.Types.Field.Text, only: [plain_text: 1]
+  doctest MishkaGervaz.Form.Types.Field.Text, only: [plain_text: 1, within_length: 2]
 
   describe "behaviour callbacks" do
     test "render/2 returns assigns unchanged" do
@@ -16,6 +16,19 @@ defmodule MishkaGervaz.Form.Types.Field.TextTest do
       assert Text.validate("a < b > c", %{}) == {:ok, "a < b > c"}
       assert Text.validate(nil, %{}) == {:ok, nil}
       assert Text.validate("", %{}) == {:ok, ""}
+    end
+
+    test "validate/2 refuses a value longer than the field's max_length, naming the limit" do
+      assert Text.validate("Ann", %{max_length: 3}) == {:ok, "Ann"}
+
+      assert Text.validate("Anna", %{max_length: 3}) ==
+               {:error, {"must be %{count} characters or fewer", [count: 3]}}
+
+      assert Text.validate("Anna", %{max_length: nil}) == {:ok, "Anna"}
+    end
+
+    test "validate/2 counts characters, not bytes" do
+      assert Text.validate("نامِ", %{max_length: 4}) == {:ok, "نامِ"}
     end
 
     test "validate/2 refuses a value that holds an HTML tag, in words" do

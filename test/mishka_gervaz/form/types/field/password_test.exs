@@ -133,4 +133,11 @@ defmodule MishkaGervaz.Form.Types.Field.PasswordTest do
       assert length(fields) == 3
     end
   end
+
+  test "validate/2 refuses a password longer than the field's max_length" do
+    assert Password.validate("secret", %{max_length: 6}) == {:ok, "secret"}
+
+    assert Password.validate("secrets", %{max_length: 6}) ==
+             {:error, {"must be %{count} characters or fewer", [count: 6]}}
+  end
 end
