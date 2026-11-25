@@ -177,16 +177,19 @@ end
 | Callback | Required | Note |
 |---|---|---|
 | `render/2` | ✔ | `assigns, config` — the Standard template draws the field with it, inside its label and errors; `assigns` carry `name`, `id`, `value`, `placeholder`, `disabled` and `module` (the UI adapter) |
-| `sanitize/2` | — | runs **before** validation; text types strip HTML, textarea/json/nested pass through |
+| `sanitize/2` | — | runs **before** validation; tidies a value (text types trim it) and never changes what was meant; textarea/json/nested pass through |
 | `parse_params/2` | — | raw param → typed value |
-| `validate/2` | — | `{:ok, value}` \| `{:error, message}` — runs on each change and on save; the message shows under the field and a refused save writes nothing |
+| `validate/2` | — | `{:ok, value}` \| `{:error, message}` \| `{:error, {message, vars}}` — runs on each change and on save; the message shows under the field, joined to its label when it is a phrase ("Seats must be 10 or less"), and a refused save writes nothing. The action's own sentence for the field wins over it; it wins over the action's phrases |
 | `default_ui/0` | — | baseline UI config for the type |
 
 Built-ins: `Form.Types.Field.*` — `Relation` and `Nested` are the substantial ones; `Hidden` is
 the smallest.
 
-> Sanitization is a real defence, not decoration: the library strips HTML from text input for you.
-> A custom type that skips `sanitize/2` opts out of it.
+> A value is never changed under the person typing it. A `:text`, `:combobox` or `:string_list`
+> value that holds an HTML tag is refused by `validate/2` with "must be plain text, without HTML
+> tags" and stays in the field as typed; a value past its field's `max_length` is refused with
+> "must be 20 characters or fewer". A custom type that refuses a value does it in `validate/2`, not
+> by rewriting it in `sanitize/2`.
 
 ## The four behaviours — compared
 
