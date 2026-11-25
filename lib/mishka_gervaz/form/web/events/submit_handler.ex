@@ -362,7 +362,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
                     form: failed_form,
                     errors: errors,
                     form_errors: form_errors,
-                    failed_saves: (state.failed_saves || 0) + 1
+                    failed_saves: state.failed_saves + 1
                   )
 
                 state =
