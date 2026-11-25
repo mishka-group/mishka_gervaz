@@ -879,7 +879,7 @@ defmodule MishkaGervaz.Form.Web.Events do
     halted =
       State.update(validated,
         form_errors: halt_messages(reason),
-        failed_saves: (validated.failed_saves || 0) + 1
+        failed_saves: validated.failed_saves + 1
       )
 
     Phoenix.Component.assign(socket, :form_state, halted)
