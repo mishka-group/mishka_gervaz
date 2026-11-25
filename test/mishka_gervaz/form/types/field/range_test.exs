@@ -45,8 +45,8 @@ defmodule MishkaGervaz.Form.Types.Field.RangeTest do
 
       assert RangeField.validate(15, config) == {:ok, 15}
       assert RangeField.validate("20", config) == {:ok, "20"}
-      assert RangeField.validate("9", config) == {:error, "is too small"}
-      assert RangeField.validate(21, config) == {:error, "is too large"}
+      assert RangeField.validate("9", config) == {:error, {"must be %{min} or more", [min: "10"]}}
+      assert RangeField.validate(21, config) == {:error, {"must be %{max} or less", [max: "20"]}}
     end
   end
 end

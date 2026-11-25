@@ -4,8 +4,8 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
   admin drives it (`MishkaGervaz.Test.Web.PlanItem` on `MishkaGervaz.Test.Web.PlanPageLive`): its
   `:price` runs from `Decimal.new("0.50")` to `fn -> Decimal.new("9999.99") end`.
 
-  The input carries both bounds as plain digits. A save of a value outside them shows "is too
-  small" or "is too large" and saves nothing; the bounds themselves are allowed. `Number.validate/2`,
+  The input carries both bounds as plain digits. A save of a value outside them names the bound it
+  broke, "Price must be 0.50 or more" or "Price must be 9999.99 or less", and saves nothing; the bounds themselves are allowed. `Number.validate/2`,
   which also checks a value while it is typed, compares as `Decimal`s.
   """
   use ExUnit.Case, async: false
@@ -48,7 +48,7 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
     view = open()
     save(view, "0.49")
 
-    assert render(view) =~ "is too small"
+    assert render(view) =~ "Price must be 0.50 or more"
     assert Ash.read!(PlanItem) == []
   end
 
@@ -56,7 +56,7 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
     view = open()
     save(view, "10000")
 
-    assert render(view) =~ "is too large"
+    assert render(view) =~ "Price must be 9999.99 or less"
     assert Ash.read!(PlanItem) == []
   end
 

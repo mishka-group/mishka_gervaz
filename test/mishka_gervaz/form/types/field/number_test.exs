@@ -4,6 +4,8 @@ defmodule MishkaGervaz.Form.Types.Field.NumberTest do
 
   alias MishkaGervaz.Form.Types.Field.Number, as: NumberField
 
+  doctest MishkaGervaz.Form.Types.Field.Number, only: [within: 3]
+
   describe "validate/2 — numeric values" do
     test "accepts any number when ash_type is unrestricted" do
       assert NumberField.validate(42, %{}) == {:ok, 42}
@@ -59,12 +61,16 @@ defmodule MishkaGervaz.Form.Types.Field.NumberTest do
       assert NumberField.validate(1, config) == {:ok, 1}
       assert NumberField.validate("10", config) == {:ok, "10"}
       assert NumberField.validate("5.5", config) == {:ok, "5.5"}
-      assert NumberField.validate(0, config) == {:error, "is too small"}
-      assert NumberField.validate("10.5", config) == {:error, "is too large"}
+      assert NumberField.validate(0, config) == {:error, {"must be %{min} or more", [min: "1"]}}
+
+      assert NumberField.validate("10.5", config) ==
+               {:error, {"must be %{max} or less", [max: "10"]}}
     end
 
     test "a min or max given as a function of no arguments is called" do
-      assert NumberField.validate(0, %{min: fn -> 1 end}) == {:error, "is too small"}
+      assert NumberField.validate(0, %{min: fn -> 1 end}) ==
+               {:error, {"must be %{min} or more", [min: "1"]}}
+
       assert NumberField.validate(5, %{max: fn -> nil end}) == {:ok, 5}
     end
 

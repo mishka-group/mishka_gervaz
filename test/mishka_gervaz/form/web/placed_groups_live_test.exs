@@ -75,8 +75,8 @@ defmodule MishkaGervaz.Form.Web.PlacedGroupsLiveTest do
     |> form(@form, %{"form" => %{"title" => "Kit", "licensed" => "true", "places" => "50"}})
     |> render_submit()
 
-    assert has_element?(view, "#card-keys", "less than or equal to 10")
-    refute has_element?(view, "#card-basics", "less than or equal to 10")
+    assert has_element?(view, "#card-keys", "must be 10 or less")
+    refute has_element?(view, "#card-basics", "must be 10 or less")
     assert Ash.read!(PlacedItem) == []
   end
 

@@ -5,9 +5,10 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   Validates against the field's `ash_type`: `:integer` / `Ash.Type.Integer`
   reject decimals; other numeric Ash types accept either integers or floats.
   Sanitizes string input by stripping HTML and trimming whitespace. A value below the field's `min`
-  or above its `max` gets the field's error, and the input carries both, with `ui` `step`. A bound
-  may be an integer, a float or a `Decimal`; a value is compared with it as a `Decimal`, so
-  `0.1` and `Decimal.new("0.10")` are equal.
+  or above its `max` gets an error that names the bound, "must be 1 or more" or "must be 10 or less",
+  shown under the field as "Seats must be 10 or less". The input carries both bounds, with `ui`
+  `step`. A bound may be an integer, a float or a `Decimal`; a value is compared with it as a
+  `Decimal`, so `0.1` and `Decimal.new("0.10")` are equal.
 
   ## Example
 
@@ -64,24 +65,44 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
   @doc """
   `{:ok, value}` when `number`, the number `value` holds, is within the `min` and `max` of the
-  field `config`; otherwise the field's error. `number` and the bounds may each be an integer, a
-  float or a `Decimal`, compared as `Decimal`s. A bound given as a function of no arguments is
-  called; one that is not a number is not checked.
+  field `config`; otherwise `{:error, {message, vars}}`, the message naming the bound it broke:
+  `"must be %{min} or more"` or `"must be %{max} or less"`. `number` and the bounds may each be an
+  integer, a float or a `Decimal`, compared as `Decimal`s. A bound given as a function of no
+  arguments is called; one that is not a number is not checked.
+
+  ## Examples
+
+      iex> MishkaGervaz.Form.Types.Field.Number.within(11, 11, %{max: 10})
+      {:error, {"must be %{max} or less", [max: "10"]}}
+
+      iex> MishkaGervaz.Form.Types.Field.Number.within("0.4", Decimal.new("0.4"), %{min: Decimal.new("0.50")})
+      {:error, {"must be %{min} or more", [min: "0.50"]}}
   """
   @spec within(term(), number() | Decimal.t(), map() | nil) ::
-          {:ok, term()} | {:error, String.t()}
+          {:ok, term()} | {:error, {String.t(), keyword()}}
   def within(value, number, config) do
     config = config || %{}
+    min = read_bound(Map.get(config, :min))
+    max = read_bound(Map.get(config, :max))
 
     cond do
-      below?(number, Map.get(config, :min)) -> {:error, dgettext_noop("errors", "is too small")}
-      below?(Map.get(config, :max), number) -> {:error, dgettext_noop("errors", "is too large")}
-      true -> {:ok, value}
+      below?(number, min) ->
+        {:error, {dgettext_noop("errors", "must be %{min} or more"), [min: shown(min)]}}
+
+      below?(max, number) ->
+        {:error, {dgettext_noop("errors", "must be %{max} or less"), [max: shown(max)]}}
+
+      true ->
+        {:ok, value}
     end
   end
 
-  defp below?(bound, other) when is_function(bound, 0), do: below?(bound.(), other)
-  defp below?(number, bound) when is_function(bound, 0), do: below?(number, bound.())
+  defp read_bound(bound) when is_function(bound, 0), do: bound.()
+  defp read_bound(bound), do: bound
+
+  defp shown(%Decimal{} = bound), do: Decimal.to_string(bound, :normal)
+  defp shown(bound) when is_float(bound), do: :erlang.float_to_binary(bound, [:short])
+  defp shown(bound), do: to_string(bound)
 
   defp below?(number, other) do
     case {decimal(number), decimal(other)} do

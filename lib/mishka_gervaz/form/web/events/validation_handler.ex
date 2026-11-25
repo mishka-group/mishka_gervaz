@@ -144,8 +144,8 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
       defp merge_field_type_errors(form, []), do: form
 
       defp merge_field_type_errors(form, errors) when is_list(errors) do
-        wrapped = Enum.map(errors, fn {field, msg} -> {field, {msg, []}} end)
-        %{form | errors: wrapped ++ form.errors}
+        merged = MishkaGervaz.Form.Web.Events.Helpers.merge_type_errors(form.errors, errors)
+        %{form | errors: merged}
       end
 
       defoverridable validate: 3, validate: 4, validate: 5, build_errors: 1

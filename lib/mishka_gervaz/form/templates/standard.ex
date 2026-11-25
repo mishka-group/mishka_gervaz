@@ -2406,11 +2406,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
          true <-
            Map.get(sf, :custom_validate?, MishkaGervaz.Helpers.exports?(type_mod, :validate, 2)),
          {:error, message} <- type_mod.validate(value, %{ash_type: Map.get(sf, :ash_type)}) do
-      [message]
+      [sub_type_message(message)]
     else
       _nothing_to_say -> []
     end
   end
+
+  defp sub_type_message({message, vars}), do: MishkaGervaz.Errors.translate_error(message, vars)
+  defp sub_type_message(message), do: message
 
   @doc false
   def blank_sub_value?(nil), do: true

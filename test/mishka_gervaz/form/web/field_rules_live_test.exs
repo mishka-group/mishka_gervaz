@@ -69,4 +69,14 @@ defmodule MishkaGervaz.Form.Web.FieldRulesLiveTest do
       refute "is required" in errors
     end
   end
+
+  describe "a number past its bound" do
+    test "the action's own sentence is the one message under the field" do
+      errors =
+        open() |> save(%{"name" => "Ann", "seats" => "2", "budget" => "150"}) |> field_errors()
+
+      assert errors == ["Use 100 or less: that is the budget."]
+      assert Ash.read!(RuleItem) == []
+    end
+  end
 end
