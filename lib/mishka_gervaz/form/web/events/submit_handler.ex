@@ -122,12 +122,44 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   `changeset` with an error on each field whose type's `FieldType.validate/2` refused its value, as
   `MishkaGervaz.Form.Web.Events.Helpers.validate_typed_params/3` lists them, so the save fails and
   shows them as it shows the action's own errors.
+
+  A field keeps one answer, as `MishkaGervaz.Form.Web.Events.Helpers.merge_type_errors/2` says: the
+  action's own sentence for it stays and the field type's message is left out; otherwise the field
+  type's message takes the place of the action's phrases for it.
   """
-  @spec add_field_type_errors(Ash.Changeset.t(), [{atom(), String.t()}]) :: Ash.Changeset.t()
+  @spec add_field_type_errors(Ash.Changeset.t(), [{atom(), {String.t(), keyword()}}]) ::
+          Ash.Changeset.t()
   def add_field_type_errors(changeset, errors) do
-    Enum.reduce(errors, changeset, fn {field, message}, acc ->
-      Ash.Changeset.add_error(acc, field: field, message: message)
+    Enum.reduce(errors, changeset, fn {field, {message, vars}}, acc ->
+      {theirs, others} = Enum.split_with(acc.errors, &about_field?(&1, field))
+
+      if Enum.any?(theirs, &own_sentence?/1) do
+        acc
+      else
+        error =
+          Ash.Error.Changes.InvalidAttribute.exception(field: field, message: message, vars: vars)
+
+        Ash.Changeset.add_error(%{acc | errors: others}, error)
+      end
     end)
+  end
+
+  defp about_field?(error, field),
+    do: Map.get(error, :field) == field or field in List.wrap(Map.get(error, :fields))
+
+  defp own_sentence?(error) do
+    case AshPhoenix.FormData.Error.impl_for(error) do
+      nil ->
+        false
+
+      impl ->
+        error
+        |> impl.to_form_error()
+        |> List.wrap()
+        |> Enum.any?(fn {_field, message, _vars} ->
+          is_binary(message) and Errors.sentence?(message)
+        end)
+    end
   end
 
   @doc false
@@ -329,7 +361,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
                   State.update(state,
                     form: failed_form,
                     errors: errors,
-                    form_errors: form_errors
+                    form_errors: form_errors,
+                    failed_saves: (state.failed_saves || 0) + 1
                   )
 
                 state =

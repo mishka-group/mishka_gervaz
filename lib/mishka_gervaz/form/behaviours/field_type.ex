@@ -74,9 +74,17 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   Validate a field value.
 
   Returns `{:ok, value}` for valid values or `{:error, message}` for invalid. It runs on each change
-  and on save: `message` is shown under the field, and a save it refuses writes nothing.
+  and on save: `message` is shown under the field, and a save it refuses writes nothing. A message
+  with `%{key}` placeholders is given as `{:error, {message, vars}}`, filled from `vars` after it is
+  translated, as an Ash error's is.
+
+  A message that is a phrase, such as `"must be %{max} or less"`, is joined to the field's label
+  ("Seats must be 10 or less"); one that ends a sentence is shown as written. When the action also
+  refuses the field in a sentence of its own, that sentence is shown instead; a phrase the action
+  gives for it, such as Ash's own `"is invalid"`, gives way to this message.
   """
-  @callback validate(value :: any(), config()) :: {:ok, any()} | {:error, String.t()}
+  @callback validate(value :: any(), config()) ::
+              {:ok, any()} | {:error, String.t() | {String.t(), keyword()}}
 
   @doc """
   Parse a raw parameter value into the expected type.
@@ -86,8 +94,10 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   @doc """
   Sanitize a raw parameter value for this field type.
 
-  Called before validation/submission. Text fields strip HTML tags;
-  textarea / json / nested fields pass through unchanged.
+  Called before validation/submission. It tidies a value, such as trimming the spaces around a
+  text field's, and never changes what a person meant: a value the field cannot take is refused
+  by `validate/2` with a message, so it stays in the field as typed. Textarea / json / nested
+  fields pass through unchanged.
   """
   @callback sanitize(value :: any(), config()) :: any()
 

@@ -15,6 +15,9 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
     * `resolve_max_lengths/1` — gives a text-like field the `max_length`
       constraint of its attribute when the field names none, so the input
       draws it as `maxlength`.
+    * `resolve_number_bounds/1` — gives a `:number` or `:range` field the
+      `min` and `max` constraints of its attribute when the field names
+      none, so the input draws them and the form checks them.
     * `resolve_relation_resources/1` — links `:relation` fields to
       their target resource via the Ash relationship table.
     * `resolve_field_positions/1` — applies `field_order` and the
@@ -55,6 +58,7 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
       |> resolve_explicit_field_types()
       |> resolve_field_sources()
       |> resolve_max_lengths()
+      |> resolve_number_bounds()
       |> resolve_relation_resources()
       |> resolve_field_positions()
       |> detect_preloads()
@@ -661,6 +665,41 @@ defmodule MishkaGervaz.Form.Transformers.ResolveFields do
   end
 
   defp constraint_max(_none), do: nil
+
+  @spec resolve_number_bounds(Spark.Dsl.t()) :: Spark.Dsl.t()
+  defp resolve_number_bounds(dsl_state) do
+    ash_attrs = get_ash_attributes(dsl_state)
+
+    dsl_state
+    |> get_entities(@fields_path)
+    |> filter_fields()
+    |> Enum.reduce(dsl_state, fn
+      %Field{type: type, source: source} = field, acc when type in [:number, :range] ->
+        constraints = ash_attrs |> Map.get(source, %{}) |> Map.get(:constraints)
+
+        case %{
+          field
+          | min: field.min || bound(constraints, :min),
+            max: field.max || bound(constraints, :max)
+        } do
+          ^field -> acc
+          bounded -> Transformer.replace_entity(acc, @fields_path, bounded)
+        end
+
+      _field, acc ->
+        acc
+    end)
+  end
+
+  defp bound(constraints, key) when is_list(constraints) do
+    case Keyword.get(constraints, key) do
+      %Decimal{} = bound -> bound
+      bound when is_number(bound) -> bound
+      _none -> nil
+    end
+  end
+
+  defp bound(_constraints, _key), do: nil
 
   @spec resolve_relation_resources(Spark.Dsl.t()) :: Spark.Dsl.t()
   defp resolve_relation_resources(dsl_state) do

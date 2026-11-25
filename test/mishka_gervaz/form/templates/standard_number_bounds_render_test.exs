@@ -1,7 +1,8 @@
 defmodule MishkaGervaz.Form.Templates.StandardNumberBoundsRenderTest do
   @moduledoc """
-  A form's `:range` and `:number` field draws its input with the field's `min` and `max` and its
-  `ui` `step`; a range with none runs from 0 to 100.
+  A form's `:range` field draws its input with the field's `min` and `max` and its `ui` `step`; a
+  range with none runs from 0 to 100. A `:number` field draws a text input, so a browser never
+  turns a typed `3-1` into an empty value, with the decimal keyboard when it cannot be below 0.
   """
   use ExUnit.Case, async: true
 
@@ -54,12 +55,22 @@ defmodule MishkaGervaz.Form.Templates.StandardNumberBoundsRenderTest do
     assert input =~ ~s(max="100")
   end
 
-  test "a number input carries the field's min, max and step" do
+  test "a number input is a text input, so what is typed reaches the form as typed" do
     input = render_input(%{type: :number, min: 1, max: 9, ui: %{step: 2}})
 
-    assert input =~ ~s(type="number")
-    assert input =~ ~s(min="1")
-    assert input =~ ~s(max="9")
-    assert input =~ ~s(step="2")
+    assert input =~ ~s(type="text")
+    refute input =~ ~r/\s(min|max|step)=/
+  end
+
+  test "a number that cannot be below 0 asks for the decimal keyboard" do
+    for min <- [0, 1, Decimal.new("0.50")] do
+      assert render_input(%{type: :number, min: min}) =~ ~s(inputmode="decimal")
+    end
+  end
+
+  test "a number that may be below 0 keeps the keyboard with a minus sign" do
+    for min <- [nil, -5] do
+      refute render_input(%{type: :number, min: min}) =~ "inputmode"
+    end
   end
 end

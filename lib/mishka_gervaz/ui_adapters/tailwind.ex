@@ -68,6 +68,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:autocomplete, fn -> nil end)
       |> assign_new(:maxlength, fn -> nil end)
+      |> assign_new(:required, fn -> false end)
       |> assign_new(:prefix, fn -> nil end)
       |> assign_new(:suffix, fn -> nil end)
       |> assign(:placeholder, placeholder)
@@ -99,6 +100,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           readonly={@readonly}
           autocomplete={@autocomplete}
           maxlength={@maxlength}
+          required={@required}
           aria-label={@aria_label}
           aria-describedby={units_ids(@id, @prefix, @suffix)}
           dir={icon_dir(@search, @dir)}
@@ -132,6 +134,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:placeholder, fn -> nil end)
       |> assign_new(:autocomplete, fn -> "new-password" end)
       |> assign_new(:maxlength, fn -> nil end)
+      |> assign_new(:required, fn -> false end)
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:prefix, fn -> nil end)
       |> assign_new(:suffix, fn -> nil end)
@@ -149,6 +152,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         readonly={@readonly}
         autocomplete={@autocomplete}
         maxlength={@maxlength}
+        required={@required}
         aria-describedby={units_ids(@id, @prefix, @suffix)}
         dir={@dir}
         class={[
@@ -281,6 +285,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:prompt, fn -> select_prompt(assigns[:variant]) end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
+      |> assign_new(:required, fn -> false end)
       |> assign_new(:id, fn -> nil end)
 
     ~H"""
@@ -294,6 +299,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         id={@id}
         name={@name}
         disabled={@disabled}
+        required={@required}
         class={[
           @class,
           "cursor-pointer appearance-none pe-[32px]!",
@@ -1197,17 +1203,31 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A number input, `type="number"` unless `:type` says otherwise.
+
+  ## Assigns
+    * `:type` - `"number"`, the default, or `"text"`: a text input sends what the reader typed as
+      typed, so a value that is not a number, such as `3-1`, reaches the server and is refused in
+      words, where a number input sends it as an empty value. A text input asks for the phone's
+      decimal keyboard when its `:min` is 0 or more, and carries no `min`, `max` or `step`, which a
+      text input has no use for
+    * `:min`, `:max`, `:step` - the bounds and step of a number input
+    * `:prefix`, `:suffix` - units drawn beside the value
+  """
   @impl true
   def number_input(assigns) do
     placeholder = assigns[:placeholder] || assigns[:placeholder_label]
 
     assigns =
       assigns
+      |> assign_new(:type, fn -> "number" end)
       |> assign_new(:class, fn -> input_class(assigns[:search] == true) end)
       |> assign_new(:step, fn -> "any" end)
       |> assign(:placeholder, placeholder)
       |> assign_new(:min, fn -> nil end)
       |> assign_new(:max, fn -> nil end)
+      |> assign_new(:required, fn -> false end)
       |> assign_new(:icon, fn -> nil end)
       |> assign_new(:disabled, fn -> false end)
       |> assign_new(:readonly, fn -> false end)
@@ -1225,14 +1245,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
         />
         <input
-          type="number"
+          type={@type}
+          inputmode={@type == "text" && number_keyboard(@min)}
           id={@id}
           name={@name}
           value={@value}
           placeholder={@placeholder}
-          min={@min}
-          max={@max}
-          step={@step}
+          min={@type == "number" && @min}
+          max={@type == "number" && @max}
+          step={@type == "number" && @step}
+          required={@required}
           disabled={@disabled}
           readonly={@readonly}
           aria-describedby={units_ids(@id, @prefix, @suffix)}
@@ -1247,6 +1269,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
     </.with_units>
     """
+  end
+
+  # The phone keyboard a text input for a number asks for: the decimal one, which has no minus sign
+  # on some phones, only when the value cannot be below 0.
+  defp number_keyboard(min) do
+    case min |> to_string() |> Decimal.parse() do
+      {bound, ""} -> if Decimal.negative?(bound), do: nil, else: "decimal"
+      _no_bound -> nil
+    end
   end
 
   attr :label, :string, default: nil
@@ -1317,7 +1348,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   Copy-to-clipboard button for a short value (e.g. an id). Requires the consuming app to register a
-  `CopyToClipboard` JS hook; reads the text from `data-copy`.
+  `CopyToClipboard` JS hook that copies `data-copy` and then sets `data-copied` on the button for a
+  moment, without writing into it. While `data-copied` is set the copy icon gives way to a check
+  icon of the same size, so the button and its table cell never move, and a polite live region says
+  "Copied" to screen readers. A hook that swaps the button's children for text instead still copies,
+  but the button changes size.
 
   ## Assigns
     * `:value` - text placed on the clipboard
@@ -1326,21 +1361,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   """
   @impl true
   def copy_button(assigns) do
-    assigns = assign_new(assigns, :label, fn -> dgettext("mishka_gervaz", "Copy") end)
+    assigns =
+      assigns
+      |> assign_new(:label, fn -> dgettext("mishka_gervaz", "Copy") end)
+      |> assign(:copied, dgettext("mishka_gervaz", "Copied"))
 
     ~H"""
     <button
       type="button"
       id={@id}
       phx-hook="CopyToClipboard"
-      phx-update="ignore"
       data-copy={@value}
       title={@label}
-      class="grid place-items-center text-[#c3c0b8] transition-colors hover:text-[#8a877f] focus:outline-none"
+      aria-label={@label}
+      class="group relative grid size-3 place-items-center text-[#c3c0b8] transition-colors hover:text-[#8a877f] focus:outline-none data-[copied]:text-[#177a53]"
     >
       <svg
-        width="12"
-        height="12"
+        data-role="gervaz-copy-icon"
+        class="size-3 group-data-[copied]:hidden"
+        aria-hidden="true"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -1351,6 +1390,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <rect x="9" y="9" width="12" height="12" rx="2" />
         <path d="M5 15V5a2 2 0 0 1 2-2h10" />
       </svg>
+      <svg
+        data-role="gervaz-copied-icon"
+        class="hidden size-3 group-data-[copied]:block"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      <span class="sr-only" aria-live="polite">
+        <span class="hidden group-data-[copied]:inline">{@copied}</span>
+      </span>
     </button>
     """
   end
@@ -2815,6 +2870,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:collapsed` - a collapsible group starts closed
     * `:class` - the fieldset's classes
 
+  The fields sit below the label and description with a gap; a group with neither starts with its
+  fields, without one.
+
   A collapsible group keeps the reader's open or closed choice while the form redraws: its
   `<details>` ignores the server's `open` attribute once mounted (`Phoenix.LiveView.JS.ignore_attributes/1`).
   """
@@ -2827,6 +2885,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:collapsible, fn -> false end)
       |> assign_new(:collapsed, fn -> false end)
       |> assign_new(:class, fn -> "rounded-[16px] border border-[#ecebe6] p-5" end)
+
+    assigns =
+      assigns
+      |> assign(:label, present(assigns.label))
+      |> assign(:description, present(assigns.description))
 
     ~H"""
     <fieldset class={["min-w-0", @class]}>
@@ -2849,13 +2912,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <p :if={@description} class="mt-1 text-[12px] font-medium text-[#8a877f]">
           {@description}
         </p>
-        <div class="mt-4 space-y-4">
+        <div class={[(@label || @description) && "mt-4", "space-y-4"]}>
           {render_slot(@inner_block)}
         </div>
       <% end %>
     </fieldset>
     """
   end
+
+  defp present(text) when text in [nil, ""], do: nil
+  defp present(text), do: text
 
   @doc """
   The steps of a wizard or tabs form as numbered circles joined by lines.
@@ -3280,6 +3346,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:readonly, fn -> false end)
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:maxlength, fn -> nil end)
+      |> assign_new(:required, fn -> false end)
       |> assign(:dir, input_dir(assigns, "auto"))
 
     ~H"""
@@ -3288,6 +3355,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       name={@name}
       placeholder={@placeholder}
       maxlength={@maxlength}
+      required={@required}
       rows={@rows}
       disabled={@disabled}
       readonly={@readonly}

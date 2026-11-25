@@ -4,8 +4,9 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
   admin drives it (`MishkaGervaz.Test.Web.PlanItem` on `MishkaGervaz.Test.Web.PlanPageLive`): its
   `:price` runs from `Decimal.new("0.50")` to `fn -> Decimal.new("9999.99") end`.
 
-  The input carries both bounds as plain digits. A save of a value outside them shows "is too
-  small" or "is too large" and saves nothing; the bounds themselves are allowed. `Number.validate/2`,
+  The input is a text input with the decimal keyboard, so a typed `3-1` reaches the form and reads
+  "Price must be a number" instead of arriving empty. A save of a value outside them names the bound it
+  broke, "Price must be 0.50 or more" or "Price must be 9999.99 or less", and saves nothing; the bounds themselves are allowed. `Number.validate/2`,
   which also checks a value while it is typed, compares as `Decimal`s.
   """
   use ExUnit.Case, async: false
@@ -35,20 +36,39 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
     |> render_submit()
   end
 
-  test "the input carries the bounds as plain digits" do
+  test "the input is a text input with the decimal keyboard, so what is typed is sent as typed" do
     view = open()
 
     assert has_element?(
              view,
-             ~s|#{@form} input[name="form[price]"][min="0.50"][max="9999.99"][step="0.01"]|
+             ~s|#{@form} input[type="text"][name="form[price]"][inputmode="decimal"]|
            )
+  end
+
+  test "text that is not a number is refused in words, never read as empty" do
+    for typed <- ["3-1", "abc", "1,5", "NaN", "Infinity", "--1"] do
+      view = open()
+      save(view, typed)
+
+      assert render(view) =~ "Price must be a number", typed
+      refute render(view) =~ "Price is invalid", typed
+    end
+
+    assert Ash.read!(PlanItem) == []
+  end
+
+  test "a number written with an exponent is read whole and checked against the bounds" do
+    view = open()
+    save(view, "1e9")
+
+    assert render(view) =~ "Price must be 9999.99 or less"
   end
 
   test "a price under the minimum is refused on save" do
     view = open()
     save(view, "0.49")
 
-    assert render(view) =~ "is too small"
+    assert render(view) =~ "Price must be 0.50 or more"
     assert Ash.read!(PlanItem) == []
   end
 
@@ -56,7 +76,7 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
     view = open()
     save(view, "10000")
 
-    assert render(view) =~ "is too large"
+    assert render(view) =~ "Price must be 9999.99 or less"
     assert Ash.read!(PlanItem) == []
   end
 

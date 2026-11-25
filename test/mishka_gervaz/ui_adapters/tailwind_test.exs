@@ -2,7 +2,8 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
   @moduledoc """
   Tests for `MishkaGervaz.UIAdapters.Tailwind.select/1` — flat options stay flat
   `<option>`s; a `{group_label, [opts]}` entry becomes an `<optgroup>` — and for the row action
-  buttons, which dim while their click is pending.
+  buttons, which dim while their click is pending, and for the copy button, which shows the
+  copied state from the `data-copied` attribute the host's hook sets.
   """
   use ExUnit.Case, async: true
 
@@ -128,6 +129,60 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
 
         assert html =~ "phx-click-loading:opacity-70", inspect(variant)
       end
+    end
+  end
+
+  describe "copy_button/1" do
+    defp copy_button(assigns \\ %{}) do
+      html =
+        render_component(
+          &Tailwind.copy_button/1,
+          Map.merge(%{id: "copy-id-1", value: "0b9f-41c2"}, assigns)
+        )
+
+      LazyHTML.from_fragment(html)
+    end
+
+    defp classes(node), do: node |> LazyHTML.attribute("class") |> hd() |> String.split()
+
+    test "copies its value through the host hook and lets LiveView keep the value current" do
+      button = LazyHTML.query(copy_button(), "button#copy-id-1")
+
+      assert LazyHTML.attribute(button, "phx-hook") == ["CopyToClipboard"]
+      assert LazyHTML.attribute(button, "data-copy") == ["0b9f-41c2"]
+      assert LazyHTML.attribute(button, "phx-update") == []
+    end
+
+    test "swaps the copy icon for a check icon while data-copied is set, at one fixed size" do
+      html = copy_button()
+      button = LazyHTML.query(html, "button")
+      copy_icon = LazyHTML.query(html, ~s([data-role="gervaz-copy-icon"]))
+      copied_icon = LazyHTML.query(html, ~s([data-role="gervaz-copied-icon"]))
+
+      assert "group" in classes(button)
+      assert "size-3" in classes(button)
+
+      refute "hidden" in classes(copy_icon)
+      assert "group-data-[copied]:hidden" in classes(copy_icon)
+
+      assert "hidden" in classes(copied_icon)
+      assert "group-data-[copied]:block" in classes(copied_icon)
+
+      assert "size-3" in classes(copy_icon)
+      assert "size-3" in classes(copied_icon)
+    end
+
+    test "is named by its label and tells screen readers when it copied" do
+      html = copy_button(%{label: "Copy the id"})
+      button = LazyHTML.query(html, "button")
+      region = LazyHTML.query(html, ~s([aria-live="polite"]))
+      announcement = LazyHTML.query(html, ~s([aria-live="polite"] > span))
+
+      assert LazyHTML.attribute(button, "aria-label") == ["Copy the id"]
+      assert "sr-only" in classes(region)
+      assert LazyHTML.text(announcement) == "Copied"
+      assert "hidden" in classes(announcement)
+      assert "group-data-[copied]:inline" in classes(announcement)
     end
   end
 end

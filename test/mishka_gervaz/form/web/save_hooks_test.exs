@@ -68,6 +68,21 @@ defmodule MishkaGervaz.Form.Web.SaveHooksTest do
       assert after_errors =~ ~s(type="submit")
     end
 
+    test "counts as a refused save, and moves the reader to its reason" do
+      socket = mount(HaltedEntry) |> save(%{"title" => "stale copy"})
+
+      assert socket.assigns.form_state.failed_saves == 1
+
+      [js] =
+        socket
+        |> render_form()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s|span[id="hooked-entry-failed-save-1"]|)
+        |> LazyHTML.attribute("phx-mounted")
+
+      assert [["focus", %{"to" => "#hooked-entry-form-errors"}]] = Jason.decode!(js)
+    end
+
     test "keeps the form open with what the user typed" do
       socket = mount(HaltedEntry) |> save(%{"title" => "stale copy"})
       state = socket.assigns.form_state

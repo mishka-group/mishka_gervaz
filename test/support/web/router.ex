@@ -29,6 +29,8 @@ defmodule MishkaGervaz.Test.Web.Router do
     * `/toasts` — `MishkaGervaz.Test.Web.ToastPageLive`, a page that pushes toasts.
     * `/placed` — `MishkaGervaz.Test.Web.PlacedPageLive`, a page that places the groups of
       `MishkaGervaz.Test.Web.PlacedItem`'s form in its own cards.
+    * `/rules` — `MishkaGervaz.Test.Web.RulePageLive`, a page with the form of
+      `MishkaGervaz.Test.Web.RuleItem`, whose fields each carry a rule.
   """
 
   use Phoenix.Router
@@ -58,5 +60,6 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/plans/drawer", MishkaGervaz.Test.Web.PlanPageLive, :drawer
     live "/toasts", MishkaGervaz.Test.Web.ToastPageLive
     live "/placed", MishkaGervaz.Test.Web.PlacedPageLive
+    live "/rules", MishkaGervaz.Test.Web.RulePageLive
   end
 end

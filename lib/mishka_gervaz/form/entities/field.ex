@@ -319,7 +319,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
                        {:fun, 1}
                      ]},
                   doc:
-                    "Minimum value for number/range fields: an integer, a float or a `Decimal`, so `min Decimal.new(\"0.50\")` bounds a price. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound."
+                    "Minimum value for number/range fields: an integer, a float or a `Decimal`, so `min Decimal.new(\"0.50\")` bounds a price. For `:date` and `:datetime` fields, the earliest day or time the picker offers and the save takes: a `Date`, `DateTime` or `NaiveDateTime`. A function is read each time the form draws or checks it: `fn -> DateTime.utc_now() end`, or `fn state -> value end` given the form state as `visible` is (`mode`, `current_user`, `master_user?`, `form`, `field_values`), so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record. `nil` is no bound. Left out on a number or range field, it is the `min` constraint of the field's attribute, when it has one."
                 ],
                 max: [
                   type:
@@ -335,7 +335,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
                        {:fun, 1}
                      ]},
                   doc:
-                    "Maximum value for number/range fields. For `:date` and `:datetime` fields, the latest day or time the picker offers and the save takes. Given as `min` is; a `Date` takes in the whole day."
+                    "Maximum value for number/range fields. For `:date` and `:datetime` fields, the latest day or time the picker offers and the save takes. Given as `min` is; a `Date` takes in the whole day. Left out on a number or range field, it is the `max` constraint of the field's attribute, when it has one."
                 ],
                 max_length: [
                   type: :pos_integer,
@@ -527,7 +527,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
     step: [
       type: {:or, [:integer, :float]},
       doc:
-        "Step value for number/range fields. For a `:datetime` field, the minutes between the times its picker offers (`15` gives :00, :15, :30 and :45)."
+        "Step value for a `:range` field. A `:number` field is drawn as a text input and takes no step. For a `:datetime` field, the minutes between the times its picker offers (`15` gives :00, :15, :30 and :45)."
     ],
     first_day_of_week: [
       type: {:in, [:monday, :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday]},

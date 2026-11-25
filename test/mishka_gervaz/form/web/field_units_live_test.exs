@@ -52,7 +52,7 @@ defmodule MishkaGervaz.Form.Web.FieldUnitsLiveTest do
 
     assert has_element?(
              view,
-             ~s|#{@form} input[type="number"][name="form[discount]"].rounded-e-none|
+             ~s|#{@form} input[type="text"][name="form[discount]"].rounded-e-none|
            )
 
     assert [id] = described_by(view, "discount")

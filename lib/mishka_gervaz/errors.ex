@@ -253,17 +253,50 @@ defmodule MishkaGervaz.Errors do
   defp with_field(message, field, _resource) when field in [nil, :_form], do: message
 
   defp with_field(message, field, resource) do
-    if sentence?(message) do
-      message
-    else
-      dgettext("mishka_gervaz", "%{field} %{message}",
-        field: field_name(resource, field),
-        message: message
-      )
-    end
+    if sentence?(message), do: message, else: labelled(message, field_name(resource, field))
   end
 
-  defp sentence?(message), do: Regex.match?(@sentence_end, message)
+  @doc """
+  `message` about a field whose name a person reads as `label`: a message that ends a sentence, or
+  a `nil` or empty `label`, is returned as written; any other is joined to `label` through the
+  `"%{field} %{message}"` template, so `"is required"` under Name reads `"Name is required"`.
+
+  `message` is not translated here: give it as the person reads it.
+
+  ## Examples
+
+      iex> MishkaGervaz.Errors.label_message("is required", "Name")
+      "Name is required"
+
+      iex> MishkaGervaz.Errors.label_message("Use 8 tries or fewer.", "Tries")
+      "Use 8 tries or fewer."
+  """
+  @spec label_message(String.t(), String.t() | nil) :: String.t()
+  def label_message(message, label)
+      when is_binary(message) and is_binary(label) and label != "" do
+    if sentence?(message), do: message, else: labelled(message, label)
+  end
+
+  def label_message(message, _label), do: message
+
+  @doc """
+  Whether `message` ends a sentence: its last character is `.` `!` `?` `…` `؟` `۔` `。` or the like,
+  before any closing quote or bracket. Such a message is a resource's own words and is shown as
+  written; any other is a phrase joined to its field's name.
+
+  ## Examples
+
+      iex> MishkaGervaz.Errors.sentence?("Use 120 characters or fewer.")
+      true
+
+      iex> MishkaGervaz.Errors.sentence?("is required")
+      false
+  """
+  @spec sentence?(String.t()) :: boolean()
+  def sentence?(message) when is_binary(message), do: Regex.match?(@sentence_end, message)
+
+  defp labelled(message, label),
+    do: dgettext("mishka_gervaz", "%{field} %{message}", field: label, message: message)
 
   defp field_name(resource, field) do
     declared_field_label(resource, field) || humanized_field(field)

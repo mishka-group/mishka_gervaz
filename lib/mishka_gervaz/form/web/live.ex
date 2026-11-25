@@ -50,6 +50,8 @@ defmodule MishkaGervaz.Form.Web.Live do
   - `notify_dirty` - `true` sends the page `{:form_dirty, id, dirty?}` each time the form comes to
     hold changes the reader has not saved, and each time it holds none any more: after a save, a
     Discard, a Cancel or a start over. See "Unsaved changes".
+  - `notify_failed` - `true` sends the page `{:form_failed, id, failure}` each time a save is
+    refused. See "After a refused save".
 
   ## Placing the groups in the page
 
@@ -157,6 +159,26 @@ defmodule MishkaGervaz.Form.Web.Live do
     for editing. Pass a different `record_id`, or `nil`, to move it.
   - mounted without one, and opened for editing with `send_update/2` — the form returns to an
     empty create form.
+
+  ## After a refused save
+
+  A save the form refuses, for the action's errors, a field type's or a `before_save` that halted,
+  keeps what was typed, shows each message under its field, and moves the reader to the first field
+  with an error, in the order the form draws them: the field is focused, which scrolls it into
+  view, and a collapsed group or another step holding it is opened first. A refusal no field shows
+  moves the reader to the message above the submit row. It is done with `Phoenix.LiveView.JS` in the
+  template, so the page needs no hook.
+
+  A page that wants to say it too, in a toast, mounts the form with `notify_failed={true}`:
+
+      def handle_info({:form_failed, "post-form", %{fields: fields}}, socket) do
+        new_socket = MishkaGervaz.Toast.push(socket, :error, "Check the \#{length(fields)} marked fields.")
+        {:noreply, new_socket}
+      end
+
+  `failure` is a map: `:mode`, `:create` or `:update`; `:fields`, the names of the fields showing an
+  error, in the order the form declares them; and `:messages`, the messages shown above the submit
+  row, which no field shows.
 
   ## Parent LiveView Integration
 
@@ -318,6 +340,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:resource, resource)
         |> assign(:id, id)
         |> assign(:notify_dirty, Map.get(assigns, :notify_dirty) == true)
+        |> assign(:notify_failed, Map.get(assigns, :notify_failed) == true)
         |> assign(:record_id, record_id)
         |> assign(:record_id_given?, Map.has_key?(assigns, :record_id))
         |> assign(:initialized, true)
@@ -451,10 +474,15 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   @impl true
   def handle_event(event, params, socket) do
-    {:noreply, new_socket} =
+    {:noreply, handled_socket} =
       events_module(socket.assigns[:form_state]).handle(event, params, socket)
 
-    {:noreply, announce_dirty(new_socket, dirty?(socket))}
+    new_socket =
+      handled_socket
+      |> announce_dirty(dirty?(socket))
+      |> announce_failed(failed_saves(socket))
+
+    {:noreply, new_socket}
   end
 
   defp events_module(%{static: %{config: %{events: %{module: mod}}}})
@@ -536,6 +564,32 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   defp announce_dirty(socket, _was_dirty?), do: socket
+
+  defp failed_saves(%{assigns: %{form_state: %State{failed_saves: count}}}), do: count
+  defp failed_saves(_socket), do: 0
+
+  # A form mounted with `notify_failed` tells its page each time a save is refused.
+  defp announce_failed(
+         %{assigns: %{notify_failed: true, form_state: %State{failed_saves: count} = state}} =
+           socket,
+         before
+       )
+       when count != before do
+    errors = state.errors || %{}
+
+    failure = %{
+      mode: state.mode,
+      fields: for(%{name: name} <- state.static.fields, failed?(errors, name), do: name),
+      messages: state.form_errors || []
+    }
+
+    send(self(), {:form_failed, socket.assigns.id, failure})
+    socket
+  end
+
+  defp announce_failed(socket, _before), do: socket
+
+  defp failed?(errors, name), do: Map.get(errors, name) not in [nil, [], ""]
 
   @impl true
   def render(assigns) do

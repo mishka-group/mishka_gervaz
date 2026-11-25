@@ -18,6 +18,11 @@ defmodule MishkaGervaz.Form.Types.Field.StringListTest do
       assert {:ok, ["a", "b"]} = StringList.validate(["a", "b"], %{})
     end
 
+    test "validate refuses a list with an item that holds an HTML tag" do
+      assert StringList.validate(["a", "<b>b</b>"], %{}) ==
+               {:error, "must be plain text, without HTML tags"}
+    end
+
     test "validate wraps a binary in a list" do
       assert {:ok, ["hello"]} = StringList.validate("hello", %{})
     end

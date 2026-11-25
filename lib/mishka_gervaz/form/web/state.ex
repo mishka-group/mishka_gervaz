@@ -12,6 +12,13 @@ defmodule MishkaGervaz.Form.Web.State do
   record, or returned to an empty form by a save. A live component drawn inside the form that keeps
   state of its own compares it with the count it last saw, and starts over with the form.
 
+  ## Refused saves
+
+  `failed_saves` counts the saves the form refused: the action's errors, a field type's, or a
+  `before_save` that halted. The template draws a mark named after the count, so each refusal moves
+  the reader to the first field with an error, and a form mounted with `notify_failed` tells its
+  page (`MishkaGervaz.Form.Web.Live`, "After a refused save").
+
   ## Performance split
 
   State is partitioned into two halves:
@@ -187,7 +194,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :preload_aliases,
     :dismissed_notices,
     :pickers,
-    :opened
+    :opened,
+    failed_saves: 0
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -215,7 +223,8 @@ defmodule MishkaGervaz.Form.Web.State do
           preload_aliases: %{atom() => atom()},
           dismissed_notices: MapSet.t(),
           pickers: %{atom() => Date.t()},
-          opened: non_neg_integer()
+          opened: non_neg_integer(),
+          failed_saves: non_neg_integer()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -697,7 +706,8 @@ defmodule MishkaGervaz.Form.Web.State do
           preload_aliases: Info.preload_aliases(resource, master_user?),
           dismissed_notices: MapSet.new(),
           pickers: %{},
-          opened: 0
+          opened: 0,
+          failed_saves: 0
         }
       end
 

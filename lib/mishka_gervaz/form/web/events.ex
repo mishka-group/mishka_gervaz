@@ -871,10 +871,16 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   # A save `before_save` halted: the form keeps what was typed and shows the reason above the
-  # submit row, through `state.form_errors`.
+  # submit row, through `state.form_errors`, and counts it as a refused save.
   defp halt_save(state, params, reason, socket) do
     socket = validation_handler(state).validate(state, params, socket)
-    halted = State.update(socket.assigns.form_state, form_errors: halt_messages(reason))
+    validated = socket.assigns.form_state
+
+    halted =
+      State.update(validated,
+        form_errors: halt_messages(reason),
+        failed_saves: (validated.failed_saves || 0) + 1
+      )
 
     Phoenix.Component.assign(socket, :form_state, halted)
   end

@@ -24,12 +24,28 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   `render_steps/1`), upload sections, and submit buttons
   in a fixed order so notice positioning stays predictable.
 
+  ## Field errors
+
+  An error under a field names the field: a message that is a phrase is joined to the field's
+  label, so `"is required"` under Name reads "Name is required". A message that ends a sentence is a
+  resource's own words and is shown as written. A sub-field of a nested field is named the same way,
+  by its own label.
+
+  A text, password, number, textarea or select input of a field that says `required true` carries
+  `required`, beside the asterisk on its label, and a text input its `maxlength`. A `:number` field
+  is drawn as a text input with the phone's decimal keyboard (when its `min` is 0 or more), so what
+  is typed reaches the form as typed and `3-1` is refused as "must be a number"; a number input
+  would send it as an empty value, read as "is required" or saved as nothing. Its `min` and `max`
+  are checked on save and named in the message. The form is `novalidate`, so these mark the input for the
+  browser and for assistive technology but never stop a save on their own: every message comes from
+  the form, under its field and in the person's language, and an input in a closed group or a
+  hidden step, which the browser cannot point at, never blocks the save without a word.
+
   ## Steps
 
   A `:wizard` or `:tabs` form draws the groups of every step, each step in a `data-step` container
   that is `hidden` unless it is the current one. Every input stays in the form, so a step left
   keeps what was typed into it, a password and a picked file included, and the save sends them all.
-  The form is `novalidate`, as the browser cannot point at a hidden input.
 
   The submit row holds Cancel, the UI adapter's `step_navigation` (Back on every step but the first,
   Next on every step but the last) and, on the last step only, the submit button. Next is a submit
@@ -171,7 +187,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-submit="save"
             phx-target={@myself}
             multipart={has_uploads?(@static)}
-            novalidate={@state.static.layout_mode in [:wizard, :tabs]}
+            novalidate
           >
             {render_notices_at(assigns, :form_top)}
             {render_notices_at(assigns, :before_header)}
@@ -192,6 +208,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_uploads_section(assigns)}
             {render_notices_at(assigns, :before_submit)}
             {render_form_errors(assigns)}
+            {render_failed_save(assigns)}
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
           </.form>
@@ -285,13 +302,19 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   def render_field(assigns) do
     field = assigns.field
     form = assigns.state.form
+    label = get_ui_label(field)
+
+    errors =
+      assigns.state.errors
+      |> Map.get(field.name, [])
+      |> Enum.map(&MishkaGervaz.Errors.label_message(&1, label))
 
     assigns =
       assigns
       |> assign(:field_config, field)
       |> assign(:form_field, form[field.name])
-      |> assign(:label, get_ui_label(field))
-      |> assign(:errors, Map.get(assigns.state.errors, field.name, []))
+      |> assign(:label, label)
+      |> assign(:errors, errors)
       |> assign(:ui, assigns.static.ui_adapter)
 
     render_field_by_type(assigns)
@@ -299,10 +322,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @doc """
   One group through the UI adapter's `field_group`, or nothing when none of its fields is shown.
+  The adapter is given the group's label and its `ui` `description`, both translated.
 
   A group declared `collapsed true` is drawn collapsible and closed, whether or not it also says
   `collapsible true`: a group that starts closed can always be opened. A collapsed group opens
-  when one of its fields shows an error, so a failed save never hides the error inside it.
+  when one of its fields shows an error, and again on each refused save, so a failed save never
+  hides the error inside it.
   """
   @impl true
   def render_group(assigns) do
@@ -325,12 +350,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns =
         assigns
         |> assign(:group_label, translate_text(Map.get(group, :resolved_label)))
+        |> assign(:group_description, translate_text(get_in(group, [:ui, :description])))
         |> assign(:group_fields, group_fields)
         |> assign(:group_columns, get_in(group, [:ui, :columns]))
         |> assign(:ui, assigns.static.ui_adapter)
         |> assign(:collapsible, collapsed or Map.get(group, :collapsible, false))
         |> assign(:collapsed, collapsed)
         |> assign(:open_on_error, collapsed and group_has_errors?(visible_fields, assigns.state))
+        |> assign(:open_id, open_id(assigns.static, group, assigns.state))
         |> assign(:has_group_class, not is_nil(group_class))
         |> assign(:group_class, group_class || "")
 
@@ -341,11 +368,12 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             module={@ui}
             function={:field_group}
             label={@group_label}
+            description={@group_description}
             class={@group_class}
             collapsible={@collapsible}
             collapsed={@collapsed}
           >
-            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
+            <span :if={@open_on_error} id={@open_id} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% else %>
@@ -353,10 +381,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             module={@ui}
             function={:field_group}
             label={@group_label}
+            description={@group_description}
             collapsible={@collapsible}
             collapsed={@collapsed}
           >
-            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
+            <span :if={@open_on_error} id={@open_id} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% end %>
@@ -371,6 +400,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp group_has_errors?(_fields, _state), do: false
 
   defp open_group, do: JS.set_attribute({"open", ""}, to: {:closest, "details"})
+
+  # The mark that opens a collapsed group holding an error is named after the refused saves, so each
+  # refusal opens the group again, even one the reader closed since.
+  defp open_id(static, group, state),
+    do: "#{static.id}-group-#{group.name}-opened-#{Map.get(state, :failed_saves) || 0}"
 
   @doc """
   The steps of a wizard or tabs form, through the UI adapter's `step_indicator`.
@@ -628,7 +662,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
-    <div id={@static.id <> "-form-errors"} class="mb-4">
+    <div id={@static.id <> "-form-errors"} tabindex="-1" class="mb-4 outline-none">
       <.dynamic_component module={@ui} function={:alert} type={:error} icon="hero-exclamation-circle">
         <p :for={message <- @form_error_messages}>{message}</p>
       </.dynamic_component>
@@ -637,6 +671,79 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   def render_form_errors(assigns), do: ~H""
+
+  @doc """
+  After a refused save, a hidden mark named after `state.failed_saves` whose `phx-mounted` moves the
+  reader to what stopped the save: it focuses the first field with an error, in the order the form
+  draws them (the groups of the current step in their order, then the fields no group holds), which
+  scrolls it into view; with no field showing one, it focuses the messages above the submit row.
+
+  Each refusal draws a mark with a new id, so LiveView mounts it again and the reader is moved
+  again, even to the same field. Each field's cell is `"<id>-field-<name>"`.
+  """
+  def render_failed_save(%{state: %{failed_saves: count}} = assigns)
+      when is_integer(count) and count > 0 do
+    assigns =
+      assigns
+      |> assign(:failed_save_js, failed_save_js(assigns.static, assigns.state))
+      |> assign(:failed_save_count, count)
+
+    ~H"""
+    <span
+      :if={@failed_save_js}
+      id={"#{@static.id}-failed-save-#{@failed_save_count}"}
+      hidden
+      phx-mounted={@failed_save_js}
+    />
+    """
+  end
+
+  def render_failed_save(assigns), do: ~H""
+
+  defp failed_save_js(static, state) do
+    case first_failed_field(static, state) do
+      nil when state.form_errors != [] -> JS.focus(to: "##{static.id}-form-errors")
+      nil -> nil
+      name -> JS.focus_first(to: "##{static.id}-field-#{name}")
+    end
+  end
+
+  defp first_failed_field(static, %{errors: errors} = state)
+       when is_map(errors) and errors != %{} do
+    static
+    |> drawn_fields(state)
+    |> Enum.find_value(fn field ->
+      if field.type != :hidden and accessible?(field, state) and
+           show_on_mode?(field, state.mode) and Map.get(errors, field.name) not in [nil, [], ""],
+         do: field.name
+    end)
+  end
+
+  defp first_failed_field(_static, _state), do: nil
+
+  # The fields in the order the form draws them: a form without groups draws its fields; a wizard or
+  # tabs form only the groups of the current step; a standard form its groups, then the fields no
+  # group holds.
+  defp drawn_fields(%{groups: []} = static, _state), do: static.fields
+
+  defp drawn_fields(%{layout_mode: mode, steps: [_ | _] = steps} = static, state)
+       when mode in [:wizard, :tabs] do
+    static.groups
+    |> Enum.filter(&accessible?(&1, state))
+    |> State.Helpers.groups_for_step(steps, state.current_step)
+    |> Enum.flat_map(&Map.get(&1, :resolved_fields, []))
+  end
+
+  defp drawn_fields(static, state) do
+    grouped = MapSet.new(Enum.flat_map(static.groups, &Map.get(&1, :fields, [])))
+
+    grouped_fields =
+      static.groups
+      |> Enum.filter(&accessible?(&1, state))
+      |> Enum.flat_map(&Map.get(&1, :resolved_fields, []))
+
+    grouped_fields ++ Enum.reject(static.fields, &MapSet.member?(grouped, &1.name))
+  end
 
   @doc false
   def render_notices_at(assigns, position) do
@@ -814,7 +921,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div class={@col_class}>
       <%= for field <- @render_fields do %>
         <% fa = assign(assigns, :field, field) %>
-        <div class={nested_span_class(get_in_map(field, [:ui, :span]))}>
+        <div
+          id={"#{@static.id}-field-#{field.name}"}
+          class={nested_span_class(get_in_map(field, [:ui, :span]))}
+        >
           {render_field(fa)}
         </div>
       <% end %>
@@ -1026,7 +1136,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     do: %{function: :textarea, rows: 2, placeholder: translate_text(key.placeholder)}
 
   defp key_map_control(%{type: :number} = key, _value),
-    do: %{function: :number_input, placeholder: translate_text(key.placeholder)}
+    do: %{function: :number_input, type: "text", placeholder: translate_text(key.placeholder)}
 
   defp key_map_control(%{type: :password} = key, _value),
     do: %{
@@ -1594,6 +1704,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :password_input)
+        |> assign(:required, required?(field))
         |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
         |> put_units(field)
         |> dynamic_component()
@@ -1604,6 +1715,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:readonly, is_readonly)
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
+        |> assign(:required, required?(field))
         |> put_units(field)
         |> dynamic_component()
 
@@ -1612,6 +1724,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :number_input)
+        |> assign(:type, "text")
+        |> assign(:required, required?(field))
         |> put_present(:min, number_bound(Map.get(field, :min)))
         |> put_present(:max, number_bound(Map.get(field, :max)))
         |> put_present(:step, get_in_map(field, [:ui, :step]))
@@ -1623,6 +1737,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :textarea)
+        |> assign(:required, required?(field))
         |> dynamic_component()
 
       :select ->
@@ -1630,6 +1745,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
         base
         |> assign(:function, :select)
+        |> assign(:required, required?(field))
         |> assign(:options, options)
         |> assign(:prompt, MishkaGervaz.Form.Types.Field.Select.prompt(field))
         |> dynamic_component()
@@ -2183,7 +2299,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         {sub_field_input(assigns)}
       </div>
       <p :for={err <- @sub_errors} class="mt-[6px] text-[11.5px] font-medium text-[#c0392b]">
-        {sub_error_text(err)}
+        {MishkaGervaz.Errors.label_message(sub_error_text(err), @sf.label)}
       </p>
     </div>
     """
@@ -2280,6 +2396,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns
     |> sub_field_base()
     |> assign(:function, :number_input)
+    |> assign(:type, "text")
     |> assign(:placeholder, assigns.sf.placeholder)
     |> dynamic_component()
   end
@@ -2393,11 +2510,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
          true <-
            Map.get(sf, :custom_validate?, MishkaGervaz.Helpers.exports?(type_mod, :validate, 2)),
          {:error, message} <- type_mod.validate(value, %{ash_type: Map.get(sf, :ash_type)}) do
-      [message]
+      [sub_type_message(message)]
     else
       _nothing_to_say -> []
     end
   end
+
+  defp sub_type_message({message, vars}), do: MishkaGervaz.Errors.translate_error(message, vars)
+  defp sub_type_message(message), do: message
 
   @doc false
   def blank_sub_value?(nil), do: true
@@ -2749,6 +2869,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> put_present(:prefix, resolve_label(get_in_map(field, [:ui, :prefix])))
     |> put_present(:suffix, resolve_label(get_in_map(field, [:ui, :suffix])))
   end
+
+  # Whether a field's input carries `required`: the field says `required true`. A checkbox or toggle
+  # never does, as a required one would have to be ticked.
+  defp required?(field), do: Map.get(field, :required) == true
 
   defp put_present(assigns, _key, nil), do: assigns
   defp put_present(assigns, key, value), do: assign(assigns, key, value)

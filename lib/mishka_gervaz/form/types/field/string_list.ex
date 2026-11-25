@@ -4,8 +4,9 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
 
   Renders as a dynamic list of text inputs with add / remove buttons.
   Used for `{:array, :string}` attributes such as allowed origins, tags,
-  and so on. Sanitize strips HTML and trims each item; empty strings are
-  filtered out on `parse_params/2`.
+  and so on. Sanitize trims each item and keeps it as typed; an item that holds an HTML tag is
+  refused as a `:text` field's value is (`MishkaGervaz.Form.Types.Field.Text.plain_text/1`). Empty
+  strings are filtered out on `parse_params/2`.
 
   ## Example
 
@@ -21,11 +22,19 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
 
   @behaviour MishkaGervaz.Form.Behaviours.FieldType
 
+  alias MishkaGervaz.Form.Types.Field.Text
+
   @impl true
   def render(assigns, _config), do: assigns
 
   @impl true
-  def validate(value, _config) when is_list(value), do: {:ok, value}
+  def validate(value, _config) when is_list(value) do
+    case Enum.find(value, &match?({:error, _}, Text.plain_text(&1))) do
+      nil -> {:ok, value}
+      item -> Text.plain_text(item)
+    end
+  end
+
   def validate(value, _config) when is_binary(value) and value != "", do: {:ok, [value]}
   def validate(nil, _config), do: {:ok, []}
   def validate(_, _config), do: {:ok, []}
@@ -38,14 +47,12 @@ defmodule MishkaGervaz.Form.Types.Field.StringList do
   @impl true
   def sanitize(value, _config) when is_list(value) do
     Enum.map(value, fn
-      item when is_binary(item) -> item |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
+      item when is_binary(item) -> String.trim(item)
       item -> item
     end)
   end
 
-  def sanitize(value, _config) when is_binary(value) do
-    value |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
-  end
+  def sanitize(value, _config) when is_binary(value), do: String.trim(value)
 
   def sanitize(value, _config), do: value
 

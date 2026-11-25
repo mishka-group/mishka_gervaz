@@ -127,4 +127,52 @@ defmodule MishkaGervaz.Form.Templates.StandardDescriptionRenderTest do
       end
     end
   end
+
+  describe "a group's description" do
+    defp render_group(ui) do
+      field = FormInfo.field(FormPost, :title)
+
+      state =
+        build_state(
+          static_opts: [fields: [field], groups: []],
+          mode: :create,
+          form: to_form(%{}, as: :form)
+        )
+
+      group = %{
+        name: :basics,
+        fields: [:title],
+        resolved_fields: [field],
+        resolved_label: "Basics",
+        ui: Map.merge(%{class: nil, columns: nil, description: nil}, ui)
+      }
+
+      render_component(&Standard.render_group/1, %{
+        group: group,
+        static: state.static,
+        state: state,
+        myself: nil,
+        uploads: %{}
+      })
+    end
+
+    test "is drawn under the group's label" do
+      html = render_group(%{description: "Where the post appears"})
+
+      [before_text, _after] = String.split(html, "Where the post appears", parts: 2)
+      assert before_text =~ "Basics"
+      refute before_text =~ ~s|name="form[title]"|
+    end
+
+    test "is drawn for a group with its own class too" do
+      assert render_group(%{description: "Where it appears", class: "my-group"}) =~
+               "Where it appears"
+    end
+
+    test "is absent when the group declares none" do
+      html = render_group(%{})
+
+      refute html =~ ~r/<p[^>]*text-\[12px\][^>]*>/
+    end
+  end
 end

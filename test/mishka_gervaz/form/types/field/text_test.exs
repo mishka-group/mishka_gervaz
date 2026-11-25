@@ -4,15 +4,37 @@ defmodule MishkaGervaz.Form.Types.Field.TextTest do
 
   alias MishkaGervaz.Form.Types.Field.Text
 
+  doctest MishkaGervaz.Form.Types.Field.Text, only: [plain_text: 1, within_length: 2]
+
   describe "behaviour callbacks" do
     test "render/2 returns assigns unchanged" do
       assert Text.render(%{a: 1}, %{}) == %{a: 1}
     end
 
-    test "validate/2 always returns {:ok, value}" do
+    test "validate/2 takes plain text, a bare < or > included" do
       assert Text.validate("hello", %{}) == {:ok, "hello"}
+      assert Text.validate("a < b > c", %{}) == {:ok, "a < b > c"}
       assert Text.validate(nil, %{}) == {:ok, nil}
       assert Text.validate("", %{}) == {:ok, ""}
+    end
+
+    test "validate/2 refuses a value longer than the field's max_length, naming the limit" do
+      assert Text.validate("Ann", %{max_length: 3}) == {:ok, "Ann"}
+
+      assert Text.validate("Anna", %{max_length: 3}) ==
+               {:error, {"must be %{count} characters or fewer", [count: 3]}}
+
+      assert Text.validate("Anna", %{max_length: nil}) == {:ok, "Anna"}
+    end
+
+    test "validate/2 counts characters, not bytes" do
+      assert Text.validate("نامِ", %{max_length: 4}) == {:ok, "نامِ"}
+    end
+
+    test "validate/2 refuses a value that holds an HTML tag, in words" do
+      for value <- ["<b>hello</b>", "<script>alert(1)</script>", "Ann <img src=x>"] do
+        assert Text.validate(value, %{}) == {:error, "must be plain text, without HTML tags"}
+      end
     end
 
     test "parse_params/2 passes through" do
@@ -26,9 +48,8 @@ defmodule MishkaGervaz.Form.Types.Field.TextTest do
   end
 
   describe "sanitize/2" do
-    test "strips HTML tags from binaries" do
-      assert Text.sanitize("<b>hello</b>", %{}) == "hello"
-      assert Text.sanitize("<script>alert('x')</script>", %{}) == "alert('x')"
+    test "keeps HTML tags as typed, for validate/2 to refuse" do
+      assert Text.sanitize("<b>hello</b>", %{}) == "<b>hello</b>"
     end
 
     test "trims whitespace" do

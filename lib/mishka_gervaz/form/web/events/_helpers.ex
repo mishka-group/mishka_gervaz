@@ -57,16 +57,17 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
 
   @doc """
   Runs each field's `FieldType.validate/2` over `params` and returns a list
-  of `{field_atom, message}` pairs ready to merge into an AshPhoenix.Form's
+  of `{field_atom, {message, vars}}` pairs, the shape of an AshPhoenix.Form's
   `errors` keyword list. Fields whose type module doesn't implement
   `validate/2` (detected via the cached `:custom_validate?` flag) are
   skipped.
   """
-  @spec validate_typed_params(list(map()), map(), map()) :: [{atom(), String.t()}]
+  @spec validate_typed_params(list(map()), map(), map()) :: [{atom(), {String.t(), keyword()}}]
   def validate_typed_params(fields, params, state) when is_list(fields) and is_map(params) do
     Enum.reduce(fields, [], fn field, acc ->
       case run_field_validate(read_bounds(field, state), params) do
-        {:error, msg} -> [{field.name, msg} | acc]
+        {:error, {msg, vars}} -> [{field.name, {msg, vars}} | acc]
+        {:error, msg} -> [{field.name, {msg, []}} | acc]
         _ -> acc
       end
     end)
@@ -74,6 +75,30 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
   end
 
   def validate_typed_params(_fields, _params, _state), do: []
+
+  @doc """
+  `errors`, an AshPhoenix.Form's `{field, {message, vars}}` list, with each of `type_errors`, as
+  `validate_typed_params/3` lists them, put in.
+
+  A field shows one answer to one problem. When the action already refused the field in a sentence
+  of its own, such as `"Use 100 or less: that is the budget."`, that sentence stays and the field
+  type's message is left out. Otherwise the field type's message takes the place of the action's
+  phrases for the field, such as Ash's `"length must be less than or equal to %{max}"`, so a value
+  over a bound is not told twice.
+  """
+  @spec merge_type_errors(list(), [{atom(), {String.t(), keyword()}}]) :: list()
+  def merge_type_errors(errors, type_errors) do
+    Enum.reduce(type_errors, errors, fn {field, _message} = type_error, acc ->
+      {theirs, others} = Enum.split_with(acc, &match?({^field, _}, &1))
+
+      if Enum.any?(theirs, fn {_field, {message, _vars}} -> own_sentence?(message) end),
+        do: acc,
+        else: [type_error | others]
+    end)
+  end
+
+  defp own_sentence?(message) when is_binary(message), do: MishkaGervaz.Errors.sentence?(message)
+  defp own_sentence?(_message), do: false
 
   @doc """
   `field` with its `min` and `max` read for the form `state` when they are `fn state -> value end`,

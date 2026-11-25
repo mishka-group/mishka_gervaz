@@ -115,4 +115,28 @@ defmodule MishkaGervaz.Form.Web.Events.HelpersTest do
                {:sock, %{"avatar" => uploads}}
     end
   end
+
+  describe "merge_type_errors/2" do
+    @over {"must be %{max} or less", [max: "100"]}
+
+    test "the action's own sentence for a field stays, and the field type's message is left out" do
+      errors = [budget: {"Use 100 or less: that is the budget.", []}]
+
+      assert Helpers.merge_type_errors(errors, budget: @over) == errors
+    end
+
+    test "the field type's message takes the place of the action's phrases for the field" do
+      errors = [
+        budget: {"must be less than or equal to %{max}", [max: 100]},
+        name: {"is required", []}
+      ]
+
+      assert Helpers.merge_type_errors(errors, budget: @over) ==
+               [budget: @over, name: {"is required", []}]
+    end
+
+    test "a field the action said nothing of gets the field type's message" do
+      assert Helpers.merge_type_errors([], budget: @over) == [budget: @over]
+    end
+  end
 end
