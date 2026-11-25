@@ -1348,7 +1348,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   Copy-to-clipboard button for a short value (e.g. an id). Requires the consuming app to register a
-  `CopyToClipboard` JS hook; reads the text from `data-copy`.
+  `CopyToClipboard` JS hook that copies `data-copy` and then sets `data-copied` on the button for a
+  moment, without writing into it. While `data-copied` is set the copy icon gives way to a check
+  icon of the same size, so the button and its table cell never move, and a polite live region says
+  "Copied" to screen readers. A hook that swaps the button's children for text instead still copies,
+  but the button changes size.
 
   ## Assigns
     * `:value` - text placed on the clipboard
@@ -1357,21 +1361,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   """
   @impl true
   def copy_button(assigns) do
-    assigns = assign_new(assigns, :label, fn -> dgettext("mishka_gervaz", "Copy") end)
+    assigns =
+      assigns
+      |> assign_new(:label, fn -> dgettext("mishka_gervaz", "Copy") end)
+      |> assign(:copied, dgettext("mishka_gervaz", "Copied"))
 
     ~H"""
     <button
       type="button"
       id={@id}
       phx-hook="CopyToClipboard"
-      phx-update="ignore"
       data-copy={@value}
       title={@label}
-      class="grid place-items-center text-[#c3c0b8] transition-colors hover:text-[#8a877f] focus:outline-none"
+      aria-label={@label}
+      class="group relative grid size-3 place-items-center text-[#c3c0b8] transition-colors hover:text-[#8a877f] focus:outline-none data-[copied]:text-[#177a53]"
     >
       <svg
-        width="12"
-        height="12"
+        data-role="gervaz-copy-icon"
+        class="size-3 group-data-[copied]:hidden"
+        aria-hidden="true"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -1382,6 +1390,22 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <rect x="9" y="9" width="12" height="12" rx="2" />
         <path d="M5 15V5a2 2 0 0 1 2-2h10" />
       </svg>
+      <svg
+        data-role="gervaz-copied-icon"
+        class="hidden size-3 group-data-[copied]:block"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      <span class="sr-only" aria-live="polite">
+        <span class="hidden group-data-[copied]:inline">{@copied}</span>
+      </span>
     </button>
     """
   end

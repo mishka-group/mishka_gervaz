@@ -486,6 +486,11 @@ msgstr ""
 msgid "Copy"
 msgstr ""
 
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1367
+#, elixir-autogen, elixir-format
+msgid "Copied"
+msgstr ""
+
 #: lib/mishka_gervaz/ui_adapters/tailwind.ex:3829
 #, elixir-autogen, elixir-format
 msgid "Dismiss"

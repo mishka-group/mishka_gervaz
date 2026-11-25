@@ -128,6 +128,11 @@
   and after a failed save; each sticks where it rests, so neither slides when the body scrolls. The
   body is marked `data-role="gervaz-panel-body"`. On a phone the form's
   tabs and its submit row's buttons are 44 px tall
+- The copy button (`copy_button/1`) keeps its size: while the host's `CopyToClipboard` hook marks
+  it `data-copied`, a check icon of the same size takes the copy icon's place and a polite live
+  region says "Copied". Before, the hook's "Copied!" text replaced the 12 px icon, so an icon-only
+  button grew and its table cell moved. It needs the host hook that sets `data-copied` instead of
+  writing into the button
 
 ### Dependencies:
 - phoenix_live_view 1.2.13 => 1.2.15 (EEF-CVE-2026-126334)
