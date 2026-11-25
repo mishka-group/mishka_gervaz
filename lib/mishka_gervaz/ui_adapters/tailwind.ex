@@ -2823,6 +2823,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:collapsed` - a collapsible group starts closed
     * `:class` - the fieldset's classes
 
+  The fields sit below the label and description with a gap; a group with neither starts with its
+  fields, without one.
+
   A collapsible group keeps the reader's open or closed choice while the form redraws: its
   `<details>` ignores the server's `open` attribute once mounted (`Phoenix.LiveView.JS.ignore_attributes/1`).
   """
@@ -2835,6 +2838,11 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       |> assign_new(:collapsible, fn -> false end)
       |> assign_new(:collapsed, fn -> false end)
       |> assign_new(:class, fn -> "rounded-[16px] border border-[#ecebe6] p-5" end)
+
+    assigns =
+      assigns
+      |> assign(:label, present(assigns.label))
+      |> assign(:description, present(assigns.description))
 
     ~H"""
     <fieldset class={["min-w-0", @class]}>
@@ -2857,13 +2865,16 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         <p :if={@description} class="mt-1 text-[12px] font-medium text-[#8a877f]">
           {@description}
         </p>
-        <div class="mt-4 space-y-4">
+        <div class={[(@label || @description) && "mt-4", "space-y-4"]}>
           {render_slot(@inner_block)}
         </div>
       <% end %>
     </fieldset>
     """
   end
+
+  defp present(text) when text in [nil, ""], do: nil
+  defp present(text), do: text
 
   @doc """
   The steps of a wizard or tabs form as numbered circles joined by lines.

@@ -563,6 +563,31 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
         assert fieldset =~ ~r/class="min-w-0/
       end
     end
+
+    defp group_html(assigns) do
+      %{
+        __changed__: nil,
+        inner_block: [%{inner_block: fn _, _ -> "x" end, __slot__: :inner_block}]
+      }
+      |> Map.merge(assigns)
+      |> Tailwind.field_group()
+      |> rendered_to_string()
+    end
+
+    defp fields_box(html),
+      do: html |> then(&Regex.run(~r/<div class="[^"]*space-y-4[^"]*"/, &1)) |> hd()
+
+    test "starts with its fields when it has no label and no description" do
+      for empty <- [%{}, %{label: "", description: ""}] do
+        refute fields_box(group_html(empty)) =~ "mt-4"
+      end
+    end
+
+    test "keeps a gap under its label or its description" do
+      assert fields_box(group_html(%{label: "Basics"})) =~ "mt-4"
+      assert fields_box(group_html(%{description: "About the post"})) =~ "mt-4"
+      assert group_html(%{description: "About the post"}) =~ "About the post"
+    end
   end
 
   describe "a list that opens under its control" do

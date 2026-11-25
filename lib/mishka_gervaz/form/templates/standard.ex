@@ -318,6 +318,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   @doc """
   One group through the UI adapter's `field_group`, or nothing when none of its fields is shown.
+  The adapter is given the group's label and its `ui` `description`, both translated.
 
   A group declared `collapsed true` is drawn collapsible and closed, whether or not it also says
   `collapsible true`: a group that starts closed can always be opened. A collapsed group opens
@@ -344,6 +345,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns =
         assigns
         |> assign(:group_label, translate_text(Map.get(group, :resolved_label)))
+        |> assign(:group_description, translate_text(get_in(group, [:ui, :description])))
         |> assign(:group_fields, group_fields)
         |> assign(:group_columns, get_in(group, [:ui, :columns]))
         |> assign(:ui, assigns.static.ui_adapter)
@@ -360,6 +362,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             module={@ui}
             function={:field_group}
             label={@group_label}
+            description={@group_description}
             class={@group_class}
             collapsible={@collapsible}
             collapsed={@collapsed}
@@ -372,6 +375,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             module={@ui}
             function={:field_group}
             label={@group_label}
+            description={@group_description}
             collapsible={@collapsible}
             collapsed={@collapsed}
           >
