@@ -32,8 +32,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   by its own label.
 
   A text, password, number, textarea or select input of a field that says `required true` carries
-  `required`, beside the asterisk on its label; a number input carries its field's `min` and `max`,
-  and a text input its `maxlength`. The form is `novalidate`, so these mark the input for the
+  `required`, beside the asterisk on its label, and a text input its `maxlength`. A `:number` field
+  is drawn as a text input with the phone's decimal keyboard (when its `min` is 0 or more), so what
+  is typed reaches the form as typed and `3-1` is refused as "must be a number"; a number input
+  would send it as an empty value, read as "is required" or saved as nothing. Its `min` and `max`
+  are checked on save and named in the message. The form is `novalidate`, so these mark the input for the
   browser and for assistive technology but never stop a save on their own: every message comes from
   the form, under its field and in the person's language, and an input in a closed group or a
   hidden step, which the browser cannot point at, never blocks the save without a word.
@@ -1049,7 +1052,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     do: %{function: :textarea, rows: 2, placeholder: translate_text(key.placeholder)}
 
   defp key_map_control(%{type: :number} = key, _value),
-    do: %{function: :number_input, placeholder: translate_text(key.placeholder)}
+    do: %{function: :number_input, type: "text", placeholder: translate_text(key.placeholder)}
 
   defp key_map_control(%{type: :password} = key, _value),
     do: %{
@@ -1637,6 +1640,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :number_input)
+        |> assign(:type, "text")
         |> assign(:required, required?(field))
         |> put_present(:min, number_bound(Map.get(field, :min)))
         |> put_present(:max, number_bound(Map.get(field, :max)))
@@ -2308,6 +2312,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns
     |> sub_field_base()
     |> assign(:function, :number_input)
+    |> assign(:type, "text")
     |> assign(:placeholder, assigns.sf.placeholder)
     |> dynamic_component()
   end

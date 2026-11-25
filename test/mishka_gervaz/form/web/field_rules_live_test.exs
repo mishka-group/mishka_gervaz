@@ -71,8 +71,11 @@ defmodule MishkaGervaz.Form.Web.FieldRulesLiveTest do
   end
 
   describe "a number past its bound" do
-    test "the input carries the bounds of its attribute's constraints" do
-      assert has_element?(open(), ~s|#{@form} input[name="form[seats]"][min="1"][max="10"]|)
+    test "the field takes the bounds of its attribute's constraints" do
+      assert has_element?(open(), ~s|#{@form} input[name="form[seats]"][inputmode="decimal"]|)
+
+      errors = open() |> save(%{"name" => "Ann", "seats" => "0"}) |> field_errors()
+      assert errors == ["Seats must be 1 or more"]
     end
 
     test "the bound of its attribute is named in one sentence" do

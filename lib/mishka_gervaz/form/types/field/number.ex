@@ -2,27 +2,28 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   @moduledoc """
   Numeric input field type.
 
-  Validates against the field's `ash_type`: `:integer` / `Ash.Type.Integer`
-  reject decimals; other numeric Ash types accept either integers or floats.
-  Sanitizes string input by trimming whitespace; anything else that is not a number, an HTML tag
-  included, gets "must be a number" rather than being changed. A value below the field's `min`
-  or above its `max` gets an error that names the bound, "must be 1 or more" or "must be 10 or less",
-  shown under the field as "Seats must be 10 or less". The input carries both bounds, with `ui`
-  `step`. A bound may be an integer, a float or a `Decimal`; a value is compared with it as a
-  `Decimal`, so `0.1` and `Decimal.new("0.10")` are equal.
+  Validates against the field's `ash_type`: `:integer` / `Ash.Type.Integer` reject decimals;
+  other numeric Ash types accept either integers or floats. Sanitizes string input by trimming
+  whitespace; anything else that is not a number gets "must be a number" rather than being
+  changed: an HTML tag, `NaN`, or text with a number only at its start such as `3-1`. The form
+  draws the input as a text input with the phone's decimal keyboard, so what the reader typed
+  reaches the server as typed; a number input would send `3-1` as an empty value.
+
+  A value below the field's `min` or above its `max` gets an error that names the bound, "must be
+  1 or more" or "must be 10 or less", shown under the field as "Seats must be 10 or less". A bound
+  may be an integer, a float or a `Decimal`; a value is compared with it as a `Decimal`, so `0.1`
+  and `Decimal.new("0.10")` are equal.
 
   ## Example
 
       field :priority, :number do
         min 0
         max 10
-        ui do step 1 end
       end
 
       field :price, :number do
         min Decimal.new("0.50")
         max Decimal.new("9999.99")
-        ui do step 0.01 end
       end
 
   See `MishkaGervaz.Form.Behaviours.FieldType` and `MishkaGervaz.Form.Types.Field`.
@@ -47,18 +48,8 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
   def validate(value, config) when is_binary(value) and value != "" do
     case Integer.parse(value) do
-      {number, ""} ->
-        within(value, number, config)
-
-      _ ->
-        if integer_type?(Map.get(config || %{}, :ash_type)) do
-          {:error, dgettext_noop("errors", "must be a whole number")}
-        else
-          case Float.parse(value) do
-            {_number, _rest} -> within(value, decimal_or_float(value), config)
-            :error -> {:error, dgettext_noop("errors", "must be a number")}
-          end
-        end
+      {number, ""} -> within(value, number, config)
+      _not_an_integer -> validate_fraction(value, config)
     end
   end
 
@@ -117,11 +108,16 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   defp decimal(number) when is_float(number), do: Decimal.from_float(number)
   defp decimal(_other), do: nil
 
-  # A typed value read as written, `"0.10"` as `0.10`, so it meets a `Decimal` bound exactly.
-  defp decimal_or_float(value) do
-    case Decimal.parse(value) do
-      {number, ""} -> number
-      _other -> value |> Float.parse() |> elem(0)
+  # A typed value that is not a whole number, read whole and as written, `"0.10"` as `0.10`, so it
+  # meets a `Decimal` bound exactly. Text with a number only at its start, such as `"3-1"`, is not a
+  # number, and neither is `"NaN"` or `"Infinity"`.
+  defp validate_fraction(value, config) do
+    with {%Decimal{coef: coef} = number, ""} when is_integer(coef) <- Decimal.parse(value),
+         false <- integer_type?(Map.get(config || %{}, :ash_type)) do
+      within(value, number, config)
+    else
+      true -> {:error, dgettext_noop("errors", "must be a whole number")}
+      _not_a_number -> {:error, dgettext_noop("errors", "must be a number")}
     end
   end
 

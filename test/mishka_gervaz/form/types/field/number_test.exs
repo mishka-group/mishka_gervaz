@@ -44,6 +44,29 @@ defmodule MishkaGervaz.Form.Types.Field.NumberTest do
     test "rejects garbage strings" do
       assert NumberField.validate("abc", %{}) == {:error, "must be a number"}
     end
+
+    test "rejects text with a number only at its start, for any ash_type" do
+      for typed <- ["3-1", "1,5", "1_000", "0x10", "2e"], ash_type <- [nil, :integer, :decimal] do
+        assert NumberField.validate(typed, %{ash_type: ash_type}) == {:error, "must be a number"},
+               "#{typed} as #{inspect(ash_type)}"
+      end
+    end
+
+    test "rejects NaN and Infinity" do
+      for typed <- ["NaN", "Infinity", "-inf"] do
+        assert NumberField.validate(typed, %{}) == {:error, "must be a number"}, typed
+      end
+    end
+
+    test "reads a number written with an exponent or a leading point whole" do
+      assert NumberField.validate("1e9", %{max: 10}) ==
+               {:error, {"must be %{max} or less", [max: "10"]}}
+
+      assert NumberField.validate(".5", %{}) == {:ok, ".5"}
+
+      assert NumberField.validate("1e9", %{ash_type: :integer}) ==
+               {:error, "must be a whole number"}
+    end
   end
 
   describe "validate/2 — passthrough" do

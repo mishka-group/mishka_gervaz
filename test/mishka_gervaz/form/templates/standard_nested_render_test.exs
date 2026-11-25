@@ -169,7 +169,7 @@ defmodule MishkaGervaz.Form.Templates.StandardNestedRenderTest do
     end
 
     test "and draws it through the adapter, not by hand", %{html: html} do
-      assert html =~ ~s|type="number"|
+      assert html =~ ~r/<input[^>]*type="text"[^>]*name="[^"]*\[weight\]"/
       assert html =~ "<select"
       assert html =~ "<textarea"
       assert html =~ ~s|type="checkbox"|

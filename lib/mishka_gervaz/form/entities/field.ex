@@ -527,7 +527,7 @@ defmodule MishkaGervaz.Form.Entities.Field.Ui do
     step: [
       type: {:or, [:integer, :float]},
       doc:
-        "Step value for number/range fields. For a `:datetime` field, the minutes between the times its picker offers (`15` gives :00, :15, :30 and :45)."
+        "Step value for a `:range` field. A `:number` field is drawn as a text input and takes no step. For a `:datetime` field, the minutes between the times its picker offers (`15` gives :00, :15, :30 and :45)."
     ],
     first_day_of_week: [
       type: {:in, [:monday, :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday]},

@@ -1203,12 +1203,25 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     """
   end
 
+  @doc """
+  A number input, `type="number"` unless `:type` says otherwise.
+
+  ## Assigns
+    * `:type` - `"number"`, the default, or `"text"`: a text input sends what the reader typed as
+      typed, so a value that is not a number, such as `3-1`, reaches the server and is refused in
+      words, where a number input sends it as an empty value. A text input asks for the phone's
+      decimal keyboard when its `:min` is 0 or more, and carries no `min`, `max` or `step`, which a
+      text input has no use for
+    * `:min`, `:max`, `:step` - the bounds and step of a number input
+    * `:prefix`, `:suffix` - units drawn beside the value
+  """
   @impl true
   def number_input(assigns) do
     placeholder = assigns[:placeholder] || assigns[:placeholder_label]
 
     assigns =
       assigns
+      |> assign_new(:type, fn -> "number" end)
       |> assign_new(:class, fn -> input_class(assigns[:search] == true) end)
       |> assign_new(:step, fn -> "any" end)
       |> assign(:placeholder, placeholder)
@@ -1232,14 +1245,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8a5a0]"
         />
         <input
-          type="number"
+          type={@type}
+          inputmode={@type == "text" && number_keyboard(@min)}
           id={@id}
           name={@name}
           value={@value}
           placeholder={@placeholder}
-          min={@min}
-          max={@max}
-          step={@step}
+          min={@type == "number" && @min}
+          max={@type == "number" && @max}
+          step={@type == "number" && @step}
           required={@required}
           disabled={@disabled}
           readonly={@readonly}
@@ -1255,6 +1269,15 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
     </.with_units>
     """
+  end
+
+  # The phone keyboard a text input for a number asks for: the decimal one, which has no minus sign
+  # on some phones, only when the value cannot be below 0.
+  defp number_keyboard(min) do
+    case min |> to_string() |> Decimal.parse() do
+      {bound, ""} -> if Decimal.negative?(bound), do: nil, else: "decimal"
+      _no_bound -> nil
+    end
   end
 
   attr :label, :string, default: nil
