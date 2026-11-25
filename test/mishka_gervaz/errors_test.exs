@@ -232,6 +232,13 @@ defmodule MishkaGervaz.ErrorsTest do
 
       assert Errors.format_flash_message(error) == "Publish failed: Post title is required"
     end
+
+    test "label_message/2 joins a phrase to the label a person reads" do
+      assert Errors.label_message("is required", "Name") == "Name is required"
+      assert Errors.label_message("Use 8 tries or fewer.", "Tries") == "Use 8 tries or fewer."
+      assert Errors.label_message("is required", nil) == "is required"
+      assert Errors.label_message("is required", "") == "is required"
+    end
   end
 
   describe "in Persian" do

@@ -24,6 +24,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   `render_steps/1`), upload sections, and submit buttons
   in a fixed order so notice positioning stays predictable.
 
+  ## Field errors
+
+  An error under a field names the field: a message that is a phrase is joined to the field's
+  label, so `"is required"` under Name reads "Name is required". A message that ends a sentence is a
+  resource's own words and is shown as written. A sub-field of a nested field is named the same way,
+  by its own label.
+
   ## Steps
 
   A `:wizard` or `:tabs` form draws the groups of every step, each step in a `data-step` container
@@ -285,13 +292,19 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   def render_field(assigns) do
     field = assigns.field
     form = assigns.state.form
+    label = get_ui_label(field)
+
+    errors =
+      assigns.state.errors
+      |> Map.get(field.name, [])
+      |> Enum.map(&MishkaGervaz.Errors.label_message(&1, label))
 
     assigns =
       assigns
       |> assign(:field_config, field)
       |> assign(:form_field, form[field.name])
-      |> assign(:label, get_ui_label(field))
-      |> assign(:errors, Map.get(assigns.state.errors, field.name, []))
+      |> assign(:label, label)
+      |> assign(:errors, errors)
       |> assign(:ui, assigns.static.ui_adapter)
 
     render_field_by_type(assigns)
@@ -2183,7 +2196,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         {sub_field_input(assigns)}
       </div>
       <p :for={err <- @sub_errors} class="mt-[6px] text-[11.5px] font-medium text-[#c0392b]">
-        {sub_error_text(err)}
+        {MishkaGervaz.Errors.label_message(sub_error_text(err), @sf.label)}
       </p>
     </div>
     """
