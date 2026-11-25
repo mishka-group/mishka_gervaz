@@ -134,4 +134,19 @@ defmodule MishkaGervaz.Form.Web.FieldRulesLiveTest do
       assert Ash.read!(RuleItem) == []
     end
   end
+
+  describe "the inputs" do
+    test "a required field's input carries required, and the others do not" do
+      view = open()
+
+      assert has_element?(view, ~s|#{@form} input[name="form[name]"][required]|)
+      assert has_element?(view, ~s|#{@form} input[name="form[seats]"][required]|)
+      refute has_element?(view, ~s|#{@form} textarea[name="form[note]"][required]|)
+      refute has_element?(view, ~s|#{@form} input[name="form[budget]"][required]|)
+    end
+
+    test "the form leaves every message to itself, so the browser never stops a save" do
+      assert has_element?(open(), "form#{@form}[novalidate]")
+    end
+  end
 end

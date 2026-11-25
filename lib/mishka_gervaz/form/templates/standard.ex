@@ -31,12 +31,18 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   resource's own words and is shown as written. A sub-field of a nested field is named the same way,
   by its own label.
 
+  A text, password, number, textarea or select input of a field that says `required true` carries
+  `required`, beside the asterisk on its label; a number input carries its field's `min` and `max`,
+  and a text input its `maxlength`. The form is `novalidate`, so these mark the input for the
+  browser and for assistive technology but never stop a save on their own: every message comes from
+  the form, under its field and in the person's language, and an input in a closed group or a
+  hidden step, which the browser cannot point at, never blocks the save without a word.
+
   ## Steps
 
   A `:wizard` or `:tabs` form draws the groups of every step, each step in a `data-step` container
   that is `hidden` unless it is the current one. Every input stays in the form, so a step left
   keeps what was typed into it, a password and a picked file included, and the save sends them all.
-  The form is `novalidate`, as the browser cannot point at a hidden input.
 
   The submit row holds Cancel, the UI adapter's `step_navigation` (Back on every step but the first,
   Next on every step but the last) and, on the last step only, the submit button. Next is a submit
@@ -178,7 +184,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-submit="save"
             phx-target={@myself}
             multipart={has_uploads?(@static)}
-            novalidate={@state.static.layout_mode in [:wizard, :tabs]}
+            novalidate
           >
             {render_notices_at(assigns, :form_top)}
             {render_notices_at(assigns, :before_header)}
@@ -1607,6 +1613,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :password_input)
+        |> assign(:required, required?(field))
         |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]) || "new-password")
         |> put_units(field)
         |> dynamic_component()
@@ -1617,6 +1624,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:readonly, is_readonly)
         |> assign(:function, :text_input)
         |> assign(:type, to_string(t))
+        |> assign(:required, required?(field))
         |> put_units(field)
         |> dynamic_component()
 
@@ -1625,6 +1633,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :number_input)
+        |> assign(:required, required?(field))
         |> put_present(:min, number_bound(Map.get(field, :min)))
         |> put_present(:max, number_bound(Map.get(field, :max)))
         |> put_present(:step, get_in_map(field, [:ui, :step]))
@@ -1636,6 +1645,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:disabled, false)
         |> assign(:readonly, is_readonly)
         |> assign(:function, :textarea)
+        |> assign(:required, required?(field))
         |> dynamic_component()
 
       :select ->
@@ -1643,6 +1653,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
         base
         |> assign(:function, :select)
+        |> assign(:required, required?(field))
         |> assign(:options, options)
         |> assign(:prompt, MishkaGervaz.Form.Types.Field.Select.prompt(field))
         |> dynamic_component()
@@ -2765,6 +2776,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> put_present(:prefix, resolve_label(get_in_map(field, [:ui, :prefix])))
     |> put_present(:suffix, resolve_label(get_in_map(field, [:ui, :suffix])))
   end
+
+  # Whether a field's input carries `required`: the field says `required true`. A checkbox or toggle
+  # never does, as a required one would have to be ticked.
+  defp required?(field), do: Map.get(field, :required) == true
 
   defp put_present(assigns, _key, nil), do: assigns
   defp put_present(assigns, key, value), do: assign(assigns, key, value)
