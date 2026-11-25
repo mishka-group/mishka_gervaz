@@ -79,4 +79,33 @@ defmodule MishkaGervaz.Form.Web.FieldRulesLiveTest do
       assert Ash.read!(RuleItem) == []
     end
   end
+
+  describe "a text field given HTML tags" do
+    test "keeps them as typed while the form checks it" do
+      view = open()
+
+      view |> form(@form, %{"form" => %{"name" => "<b>Ann</b>"}}) |> render_change()
+
+      assert has_element?(view, ~s|#{@form} input[name="form[name]"][value="<b>Ann</b>"]|)
+    end
+
+    test "is refused on save in words, and the field keeps what was typed" do
+      view = open() |> save(%{"name" => "<script>alert(1)</script>Ann", "seats" => "2"})
+
+      assert "Name must be plain text, without HTML tags" in field_errors(view)
+
+      assert has_element?(
+               view,
+               ~s|#{@form} input[name="form[name]"][value="<script>alert(1)</script>Ann"]|
+             )
+
+      assert Ash.read!(RuleItem) == []
+    end
+
+    test "a bare < or > is text and is saved" do
+      open() |> save(%{"name" => "a < b > c", "seats" => "2"})
+
+      assert [%{name: "a < b > c"}] = Ash.read!(RuleItem)
+    end
+  end
 end

@@ -94,8 +94,10 @@ defmodule MishkaGervaz.Form.Behaviours.FieldType do
   @doc """
   Sanitize a raw parameter value for this field type.
 
-  Called before validation/submission. Text fields strip HTML tags;
-  textarea / json / nested fields pass through unchanged.
+  Called before validation/submission. It tidies a value, such as trimming the spaces around a
+  text field's, and never changes what a person meant: a value the field cannot take is refused
+  by `validate/2` with a message, so it stays in the field as typed. Textarea / json / nested
+  fields pass through unchanged.
   """
   @callback sanitize(value :: any(), config()) :: any()
 

@@ -3,7 +3,9 @@ defmodule MishkaGervaz.Form.Types.Field.Combobox do
   Combobox field type: text input with dropdown suggestions.
 
   Combines free text entry with pre-loaded option suggestions.
-  Users can type any value or select from the suggestion list.
+  Users can type any value or select from the suggestion list. A typed value is trimmed and kept as
+  typed; one that holds an HTML tag is refused as a `:text` field's is
+  (`MishkaGervaz.Form.Types.Field.Text.plain_text/1`).
 
   Options are resolved once at form initialization (not on every render),
   making it efficient for database-backed suggestion lists.
@@ -28,15 +30,13 @@ defmodule MishkaGervaz.Form.Types.Field.Combobox do
   def render(assigns, _config), do: assigns
 
   @impl true
-  def validate(value, _config), do: {:ok, value}
+  def validate(value, _config), do: MishkaGervaz.Form.Types.Field.Text.plain_text(value)
 
   @impl true
   def parse_params(value, _config), do: value
 
   @impl true
-  def sanitize(value, _config) when is_binary(value) do
-    value |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
-  end
+  def sanitize(value, _config) when is_binary(value), do: String.trim(value)
 
   def sanitize(value, _config), do: value
 

@@ -4,7 +4,8 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
 
   Validates against the field's `ash_type`: `:integer` / `Ash.Type.Integer`
   reject decimals; other numeric Ash types accept either integers or floats.
-  Sanitizes string input by stripping HTML and trimming whitespace. A value below the field's `min`
+  Sanitizes string input by trimming whitespace; anything else that is not a number, an HTML tag
+  included, gets "must be a number" rather than being changed. A value below the field's `min`
   or above its `max` gets an error that names the bound, "must be 1 or more" or "must be 10 or less",
   shown under the field as "Seats must be 10 or less". The input carries both bounds, with `ui`
   `step`. A bound may be an integer, a float or a `Decimal`; a value is compared with it as a
@@ -128,9 +129,7 @@ defmodule MishkaGervaz.Form.Types.Field.Number do
   def parse_params(value, _config), do: value
 
   @impl true
-  def sanitize(value, _config) when is_binary(value) do
-    value |> MishkaGervaz.Helpers.strip_tags() |> String.trim()
-  end
+  def sanitize(value, _config) when is_binary(value), do: String.trim(value)
 
   def sanitize(value, _config), do: value
 

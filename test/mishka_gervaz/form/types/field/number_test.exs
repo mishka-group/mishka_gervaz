@@ -81,8 +81,9 @@ defmodule MishkaGervaz.Form.Types.Field.NumberTest do
   end
 
   describe "sanitize/2" do
-    test "strips HTML and trims binaries" do
-      assert NumberField.sanitize(" <b>42</b> ", %{}) == "42"
+    test "trims binaries and keeps HTML tags, which validate/2 refuses" do
+      assert NumberField.sanitize(" <b>42</b> ", %{}) == "<b>42</b>"
+      assert NumberField.validate("<b>42</b>", %{}) == {:error, "must be a number"}
     end
 
     test "passes non-binaries through" do

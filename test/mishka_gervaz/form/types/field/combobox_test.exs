@@ -19,8 +19,15 @@ defmodule MishkaGervaz.Form.Types.Field.ComboboxTest do
   end
 
   describe "sanitize/2" do
-    test "strips HTML and trims binaries" do
-      assert Combobox.sanitize(" <b>en</b> ", %{}) == "en"
+    test "trims binaries and keeps HTML tags as typed" do
+      assert Combobox.sanitize(" <b>en</b> ", %{}) == "<b>en</b>"
+    end
+
+    test "validate/2 refuses a value that holds an HTML tag" do
+      assert Combobox.validate("<b>en</b>", %{}) ==
+               {:error, "must be plain text, without HTML tags"}
+
+      assert Combobox.validate("en", %{}) == {:ok, "en"}
     end
 
     test "passes non-binaries through" do
