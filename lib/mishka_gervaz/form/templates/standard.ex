@@ -208,6 +208,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_uploads_section(assigns)}
             {render_notices_at(assigns, :before_submit)}
             {render_form_errors(assigns)}
+            {render_failed_save(assigns)}
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
           </.form>
@@ -325,7 +326,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   A group declared `collapsed true` is drawn collapsible and closed, whether or not it also says
   `collapsible true`: a group that starts closed can always be opened. A collapsed group opens
-  when one of its fields shows an error, so a failed save never hides the error inside it.
+  when one of its fields shows an error, and again on each refused save, so a failed save never
+  hides the error inside it.
   """
   @impl true
   def render_group(assigns) do
@@ -355,6 +357,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         |> assign(:collapsible, collapsed or Map.get(group, :collapsible, false))
         |> assign(:collapsed, collapsed)
         |> assign(:open_on_error, collapsed and group_has_errors?(visible_fields, assigns.state))
+        |> assign(:open_id, open_id(assigns.static, group, assigns.state))
         |> assign(:has_group_class, not is_nil(group_class))
         |> assign(:group_class, group_class || "")
 
@@ -370,7 +373,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             collapsible={@collapsible}
             collapsed={@collapsed}
           >
-            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
+            <span :if={@open_on_error} id={@open_id} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% else %>
@@ -382,7 +385,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             collapsible={@collapsible}
             collapsed={@collapsed}
           >
-            <span :if={@open_on_error} hidden phx-mounted={open_group()} />
+            <span :if={@open_on_error} id={@open_id} hidden phx-mounted={open_group()} />
             {render_group_fields(assigns, @group_fields, @group_columns)}
           </.dynamic_component>
         <% end %>
@@ -397,6 +400,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   defp group_has_errors?(_fields, _state), do: false
 
   defp open_group, do: JS.set_attribute({"open", ""}, to: {:closest, "details"})
+
+  # The mark that opens a collapsed group holding an error is named after the refused saves, so each
+  # refusal opens the group again, even one the reader closed since.
+  defp open_id(static, group, state),
+    do: "#{static.id}-group-#{group.name}-opened-#{Map.get(state, :failed_saves) || 0}"
 
   @doc """
   The steps of a wizard or tabs form, through the UI adapter's `step_indicator`.
@@ -654,7 +662,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
-    <div id={@static.id <> "-form-errors"} class="mb-4">
+    <div id={@static.id <> "-form-errors"} tabindex="-1" class="mb-4 outline-none">
       <.dynamic_component module={@ui} function={:alert} type={:error} icon="hero-exclamation-circle">
         <p :for={message <- @form_error_messages}>{message}</p>
       </.dynamic_component>
@@ -663,6 +671,79 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   def render_form_errors(assigns), do: ~H""
+
+  @doc """
+  After a refused save, a hidden mark named after `state.failed_saves` whose `phx-mounted` moves the
+  reader to what stopped the save: it focuses the first field with an error, in the order the form
+  draws them (the groups of the current step in their order, then the fields no group holds), which
+  scrolls it into view; with no field showing one, it focuses the messages above the submit row.
+
+  Each refusal draws a mark with a new id, so LiveView mounts it again and the reader is moved
+  again, even to the same field. Each field's cell is `"<id>-field-<name>"`.
+  """
+  def render_failed_save(%{state: %{failed_saves: count}} = assigns)
+      when is_integer(count) and count > 0 do
+    assigns =
+      assigns
+      |> assign(:failed_save_js, failed_save_js(assigns.static, assigns.state))
+      |> assign(:failed_save_count, count)
+
+    ~H"""
+    <span
+      :if={@failed_save_js}
+      id={"#{@static.id}-failed-save-#{@failed_save_count}"}
+      hidden
+      phx-mounted={@failed_save_js}
+    />
+    """
+  end
+
+  def render_failed_save(assigns), do: ~H""
+
+  defp failed_save_js(static, state) do
+    case first_failed_field(static, state) do
+      nil when state.form_errors != [] -> JS.focus(to: "##{static.id}-form-errors")
+      nil -> nil
+      name -> JS.focus_first(to: "##{static.id}-field-#{name}")
+    end
+  end
+
+  defp first_failed_field(static, %{errors: errors} = state)
+       when is_map(errors) and errors != %{} do
+    static
+    |> drawn_fields(state)
+    |> Enum.find_value(fn field ->
+      if field.type != :hidden and accessible?(field, state) and
+           show_on_mode?(field, state.mode) and Map.get(errors, field.name) not in [nil, [], ""],
+         do: field.name
+    end)
+  end
+
+  defp first_failed_field(_static, _state), do: nil
+
+  # The fields in the order the form draws them: a form without groups draws its fields; a wizard or
+  # tabs form only the groups of the current step; a standard form its groups, then the fields no
+  # group holds.
+  defp drawn_fields(%{groups: []} = static, _state), do: static.fields
+
+  defp drawn_fields(%{layout_mode: mode, steps: [_ | _] = steps} = static, state)
+       when mode in [:wizard, :tabs] do
+    static.groups
+    |> Enum.filter(&accessible?(&1, state))
+    |> State.Helpers.groups_for_step(steps, state.current_step)
+    |> Enum.flat_map(&Map.get(&1, :resolved_fields, []))
+  end
+
+  defp drawn_fields(static, state) do
+    grouped = MapSet.new(Enum.flat_map(static.groups, &Map.get(&1, :fields, [])))
+
+    grouped_fields =
+      static.groups
+      |> Enum.filter(&accessible?(&1, state))
+      |> Enum.flat_map(&Map.get(&1, :resolved_fields, []))
+
+    grouped_fields ++ Enum.reject(static.fields, &MapSet.member?(grouped, &1.name))
+  end
 
   @doc false
   def render_notices_at(assigns, position) do
@@ -840,7 +921,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     <div class={@col_class}>
       <%= for field <- @render_fields do %>
         <% fa = assign(assigns, :field, field) %>
-        <div class={nested_span_class(get_in_map(field, [:ui, :span]))}>
+        <div
+          id={"#{@static.id}-field-#{field.name}"}
+          class={nested_span_class(get_in_map(field, [:ui, :span]))}
+        >
           {render_field(fa)}
         </div>
       <% end %>

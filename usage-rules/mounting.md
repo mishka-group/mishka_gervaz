@@ -92,6 +92,7 @@ this row instead ([table/pagination.md](table/pagination.md)).
 | `submit` | — | `false` draws no submit row (the `save` event stays allowed) |
 | `submit_alternatives` | — | other ways to create, offered from a caret beside the submit button |
 | `notify_dirty` | — | `true` sends the page `{:form_dirty, id, dirty?}` — see "Unsaved changes" |
+| `notify_failed` | — | `true` sends the page `{:form_failed, id, failure}` on each refused save — see "After a refused save" |
 | `:body` slot | — | the page places the groups in its own markup — see "Placing the groups in the page" |
 
 Changing `record_id` or `defaults` re-initializes the form. The others are applied **at init
@@ -158,6 +159,27 @@ changes?" first ([customization/ui-adapters.md](customization/ui-adapters.md)). 
 declared with `confirm` asks its question itself while the form holds changes
 ([form/submit.md](form/submit.md)).
 
+### After a refused save
+
+A refused save keeps what was typed, shows each message under its field, and moves the reader to
+the first field with an error, in the order the form draws them: the field is focused, which
+scrolls it into view, and a collapsed group or another step holding it is opened first. A refusal
+no field shows moves the reader to the message above the submit row. It is `Phoenix.LiveView.JS`
+in the template (a hidden mark per refusal with `phx-mounted`), so the page needs no hook. Each
+field's cell is `"<id>-field-<name>"`.
+
+Mounted with `notify_failed={true}`, the form also tells its page, for a toast:
+
+```elixir
+def handle_info({:form_failed, "post-form", %{fields: fields}}, socket) do
+  new_socket = MishkaGervaz.Toast.push(socket, :error, "Check the #{length(fields)} marked fields.")
+  {:noreply, new_socket}
+end
+```
+
+`failure` is `%{mode: :create | :update, fields: [atom], messages: [String.t()]}`: the fields
+showing an error, in the order the form declares them, and the messages above the submit row.
+
 ## Messages the parent must answer
 
 ### Form
@@ -168,6 +190,7 @@ def handle_info({:form_saved, :update, result}, socket), do: …
 def handle_info({:form_cancelled, resource}, socket), do: …
 def handle_info({:form_event, event, params}, socket), do: …   # any unrecognized form event
 def handle_info({:form_dirty, id, dirty?}, socket), do: …       # only with notify_dirty={true}
+def handle_info({:form_failed, id, failure}, socket), do: …     # only with notify_failed={true}
 ```
 
 ### Table
