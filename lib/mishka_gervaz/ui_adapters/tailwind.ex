@@ -4943,7 +4943,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   One toast, a short dark note at the bottom of the screen (see `MishkaGervaz.Toast`): a dot in its
-  tone's colour, its sentence, an Undo button and a link when it has them, and a Close. Its buttons
+  tone's colour, its sentence, an Undo button and a link when it has them, and a Close. It is no
+  live region of its own: the toasts' container is the page's one polite live region, so a screen
+  reader reads each toast once as it arrives. Its buttons
   send `gervaz_toast_undo` and `gervaz_toast_close` with the toast's id to the page, whose
   `MishkaGervaz.Toast.attach/1` hook answers them.
 
@@ -4970,7 +4972,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     ~H"""
     <div
       id={@id}
-      role="status"
       data-role="gervaz-toast"
       data-tone={@tone}
       class="pointer-events-auto flex max-w-[420px] items-center gap-2.5 rounded-[13px] bg-[#17161a] px-3.5 py-[11px] text-[12.5px] font-semibold leading-[1.45] text-white shadow-[0_14px_34px_rgba(23,22,26,0.3)] max-[640px]:max-w-none max-[640px]:w-full"

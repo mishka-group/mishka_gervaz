@@ -34,6 +34,16 @@ defmodule MishkaGervaz.ToastLiveTest do
     assert has_element?(view, ~s|#gervaz-toasts[aria-live="polite"]|)
   end
 
+  test "the toasts' container is the page's one live region, so a toast is read once" do
+    view = open()
+
+    press(view, "saved")
+    doc = view |> render() |> LazyHTML.from_fragment()
+
+    regions = LazyHTML.query(doc, "[aria-live], [role=status], [role=alert], [role=log]")
+    assert regions |> LazyHTML.attribute("id") == ["gervaz-toasts"]
+  end
+
   test "leaves by itself when its time is up" do
     view = open()
     :erlang.trace(view.pid, true, [:receive])

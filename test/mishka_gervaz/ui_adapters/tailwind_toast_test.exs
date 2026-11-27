@@ -22,10 +22,11 @@ defmodule MishkaGervaz.UIAdapters.TailwindToastTest do
   defp attr(doc, selector, name), do: doc |> one(selector) |> LazyHTML.attribute(name)
   defp text(doc, selector), do: doc |> one(selector) |> LazyHTML.text() |> String.trim()
 
-  test "is a status note with its sentence, in its tone" do
+  test "is a note with its sentence, in its tone, and no live region of its own" do
     doc = render(%{tone: :warn})
 
-    assert attr(doc, "#toast-7", "role") == ["status"]
+    assert attr(doc, "#toast-7", "role") == []
+    assert attr(doc, "#toast-7", "aria-live") == []
     assert attr(doc, "#toast-7", "data-tone") == ["warn"]
     assert text(doc, ~s|[data-role="gervaz-toast-text"]|) == "Order refunded."
   end

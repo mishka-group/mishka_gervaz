@@ -1,3 +1,9 @@
+# Changelog for MishkaGervaz 0.0.14
+
+### Bug fixes:
+- A toast is read once by a screen reader: the toasts' container is the page's one polite live
+  region, and a toast inside it no longer carries a `role="status"` of its own
+
 # Changelog for MishkaGervaz 0.0.13
 
 ### Features:
