@@ -54,6 +54,27 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
     [%{__slot__: :inner_block, inner_block: inner_block}]
   end
 
+  defp stepped_body do
+    assigns = %{}
+
+    inner_block = fn _changed, _arg ->
+      ~H"""
+      <div role="tablist"><button id="tab-one" type="button">One</button></div>
+      <div id="step-one" data-step="one" hidden><input id="one" name="one" /></div>
+      <div id="step-two" data-step="two" data-panel-focus><input id="two" name="two" /></div>
+      """
+    end
+
+    [%{__slot__: :inner_block, inner_block: inner_block}]
+  end
+
+  # The elements the open's `focus_first` runs on, found in the drawn panel as the browser finds them.
+  defp focused_on_open(doc) do
+    [mounted] = attr(doc, "#edit", "phx-mounted")
+    [["focus_first", %{"to" => selector}]] = focus_ops(mounted)
+    doc |> one(selector) |> LazyHTML.attribute("id")
+  end
+
   defp focus_ops(encoded) do
     encoded
     |> Jason.decode!()
@@ -91,8 +112,7 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
       test "focuses the first field of its body as it opens, the close button staying before it" do
         doc = render(unquote(fun), %{show: true, inner_block: fields_body()})
 
-        [mounted] = attr(doc, "#edit", "phx-mounted")
-        assert [["focus_first", %{"to" => "#edit-body"}]] = focus_ops(mounted)
+        assert focused_on_open(doc) == ["edit-body"]
 
         ids =
           doc
@@ -103,6 +123,13 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
         assert attr(doc, "#edit-body > :first-child", "id") == ["edit-body-start"]
         assert attr(doc, "#edit-body-start", "tabindex") == ["-1"]
         assert attr(doc, "#edit-panel", "phx-key") == ["escape"]
+      end
+
+      test "focuses the first field of the step marked data-panel-focus, not the tabs before it" do
+        doc = render(unquote(fun), %{show: true, inner_block: stepped_body()})
+
+        assert focused_on_open(doc) == ["step-two"]
+        assert one(doc, "#step-two input") |> LazyHTML.attribute("id") == ["two"]
       end
 
       test "scrolls its body back to the top as it closes, before it hands the focus back" do
@@ -291,7 +318,10 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
     hidden = Jason.encode!(Tailwind.hide_window(JS.push("closed"), "edit").ops)
 
     assert shown =~ "#edit-panel"
-    assert List.last(Tailwind.show_window("edit").ops) == ["focus_first", %{to: "#edit-body"}]
+
+    assert ["focus_first", %{to: "#edit-body:not(:has([data-panel-focus]))" <> _}] =
+             List.last(Tailwind.show_window("edit").ops)
+
     assert shown =~ "sm:scale-95"
     assert hidden =~ "closed"
     assert hidden =~ "pop_focus"

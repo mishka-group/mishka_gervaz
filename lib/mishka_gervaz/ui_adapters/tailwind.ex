@@ -4354,7 +4354,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   `:on_close`; Escape closes it too, unless `:confirm_close` is given.
 
   Opening it focuses the first field in its body, so what the reader types goes there at once; a
-  body with no field takes the focus at its own top (`<id>-body-start`). The close button comes
+  body with no field takes the focus at its own top (`<id>-body-start`). An element in the body
+  marked `data-panel-focus` takes the focus in place of the whole body, its first field focused:
+  a gervaz form with tabs or steps marks its current step so, and the reader lands in the step's
+  first field and not on its tabs. The close button comes
   before the body, so Shift+Tab reaches it, as does Escape. Closing it scrolls its body back to the
   top, so it opens at the top again and not where the reader left it.
 
@@ -4466,7 +4469,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         {property <> " ease-out duration-200 motion-reduce:transition-none", away, shown}
     )
     |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "#" <> id <> "-body")
+    |> JS.focus_first(to: panel_focus(id))
+  end
+
+  defp panel_focus(id) do
+    body = "#" <> id <> "-body"
+    body <> ":not(:has([data-panel-focus])), " <> body <> " [data-panel-focus]"
   end
 
   defp hide_panel(js, id, {property, away, shown}) do

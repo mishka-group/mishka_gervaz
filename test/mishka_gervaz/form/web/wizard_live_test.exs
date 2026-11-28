@@ -44,6 +44,14 @@ defmodule MishkaGervaz.Form.Web.WizardLiveTest do
     |> LazyHTML.attribute("data-step")
   end
 
+  defp focus_step(view) do
+    view
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query(~s|#{@form} [data-panel-focus]|)
+    |> LazyHTML.attribute("data-step")
+  end
+
   # Next is the form's submit button, so pressing it, or Enter in a field, submits the form.
   defp next(view, values \\ %{}) do
     assert has_element?(view, ~s|#{@next}[type="submit"]|)
@@ -68,6 +76,14 @@ defmodule MishkaGervaz.Form.Web.WizardLiveTest do
       view |> element(@back) |> render_click()
       assert shown_step(view) == ["where"]
       assert Process.alive?(view.pid)
+    end
+
+    test "mark the shown step as the one a panel focuses as it opens, and only it" do
+      view = open()
+      assert focus_step(view) == ["where"]
+
+      next(view, %{"title" => "Hello", "address" => "site.example"})
+      assert focus_step(view) == ["what"]
     end
 
     test "Back keeps what was typed on every step" do

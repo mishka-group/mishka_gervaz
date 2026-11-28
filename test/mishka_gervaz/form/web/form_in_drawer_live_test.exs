@@ -28,6 +28,17 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
     view
   end
 
+  # The elements the drawer's open runs `focus_first` on, found in the page as the browser finds them.
+  defp focused_on_open(view) do
+    doc = view |> render() |> LazyHTML.from_fragment()
+    [mounted] = doc |> LazyHTML.query("#plan-drawer") |> LazyHTML.attribute("phx-mounted")
+
+    [selector] =
+      for ["focus_first", %{"to" => to}] <- Jason.decode!(mounted), do: to
+
+    doc |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+  end
+
   test "the form stands in the drawer's panel" do
     view = open()
 
@@ -50,6 +61,17 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
       assert class =~ "in-data-[role=gervaz-panel-body]:sticky"
       assert class =~ "in-data-[role=gervaz-panel-body]:#{edge} "
     end
+  end
+
+  test "opening it focuses the first field of the current tab, not the tab buttons above it" do
+    view = open()
+
+    assert focused_on_open(view) == ["plan-step-basics"]
+    assert has_element?(view, "#plan-step-basics input")
+
+    view |> element(~s|#plan-tab-publishing|) |> render_click()
+
+    assert focused_on_open(view) == ["plan-step-publishing"]
   end
 
   test "asks before it closes only while the form holds changes" do

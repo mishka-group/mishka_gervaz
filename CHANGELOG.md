@@ -15,6 +15,10 @@
   button took the focus, so typing went nowhere. The close button is still reached by Shift+Tab
   and Escape, and closing scrolls the body back to the top, so it opens at the top again and not
   where the reader left it
+- A gervaz form with tabs or steps in a drawer, a sheet or a window puts the reader in the first
+  field of its current tab or step as the panel opens, and not on its tab or step buttons: the
+  current step is marked `data-panel-focus`, and the panel focuses the first field of an element so
+  marked in its body
 
 # Changelog for MishkaGervaz 0.0.13
 

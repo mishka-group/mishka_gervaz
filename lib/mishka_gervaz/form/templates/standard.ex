@@ -66,7 +66,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   only the fields scroll and the save button is always in reach, after a failed save too. Each
   sticks where it rests, inside the body's padding, so neither moves when the body scrolls, and a
   white band over that padding hides the fields that scroll past it. Outside a panel both stay in
-  the page's flow.
+  the page's flow. The current step's container is marked `data-panel-focus`, so the panel, as it
+  opens, focuses the step's first field and not its tab or step button.
 
   ## Placed groups
 
@@ -540,6 +541,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         role={@tabs? && "tabpanel"}
         aria-labelledby={@tabs? && @static.id <> "-tab-" <> to_string(step.name)}
         hidden={step.name != @state.current_step}
+        data-panel-focus={step.name == @state.current_step}
       >
         <%= for group <- groups do %>
           <% ga = assign(assigns, :group, group) %>
