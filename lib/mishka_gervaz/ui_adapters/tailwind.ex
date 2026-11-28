@@ -4357,8 +4357,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   body with no field takes the focus at its own top (`<id>-body-start`). An element in the body
   marked `data-panel-focus` takes the focus in place of the whole body, its first field focused:
   a gervaz form with tabs or steps marks its current step so, and the reader lands in the step's
-  first field and not on its tabs. The close button comes
-  before the body, so Shift+Tab reaches it, as does Escape. Closing it scrolls its body back to the
+  first field and not on its tabs. The panel itself takes no focus (it has no `tabindex`): LiveView's
+  focus wrap focuses its panel as the open's transition ends, which would take the focus from that
+  field. The close button comes before the body, so Shift+Tab reaches it, as does Escape. Closing it scrolls its body back to the
   top, so it opens at the top again and not where the reader left it.
 
   ## Assigns
@@ -4549,7 +4550,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         aria-modal="true"
         aria-labelledby={@title && @id <> "-title"}
         aria-describedby={@sub && @id <> "-sub"}
-        tabindex="-1"
         phx-window-keydown={is_nil(@confirm_close) && @close_js}
         phx-key="escape"
         class={[

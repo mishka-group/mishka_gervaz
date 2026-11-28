@@ -109,6 +109,13 @@ defmodule MishkaGervaz.UIAdapters.TailwindDrawerTest do
         assert one(doc, "#edit-panel > #edit-panel-end[tabindex]") |> Enum.count() == 1
       end
 
+      test "takes no focus of its own, so the field its open focused keeps it after the transition" do
+        doc = render(unquote(fun), %{show: true, inner_block: fields_body()})
+
+        assert attr(doc, "#edit-panel", "phx-hook") == ["Phoenix.FocusWrap"]
+        assert attr(doc, "#edit-panel", "tabindex") == []
+      end
+
       test "focuses the first field of its body as it opens, the close button staying before it" do
         doc = render(unquote(fun), %{show: true, inner_block: fields_body()})
 
