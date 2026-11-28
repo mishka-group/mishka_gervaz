@@ -22,6 +22,11 @@
 - The field a drawer, a sheet or a window focuses as it opens keeps the focus once the panel's
   transition ends. Before, LiveView's focus wrap moved the focus to the panel itself at that moment,
   since the panel had a `tabindex`, so typing went nowhere
+- A gervaz form in a drawer, a sheet or a window that its opener starts over with `reset` keeps the
+  reader in its first field: the form drawn anew focuses the field the panel focused as it opened,
+  the first field of its current tab or step or its own first one, and an edit takes the focus the
+  same way once its record has loaded. Before, the open focused the old form's field, the start
+  over drew a new `<form>` in its place and the focus fell to the page, so typing went nowhere
 - A form whose page refreshes its `defaults` while it is open keeps what was typed, its errors and
   the tab or step it is on, and its notices and options read the new values. It starts over only
   as a create form with no changes, when a field's own default is among what changed. Before, any

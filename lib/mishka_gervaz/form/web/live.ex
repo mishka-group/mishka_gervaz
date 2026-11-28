@@ -133,7 +133,9 @@ defmodule MishkaGervaz.Form.Web.Live do
   again. The uploads are cancelled. A create is drawn once without its `<form>` before the empty one
   is built, so every control is drawn anew, a `phx-update="ignore"` one included, and reads the new
   value. A table's Edit sends `reset: true` with the row's `record_id`. A button that opens the form
-  without asking the server uses `reset/2`.
+  without asking the server uses `reset/2`. In a drawer, a sheet or a window the new `<form>` takes
+  the focus the panel gave the old one as it opened (see `MishkaGervaz.Form.Templates.Standard`,
+  "In a drawer, a sheet or a window").
 
   ## Values the page works out
 

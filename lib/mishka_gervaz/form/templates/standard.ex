@@ -69,6 +69,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   the page's flow. The current step's container is marked `data-panel-focus`, so the panel, as it
   opens, focuses the step's first field and not its tab or step button.
 
+  A form that starts over draws a new `<form>` (see "Opening a form again" in
+  `MishkaGervaz.Form.Web.Live`), and the field the panel focused goes away with the old one: an
+  opener that pushes the form's `reset` focuses the old form's field before the new one arrives. So
+  the `<form>`, as it is drawn in a panel's body, focuses that field again, the current step's first
+  field or its own first one, and an edit drawn once its record has loaded takes the focus the same
+  way. In a hidden panel, and outside a panel, it focuses nothing.
+
   ## Placed groups
 
   A `:standard` form mounted with a `:body` slot draws that slot in place of its groups, inside the
@@ -184,6 +191,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <.form
             for={@state.form}
             id={@static.id <> "-form"}
+            phx-mounted={panel_focus_js(@static.id <> "-form")}
             phx-change="validate"
             phx-submit="save"
             phx-target={@myself}
@@ -243,6 +251,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       myself: assigns[:myself],
       uploads: assigns[:uploads] || %{}
     }
+  end
+
+  # A form drawn in an open panel's body focuses the field the panel focuses as it opens: its current
+  # step's first field, or its own first one. Outside a panel, or in a hidden one, nothing is focused.
+  defp panel_focus_js(form_id) do
+    form = ~s|[data-role="gervaz-panel-body"] #| <> form_id
+
+    JS.focus_first(
+      to: form <> ":not(:has([data-panel-focus])), " <> form <> " [data-panel-focus]"
+    )
   end
 
   # The fields no group holds, drawn after a placed body as `render_groups/1` draws them after the
