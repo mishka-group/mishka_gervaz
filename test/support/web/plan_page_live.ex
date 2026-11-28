@@ -5,6 +5,9 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
   error flash the form sends in `#flash-error`, and whether the form holds changes in `#dirty`.
   Opened with `?id=<id>`, the form edits that record. Its `#put-discount` button puts a discount of
   15 into the open form (`MishkaGervaz.Form.Web.Live.put_values/2`), a value the page worked out.
+  Opened with `?shop=<name>`, the form's `defaults` carry the shop, live data no field reads: the
+  `#rename-shop` button renames it to "<name> 2" and `#default-title` gives the title field the
+  default "From the page", as a page refreshing its data while the form is open.
 
   On `/plans/drawer` the form sits in the Tailwind adapter's drawer, `#plan-drawer`, open as the
   page opens. While the form holds changes the drawer asks "Discard your changes?" before it
@@ -20,11 +23,27 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
   @master %{id: "master-1", site_id: nil, role: :admin}
 
   @impl true
-  def mount(params, _session, socket),
-    do: {:ok, assign(socket, saved: nil, dirty?: false, open?: true, record_id: params["id"])}
+  def mount(params, _session, socket) do
+    new_socket =
+      assign(socket,
+        saved: nil,
+        dirty?: false,
+        open?: true,
+        record_id: params["id"],
+        defaults: params["shop"] && %{shop: params["shop"]}
+      )
+
+    {:ok, new_socket}
+  end
 
   @impl true
   def handle_event("close_drawer", _params, socket), do: {:noreply, assign(socket, :open?, false)}
+
+  def handle_event("rename_shop", _params, socket),
+    do: {:noreply, update(socket, :defaults, &%{&1 | shop: &1.shop <> " 2"})}
+
+  def handle_event("default_title", _params, socket),
+    do: {:noreply, update(socket, :defaults, &Map.put(&1, :title, "From the page"))}
 
   def handle_event("put_discount", _params, socket) do
     MishkaGervaz.Form.Web.Live.put_values("plan", %{discount: 15})
@@ -77,12 +96,15 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
     <p id="saved">{@saved}</p>
     <p id="dirty">{to_string(@dirty?)}</p>
     <button id="put-discount" type="button" phx-click="put_discount">Put a discount</button>
+    <button id="rename-shop" type="button" phx-click="rename_shop">Rename the shop</button>
+    <button id="default-title" type="button" phx-click="default_title">Default the title</button>
     <.live_component
       module={MishkaGervaz.Form.Web.Live}
       id="plan"
       resource={MishkaGervaz.Test.Web.PlanItem}
       current_user={@master}
       record_id={@record_id}
+      defaults={@defaults}
       notify_dirty={true}
     />
     """

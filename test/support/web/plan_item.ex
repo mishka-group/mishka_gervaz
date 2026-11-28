@@ -4,7 +4,8 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
   `navigation :free` and three tabs, Basics (`:title`, `:kind`, `:billing`), Pricing (`:slug`,
   `:price`, `:discount`) and Publishing (`:listed`, `:featured`, `:channels`). Its `before_save`
   fills an empty slug from the title. Its submit row has a Discard button,
-  and its Cancel and Discard ask "Discard your changes?" while the form holds changes.
+  and its Cancel and Discard ask "Discard your changes?" while the form holds changes. A notice
+  above the submit row, `:shop`, names the shop in the page's `defaults` while it gives one.
 
     * `:kind` — a `:choice_cards` field: One-time, with a second line and an icon, and
       Subscription;
@@ -138,6 +139,13 @@ defmodule MishkaGervaz.Test.Web.PlanItem do
       layout do
         mode :tabs
         navigation :free
+
+        notice :shop do
+          position :before_submit
+          type :info
+          visible fn state -> is_map(state.defaults) and Map.has_key?(state.defaults, :shop) end
+          title fn state -> "Sold in #{state.defaults.shop}" end
+        end
 
         step :basics do
           groups [:basics]

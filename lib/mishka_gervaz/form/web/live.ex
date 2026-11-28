@@ -43,6 +43,10 @@ defmodule MishkaGervaz.Form.Web.Live do
     because a field it depends on changed, the save leaves it out.
     An update that leaves the key out, such as the `send_update/2` a table's Edit sends with only a
     `record_id`, keeps the defaults the form has. Pass `defaults: nil` to drop them.
+    New defaults start a create form over only while it holds no changes and a field's own default
+    is among what changed. Otherwise the form keeps what was typed, its errors and the step it is
+    on, and its notices and options read the new values, so a page may pass live data (a product's
+    name, a count of buyers) and refresh it while the form is open.
   - `reset` - `true` starts the form over on its `record_id`, even when that is the record already
     open, or `nil` while the form is already on create. See "Opening a form again".
   - `body` - a slot that places the form's groups in the page's own markup. See "Placing the
@@ -347,15 +351,14 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)
       else
-        defaults_changed = defaults != existing_state.defaults
-
         cond do
           Map.get(assigns, :reset) == true ->
             socket
             |> assign(:form_state, State.update(existing_state, defaults: defaults))
             |> start_over(record_id)
 
-          record_id != socket.assigns[:record_id] or defaults_changed ->
+          record_id != socket.assigns[:record_id] or
+              follows_defaults?(existing_state, defaults) ->
             updated_state =
               existing_state |> fresh_state() |> State.update(defaults: defaults)
 
@@ -364,6 +367,9 @@ defmodule MishkaGervaz.Form.Web.Live do
             |> assign(:record_id, record_id)
             |> maybe_load_form(updated_state, record_id)
 
+          defaults != existing_state.defaults ->
+            assign(socket, :form_state, State.update(existing_state, defaults: defaults))
+
           true ->
             socket
         end
@@ -371,6 +377,25 @@ defmodule MishkaGervaz.Form.Web.Live do
 
     {:ok, socket}
   end
+
+  # A create form with no changes is built again when a field's default changed, so its inputs
+  # draw the new value. A form with changes, an edit, or defaults no field reads keep the form.
+  defp follows_defaults?(%State{defaults: defaults}, defaults), do: false
+  defp follows_defaults?(%State{dirty?: true}, _defaults), do: false
+  defp follows_defaults?(%State{mode: :update}, _defaults), do: false
+
+  defp follows_defaults?(%State{defaults: old, static: %{fields: fields}}, new) do
+    Enum.any?(fields, &(field_default(old, &1.name) != field_default(new, &1.name)))
+  end
+
+  defp field_default(defaults, name) when is_map(defaults) do
+    case defaults do
+      %{^name => value} -> value
+      _not_by_atom -> Map.get(defaults, to_string(name))
+    end
+  end
+
+  defp field_default(_defaults, _name), do: nil
 
   @doc false
   @spec start_over(Phoenix.LiveView.Socket.t(), String.t() | nil) :: Phoenix.LiveView.Socket.t()

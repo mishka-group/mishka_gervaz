@@ -19,6 +19,11 @@
   field of its current tab or step as the panel opens, and not on its tab or step buttons: the
   current step is marked `data-panel-focus`, and the panel focuses the first field of an element so
   marked in its body
+- A form whose page refreshes its `defaults` while it is open keeps what was typed, its errors and
+  the tab or step it is on, and its notices and options read the new values. It starts over only
+  as a create form with no changes, when a field's own default is among what changed. Before, any
+  change to `defaults`, such as a product's name or a count the page passes for a notice, started
+  the form over on its first step and threw away what was set on the others
 
 # Changelog for MishkaGervaz 0.0.13
 
