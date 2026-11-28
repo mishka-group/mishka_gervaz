@@ -398,8 +398,14 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
       Runs the `after_save` hook with the saved record, for its side effects, sends
       `{:form_saved, mode, record}` to the parent LiveView and runs the `after_save` JS hook.
-      An update save on a form mounted with a `record_id` assign reloads the saved record for
-      editing; every other save returns the form to an empty create form.
+
+      The save's own render keeps what was saved, with no error left on it, and the form starts
+      over in a later render (`send_update/3` with `reset: true`, which the process runs after the
+      `{:form_saved, ...}` it sent first). A page that closes a window when it hears the save starts
+      the window's fade before the form starts over, and LiveView holds every later render until
+      the fade ends, so the window fades out over the saved values instead of an empty form. An
+      update save on a form mounted with a `record_id` assign then reads the saved record again
+      for editing; every other save returns the form to an empty create form.
       """
       @spec after_save(State.t(), struct(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
@@ -408,20 +414,21 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         MishkaGervaz.Form.Web.Events.run_hook(state, :after_save, [result, state])
         send(self(), {:form_saved, state.mode, result})
 
-        socket = push_js_hook(socket, state, :after_save, record_id)
+        again =
+          if state.mode == :update and socket.assigns[:record_id_given?] == true,
+            do: record_id
 
-        reset_state = MishkaGervaz.Form.Web.Live.fresh_state(state)
+        Phoenix.LiveView.send_update(MishkaGervaz.Form.Web.Live,
+          id: state.static.id,
+          record_id: again,
+          reset: true
+        )
 
-        if state.mode == :update and socket.assigns[:record_id_given?] == true and
-             not is_nil(record_id) do
-          socket
-          |> Phoenix.Component.assign(:record_id, record_id)
-          |> DataLoader.load_record(reset_state, record_id)
-        else
-          socket
-          |> Phoenix.Component.assign(:record_id, nil)
-          |> DataLoader.new_record(reset_state)
-        end
+        saved_state = State.update(state, errors: %{}, form_errors: [], dirty?: false)
+
+        socket
+        |> Phoenix.Component.assign(:form_state, saved_state)
+        |> push_js_hook(state, :after_save, record_id)
       end
 
       @spec consume_and_merge_uploads(State.t(), map(), Phoenix.LiveView.Socket.t()) ::

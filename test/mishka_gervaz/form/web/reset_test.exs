@@ -322,7 +322,13 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       socket = open_create(socket)
       assert socket.assigns.form_state.opened == 3
 
-      socket = socket |> open_edit(entry) |> type("title", "Saved again") |> save()
+      socket =
+        socket
+        |> open_edit(entry)
+        |> type("title", "Saved again")
+        |> save()
+        |> deliver_send_updates()
+
       assert title(socket) in [nil, ""]
       assert socket.assigns.form_state.opened == 5
     end

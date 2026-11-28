@@ -6,6 +6,10 @@
 - `MishkaGervaz.Table.Web.Live.reorder/2` draws a row that is still arriving: a page that hands the
   table a new row as a realtime notification and asks for it in order at once sees it where the
   order puts it, also just past the rows shown, where before the row was left out
+- A window a page closes when its form is saved fades out over the values that were saved: the
+  save's own render keeps them, with no error left on it, and the form starts over in a later
+  render, which LiveView holds until the fade ends. Before, the form was emptied in the save's
+  render and the window faded out over an empty form
 
 # Changelog for MishkaGervaz 0.0.13
 
