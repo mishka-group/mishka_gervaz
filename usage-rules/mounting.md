@@ -98,6 +98,7 @@ this row instead ([table/pagination.md](table/pagination.md)).
 | `navigation` | — | `:sequential` or `:free` in place of the resource's — see [form/layout.md](form/layout.md) "What the page chooses" |
 | `step` | — | the step a wizard or tabs form opens on — see [form/layout.md](form/layout.md) |
 | `notify_step` | — | `true` sends the page `{:form_step, id, step}` each time the form moves to another step |
+| `notify_busy` | — | `true` sends the page `{:form_busy, id, :submit \| :next_step}` for each save or Next the form drops while it reads its record again (after an update save, a Discard or a start over); the press is not run later |
 
 Changing `record_id` or `defaults` re-initializes the form; a changed `navigation` or `step` is
 applied as it changes. The others are applied **at init only**. An update that leaves `defaults` out, such as the `send_update/2` a table's Edit sends with
@@ -196,6 +197,7 @@ def handle_info({:form_event, event, params}, socket), do: …   # any unrecogni
 def handle_info({:form_dirty, id, dirty?}, socket), do: …       # only with notify_dirty={true}
 def handle_info({:form_failed, id, failure}, socket), do: …     # only with notify_failed={true}
 def handle_info({:form_step, id, step}, socket), do: …          # only with notify_step={true}
+def handle_info({:form_busy, id, action}, socket), do: …        # only with notify_busy={true}
 ```
 
 ### Table

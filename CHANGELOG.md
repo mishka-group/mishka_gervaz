@@ -58,6 +58,12 @@
   arrives, and the fresh form takes their place then. A live component in an entry, a table with a
   stream say, keeps its rows. Before, the form drew its loading state in between, so every step
   flickered and a live component in an entry came back empty. A save sent in between does nothing
+- A save, Next or answered question a form drops while it reads its record again is told to a page
+  mounted with `notify_busy={true}`, as `{:form_busy, id, :submit}` or `{:form_busy, id, :next_step}`,
+  so a page that keeps something for that save, the kind of save a button asked for, lets go of it
+  and a later save does not act on it. The press is dropped, never run once the record arrives: it
+  was made on the form as it was before, a second press of a save already made or a save of values
+  a Discard put back
 - Cancel on an edit with no `on_cancel` hook puts back the record's saved values and stays on the
   record, on the step or tab it is on. Before, it threw the record away and returned the form to an
   empty create form

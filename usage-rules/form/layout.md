@@ -81,6 +81,10 @@ the step, and is given the form as the `:body` slot is:
 - While the form reads the record it is on again (an update save, Discard, a start over) it keeps
   drawing the steps and the entries, so a live component in an entry keeps its rows; the fresh
   form takes their place once the record arrives.
+- A save, Next or answered question pressed in that time is dropped, never run later. A page that
+  keeps something for a save (the kind of save a button asked for) carries it in the save's params,
+  as the submit button's `name`/`value` its `before_save` hook reads, or mounts `notify_busy={true}`
+  and lets go of it on `{:form_busy, id, action}`.
 
 ## What the page chooses
 

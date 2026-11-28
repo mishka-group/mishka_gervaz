@@ -312,6 +312,37 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       assert socket.assigns.form_state.dirty? == false
       assert title(socket) == "Saved title"
     end
+
+    test "a save, Next or answer sent while it reads the record again tells a page that asked",
+         %{entry: entry} do
+      socket = mount(%{notify_busy: true}) |> open_edit(entry)
+      socket = component_update(socket, %{record_id: entry.id, reset: true})
+      params = %{"form" => %{"title" => "Saved while reading"}}
+
+      assert {:noreply, ^socket} = Live.handle_event("save", params, socket)
+      assert_received {:form_busy, @id, :submit}
+
+      assert {:noreply, ^socket} = Live.handle_event("question_confirm", %{}, socket)
+      assert_received {:form_busy, @id, :submit}
+
+      assert {:noreply, ^socket} = Live.handle_event("next_step", %{}, socket)
+      assert_received {:form_busy, @id, :next_step}
+
+      refute_received {:form_saved, _mode, _record}
+
+      socket = finish_loading(socket, entry)
+      {:noreply, _socket} = Live.handle_event("validate", params, socket)
+      refute_received {:form_busy, _id, _action}
+    end
+
+    test "a page that did not ask is not told of a save sent while it reads the record again",
+         %{entry: entry} do
+      socket = mount() |> open_edit(entry)
+      socket = component_update(socket, %{record_id: entry.id, reset: true})
+
+      assert {:noreply, ^socket} = Live.handle_event("save", %{"form" => %{}}, socket)
+      refute_received {:form_busy, _id, _action}
+    end
   end
 
   describe "each start over" do

@@ -63,6 +63,9 @@ defmodule MishkaGervaz.Form.Web.Live do
   - `step` - the step a wizard or tabs form opens on. See "Steps the page chooses".
   - `notify_step` - `true` sends the page `{:form_step, id, step}` each time a wizard or tabs form
     moves to another step. See "Steps the page chooses".
+  - `notify_busy` - `true` sends the page `{:form_busy, id, action}` for each save (`:submit`) or
+    Next (`:next_step`) the form does not run because it is reading its record again. See "Opening
+    a form again".
 
   ## Placing the groups in the page
 
@@ -207,6 +210,19 @@ defmodule MishkaGervaz.Form.Web.Live do
   entries stay on the page, and a live component in an entry keeps what it holds, the rows of a
   table's stream say. A save, a Next or an answered question sent while the record is read again
   does nothing. Another record is drawn anew, after the form's loading state.
+
+  Such a press is dropped, not kept for later: it was made on the form as it was before the read,
+  a second press of a save already made, say, or a save of the values a Discard just put back, so
+  running it once the record arrives could save what the reader no longer means. The reader presses
+  again on the fresh form. A page that keeps something for a save, the kind of save a button
+  asked for say, is told with `notify_busy={true}`, as `{:form_busy, id, :submit}` for a save or an
+  answered question and `{:form_busy, id, :next_step}` for a Next, so it can let go of it:
+
+      def handle_info({:form_busy, "post-form", _action}, socket),
+        do: {:noreply, assign(socket, :publish?, false)}
+
+  A page that can, carries such a choice in the save itself instead, as the `name` and `value` of
+  the submit button pressed, which the form's `before_save` hook reads from its params.
 
   ## Values the page works out
 
@@ -444,6 +460,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:notify_dirty, Map.get(assigns, :notify_dirty) == true)
         |> assign(:notify_failed, Map.get(assigns, :notify_failed) == true)
         |> assign(:notify_step, Map.get(assigns, :notify_step) == true)
+        |> assign(:notify_busy, Map.get(assigns, :notify_busy) == true)
         |> assign(:record_id, record_id)
         |> assign(:record_id_given?, Map.has_key?(assigns, :record_id))
         |> assign(:initialized, true)
@@ -645,8 +662,10 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   @impl true
   def handle_event(event, _params, %{assigns: %{form_state: %State{loading: :loading}}} = socket)
-      when event in ["save", "next_step", "question_confirm"],
-      do: {:noreply, socket}
+      when event in ["save", "next_step", "question_confirm"] do
+    announce_busy(socket, event)
+    {:noreply, socket}
+  end
 
   def handle_event(event, params, socket) do
     {:noreply, handled_socket} =
@@ -784,6 +803,18 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   defp announce_step(socket, _was), do: socket
+
+  # A form mounted with `notify_busy` tells its page of each save, Next or answer it does not run
+  # because it is reading its record again.
+  defp announce_busy(%{assigns: %{notify_busy: true, id: id}}, event) do
+    send(self(), {:form_busy, id, busy_action(event)})
+    :ok
+  end
+
+  defp announce_busy(_socket, _event), do: :ok
+
+  defp busy_action("next_step"), do: :next_step
+  defp busy_action(_save), do: :submit
 
   defp failed_saves(%{assigns: %{form_state: %State{failed_saves: count}}}), do: count
   defp failed_saves(_socket), do: 0
