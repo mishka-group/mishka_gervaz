@@ -95,6 +95,8 @@
   shows first, and a field a page gave in `defaults` holds what is typed over it
 - A text or number input whose value a save refused keeps what was typed while the error stands
   under it: "1e5" refused stays "1e5" rather than the "100000" it was read as
+- The open list of a `:search_multi` relation closes on Escape wherever the focus is, a clicked
+  option included, and the focus goes back to its search input
 
 # Changelog for MishkaGervaz 0.0.13
 

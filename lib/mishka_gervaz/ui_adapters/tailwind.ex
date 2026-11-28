@@ -888,7 +888,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
   while the list is shut, for the reason `search_select/1` gives. `:search_event` is the event a
   keyup sends, as `search_select/1` says. A click in the input, or Tab into it, opens the list
-  through the `.SearchSelect` hook, at once, as `search_select/1` says.
+  through the `.SearchSelect` hook, at once, as `search_select/1` says. Escape closes the open
+  list wherever the focus is, and puts the focus back in the input.
   """
   @impl true
   def multi_select(assigns) do
@@ -995,6 +996,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :if={@dropdown_open?}
         data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        phx-window-keydown={close_list(@myself, @filter_name, @id)}
+        phx-key="Escape"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -1031,6 +1034,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
     </div>
     """
+  end
+
+  # The open list of a `multi_select/1` closes on Escape pressed anywhere on the page, a press the
+  # hook does not see when the focus left the box (a clicked option takes none in some browsers),
+  # and the focus goes back to the search input.
+  defp close_list(myself, filter_name, input_id) do
+    closed = JS.push("relation_close_dropdown", target: myself, value: %{filter: filter_name})
+    if input_id, do: JS.focus(closed, to: "##{input_id}"), else: closed
   end
 
   @doc """
