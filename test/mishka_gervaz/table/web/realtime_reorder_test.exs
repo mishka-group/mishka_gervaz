@@ -6,8 +6,9 @@ defmodule MishkaGervaz.Table.Web.RealtimeReorderTest do
   The table reads as many rows as it shows again from its first page, in its order, one more for
   each moved row, and draws them afresh in that order: a row moved in from a later page stands in
   its place, a row shown that now stands just past them stays below them, rows moved past them are
-  not drawn, and a row shown further on leaves. The footer's `shown_ids` follows what is drawn, and a burst is
-  read once.
+  not drawn, and a row shown further on leaves. A row handed in as a realtime notification in the
+  same burst counts as shown. The footer's `shown_ids` follows what is drawn, and a burst is read
+  once.
   """
   use ExUnit.Case, async: false
 
@@ -36,6 +37,23 @@ defmodule MishkaGervaz.Table.Web.RealtimeReorderTest do
       next_offset: 5,
       shown_ids: MapSet.new(Enum.take(rows, 5) ++ extra, & &1.id)
     )
+  end
+
+  # Every row read, by name: the table shows the whole list, as a short list of files is.
+  defp all_shown(rows),
+    do: rows |> shown(Enum.drop(rows, 5)) |> State.update(next_offset: length(rows))
+
+  defp created(record) do
+    %Ash.Notifier.Notification{
+      resource: BasicResource,
+      action: Ash.Resource.Info.action(BasicResource, :create),
+      data: record
+    }
+  end
+
+  defp notify(socket, notification) do
+    {:ok, socket} = Live.update(%{pubsub_notification: notification}, socket)
+    socket
   end
 
   defp socket(state) do
@@ -156,6 +174,35 @@ defmodule MishkaGervaz.Table.Web.RealtimeReorderTest do
              second.id,
              first.id | rows |> Enum.slice(2, 3) |> ids()
            ]
+  end
+
+  test "a row handed in and asked for in order in one burst is drawn in its place at the end",
+       %{rows: rows} do
+    socket = rows |> all_shown() |> socket() |> connected()
+    arrived = Ash.create!(BasicResource, %{name: "Item 8"})
+
+    socket = socket |> notify(created(arrived)) |> reorder(arrived)
+
+    assert stream(socket).inserts == []
+    assert_received {:phoenix, :send_update, {{Live, "table"}, %{realtime_flush: true}}}
+    refute_received {:phoenix, :send_update, _second_flush}
+
+    {socket, on_flush} = Queries.count(fn -> flush(socket) end)
+
+    assert drawn_ids(socket) == ids(rows) ++ [arrived.id]
+    assert MapSet.member?(socket.assigns.table_state.shown_ids, arrived.id)
+    assert on_flush == 1
+  end
+
+  test "a row handed in whose place is past a later page's rows waits for Load more",
+       %{rows: rows} do
+    arrived = Ash.create!(BasicResource, %{name: "Item 8"})
+
+    socket = rows |> shown() |> socket() |> connected() |> notify(created(arrived))
+    socket = socket |> reorder(arrived) |> flush()
+
+    assert drawn_ids(socket) == ids(Enum.take(rows, 5))
+    refute MapSet.member?(socket.assigns.table_state.shown_ids, arrived.id)
   end
 
   test "a burst on a connected socket waits and is read once", %{rows: rows} do

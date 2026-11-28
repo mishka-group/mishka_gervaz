@@ -3,6 +3,9 @@
 ### Bug fixes:
 - A toast is read once by a screen reader: the toasts' container is the page's one polite live
   region, and a toast inside it no longer carries a `role="status"` of its own
+- `MishkaGervaz.Table.Web.Live.reorder/2` draws a row that is still arriving: a page that hands the
+  table a new row as a realtime notification and asks for it in order at once sees it where the
+  order puts it, also just past the rows shown, where before the row was left out
 
 # Changelog for MishkaGervaz 0.0.13
 
