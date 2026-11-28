@@ -42,19 +42,25 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   @doc """
   Build keyword options for `Phoenix.LiveView.allow_upload/3` from a DSL upload config map.
 
+  `:accept` is always given, as `allow_upload/3` requires it: an upload that names no `accept`
+  takes a file of any type (`:any`).
+
   ## Examples
 
       iex> build_allow_upload_opts(%{accept: "image/*", max_entries: 3, max_file_size: 10_000_000, auto_upload: true}, "my-form")
       [accept: ~w(image/*), max_entries: 3, max_file_size: 10_000_000, auto_upload: true]
+
+      iex> build_allow_upload_opts(%{}, "my-form")
+      [accept: :any, max_entries: 1, max_file_size: 8_000_000, auto_upload: false]
   """
   @spec build_allow_upload_opts(map(), String.t()) :: keyword()
   def build_allow_upload_opts(upload_config, _component_id) do
     [
+      accept: parse_accept(upload_config[:accept]),
       max_entries: upload_config[:max_entries] || 1,
       max_file_size: upload_config[:max_file_size] || 8_000_000,
       auto_upload: upload_config[:auto_upload] || false
     ]
-    |> maybe_put_opt(:accept, upload_config[:accept], &parse_accept/1)
     |> maybe_put_opt(:chunk_size, upload_config[:chunk_size])
     |> maybe_put_opt(:chunk_timeout, upload_config[:chunk_timeout])
     |> maybe_put_opt(:external, upload_config[:external])
@@ -113,7 +119,4 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
 
   defp maybe_put_opt(opts, _key, nil), do: opts
   defp maybe_put_opt(opts, key, value), do: Keyword.put(opts, key, value)
-
-  defp maybe_put_opt(opts, _key, nil, _transform), do: opts
-  defp maybe_put_opt(opts, key, value, transform), do: Keyword.put(opts, key, transform.(value))
 end

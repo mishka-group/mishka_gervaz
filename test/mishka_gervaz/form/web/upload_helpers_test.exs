@@ -115,7 +115,12 @@ defmodule MishkaGervaz.Form.Web.UploadHelpersTest do
       assert Keyword.get(opts, :max_entries) == 1
       assert Keyword.get(opts, :max_file_size) == 8_000_000
       assert Keyword.get(opts, :auto_upload) == false
-      refute Keyword.has_key?(opts, :accept)
+      assert Keyword.fetch!(opts, :accept) == :any
+    end
+
+    test "takes any type when the upload's accept is nil" do
+      opts = UploadHelpers.build_allow_upload_opts(%{accept: nil}, "form-1")
+      assert Keyword.fetch!(opts, :accept) == :any
     end
 
     test "includes configured values" do

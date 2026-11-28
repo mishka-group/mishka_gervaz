@@ -33,6 +33,8 @@ defmodule MishkaGervaz.Test.Web.Router do
       `MishkaGervaz.Test.Web.PlacedItem`'s form in its own cards.
     * `/rules` — `MishkaGervaz.Test.Web.RulePageLive`, a page with the form of
       `MishkaGervaz.Test.Web.RuleItem`, whose fields each carry a rule.
+    * `/crates` — `MishkaGervaz.Test.Web.CratePageLive`, a page with the form of
+      `MishkaGervaz.Test.Web.CrateItem`, whose upload takes a file of any type.
   """
 
   use Phoenix.Router
@@ -64,5 +66,6 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/toasts", MishkaGervaz.Test.Web.ToastPageLive
     live "/placed", MishkaGervaz.Test.Web.PlacedPageLive
     live "/rules", MishkaGervaz.Test.Web.RulePageLive
+    live "/crates", MishkaGervaz.Test.Web.CratePageLive
   end
 end
