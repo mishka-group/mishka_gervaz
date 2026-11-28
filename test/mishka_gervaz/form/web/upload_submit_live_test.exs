@@ -128,6 +128,15 @@ defmodule MishkaGervaz.Form.Web.UploadSubmitLiveTest do
     end
   end
 
+  test "a form holding a dropped file holds changes though its fields are back where they started" do
+    view = open() |> drop("manifest.txt", "contents")
+
+    view |> form(@form, %{"form" => %{"title" => "Spare parts"}}) |> render_change()
+    view |> form(@form, %{"form" => %{"title" => ""}}) |> render_change()
+
+    assert has_element?(view, ~s|#crate-form-wrapper[data-dirty="true"]|)
+  end
+
   describe "a client name that is not a plain file name" do
     for {name, safe} <- [
           {"../../etc/passwd", "passwd"},

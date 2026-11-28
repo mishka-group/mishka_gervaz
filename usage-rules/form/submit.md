@@ -62,6 +62,10 @@ its `defaults`, the pending uploads are cancelled, and a `:tabs` form stays on i
 saved. Without a `discard` block there is no such button; a page can do the same with
 `MishkaGervaz.Form.Web.Live.discard/1`.
 
+A typed change holds changes only while what the form holds differs from what it held as the
+first change arrived: text typed and put back, or a box ticked and unticked again, holds none, so
+Discard goes away and Cancel and Discard ask nothing. A file waiting on an upload always counts.
+
 ```elixir
 submit do
   cancel confirm: fn -> dgettext("mishka_gervaz", "Discard your changes?") end

@@ -25,6 +25,13 @@ defmodule MishkaGervaz.Form.Web.State do
   Next, Back, a tab, or a `step` the page passed. The template draws a mark named after the count,
   so each move focuses the first field of the step moved to.
 
+  ## Changes
+
+  `dirty?` says whether the form holds changes. A typed change compares what the form holds
+  (`MishkaGervaz.Form.Web.State.Helpers.held_values/1`) with `start_values`, what it held as the
+  first change arrived, so a change put back, a box ticked and unticked again, holds none.
+  `start_values` is `nil` until that first change and again once the form starts over.
+
   `empty_files` holds, per upload, the names of the empty files the browser left out of its last
   drop, which the template names under the upload.
 
@@ -206,7 +213,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :opened,
     empty_files: %{},
     failed_saves: 0,
-    step_moves: 0
+    step_moves: 0,
+    start_values: nil
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -237,7 +245,8 @@ defmodule MishkaGervaz.Form.Web.State do
           opened: non_neg_integer(),
           empty_files: %{atom() => list(String.t())},
           failed_saves: non_neg_integer(),
-          step_moves: non_neg_integer()
+          step_moves: non_neg_integer(),
+          start_values: map() | nil
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -522,6 +531,51 @@ defmodule MishkaGervaz.Form.Web.State do
     defp declared_readonly?(%{readonly: true}, _state), do: true
     defp declared_readonly?(_field, _state), do: false
 
+    @doc """
+    What the form holds, in a shape two moments of the same form compare by: each field's value,
+    a relation's picks from `state.field_values` before the form's own, and the existing files of
+    each upload.
+
+    A value is read the way a browser sends it, so the start and a change that puts it back compare
+    equal: `nil`, `""` and an empty list are all empty, a list drops its empty entries, and atoms,
+    numbers and decimals read as their text.
+    """
+    @spec held_values(map()) :: map()
+    def held_values(%{form: %Phoenix.HTML.Form{} = form, static: %{fields: fields}} = state)
+        when is_list(fields) do
+      picks = state.field_values || %{}
+
+      values =
+        Map.new(fields, fn %{name: name} ->
+          value =
+            case picks do
+              %{^name => picked} -> picked
+              _not_picked -> Phoenix.HTML.Form.input_value(form, name)
+            end
+
+          {name, held(value)}
+        end)
+
+      %{values: values, existing_files: state.existing_files || %{}}
+    end
+
+    def held_values(_state), do: nil
+
+    defp held(value) when value in [nil, "", []], do: nil
+
+    defp held(values) when is_list(values) do
+      case values |> Enum.map(&held/1) |> Enum.reject(&is_nil/1) do
+        [] -> nil
+        kept -> kept
+      end
+    end
+
+    defp held(value) when is_boolean(value), do: to_string(value)
+    defp held(value) when is_atom(value), do: Atom.to_string(value)
+    defp held(value) when is_number(value), do: to_string(value)
+    defp held(%Decimal{} = value), do: Decimal.to_string(value, :normal)
+    defp held(value), do: value
+
     @doc false
     @spec load_static_relation_options(list(map()), map() | nil, boolean()) :: map()
     def load_static_relation_options(fields, current_user, master_user? \\ false) do
@@ -722,7 +776,8 @@ defmodule MishkaGervaz.Form.Web.State do
           opened: 0,
           empty_files: %{},
           failed_saves: 0,
-          step_moves: 0
+          step_moves: 0,
+          start_values: nil
         }
       end
 

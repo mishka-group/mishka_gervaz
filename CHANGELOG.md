@@ -80,6 +80,10 @@
 - The tab strip of a `:tabs` form scrolls the current tab into view as the form moves, so on a
   phone, where the strip scrolls sideways, the tab shown is never off the edge. It scrolls the
   strip alone, never the page
+- A form changed back to where it started holds no changes: a typed change compares what the form
+  holds with what it held as the first change arrived, so text typed and put back, or a
+  multi-select ticked and unticked again, no longer asks "Discard your changes?" and tells a page
+  with `notify_dirty` it holds none. A file waiting on an upload still counts as a change
 
 # Changelog for MishkaGervaz 0.0.13
 

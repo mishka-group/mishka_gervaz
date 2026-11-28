@@ -4,7 +4,8 @@ defmodule MishkaGervaz.Form.Web.DirtySignalLiveTest do
   (`MishkaGervaz.Test.Web.PlanItem` on `MishkaGervaz.Test.Web.PlanPageLive`).
 
   The form tells its page `{:form_dirty, id, dirty?}` when it comes to hold changes and when it holds
-  none any more: after a save or a Discard. Its wrapper carries `data-dirty`. Its Cancel and Discard,
+  none any more: after a save or a Discard, or once what it holds is back to where it started. Its
+  wrapper carries `data-dirty`. Its Cancel and Discard,
   declared with `confirm`, carry the question in `data-confirm` while it holds changes, and only
   then.
   """
@@ -74,6 +75,37 @@ defmodule MishkaGervaz.Form.Web.DirtySignalLiveTest do
            )
 
     refute has_element?(view, ~s|#{@form} button[type="submit"][data-confirm]|)
+  end
+
+  describe "a form changed back to where it started" do
+    test "a create whose multi-select is ticked and unticked again holds no changes" do
+      view = open()
+
+      change(view, %{"channels" => ["", "store"]})
+      assert has_element?(view, "#dirty", "true")
+
+      change(view, %{"channels" => [""]})
+
+      assert has_element?(view, "#dirty", "false")
+      refute has_element?(view, ~s|#{@form} [data-confirm="#{@question}"]|)
+    end
+
+    test "an edit whose multi-select and title go back to the saved values holds no changes" do
+      plan = Ash.create!(PlanItem, %{title: "Kit", channels: [:email]})
+      view = open("/plans?id=#{plan.id}")
+
+      change(view, %{"title" => "Kit", "channels" => ["", "email", "store"]})
+      assert has_element?(view, "#dirty", "true")
+
+      change(view, %{"title" => "Kit", "channels" => ["", "email"]})
+      assert has_element?(view, "#dirty", "false")
+
+      change(view, %{"title" => "Kits"})
+      assert has_element?(view, "#dirty", "true")
+
+      change(view, %{"title" => "Kit"})
+      assert has_element?(view, "#dirty", "false")
+    end
   end
 
   describe "the message" do
