@@ -55,7 +55,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   A `:tabs` form draws its steps as tabs (`render_step_indicator/1`) and each step's container as
   the tab's panel, `"<id>-step-<name>"`. With `navigation :free` any tab opens and the submit row
   holds the submit button on every tab, with no Back or Next; with `:sequential` the visited tabs
-  open and the submit row is a wizard's.
+  open, every tab once the record is saved, and the submit row is a wizard's.
 
   ## In a drawer, a sheet or a window
 
@@ -159,6 +159,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
   alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
+  alias MishkaGervaz.Form.Web.Events.StepHandler
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
 
@@ -437,8 +438,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   The steps of a wizard or tabs form, through the UI adapter's `step_indicator`.
 
   A `:tabs` form draws them as tabs (`tabs: true`): each a button sending `goto_step`, those the
-  reader may open listed in `navigable` (every step with `navigation :free`, the steps already
-  visited with `:sequential`), each naming the panel of its step, `"<id>-step-<name>"`.
+  reader may open listed in `navigable` (`MishkaGervaz.Form.Web.Events.StepHandler.open_steps/1`:
+  every step with `navigation :free` or on a saved record, the steps already visited while a
+  record is made with `:sequential`), each naming the panel of its step, `"<id>-step-<name>"`.
   """
   @impl true
   def render_step_indicator(assigns) do
@@ -459,7 +461,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:step_data, step_data)
       |> assign(:current_step, assigns.state.current_step)
       |> assign(:tabs?, assigns.static.layout_mode == :tabs)
-      |> assign(:navigable, navigable_steps(assigns.static, assigns.state))
+      |> assign(:navigable, StepHandler.open_steps(assigns.state))
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
@@ -492,11 +494,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
-
-  defp navigable_steps(%{layout_navigation: :free, steps: steps}, _state),
-    do: Enum.map(steps, & &1.name)
-
-  defp navigable_steps(_static, state), do: state.wizard_history || []
 
   # Draws the groups in order, then the fields no group holds, with the `:before_fields` notices
   # ahead of those fields.

@@ -31,7 +31,7 @@ is typed on one tab is kept while another is open, and the save sends it all.
 | `navigation` | Tabs | Submit row |
 |---|---|---|
 | `:free` | any tab opens | Save on every tab, and Enter in a field saves; no Back or Next |
-| `:sequential` (default) | only the tabs already visited open | Back and Next, Save on the last tab only, as a wizard |
+| `:sequential` (default) | only the tabs already visited open, and the one shown; every tab on a saved record (`mode: :update`) | Back and Next, Save on the last tab only, as a wizard |
 
 A save runs the form's `before_save` and the action as any save does. One that fails on a field of
 another tab moves to the first tab holding an error, marks every tab holding one (the adapter

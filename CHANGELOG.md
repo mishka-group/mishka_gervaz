@@ -72,6 +72,11 @@
 - A wizard or tabs form that moves to another step, by Next, Back, a tab or a `step` the page
   passes, focuses the first field of the step it moved to. Before, the button pressed went away
   with its step and the focus fell to the page
+- A `:tabs` form whose steps open in order keeps every tab open on a saved record, however it is
+  opened and wherever it moves, and never draws the tab shown as disabled: Back counts the step it
+  lands on as visited. Before, opening a saved record on its first step, or a step save that read
+  the record again, locked the later tabs, and Back after a jump forward could land on a tab drawn
+  shown and disabled at once
 
 # Changelog for MishkaGervaz 0.0.13
 

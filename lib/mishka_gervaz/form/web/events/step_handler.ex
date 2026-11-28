@@ -19,8 +19,11 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
       holding one `:error`, and sends the parent LiveView `{:put_flash, :error, message}`, the
       message naming the step to check.
 
-  Back (`prev_step`) moves to the previous step. Every step stays in the form, so nothing typed on
-  either is lost.
+  Back (`prev_step`) moves to the previous step and counts it as visited. Every step stays in the
+  form, so nothing typed on either is lost.
+
+  A tab opens the steps `open_steps/1` names: every step on free tabs and on a saved record, the
+  visited ones while a record is made.
 
   ## Overridable Functions
 
@@ -179,6 +182,20 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
     )
   end
 
+  @doc """
+  The names of the steps the reader may open from a tab: every step on free tabs and on a saved
+  record (`mode: :update`); otherwise the steps already visited, with the step shown always among
+  them, so a step is never drawn shown and closed at once.
+  """
+  @spec open_steps(map()) :: [atom()]
+  def open_steps(%{static: %{layout_navigation: :free, steps: steps}}),
+    do: Enum.map(steps, & &1.name)
+
+  def open_steps(%{mode: :update, static: %{steps: steps}}), do: Enum.map(steps, & &1.name)
+
+  def open_steps(%{current_step: current, wizard_history: history}),
+    do: Enum.uniq(List.wrap(current) ++ (history || []))
+
   defp opened_status(step, step, _done), do: :active
   defp opened_status(name, _step, done), do: (name in done && :completed) || :pending
 
@@ -308,7 +325,8 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
             state =
               State.update(state,
                 current_step: prev_step,
-                step_states: step_states
+                step_states: step_states,
+                wizard_history: Enum.uniq([prev_step | state.wizard_history || []])
               )
 
             Phoenix.Component.assign(socket, :form_state, state)
@@ -318,15 +336,13 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
       @doc """
       Jump to a specific step (for tabs/free navigation mode).
 
-      Only allowed when layout_navigation is :free, or the target step
-      has been visited before.
+      Only allowed to a step `MishkaGervaz.Form.Web.Events.StepHandler.open_steps/1` names: any
+      step on free tabs or a saved record, otherwise a step visited before.
       """
       @spec goto_step(State.t(), atom(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
       def goto_step(state, target_step, socket) do
-        can_jump? =
-          state.static.layout_navigation == :free or
-            target_step in state.wizard_history
+        can_jump? = target_step in StepHandler.open_steps(state)
 
         if can_jump? and step_exists?(state, target_step) do
           step_states =
