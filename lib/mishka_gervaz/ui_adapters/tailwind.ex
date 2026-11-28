@@ -2944,7 +2944,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:target` - the form's LiveComponent, which `goto_step` is sent to
 
   The current tab is `aria-selected`; a tab whose step holds an error carries a dot in the error
-  colour.
+  colour. The strip, `<id>-tabs`, scrolls sideways when its tabs are wider than it, on a phone say,
+  and a small hook scrolls it as the form moves so the current tab is always in view
+  (`Phoenix.LiveView.JS` has no command that scrolls an element into view). It scrolls the strip
+  alone, never the page.
   """
   @impl true
   def step_indicator(%{tabs: true} = assigns) do
@@ -2959,7 +2962,33 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
 
     ~H"""
-    <div role="tablist" data-role="gervaz-step-tabs" class={@class}>
+    <div
+      id={"#{@id}-tabs"}
+      role="tablist"
+      data-role="gervaz-step-tabs"
+      class={@class}
+      phx-hook=".ShownTab"
+    >
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".ShownTab">
+        export default {
+          mounted() {
+            this.show();
+          },
+          updated() {
+            this.show();
+          },
+          show() {
+            const tab = this.el.querySelector('[role="tab"][aria-selected="true"]');
+            if (!tab || this.el.scrollWidth <= this.el.clientWidth) return;
+
+            const strip = this.el.getBoundingClientRect();
+            const shown = tab.getBoundingClientRect();
+
+            if (shown.left < strip.left) this.el.scrollLeft -= strip.left - shown.left;
+            else if (shown.right > strip.right) this.el.scrollLeft += shown.right - strip.right;
+          }
+        }
+      </script>
       <button
         :for={step <- @steps}
         type="button"

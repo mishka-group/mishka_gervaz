@@ -266,15 +266,15 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
     end
 
     test "the hook is shipped as colocated JavaScript the host bundles" do
-      [hook] =
-        Path.wildcard(
-          Path.join([
-            Mix.Project.build_path(),
-            "phoenix-colocated/mishka_gervaz/MishkaGervaz.UIAdapters.Tailwind/*.js"
-          ])
-        )
-
-      js = File.read!(hook)
+      [js] =
+        [
+          Mix.Project.build_path(),
+          "phoenix-colocated/mishka_gervaz/MishkaGervaz.UIAdapters.Tailwind/*.js"
+        ]
+        |> Path.join()
+        |> Path.wildcard()
+        |> Enum.map(&File.read!/1)
+        |> Enum.filter(&(&1 =~ "gervaz-relation-list"))
 
       for key <-
             ~w(ArrowDown ArrowUp Enter Escape stopPropagation aria-activedescendant preventDefault scrollIntoView) do

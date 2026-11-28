@@ -77,6 +77,9 @@
   lands on as visited. Before, opening a saved record on its first step, or a step save that read
   the record again, locked the later tabs, and Back after a jump forward could land on a tab drawn
   shown and disabled at once
+- The tab strip of a `:tabs` form scrolls the current tab into view as the form moves, so on a
+  phone, where the strip scrolls sideways, the tab shown is never off the edge. It scrolls the
+  strip alone, never the page
 
 # Changelog for MishkaGervaz 0.0.13
 
