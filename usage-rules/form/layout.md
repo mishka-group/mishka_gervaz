@@ -74,6 +74,9 @@ the step, and is given the form as the `:body` slot is:
 - It is inside the one `<form>`: no `<form>` of its own, no named input that is not the form's; its
   events go to the page unless they name a `phx-target`.
 - A name the form has no step for raises. A `:standard` form ignores the slot (it has `:body`).
+- While the form reads the record it is on again (an update save, Discard, a start over) it keeps
+  drawing the steps and the entries, so a live component in an entry keeps its rows; the fresh
+  form takes their place once the record arrives.
 
 ## What the page chooses
 

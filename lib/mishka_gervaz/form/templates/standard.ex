@@ -190,7 +190,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <%= if @placed? do %>
             {render_slot(@body, placed_form(assigns))}
           <% end %>
-        <% @state.loading == :loaded and @state.form -> %>
+        <% @state.loading in [:loaded, :loading] and @state.form -> %>
           <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
             {render_step_indicator(assigns)}
           <% end %>

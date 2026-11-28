@@ -290,7 +290,8 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       assert title(socket) == "Saved title"
     end
 
-    test "on the record it was closed on, reads it again", %{entry: entry} do
+    test "on the record it was closed on, reads it again and keeps drawing the form until then",
+         %{entry: entry} do
       socket = mount() |> open_edit(entry) |> type("title", "Unsaved change")
 
       assert title(socket) == "Unsaved change"
@@ -298,7 +299,13 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       socket = component_update(socket, %{record_id: entry.id, reset: true})
 
       assert socket.assigns.form_state.loading == :loading
-      assert socket.assigns.form_state.form == nil
+      assert socket.assigns.form_state.dirty? == false
+      assert render_form(socket) =~ ~s|id="picker-entry-form"|
+      refute render_form(socket) =~ "gervaz-form-loading"
+
+      params = %{"form" => %{"title" => "Saved while reading"}}
+      assert {:noreply, ^socket} = Live.handle_event("save", params, socket)
+      refute_received {:form_saved, _mode, _record}
 
       socket = finish_loading(socket, entry)
 

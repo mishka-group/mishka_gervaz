@@ -47,6 +47,11 @@
   as a create form with no changes, when a field's own default is among what changed. Before, any
   change to `defaults`, such as a product's name or a count the page passes for a notice, started
   the form over on its first step and threw away what was set on the others
+- A form that reads the record it is on again, after an update save, a Discard or a start over,
+  keeps drawing its steps, the step it is on and the page's `:in_step` entries until the record
+  arrives, and the fresh form takes their place then. A live component in an entry, a table with a
+  stream say, keeps its rows. Before, the form drew its loading state in between, so every step
+  flickered and a live component in an entry came back empty. A save sent in between does nothing
 
 # Changelog for MishkaGervaz 0.0.13
 

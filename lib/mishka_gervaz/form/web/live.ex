@@ -201,6 +201,13 @@ defmodule MishkaGervaz.Form.Web.Live do
   the focus the panel gave the old one as it opened (see `MishkaGervaz.Form.Templates.Standard`,
   "In a drawer, a sheet or a window").
 
+  A record read again, the one the form is on, after an update save, a Discard or a `reset: true`
+  with its `record_id`, keeps the form it was drawn with until the record arrives, and the fresh
+  form takes its place then. So the steps, the step the form is on and the page's `:in_step`
+  entries stay on the page, and a live component in an entry keeps what it holds, the rows of a
+  table's stream say. A save, a Next or an answered question sent while the record is read again
+  does nothing. Another record is drawn anew, after the form's loading state.
+
   ## Values the page works out
 
   A page that works a value out while the form is open, such as the date a price preview was made
@@ -395,8 +402,9 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   defp group_state(%{loading: :denied}, _group), do: :hidden
 
-  defp group_state(%{loading: :loaded, form: form} = state, group) when not is_nil(form),
-    do: (Helpers.accessible?(group, state) && :shown) || :hidden
+  defp group_state(%{loading: loading, form: form} = state, group)
+       when loading in [:loaded, :loading] and not is_nil(form),
+       do: (Helpers.accessible?(group, state) && :shown) || :hidden
 
   defp group_state(_state, _group), do: :loading
 
@@ -529,7 +537,10 @@ defmodule MishkaGervaz.Form.Web.Live do
     state = socket.assigns.form_state
     socket = Events.cancel_pending_uploads(state, socket)
 
-    fresh_state = fresh_state(state)
+    fresh_state =
+      state
+      |> fresh_state()
+      |> keep_drawn(state, record_id, socket.assigns[:record_id])
 
     socket =
       socket
@@ -545,6 +556,21 @@ defmodule MishkaGervaz.Form.Web.Live do
         maybe_load_form(socket, fresh_state, record_id)
     end
   end
+
+  # A record read again keeps the form it was drawn with until it arrives, so its steps, the page's
+  # `:in_step` entries and a live component in them stay on the page. Another record, or a create,
+  # is drawn anew.
+  defp keep_drawn(fresh, %State{form: form, loading: :loaded} = drawn, record_id, record_id)
+       when not is_nil(form) and not is_nil(record_id) do
+    State.update(fresh,
+      form: form,
+      field_values: drawn.field_values,
+      relation_options: drawn.relation_options,
+      existing_files: drawn.existing_files
+    )
+  end
+
+  defp keep_drawn(fresh, _drawn, _record_id, _open_record_id), do: fresh
 
   @doc """
   Puts the form back to its starting values, as the `discard` button of the form's `submit` block
@@ -613,6 +639,10 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   @impl true
+  def handle_event(event, _params, %{assigns: %{form_state: %State{loading: :loading}}} = socket)
+      when event in ["save", "next_step", "question_confirm"],
+      do: {:noreply, socket}
+
   def handle_event(event, params, socket) do
     {:noreply, handled_socket} =
       events_module(socket.assigns[:form_state]).handle(event, params, socket)
@@ -653,7 +683,7 @@ defmodule MishkaGervaz.Form.Web.Live do
     values = form_values!(state, values)
 
     case state do
-      %State{form: %Phoenix.HTML.Form{}} ->
+      %State{form: %Phoenix.HTML.Form{}, loading: :loaded} ->
         new_state =
           state
           |> State.update(field_values: Map.merge(state.field_values || %{}, values))
@@ -667,7 +697,8 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   defp put_pending_values(
-         %{assigns: %{pending_values: values, form_state: %State{form: form}}} = socket
+         %{assigns: %{pending_values: values, form_state: %State{form: form, loading: :loaded}}} =
+           socket
        )
        when is_map(values) and not is_nil(form) do
     socket

@@ -57,6 +57,39 @@ defmodule MishkaGervaz.Form.Web.InStepSlotLiveTest do
     assert count(view, "#plan-step-pricing:not([hidden]) #pricing-extra") == 1
   end
 
+  defp add_notes(view, count) do
+    for _note <- 1..count, do: view |> element("#plan-notes-add") |> render_click()
+    assert count(view, "#plan-notes-rows > li") == count
+  end
+
+  test "a live component in it keeps its streamed rows across an update save" do
+    record = Ash.create!(PlanItem, %{title: "Kit"})
+    view = open("/plans?id=#{record.id}")
+    view |> element(~s|[role="tab"][data-step="pricing"]|) |> render_click()
+    add_notes(view, 2)
+
+    view |> form("#plan-form", %{"form" => %{"title" => "Kit 2"}}) |> render_submit()
+    render_async(view)
+
+    assert [%{title: "Kit 2"}] = Ash.read!(PlanItem)
+    assert has_element?(view, ~s|#plan-form input[name="form[title]"][value="Kit 2"]|)
+    assert count(view, "#plan-notes-rows > li") == 2
+    assert count(view, "#plan-step-pricing:not([hidden]) #plan-notes") == 1
+  end
+
+  test "a live component in it keeps its streamed rows across a discard of an edit" do
+    record = Ash.create!(PlanItem, %{title: "Kit"})
+    view = open("/plans?id=#{record.id}")
+    add_notes(view, 2)
+
+    view |> form("#plan-form", %{"form" => %{"title" => "Changed"}}) |> render_change()
+    view |> element(~s|#plan-form [data-role="gervaz-discard"]|) |> render_click()
+    render_async(view)
+
+    assert has_element?(view, ~s|#plan-form input[name="form[title]"][value="Kit"]|)
+    assert count(view, "#plan-notes-rows > li") == 2
+  end
+
   test "a slot naming a step the form has not raises" do
     socket = %Phoenix.LiveView.Socket{
       assigns: %{__changed__: %{}, flash: %{}},
