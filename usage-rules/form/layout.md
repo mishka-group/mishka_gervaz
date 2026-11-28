@@ -55,6 +55,35 @@ layout do
 end
 ```
 
+## What the page chooses
+
+The page that mounts a `:wizard` or `:tabs` form decides three things about its steps
+(`MishkaGervaz.Form.Web.Live`, "Steps the page chooses"):
+
+| Assign | Effect |
+|---|---|
+| `navigation` | `:sequential` or `:free` in place of the resource's; `:free` on a `:wizard`, or any other value, raises. A later render with another value switches the form over |
+| `step` | opens the form on that step (an atom, or its string from a URL); with `:sequential` the steps before it count as done. An unknown name leaves the first step. Applied when it changes from what the page passed before, or the form starts over |
+| `notify_step` | `true` sends the page `{:form_step, id, step}` each time the form moves to another step |
+
+One resource can then be a step-by-step `:tabs` form while a record is made and free tabs once it
+exists, with the step kept in the URL:
+
+```heex
+<.live_component module={MishkaGervaz.Form.Web.Live} id="post-form" resource={MyApp.Post}
+  current_user={@current_user} record_id={@post_id}
+  navigation={if @post_id, do: :free, else: :sequential}
+  step={@step} notify_step={true} />
+```
+
+```elixir
+def handle_info({:form_step, "post-form", step}, socket),
+  do: {:noreply, push_patch(socket, to: ~p"/posts/new?step=#{step}")}
+```
+
+Handing the step back as `step` leaves the form where it is; a render that passes the same value
+again does not move it.
+
 ## Steps
 
 ```elixir

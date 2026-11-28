@@ -134,6 +134,43 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
     )
   end
 
+  @doc """
+  The name of the form's step that `step` names, an atom or its string, as a page may take it from
+  a URL; `nil` when the form has no such step.
+  """
+  @spec step_name(map(), atom() | String.t() | nil) :: atom() | nil
+  def step_name(%{static: %{steps: steps}}, step) when is_atom(step) and not is_nil(step),
+    do: Enum.find_value(steps, &(&1.name == step && step))
+
+  def step_name(%{static: %{steps: steps}}, step) when is_binary(step),
+    do: Enum.find_value(steps, &(Atom.to_string(&1.name) == step && &1.name))
+
+  def step_name(_state, _step), do: nil
+
+  @doc """
+  The form put on step `step` without checking a step on the way: the step `:active`. A wizard,
+  and a tabs form whose steps open in order, count the steps before it as done, `:completed` and
+  visited, so Back and their tabs reach them; on free tabs every other step is `:pending`.
+  """
+  @spec opened(map(), atom()) :: map()
+  def opened(%{static: %{steps: steps} = static} = state, step) do
+    names = Enum.map(steps, & &1.name)
+    done = if stepwise?(static), do: Enum.take_while(names, &(&1 != step)), else: []
+
+    State.update(state,
+      current_step: step,
+      step_states: Map.new(names, &{&1, opened_status(&1, step, done)}),
+      wizard_history: Enum.uniq([step | Enum.reverse(done)] ++ (state.wizard_history || []))
+    )
+  end
+
+  defp opened_status(step, step, _done), do: :active
+  defp opened_status(name, _step, done), do: (name in done && :completed) || :pending
+
+  defp stepwise?(%{layout_mode: :wizard}), do: true
+  defp stepwise?(%{layout_mode: :tabs, layout_navigation: navigation}), do: navigation != :free
+  defp stepwise?(_static), do: false
+
   @doc false
   @spec refused(map(), atom()) :: map()
   def refused(state, step) do

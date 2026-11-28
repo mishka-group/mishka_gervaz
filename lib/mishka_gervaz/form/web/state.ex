@@ -783,7 +783,7 @@ defmodule MishkaGervaz.Form.Web.State do
       @doc """
       Applies a mount's own presentation choices over the ones the resource declared.
 
-      Three keys, all optional, all ignored when absent:
+      Four keys, all optional, all ignored when absent or `nil`:
 
         * `:hidden_fields` — the fields this mount does not draw. The value still reaches the save:
           `drop_protected_fields/2` only looks at fields that are still declared, and
@@ -807,8 +807,13 @@ defmodule MishkaGervaz.Form.Web.State do
               ordinary param.
 
           Offered only while creating; nothing is shown over a loaded record.
+        * `:navigation` — `:sequential` or `:free`, in place of the `navigation` the resource's
+          `layout` declares, so one resource can be a step-by-step `:tabs` form while a record is
+          made and free tabs once it exists. `:free` on a `:wizard` form, or any other value,
+          raises an `ArgumentError`.
 
-      Applied at init only, like its table-side counterpart.
+      Applied at init, like its table-side counterpart. `MishkaGervaz.Form.Web.Live` applies a
+      `:navigation` that changes later too.
       """
       @spec apply_presentation(State.t(), map()) :: State.t()
       def apply_presentation(%State{} = state, assigns) when is_map(assigns) do
@@ -816,6 +821,7 @@ defmodule MishkaGervaz.Form.Web.State do
         |> hide_fields(Map.get(assigns, :hidden_fields))
         |> hide_submit(Map.get(assigns, :submit))
         |> offer_alternatives(Map.get(assigns, :submit_alternatives))
+        |> navigate(Map.get(assigns, :navigation))
       end
 
       def apply_presentation(state, _assigns), do: state
@@ -857,6 +863,27 @@ defmodule MishkaGervaz.Form.Web.State do
            do: %{state | static: %{state.static | submit_alternatives: alternatives}}
 
       defp offer_alternatives(state, _none), do: state
+
+      defp navigate(state, nil), do: state
+
+      defp navigate(%{static: %{layout_mode: :wizard, id: id}}, :free),
+        do:
+          raise(ArgumentError,
+            message:
+              "the form #{inspect(id)} is a :wizard, whose navigation is :sequential; " <>
+                "a form with navigation :free is a :tabs form"
+          )
+
+      defp navigate(state, navigation) when navigation in [:sequential, :free],
+        do: %{state | static: %{state.static | layout_navigation: navigation}}
+
+      defp navigate(%{static: %{id: id}}, navigation),
+        do:
+          raise(ArgumentError,
+            message:
+              "the form #{inspect(id)} was given the navigation #{inspect(navigation)}, " <>
+                "it takes :sequential or :free"
+          )
 
       @spec get_action(State.t(), atom()) :: atom()
       def get_action(

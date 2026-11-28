@@ -56,6 +56,11 @@ defmodule MishkaGervaz.Form.Web.Live do
     Discard, a Cancel or a start over. See "Unsaved changes".
   - `notify_failed` - `true` sends the page `{:form_failed, id, failure}` each time a save is
     refused. See "After a refused save".
+  - `navigation` - `:sequential` or `:free`, in place of the `navigation` the resource's `layout`
+    declares. See "Steps the page chooses".
+  - `step` - the step a wizard or tabs form opens on. See "Steps the page chooses".
+  - `notify_step` - `true` sends the page `{:form_step, id, step}` each time a wizard or tabs form
+    moves to another step. See "Steps the page chooses".
 
   ## Placing the groups in the page
 
@@ -91,6 +96,39 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   The slot is used by a `:standard` form (`MishkaGervaz.Form.Templates.Standard`, "Placed groups").
   A group the page does not place is not drawn; a field in no group is drawn after the slot.
+
+  ## Steps the page chooses
+
+  A page decides three things about the steps of a `:wizard` or `:tabs` form when it mounts it.
+
+  `navigation` takes the place of the resource's own, so one resource is drawn as steps that open
+  in order (`:sequential`: Back and Next, Save on the last step) while a record is made, and as
+  free tabs (`:free`: Save on every tab) once it exists. `:free` on a `:wizard`, or any other value,
+  raises an `ArgumentError`. A later render that passes another value switches the form over.
+
+  `step` opens the form on that step, an atom or its string as a URL carries it. In a wizard, or
+  tabs whose steps open in order, the steps before it count as done, so Back and their tabs reach
+  them. A name the form has no step for leaves it on its first step. The form moves when `step`
+  changes from what the page passed before, and when the form starts over, on another `record_id`
+  or a `reset`; a render that passes the same value again leaves the form where the reader took it.
+
+  `notify_step={true}` tells the page each step the form moves to, by Next, Back, a tab, a save that
+  failed on another step or a start over, as `{:form_step, id, step}`. A page that keeps the step in
+  its URL hands it back as `step`, which leaves the form where it is:
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+        record_id={@post_id}
+        navigation={if @post_id, do: :free, else: :sequential}
+        step={@step}
+        notify_step={true}
+      />
+
+      def handle_info({:form_step, "post-form", step}, socket),
+        do: {:noreply, push_patch(socket, to: ~p"/posts/\#{socket.assigns.post_id}?step=\#{step}")}
 
   ## Unsaved changes
 
@@ -214,7 +252,7 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   alias MishkaGervaz.Form.Templates.Standard
   alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
-  alias MishkaGervaz.Form.Web.Events.RelationHandler
+  alias MishkaGervaz.Form.Web.Events.{RelationHandler, StepHandler}
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Helpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
@@ -247,14 +285,22 @@ defmodule MishkaGervaz.Form.Web.Live do
      |> assign(:form_state, nil)
      |> assign(:question, nil)
      |> assign(:pending_values, nil)
+     |> assign(:step_given, nil)
      |> assign(:initialized, false)}
   end
 
   @impl true
   def update(assigns, socket) do
     was_dirty? = dirty?(socket)
-    {:ok, new_socket} = do_update(assigns, keep_body(socket, assigns))
-    {:ok, announce_dirty(new_socket, was_dirty?)}
+    was_step = current_step(socket)
+    {:ok, updated_socket} = do_update(assigns, keep_body(socket, assigns))
+
+    new_socket =
+      updated_socket
+      |> announce_dirty(was_dirty?)
+      |> announce_step(was_step)
+
+    {:ok, new_socket}
   end
 
   # The page's `:body` slot comes with every render of the page; a `send_update/2` without it keeps
@@ -335,6 +381,7 @@ defmodule MishkaGervaz.Form.Web.Live do
     record_id = Map.get(assigns, :record_id)
     existing_state = socket.assigns[:form_state]
     defaults = Map.get(assigns, :defaults, existing_state && existing_state.defaults)
+    opened = existing_state && existing_state.opened
 
     socket =
       if is_nil(existing_state) do
@@ -347,6 +394,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:id, id)
         |> assign(:notify_dirty, Map.get(assigns, :notify_dirty) == true)
         |> assign(:notify_failed, Map.get(assigns, :notify_failed) == true)
+        |> assign(:notify_step, Map.get(assigns, :notify_step) == true)
         |> assign(:record_id, record_id)
         |> assign(:record_id_given?, Map.has_key?(assigns, :record_id))
         |> assign(:initialized, true)
@@ -377,8 +425,36 @@ defmodule MishkaGervaz.Form.Web.Live do
         end
       end
 
-    {:ok, socket}
+    new_socket =
+      socket
+      |> put_navigation(assigns)
+      |> follow_step(assigns, socket.assigns.form_state.opened != opened)
+
+    {:ok, new_socket}
   end
+
+  defp put_navigation(%{assigns: %{form_state: state}} = socket, %{navigation: navigation})
+       when not is_nil(navigation) and navigation != state.static.layout_navigation,
+       do: assign(socket, :form_state, State.apply_presentation(state, %{navigation: navigation}))
+
+  defp put_navigation(socket, _assigns), do: socket
+
+  # The `step` the page passes opens the form on it when it differs from the one it passed before,
+  # and when the form started over; a render that passes the same one again leaves the step the
+  # reader took.
+  defp follow_step(%{assigns: %{form_state: state}} = socket, %{step: given}, restarted?) do
+    name = StepHandler.step_name(state, given)
+
+    opened_socket =
+      if (restarted? or name != socket.assigns.step_given) and
+           name not in [nil, state.current_step],
+         do: assign(socket, :form_state, StepHandler.opened(state, name)),
+         else: socket
+
+    assign(opened_socket, :step_given, name)
+  end
+
+  defp follow_step(socket, _assigns, _restarted?), do: socket
 
   # A create form with no changes is built again when a field's default changed, so its inputs
   # draw the new value. A form with changes, an edit, or defaults no field reads keep the form.
@@ -435,23 +511,12 @@ defmodule MishkaGervaz.Form.Web.Live do
 
     case state do
       %{static: %{layout_mode: :tabs}, current_step: step} when not is_nil(step) ->
-        Phoenix.Component.update(socket, :form_state, &on_tab(&1, step))
+        Phoenix.Component.update(socket, :form_state, &StepHandler.opened(&1, step))
 
       _state ->
         socket
     end
   end
-
-  defp on_tab(state, step) do
-    State.update(state,
-      current_step: step,
-      step_states: Map.new(state.step_states, fn {name, _} -> {name, tab_status(name, step)} end),
-      wizard_history: Enum.uniq([step | state.wizard_history])
-    )
-  end
-
-  defp tab_status(step, step), do: :active
-  defp tab_status(_name, _step), do: :pending
 
   @doc false
   @spec fresh_state(State.t()) :: State.t()
@@ -508,6 +573,7 @@ defmodule MishkaGervaz.Form.Web.Live do
       handled_socket
       |> announce_dirty(dirty?(socket))
       |> announce_failed(failed_saves(socket))
+      |> announce_step(current_step(socket))
 
     {:noreply, new_socket}
   end
@@ -525,7 +591,12 @@ defmodule MishkaGervaz.Form.Web.Live do
       |> DataLoader.Default.handle_async_result(result, socket)
       |> put_pending_values()
 
-    {:noreply, announce_dirty(new_socket, dirty?(socket))}
+    announced_socket =
+      new_socket
+      |> announce_dirty(dirty?(socket))
+      |> announce_step(current_step(socket))
+
+    {:noreply, announced_socket}
   end
 
   # The values a page put (`put_values/2`): into the form once it is built, validated with them as
@@ -591,6 +662,25 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   defp announce_dirty(socket, _was_dirty?), do: socket
+
+  defp current_step(%{assigns: %{form_state: %State{current_step: step}}}), do: step
+  defp current_step(_socket), do: :unmounted
+
+  # A form mounted with `notify_step` tells its page each step it moves to; the step it is mounted
+  # on the page already knows.
+  defp announce_step(%{assigns: %{notify_step: true}} = socket, was)
+       when was != :unmounted do
+    case current_step(socket) do
+      ^was ->
+        socket
+
+      step ->
+        send(self(), {:form_step, socket.assigns.id, step})
+        socket
+    end
+  end
+
+  defp announce_step(socket, _was), do: socket
 
   defp failed_saves(%{assigns: %{form_state: %State{failed_saves: count}}}), do: count
   defp failed_saves(_socket), do: 0

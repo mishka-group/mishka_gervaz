@@ -94,9 +94,12 @@ this row instead ([table/pagination.md](table/pagination.md)).
 | `notify_dirty` | — | `true` sends the page `{:form_dirty, id, dirty?}` — see "Unsaved changes" |
 | `notify_failed` | — | `true` sends the page `{:form_failed, id, failure}` on each refused save — see "After a refused save" |
 | `:body` slot | — | the page places the groups in its own markup — see "Placing the groups in the page" |
+| `navigation` | — | `:sequential` or `:free` in place of the resource's — see [form/layout.md](form/layout.md) "What the page chooses" |
+| `step` | — | the step a wizard or tabs form opens on — see [form/layout.md](form/layout.md) |
+| `notify_step` | — | `true` sends the page `{:form_step, id, step}` each time the form moves to another step |
 
-Changing `record_id` or `defaults` re-initializes the form. The others are applied **at init
-only**. An update that leaves `defaults` out, such as the `send_update/2` a table's Edit sends with
+Changing `record_id` or `defaults` re-initializes the form; a changed `navigation` or `step` is
+applied as it changes. The others are applied **at init only**. An update that leaves `defaults` out, such as the `send_update/2` a table's Edit sends with
 only a `record_id`, keeps the defaults the form has; pass `defaults: nil` to drop them.
 
 ### `hidden_fields` + `defaults` go together
@@ -191,6 +194,7 @@ def handle_info({:form_cancelled, resource}, socket), do: …
 def handle_info({:form_event, event, params}, socket), do: …   # any unrecognized form event
 def handle_info({:form_dirty, id, dirty?}, socket), do: …       # only with notify_dirty={true}
 def handle_info({:form_failed, id, failure}, socket), do: …     # only with notify_failed={true}
+def handle_info({:form_step, id, step}, socket), do: …          # only with notify_step={true}
 ```
 
 ### Table

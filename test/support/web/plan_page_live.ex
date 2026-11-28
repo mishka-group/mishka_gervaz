@@ -8,6 +8,9 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
   Opened with `?shop=<name>`, the form's `defaults` carry the shop, live data no field reads: the
   `#rename-shop` button renames it to "<name> 2" and `#default-title` gives the title field the
   default "From the page", as a page refreshing its data while the form is open.
+  Opened with `?navigation=sequential` or `?navigation=free` the form takes that navigation over
+  its own, and with `?step=<name>` it opens on that tab. The tab the form tells the page it moved
+  to shows in `#step`.
 
   On `/plans/drawer` the form sits in the Tailwind adapter's drawer, `#plan-drawer`, open as the
   page opens. While the form holds changes the drawer asks "Discard your changes?" before it
@@ -30,11 +33,18 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
         dirty?: false,
         open?: true,
         record_id: params["id"],
-        defaults: params["shop"] && %{shop: params["shop"]}
+        defaults: params["shop"] && %{shop: params["shop"]},
+        navigation: navigation(params["navigation"]),
+        step: params["step"],
+        told: nil
       )
 
     {:ok, new_socket}
   end
+
+  defp navigation("sequential"), do: :sequential
+  defp navigation("free"), do: :free
+  defp navigation(_none), do: nil
 
   @impl true
   def handle_event("close_drawer", _params, socket), do: {:noreply, assign(socket, :open?, false)}
@@ -59,6 +69,9 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
 
   def handle_info({:form_saved, _mode, record}, socket),
     do: {:noreply, assign(socket, :saved, record.title)}
+
+  def handle_info({:form_step, "plan", step}, socket),
+    do: {:noreply, assign(socket, step: step, told: step)}
 
   @impl true
   def render(%{live_action: :drawer} = assigns) do
@@ -95,6 +108,7 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
     <p id="flash-error">{Phoenix.Flash.get(@flash, :error)}</p>
     <p id="saved">{@saved}</p>
     <p id="dirty">{to_string(@dirty?)}</p>
+    <p id="step">{@told}</p>
     <button id="put-discount" type="button" phx-click="put_discount">Put a discount</button>
     <button id="rename-shop" type="button" phx-click="rename_shop">Rename the shop</button>
     <button id="default-title" type="button" phx-click="default_title">Default the title</button>
@@ -105,7 +119,10 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
       current_user={@master}
       record_id={@record_id}
       defaults={@defaults}
+      navigation={@navigation}
+      step={@step}
       notify_dirty={true}
+      notify_step={true}
     />
     """
   end

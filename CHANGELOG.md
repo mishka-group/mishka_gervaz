@@ -1,5 +1,12 @@
 # Changelog for MishkaGervaz 0.0.14
 
+### Features:
+- A page chooses the steps of a wizard or tabs form it mounts: `navigation` (`:sequential` or
+  `:free`) in place of the resource's, so one resource is drawn as steps in order while a record is
+  made and as free tabs once it exists; `step`, the step the form opens on, from a URL say, with the
+  steps before it counted as done; and `notify_step={true}`, which sends the page
+  `{:form_step, id, step}` each time the form moves to another step
+
 ### Bug fixes:
 - A toast is read once by a screen reader: the toasts' container is the page's one polite live
   region, and a toast inside it no longer carries a `role="status"` of its own
