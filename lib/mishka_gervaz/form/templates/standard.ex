@@ -1200,12 +1200,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       label: nil
     }
 
-  defp key_map_control(%{type: :select} = key, _value),
-    do: %{
-      function: :select,
-      options: translate_options(key.options),
-      prompt: translate_text(key.placeholder || "")
-    }
+  defp key_map_control(%{type: :select} = key, _value) do
+    options = translate_options(key.options)
+    %{function: :select, options: options, prompt: key_select_prompt(key.placeholder, options)}
+  end
 
   defp key_map_control(%{type: :textarea} = key, _value),
     do: %{function: :textarea, rows: 2, placeholder: translate_text(key.placeholder)}
@@ -1234,6 +1232,40 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     do: %{function: :text_input, placeholder: translate_text(key.placeholder)}
 
   defp ticked?(value), do: value in [true, "true", "on"]
+
+  # A select key's empty choice reads its placeholder, or "Choose" when it sets none or one that
+  # names one of its own options, so a row that holds nothing never looks as if that option were
+  # chosen.
+  defp key_select_prompt(placeholder, options) do
+    choose = dgettext("mishka_gervaz", "Choose")
+
+    case placeholder |> option_label() |> String.trim() do
+      "" -> choose
+      text -> if option_text?(options, text), do: choose, else: text
+    end
+  end
+
+  defp option_text?(options, text) do
+    wanted = String.downcase(text)
+    options |> option_texts() |> Enum.any?(&(String.downcase(&1) == wanted))
+  end
+
+  defp option_texts(options) when is_list(options), do: Enum.flat_map(options, &option_text/1)
+  defp option_texts(_options), do: []
+
+  defp option_text({_group, [_ | _] = grouped}), do: option_texts(grouped)
+  defp option_text({label, value}), do: [option_label(label), option_label(value)]
+  defp option_text([{_key, _value} | _] = option), do: option |> Map.new() |> option_text()
+  defp option_text(%{} = option), do: Enum.map([option[:label], option[:value]], &option_label/1)
+  defp option_text(value), do: [option_label(value)]
+
+  defp option_label(text) when is_binary(text), do: translate_text(text)
+  defp option_label(text) when is_function(text, 0), do: option_label(text.())
+  defp option_label(nil), do: ""
+
+  defp option_label(value) do
+    if String.Chars.impl_for(value), do: to_string(value), else: ""
+  end
 
   # A field that spans N columns takes the whole row while the grid has fewer columns than N (one
   # on a phone), and N columns from the breakpoint where every grid of this template has them: a

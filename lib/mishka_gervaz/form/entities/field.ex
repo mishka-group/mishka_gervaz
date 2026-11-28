@@ -382,7 +382,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   amounts shows "USD" and "EUR" rather than "1" and "2". Or `fn row -> label end`, or
                   `fn row, index -> label end` with the row's index from 0; the row arrives with
                   string keys, whether it was posted or read off a saved record. A row whose label
-                  is `nil` or blank reads its number, as does every row when `row_label` is not set.
+                  is `nil` or blank, a row just added, reads "New" until its key is chosen; every
+                  row reads its number when `row_label` is not set.
                   The label also names the row's group for a screen reader. See
                   `MishkaGervaz.Form.Types.Field.KeyList.row_label/3`.
                   """

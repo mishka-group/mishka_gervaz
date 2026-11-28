@@ -114,7 +114,7 @@ second lines are translated. The UI adapter draws them with `choice_cards/1` and
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |
 | `add_label` / `remove_label` | string \| `fn -> string` | — | repeater buttons |
-| `row_label` | atom \| `fn row ->` \| `fn row, index ->` | — | what each `:key_list` row's head reads in place of its number: a key whose value names the row, or a function of the row (string keys, index from 0); `nil` or blank reads the number |
+| `row_label` | atom \| `fn row ->` \| `fn row, index ->` | — | what each `:key_list` row's head reads in place of its number: a key whose value names the row, or a function of the row (string keys, index from 0); `nil` or blank reads "New" |
 
 ## `ui do … end`
 
@@ -234,7 +234,9 @@ those keys row by row over `{:array, :map}`. A key is `[name:, type:, label:, pl
 options:, required:]`, where `type` is `:text` `:textarea` `:toggle` `:checkbox` `:number`
 `:select` `:json` or `:password`, and `required: true` marks its label. A `:password` key is drawn
 through the adapter's `password_input` with `autocomplete="off"` and never shows what it holds; left
-empty it is dropped, so an edit asks for it again.
+empty it is dropped, so an edit asks for it again. A `:select` key draws an empty choice that reads
+its `placeholder`, or "Choose" when it sets none or one that names one of its own options, so a row
+that holds nothing never looks as if a value were chosen.
 
 One form can draw different keys for different openings with `options fn state -> keys end`, read
 each time the field is drawn and its params are read. The page opens it with what decides the keys:
@@ -270,7 +272,8 @@ end
 
 A key's name reads that key's value; `fn row -> label end` or `fn row, index -> label end` builds
 the label, given the row with string keys whether it was posted or read off a saved record, and the
-index from 0. A row whose label is `nil` or blank, a row just added say, still reads its number. The
+index from 0. A row whose label is `nil` or blank, a row just added say, reads "New" until its key
+is chosen. The
 label also names the row's group for a screen reader. It is an option of a field of its own; a
 `:key_list` sub-field of a `:nested` row numbers its rows.
 

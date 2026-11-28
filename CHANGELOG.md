@@ -16,9 +16,10 @@
   as the `:body` slot is
 - A `:key_list` field names each row by what it holds with `row_label`: a key, `row_label :currency`,
   whose value the row's head reads, so a list of amounts reads "USD" and "EUR" rather than "1" and
-  "2", or `fn row -> label end` / `fn row, index -> label end`. A row whose label is empty still
-  reads its number, as every row does without the option, and the label names the row's group for
-  a screen reader
+  "2", or `fn row -> label end` / `fn row, index -> label end`. A row whose label is empty, a new
+  row, reads "New" until its key is chosen, every row without the option reads its number, and the
+  label names the row's group for a screen reader. A `:select` key's empty choice reads "Choose"
+  when it sets no placeholder or one that names one of its options, so it never looks chosen
 
 ### Bug fixes:
 - A toast is read once by a screen reader: the toasts' container is the page's one polite live

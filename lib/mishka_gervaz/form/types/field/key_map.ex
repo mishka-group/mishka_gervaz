@@ -40,7 +40,7 @@ defmodule MishkaGervaz.Form.Types.Field.KeyMap do
   | `:name`        | yes           | the key written into the map                                 |
   | `:type`        | no (`:text`)  | `:text`, `:textarea`, `:toggle`, `:checkbox`, `:number`, `:select`, `:json`, `:password` |
   | `:label`       | no            | shown above the control; humanized from `:name` otherwise    |
-  | `:placeholder` | no            | placeholder text, or the empty option's label on a `:select` |
+  | `:placeholder` | no            | placeholder text, or the empty option's label on a `:select`, "Choose" when unset or one of its options |
   | `:options`     | for `:select` | the choices, as `{label, value}` pairs or bare values        |
   | `:required`    | no (`false`)  | marks the key's label as a required field's label is marked  |
 
