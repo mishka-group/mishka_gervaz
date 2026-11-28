@@ -48,6 +48,29 @@ defmodule MishkaGervaz.Form.Web.SequentialTabsTest do
     assert socket.assigns.form_state.current_step == :basics
   end
 
+  test "Back from a step reached without the ones before it opens the step it lands on" do
+    socket =
+      Phoenix.Component.update(sequential(), :form_state, fn state ->
+        %{state | current_step: :publishing, wizard_history: [:publishing, :basics]}
+      end)
+
+    {:noreply, socket} = Events.handle("prev_step", %{}, socket)
+    doc = html(socket)
+
+    assert socket.assigns.form_state.current_step == :pricing
+    assert count(doc, ~s|[role="tab"][aria-selected="true"][data-step="pricing"]|) == 1
+    assert count(doc, ~s|[role="tab"][aria-selected="true"][disabled]|) == 0
+  end
+
+  test "the step shown is never drawn disabled" do
+    socket =
+      Phoenix.Component.update(sequential(), :form_state, fn state ->
+        %{state | current_step: :pricing, wizard_history: [:basics]}
+      end)
+
+    assert count(html(socket), ~s|[role="tab"][data-step="pricing"][disabled]|) == 0
+  end
+
   test "Next stands where Save does on a wizard, and a save moves on before the last tab" do
     socket = sequential()
     doc = html(socket)

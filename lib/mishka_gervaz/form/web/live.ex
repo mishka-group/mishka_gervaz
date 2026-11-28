@@ -43,15 +43,29 @@ defmodule MishkaGervaz.Form.Web.Live do
     because a field it depends on changed, the save leaves it out.
     An update that leaves the key out, such as the `send_update/2` a table's Edit sends with only a
     `record_id`, keeps the defaults the form has. Pass `defaults: nil` to drop them.
+    New defaults start a create form over only while it holds no changes and a field's own default
+    is among what changed. Otherwise the form keeps what was typed, its errors and the step it is
+    on, and its notices and options read the new values, so a page may pass live data (a product's
+    name, a count of buyers) and refresh it while the form is open.
   - `reset` - `true` starts the form over on its `record_id`, even when that is the record already
     open, or `nil` while the form is already on create. See "Opening a form again".
   - `body` - a slot that places the form's groups in the page's own markup. See "Placing the
     groups in the page".
+  - `in_step` - a slot, one entry per step, that adds the page's own markup to a step of a wizard
+    or tabs form. See "The page's markup in a step".
   - `notify_dirty` - `true` sends the page `{:form_dirty, id, dirty?}` each time the form comes to
     hold changes the reader has not saved, and each time it holds none any more: after a save, a
     Discard, a Cancel or a start over. See "Unsaved changes".
   - `notify_failed` - `true` sends the page `{:form_failed, id, failure}` each time a save is
     refused. See "After a refused save".
+  - `navigation` - `:sequential` or `:free`, in place of the `navigation` the resource's `layout`
+    declares. See "Steps the page chooses".
+  - `step` - the step a wizard or tabs form opens on. See "Steps the page chooses".
+  - `notify_step` - `true` sends the page `{:form_step, id, step}` each time a wizard or tabs form
+    moves to another step. See "Steps the page chooses".
+  - `notify_busy` - `true` sends the page `{:form_busy, id, action}` for each save (`:submit`) or
+    Next (`:next_step`) the form does not run because it is reading its record again. See "Opening
+    a form again".
 
   ## Placing the groups in the page
 
@@ -87,6 +101,63 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   The slot is used by a `:standard` form (`MishkaGervaz.Form.Templates.Standard`, "Placed groups").
   A group the page does not place is not drawn; a field in no group is drawn after the slot.
+
+  ## The page's markup in a step
+
+  A page that adds its own markup to a step of a `:wizard` or `:tabs` form, a list of the record's
+  files say, passes an `:in_step` slot naming the step. The entry is drawn in that step's panel
+  after the step's groups, so it shows with its step and hides with it, and is given the form as
+  the `:body` slot is:
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+        record_id={@post_id}
+      >
+        <:in_step :let={form} name={:content}>
+          <.attachments :if={form.state.mode == :update} post_id={@post_id} />
+        </:in_step>
+      </.live_component>
+
+  Several entries may name one step; they are drawn in their order. It stays one form: the markup
+  is inside the one `<form>`, so it holds no `<form>` of its own and no input with a `name` that is
+  not the form's, and its events go to the page unless they name a `phx-target`. A step the form
+  has no step for raises an `ArgumentError`; a `:standard` form ignores the slot.
+
+  ## Steps the page chooses
+
+  A page decides three things about the steps of a `:wizard` or `:tabs` form when it mounts it.
+
+  `navigation` takes the place of the resource's own, so one resource is drawn as steps that open
+  in order (`:sequential`: Back and Next, Save on the last step) while a record is made, and as
+  free tabs (`:free`: Save on every tab) once it exists. `:free` on a `:wizard`, or any other value,
+  raises an `ArgumentError`. A later render that passes another value switches the form over.
+
+  `step` opens the form on that step, an atom or its string as a URL carries it. In a wizard, or
+  tabs whose steps open in order, the steps before it count as done, so Back and their tabs reach
+  them. A name the form has no step for leaves it on its first step. The form moves when `step`
+  changes from what the page passed before, and when the form starts over, on another `record_id`
+  or a `reset`; a render that passes the same value again leaves the form where the reader took it.
+
+  `notify_step={true}` tells the page each step the form moves to, by Next, Back, a tab, a save that
+  failed on another step or a start over, as `{:form_step, id, step}`. A page that keeps the step in
+  its URL hands it back as `step`, which leaves the form where it is:
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+        record_id={@post_id}
+        navigation={if @post_id, do: :free, else: :sequential}
+        step={@step}
+        notify_step={true}
+      />
+
+      def handle_info({:form_step, "post-form", step}, socket),
+        do: {:noreply, push_patch(socket, to: ~p"/posts/\#{socket.assigns.post_id}?step=\#{step}")}
 
   ## Unsaved changes
 
@@ -129,7 +200,29 @@ defmodule MishkaGervaz.Form.Web.Live do
   again. The uploads are cancelled. A create is drawn once without its `<form>` before the empty one
   is built, so every control is drawn anew, a `phx-update="ignore"` one included, and reads the new
   value. A table's Edit sends `reset: true` with the row's `record_id`. A button that opens the form
-  without asking the server uses `reset/2`.
+  without asking the server uses `reset/2`. In a drawer, a sheet or a window the new `<form>` takes
+  the focus the panel gave the old one as it opened (see `MishkaGervaz.Form.Templates.Standard`,
+  "In a drawer, a sheet or a window").
+
+  A record read again, the one the form is on, after an update save, a Discard or a `reset: true`
+  with its `record_id`, keeps the form it was drawn with until the record arrives, and the fresh
+  form takes its place then. So the steps, the step the form is on and the page's `:in_step`
+  entries stay on the page, and a live component in an entry keeps what it holds, the rows of a
+  table's stream say. A save, a Next or an answered question sent while the record is read again
+  does nothing. Another record is drawn anew, after the form's loading state.
+
+  Such a press is dropped, not kept for later: it was made on the form as it was before the read,
+  a second press of a save already made, say, or a save of the values a Discard just put back, so
+  running it once the record arrives could save what the reader no longer means. The reader presses
+  again on the fresh form. A page that keeps something for a save, the kind of save a button
+  asked for say, is told with `notify_busy={true}`, as `{:form_busy, id, :submit}` for a save or an
+  answered question and `{:form_busy, id, :next_step}` for a Next, so it can let go of it:
+
+      def handle_info({:form_busy, "post-form", _action}, socket),
+        do: {:noreply, assign(socket, :publish?, false)}
+
+  A page that can, carries such a choice in the save itself instead, as the `name` and `value` of
+  the submit button pressed, which the form's `before_save` hook reads from its params.
 
   ## Values the page works out
 
@@ -152,13 +245,21 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   ## After a save
 
-  A create save always returns the form to an empty create form. An update save depends on how the
-  form was mounted:
+  A create save returns the form to an empty create form, on its first step. An update save depends
+  on how the form was mounted:
 
   - mounted with a `record_id` assign (even `nil`) — the form stays on the saved record, reloaded
-    for editing. Pass a different `record_id`, or `nil`, to move it.
+    for editing, on the step or tab it is on. Pass a different `record_id`, or `nil`, to move it.
   - mounted without one, and opened for editing with `send_update/2` — the form returns to an
     empty create form.
+
+  Next on a wizard step that says `save true` (`MishkaGervaz.Form.Entities.Step`, "A step that
+  saves") saves too, a create first and an update after, and the form stays on the saved record,
+  reloaded for editing, on the next step. A page that passes `record_id` keeps the record's id from
+  the `{:form_saved, :create, record}` it is sent, so its next render passes the same record:
+
+      def handle_info({:form_saved, :create, post}, socket),
+        do: {:noreply, assign(socket, :post_id, post.id)}
 
   ## After a refused save
 
@@ -208,7 +309,7 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   alias MishkaGervaz.Form.Templates.Standard
   alias MishkaGervaz.Form.Web.{State, DataLoader, Events, Renderer}
-  alias MishkaGervaz.Form.Web.Events.RelationHandler
+  alias MishkaGervaz.Form.Web.Events.{RelationHandler, StepHandler}
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Helpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
@@ -241,20 +342,35 @@ defmodule MishkaGervaz.Form.Web.Live do
      |> assign(:form_state, nil)
      |> assign(:question, nil)
      |> assign(:pending_values, nil)
+     |> assign(:step_given, nil)
      |> assign(:initialized, false)}
   end
 
   @impl true
   def update(assigns, socket) do
     was_dirty? = dirty?(socket)
-    {:ok, new_socket} = do_update(assigns, keep_body(socket, assigns))
-    {:ok, announce_dirty(new_socket, was_dirty?)}
+    was_step = current_step(socket)
+    {:ok, updated_socket} = do_update(assigns, keep_body(socket, assigns))
+
+    new_socket =
+      updated_socket
+      |> announce_dirty(was_dirty?)
+      |> announce_step(was_step)
+      |> count_step_move(was_step)
+
+    {:ok, new_socket}
   end
 
-  # The page's `:body` slot comes with every render of the page; a `send_update/2` without it keeps
-  # the one the form has.
-  defp keep_body(socket, %{body: body}), do: assign(socket, :body, body)
-  defp keep_body(socket, _assigns), do: assign_new(socket, :body, fn -> [] end)
+  # The page's `:body` and `:in_step` slots come with every render of the page; a `send_update/2`
+  # without them keeps the ones the form has.
+  defp keep_body(socket, assigns) do
+    Enum.reduce([:body, :in_step], socket, fn slot, acc ->
+      case assigns do
+        %{^slot => entries} -> assign(acc, slot, entries)
+        _no_slot -> assign_new(acc, slot, fn -> [] end)
+      end
+    end)
+  end
 
   attr :form, :map,
     required: true,
@@ -303,8 +419,9 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   defp group_state(%{loading: :denied}, _group), do: :hidden
 
-  defp group_state(%{loading: :loaded, form: form} = state, group) when not is_nil(form),
-    do: (Helpers.accessible?(group, state) && :shown) || :hidden
+  defp group_state(%{loading: loading, form: form} = state, group)
+       when loading in [:loaded, :loading] and not is_nil(form),
+       do: (Helpers.accessible?(group, state) && :shown) || :hidden
 
   defp group_state(_state, _group), do: :loading
 
@@ -329,6 +446,7 @@ defmodule MishkaGervaz.Form.Web.Live do
     record_id = Map.get(assigns, :record_id)
     existing_state = socket.assigns[:form_state]
     defaults = Map.get(assigns, :defaults, existing_state && existing_state.defaults)
+    opened = existing_state && existing_state.opened
 
     socket =
       if is_nil(existing_state) do
@@ -341,21 +459,23 @@ defmodule MishkaGervaz.Form.Web.Live do
         |> assign(:id, id)
         |> assign(:notify_dirty, Map.get(assigns, :notify_dirty) == true)
         |> assign(:notify_failed, Map.get(assigns, :notify_failed) == true)
+        |> assign(:notify_step, Map.get(assigns, :notify_step) == true)
+        |> assign(:notify_busy, Map.get(assigns, :notify_busy) == true)
         |> assign(:record_id, record_id)
         |> assign(:record_id_given?, Map.has_key?(assigns, :record_id))
         |> assign(:initialized, true)
         |> register_uploads(state, id)
         |> maybe_load_form(state, record_id)
       else
-        defaults_changed = defaults != existing_state.defaults
-
         cond do
           Map.get(assigns, :reset) == true ->
             socket
             |> assign(:form_state, State.update(existing_state, defaults: defaults))
             |> start_over(record_id)
+            |> open_step(Map.get(assigns, :open_step))
 
-          record_id != socket.assigns[:record_id] or defaults_changed ->
+          record_id != socket.assigns[:record_id] or
+              follows_defaults?(existing_state, defaults) ->
             updated_state =
               existing_state |> fresh_state() |> State.update(defaults: defaults)
 
@@ -364,13 +484,70 @@ defmodule MishkaGervaz.Form.Web.Live do
             |> assign(:record_id, record_id)
             |> maybe_load_form(updated_state, record_id)
 
+          defaults != existing_state.defaults ->
+            assign(socket, :form_state, State.update(existing_state, defaults: defaults))
+
           true ->
             socket
         end
       end
 
-    {:ok, socket}
+    new_socket =
+      socket
+      |> put_navigation(assigns)
+      |> follow_step(assigns, socket.assigns.form_state.opened != opened)
+
+    {:ok, new_socket}
   end
+
+  # The step a save that kept its record open starts over on, see
+  # `MishkaGervaz.Form.Web.Events.SubmitHandler.reopening/3`.
+  defp open_step(socket, nil), do: socket
+
+  defp open_step(socket, step),
+    do: Phoenix.Component.update(socket, :form_state, &StepHandler.opened(&1, step))
+
+  defp put_navigation(%{assigns: %{form_state: state}} = socket, %{navigation: navigation})
+       when not is_nil(navigation) and navigation != state.static.layout_navigation,
+       do: assign(socket, :form_state, State.apply_presentation(state, %{navigation: navigation}))
+
+  defp put_navigation(socket, _assigns), do: socket
+
+  # The `step` the page passes opens the form on it when it differs from the one it passed before,
+  # and when the form started over; a render that passes the same one again leaves the step the
+  # reader took.
+  defp follow_step(%{assigns: %{form_state: state}} = socket, %{step: given}, restarted?) do
+    name = StepHandler.step_name(state, given)
+
+    opened_socket =
+      if (restarted? or name != socket.assigns.step_given) and
+           name not in [nil, state.current_step],
+         do: assign(socket, :form_state, StepHandler.opened(state, name)),
+         else: socket
+
+    assign(opened_socket, :step_given, name)
+  end
+
+  defp follow_step(socket, _assigns, _restarted?), do: socket
+
+  # A create form with no changes is built again when a field's default changed, so its inputs
+  # draw the new value. A form with changes, an edit, or defaults no field reads keep the form.
+  defp follows_defaults?(%State{defaults: defaults}, defaults), do: false
+  defp follows_defaults?(%State{dirty?: true}, _defaults), do: false
+  defp follows_defaults?(%State{mode: :update}, _defaults), do: false
+
+  defp follows_defaults?(%State{defaults: old, static: %{fields: fields}}, new) do
+    Enum.any?(fields, &(field_default(old, &1.name) != field_default(new, &1.name)))
+  end
+
+  defp field_default(defaults, name) when is_map(defaults) do
+    case defaults do
+      %{^name => value} -> value
+      _not_by_atom -> Map.get(defaults, to_string(name))
+    end
+  end
+
+  defp field_default(_defaults, _name), do: nil
 
   @doc false
   @spec start_over(Phoenix.LiveView.Socket.t(), String.t() | nil) :: Phoenix.LiveView.Socket.t()
@@ -378,7 +555,10 @@ defmodule MishkaGervaz.Form.Web.Live do
     state = socket.assigns.form_state
     socket = Events.cancel_pending_uploads(state, socket)
 
-    fresh_state = fresh_state(state)
+    fresh_state =
+      state
+      |> fresh_state()
+      |> keep_drawn(state, record_id, socket.assigns[:record_id])
 
     socket =
       socket
@@ -395,6 +575,21 @@ defmodule MishkaGervaz.Form.Web.Live do
     end
   end
 
+  # A record read again keeps the form it was drawn with until it arrives, so its steps, the page's
+  # `:in_step` entries and a live component in them stay on the page. Another record, or a create,
+  # is drawn anew.
+  defp keep_drawn(fresh, %State{form: form, loading: :loaded} = drawn, record_id, record_id)
+       when not is_nil(form) and not is_nil(record_id) do
+    State.update(fresh,
+      form: form,
+      field_values: drawn.field_values,
+      relation_options: drawn.relation_options,
+      existing_files: drawn.existing_files
+    )
+  end
+
+  defp keep_drawn(fresh, _drawn, _record_id, _open_record_id), do: fresh
+
   @doc """
   Puts the form back to its starting values, as the `discard` button of the form's `submit` block
   does: an edit reads its record again, a create starts over empty, with the form's `defaults`.
@@ -404,27 +599,18 @@ defmodule MishkaGervaz.Form.Web.Live do
   def discard(socket) do
     state = socket.assigns.form_state
     record_id = if state.mode == :update, do: socket.assigns[:record_id]
-    socket = start_over(socket, record_id)
-
-    case state do
-      %{static: %{layout_mode: :tabs}, current_step: step} when not is_nil(step) ->
-        Phoenix.Component.update(socket, :form_state, &on_tab(&1, step))
-
-      _state ->
-        socket
-    end
+    step = if state.static.layout_mode == :tabs, do: state.current_step
+    reopen(socket, record_id, step)
   end
 
-  defp on_tab(state, step) do
-    State.update(state,
-      current_step: step,
-      step_states: Map.new(state.step_states, fn {name, _} -> {name, tab_status(name, step)} end),
-      wizard_history: Enum.uniq([step | state.wizard_history])
-    )
+  @doc false
+  @spec reopen(Phoenix.LiveView.Socket.t(), String.t() | nil, atom() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def reopen(socket, record_id, step) do
+    socket
+    |> start_over(record_id)
+    |> open_step(step)
   end
-
-  defp tab_status(step, step), do: :active
-  defp tab_status(_name, _step), do: :pending
 
   @doc false
   @spec fresh_state(State.t()) :: State.t()
@@ -441,6 +627,8 @@ defmodule MishkaGervaz.Form.Web.Live do
         field_values: %{},
         relation_options: static_relation_options(state),
         upload_state: %{},
+        empty_files: %{},
+        start_values: nil,
         pickers: %{},
         opened: (state.opened || 0) + 1
       ] ++ first_step(state)
@@ -473,6 +661,12 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   @impl true
+  def handle_event(event, _params, %{assigns: %{form_state: %State{loading: :loading}}} = socket)
+      when event in ["save", "next_step", "question_confirm"] do
+    announce_busy(socket, event)
+    {:noreply, socket}
+  end
+
   def handle_event(event, params, socket) do
     {:noreply, handled_socket} =
       events_module(socket.assigns[:form_state]).handle(event, params, socket)
@@ -481,6 +675,8 @@ defmodule MishkaGervaz.Form.Web.Live do
       handled_socket
       |> announce_dirty(dirty?(socket))
       |> announce_failed(failed_saves(socket))
+      |> announce_step(current_step(socket))
+      |> count_step_move(current_step(socket))
 
     {:noreply, new_socket}
   end
@@ -498,7 +694,13 @@ defmodule MishkaGervaz.Form.Web.Live do
       |> DataLoader.Default.handle_async_result(result, socket)
       |> put_pending_values()
 
-    {:noreply, announce_dirty(new_socket, dirty?(socket))}
+    announced_socket =
+      new_socket
+      |> announce_dirty(dirty?(socket))
+      |> announce_step(current_step(socket))
+      |> count_step_move(current_step(socket))
+
+    {:noreply, announced_socket}
   end
 
   # The values a page put (`put_values/2`): into the form once it is built, validated with them as
@@ -507,7 +709,7 @@ defmodule MishkaGervaz.Form.Web.Live do
     values = form_values!(state, values)
 
     case state do
-      %State{form: %Phoenix.HTML.Form{}} ->
+      %State{form: %Phoenix.HTML.Form{}, loading: :loaded} ->
         new_state =
           state
           |> State.update(field_values: Map.merge(state.field_values || %{}, values))
@@ -521,7 +723,8 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   defp put_pending_values(
-         %{assigns: %{pending_values: values, form_state: %State{form: form}}} = socket
+         %{assigns: %{pending_values: values, form_state: %State{form: form, loading: :loaded}}} =
+           socket
        )
        when is_map(values) and not is_nil(form) do
     socket
@@ -564,6 +767,54 @@ defmodule MishkaGervaz.Form.Web.Live do
   end
 
   defp announce_dirty(socket, _was_dirty?), do: socket
+
+  defp current_step(%{assigns: %{form_state: %State{current_step: step}}}), do: step
+  defp current_step(_socket), do: :unmounted
+
+  # Each move to another step after the form is mounted is counted, so the template draws a new
+  # mark that focuses the first field of the step moved to.
+  defp count_step_move(socket, :unmounted), do: socket
+
+  defp count_step_move(socket, was) do
+    case socket.assigns.form_state do
+      %State{current_step: ^was} ->
+        socket
+
+      %State{current_step: nil} ->
+        socket
+
+      %State{step_moves: moves} = state ->
+        assign(socket, :form_state, State.update(state, step_moves: moves + 1))
+    end
+  end
+
+  # A form mounted with `notify_step` tells its page each step it moves to; the step it is mounted
+  # on the page already knows.
+  defp announce_step(%{assigns: %{notify_step: true}} = socket, was)
+       when was != :unmounted do
+    case current_step(socket) do
+      ^was ->
+        socket
+
+      step ->
+        send(self(), {:form_step, socket.assigns.id, step})
+        socket
+    end
+  end
+
+  defp announce_step(socket, _was), do: socket
+
+  # A form mounted with `notify_busy` tells its page of each save, Next or answer it does not run
+  # because it is reading its record again.
+  defp announce_busy(%{assigns: %{notify_busy: true, id: id}}, event) do
+    send(self(), {:form_busy, id, busy_action(event)})
+    :ok
+  end
+
+  defp announce_busy(_socket, _event), do: :ok
+
+  defp busy_action("next_step"), do: :next_step
+  defp busy_action(_save), do: :submit
 
   defp failed_saves(%{assigns: %{form_state: %State{failed_saves: count}}}), do: count
   defp failed_saves(_socket), do: 0

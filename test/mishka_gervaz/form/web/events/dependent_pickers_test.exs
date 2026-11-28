@@ -18,7 +18,7 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
 
   import MishkaGervaz.Test.FormWebHelpers, only: [build_socket: 1]
 
-  alias MishkaGervaz.Form.Web.{DataLoader, Events, State}
+  alias MishkaGervaz.Form.Web.{DataLoader, Events, Live, State}
   alias MishkaGervaz.Form.Web.DataLoader.RecordLoader
 
   alias MishkaGervaz.Test.Resources.{
@@ -70,6 +70,19 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
   defp save(socket, params) do
     {:noreply, socket} = Events.handle("save", %{"form" => params}, socket)
     socket
+  end
+
+  # The start over a save asks for, run as the page's connected process runs it.
+  defp started_over(socket) do
+    receive do
+      {:phoenix, :send_update, {{Live, "picker-entry"}, update}} ->
+        {:ok, socket} =
+          Live.update(Map.new(update), %{socket | transport_pid: self()})
+
+        started_over(socket)
+    after
+      0 -> socket
+    end
   end
 
   defp form_param(socket, field) do
@@ -262,6 +275,7 @@ defmodule MishkaGervaz.Form.Web.Events.DependentPickersTest do
         |> select(:workspace_id, ctx.w2)
         |> select(:version_id, ctx.v2)
         |> save(%{"title" => "First"})
+        |> started_over()
 
       assert_received {:form_saved, :create, _first}
 

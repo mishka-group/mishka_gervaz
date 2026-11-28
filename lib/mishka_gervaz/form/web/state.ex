@@ -19,6 +19,22 @@ defmodule MishkaGervaz.Form.Web.State do
   the reader to the first field with an error, and a form mounted with `notify_failed` tells its
   page (`MishkaGervaz.Form.Web.Live`, "After a refused save").
 
+  ## Step moves
+
+  `step_moves` counts the times a wizard or tabs form moved to another step after it was mounted:
+  Next, Back, a tab, or a `step` the page passed. The template draws a mark named after the count,
+  so each move focuses the first field of the step moved to.
+
+  ## Changes
+
+  `dirty?` says whether the form holds changes. A typed change compares what the form holds
+  (`MishkaGervaz.Form.Web.State.Helpers.held_values/1`) with `start_values`, what it held as the
+  first change arrived, so a change put back, a box ticked and unticked again, holds none.
+  `start_values` is `nil` until that first change and again once the form starts over.
+
+  `empty_files` holds, per upload, the names of the empty files the browser left out of its last
+  drop or file picker choice, which the template names under the upload.
+
   ## Performance split
 
   State is partitioned into two halves:
@@ -195,7 +211,10 @@ defmodule MishkaGervaz.Form.Web.State do
     :dismissed_notices,
     :pickers,
     :opened,
-    failed_saves: 0
+    empty_files: %{},
+    failed_saves: 0,
+    step_moves: 0,
+    start_values: nil
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -224,7 +243,10 @@ defmodule MishkaGervaz.Form.Web.State do
           dismissed_notices: MapSet.t(),
           pickers: %{atom() => Date.t()},
           opened: non_neg_integer(),
-          failed_saves: non_neg_integer()
+          empty_files: %{atom() => list(String.t())},
+          failed_saves: non_neg_integer(),
+          step_moves: non_neg_integer(),
+          start_values: map() | nil
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -509,6 +531,66 @@ defmodule MishkaGervaz.Form.Web.State do
     defp declared_readonly?(%{readonly: true}, _state), do: true
     defp declared_readonly?(_field, _state), do: false
 
+    @doc """
+    What the form holds, in a shape two moments of the same form compare by: each field's value,
+    and the existing files of each upload.
+
+    A field's value is the form's own, but for the fields whose value gervaz keeps in
+    `state.field_values` (a relation's picks and a date or datetime calendar's pick, the ones
+    `MishkaGervaz.Helpers.merge_picked_values/2` puts into every change), which are read from
+    there. A value a page gave in `defaults` is read from the form, so a change typed over it
+    counts.
+
+    A value is read the way a browser sends it, so the start and a change that puts it back compare
+    equal: `nil`, `""` and an empty list are all empty, a list drops its empty entries, atoms,
+    numbers and decimals read as their text, and a select that draws no empty choice holds the
+    option it shows first while the form holds nothing for it
+    (`MishkaGervaz.Form.Types.Field.Select.first_value/2`).
+    """
+    @spec held_values(map()) :: map()
+    def held_values(%{form: %Phoenix.HTML.Form{} = form, static: %{fields: fields}} = state)
+        when is_list(fields) do
+      picks = state.field_values || %{}
+
+      values =
+        Map.new(fields, fn %{name: name} = field ->
+          value =
+            case {field, picks} do
+              {%{type: type}, %{^name => picked}} when type in [:relation, :date, :datetime] ->
+                picked
+
+              _form_own ->
+                Phoenix.HTML.Form.input_value(form, name)
+            end
+
+          {name, shown(field, held(value), state)}
+        end)
+
+      %{values: values, existing_files: state.existing_files || %{}}
+    end
+
+    def held_values(_state), do: nil
+
+    defp shown(%{type: :select} = field, nil, state),
+      do: held(MishkaGervaz.Form.Types.Field.Select.first_value(field, state))
+
+    defp shown(_field, value, _state), do: value
+
+    defp held(value) when value in [nil, "", [], "__nil__"], do: nil
+
+    defp held(values) when is_list(values) do
+      case values |> Enum.map(&held/1) |> Enum.reject(&is_nil/1) do
+        [] -> nil
+        kept -> kept
+      end
+    end
+
+    defp held(value) when is_boolean(value), do: to_string(value)
+    defp held(value) when is_atom(value), do: Atom.to_string(value)
+    defp held(value) when is_number(value), do: to_string(value)
+    defp held(%Decimal{} = value), do: Decimal.to_string(value, :normal)
+    defp held(value), do: value
+
     @doc false
     @spec load_static_relation_options(list(map()), map() | nil, boolean()) :: map()
     def load_static_relation_options(fields, current_user, master_user? \\ false) do
@@ -707,7 +789,10 @@ defmodule MishkaGervaz.Form.Web.State do
           dismissed_notices: MapSet.new(),
           pickers: %{},
           opened: 0,
-          failed_saves: 0
+          empty_files: %{},
+          failed_saves: 0,
+          step_moves: 0,
+          start_values: nil
         }
       end
 
@@ -783,7 +868,7 @@ defmodule MishkaGervaz.Form.Web.State do
       @doc """
       Applies a mount's own presentation choices over the ones the resource declared.
 
-      Three keys, all optional, all ignored when absent:
+      Four keys, all optional, all ignored when absent or `nil`:
 
         * `:hidden_fields` — the fields this mount does not draw. The value still reaches the save:
           `drop_protected_fields/2` only looks at fields that are still declared, and
@@ -807,8 +892,13 @@ defmodule MishkaGervaz.Form.Web.State do
               ordinary param.
 
           Offered only while creating; nothing is shown over a loaded record.
+        * `:navigation` — `:sequential` or `:free`, in place of the `navigation` the resource's
+          `layout` declares, so one resource can be a step-by-step `:tabs` form while a record is
+          made and free tabs once it exists. `:free` on a `:wizard` form, or any other value,
+          raises an `ArgumentError`.
 
-      Applied at init only, like its table-side counterpart.
+      Applied at init, like its table-side counterpart. `MishkaGervaz.Form.Web.Live` applies a
+      `:navigation` that changes later too.
       """
       @spec apply_presentation(State.t(), map()) :: State.t()
       def apply_presentation(%State{} = state, assigns) when is_map(assigns) do
@@ -816,6 +906,7 @@ defmodule MishkaGervaz.Form.Web.State do
         |> hide_fields(Map.get(assigns, :hidden_fields))
         |> hide_submit(Map.get(assigns, :submit))
         |> offer_alternatives(Map.get(assigns, :submit_alternatives))
+        |> navigate(Map.get(assigns, :navigation))
       end
 
       def apply_presentation(state, _assigns), do: state
@@ -857,6 +948,27 @@ defmodule MishkaGervaz.Form.Web.State do
            do: %{state | static: %{state.static | submit_alternatives: alternatives}}
 
       defp offer_alternatives(state, _none), do: state
+
+      defp navigate(state, nil), do: state
+
+      defp navigate(%{static: %{layout_mode: :wizard, id: id}}, :free),
+        do:
+          raise(ArgumentError,
+            message:
+              "the form #{inspect(id)} is a :wizard, whose navigation is :sequential; " <>
+                "a form with navigation :free is a :tabs form"
+          )
+
+      defp navigate(state, navigation) when navigation in [:sequential, :free],
+        do: %{state | static: %{state.static | layout_navigation: navigation}}
+
+      defp navigate(%{static: %{id: id}}, navigation),
+        do:
+          raise(ArgumentError,
+            message:
+              "the form #{inspect(id)} was given the navigation #{inspect(navigation)}, " <>
+                "it takes :sequential or :free"
+          )
 
       @spec get_action(State.t(), atom()) :: atom()
       def get_action(

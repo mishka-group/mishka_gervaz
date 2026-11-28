@@ -74,6 +74,25 @@ At `allow_upload` time the name becomes `<upload_name>` scoped by the component 
 forms on one page never collide**. Do not hand-write the namespaced name; use the plain one in the
 DSL and let the library scope it.
 
+## What the action gets
+
+On save, each file reaches the action under its field as
+`%{path:, client_name:, client_type:, client_size:}`. `path` is a copy at a random name in the
+temp folder, removed once the save returns, so the action copies or reads it before it returns.
+The client's name never goes into a path: `client_name` is only data, the part after the last `/`
+or `\` with control characters taken out (`"../../etc/passwd"` arrives as `"passwd"`). Build the
+stored path from your own id, not from `client_name`.
+
+A save that fails keeps the dropped files on the form, so the next save hands them over again; a
+file removed before it is not handed over. Once a save goes through, the form lets its files go.
+
+## What the reader is told
+
+Each upload draws its own errors under it: a file too large or of a type it does not take, and
+"You can add up to N files" (from `max_entries`) when more are dropped. A browser leaves an empty
+file out before it is uploaded, so the upload names each one it left out ("This file is empty:
+name"), whether it was dropped or chosen with the file picker. Each file's remove button is labelled "Remove <name>" for a screen reader.
+
 ## Rules the compiler enforces
 
 - `field` names a field declared in this form.

@@ -95,6 +95,11 @@ defmodule MishkaGervaz.Form.Entities.Field do
           nested_fields: list(),
           add_label: String.t() | nil,
           remove_label: String.t() | nil,
+          row_label:
+            atom()
+            | (map() -> String.t() | nil)
+            | (map(), non_neg_integer() -> String.t() | nil)
+            | nil,
           ui: __MODULE__.Ui.t() | nil,
           preload: __MODULE__.Preload.t() | nil,
           type_module: module() | nil,
@@ -136,6 +141,7 @@ defmodule MishkaGervaz.Form.Entities.Field do
     _nested_field_entities: [],
     add_label: nil,
     remove_label: nil,
+    row_label: nil,
     ui: nil,
     preload: nil,
     type_module: nil,
@@ -219,7 +225,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                 ],
                 derive_value: [
                   type: {:fun, 1},
-                  doc: "Derive value from record on edit. `fn record -> value end`"
+                  doc:
+                    "Derives the field's value from the record on edit: `fn record -> value end`. A virtual field's input starts with it, so a number and a unit derived from one stored value draw what the record holds; a `:relation` field takes it as its selection when the record leaves the field `nil`."
                 ],
                 options: [
                   type: {:or, [{:list, :any}, {:fun, 0}, {:fun, 1}]},
@@ -366,6 +373,20 @@ defmodule MishkaGervaz.Form.Entities.Field do
                   type: {:or, [:string, {:fun, 0}]},
                   doc:
                     "Label for remove button in array/nested/string_list fields. String or `fn -> gettext(...) end`."
+                ],
+                row_label: [
+                  type: {:or, [:atom, {:fun, 1}, {:fun, 2}]},
+                  doc: """
+                  What the head of each row of a `:key_list` field reads, in place of the row's
+                  number. A key's name, `row_label :currency`, reads that key's value, so a list of
+                  amounts shows "USD" and "EUR" rather than "1" and "2". Or `fn row -> label end`, or
+                  `fn row, index -> label end` with the row's index from 0; the row arrives with
+                  string keys, whether it was posted or read off a saved record. A row whose label
+                  is `nil` or blank, a row just added, reads "New" until its key is chosen; every
+                  row reads its number when `row_label` is not set.
+                  The label also names the row's group for a screen reader. See
+                  `MishkaGervaz.Form.Types.Field.KeyList.row_label/3`.
+                  """
                 ]
               ] ++ Schema.access_predicates()
 

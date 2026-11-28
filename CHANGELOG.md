@@ -1,3 +1,109 @@
+# Changelog for MishkaGervaz 0.0.14
+
+### Features:
+- A page chooses the steps of a wizard or tabs form it mounts: `navigation` (`:sequential` or
+  `:free`) in place of the resource's, so one resource is drawn as steps in order while a record is
+  made and as free tabs once it exists; `step`, the step the form opens on, from a URL say, with the
+  steps before it counted as done; and `notify_step={true}`, which sends the page
+  `{:form_step, id, step}` each time the form moves to another step
+- A wizard step says `save true` to have its Next save what the form holds, a create first and an
+  update after: the page is sent `{:form_saved, mode, record}` and the form opens the saved record
+  for editing on the next step, so a reader who leaves half way keeps a draft. An update save of a
+  form mounted with a `record_id` keeps the step or tab it was made on, where before the form went
+  back to its first step
+- A page adds its own markup to one step of a wizard or tabs form with an `:in_step` slot naming the
+  step: it is drawn in the step's panel after its groups, inside the one form, and given the form
+  as the `:body` slot is
+- A `:key_list` field names each row by what it holds with `row_label`: a key, `row_label :currency`,
+  whose value the row's head reads, so a list of amounts reads "USD" and "EUR" rather than "1" and
+  "2", or `fn row -> label end` / `fn row, index -> label end`. A row whose label is empty, a new
+  row, reads "New" until its key is chosen, every row without the option reads its number, and the
+  label names the row's group for a screen reader. A `:select` key's empty choice reads "Choose"
+  when it sets no placeholder or one that names one of its options, so it never looks chosen
+
+### Bug fixes:
+- A toast is read once by a screen reader: the toasts' container is the page's one polite live
+  region, and a toast inside it no longer carries a `role="status"` of its own
+- `MishkaGervaz.Table.Web.Live.reorder/2` draws a row that is still arriving: a page that hands the
+  table a new row as a realtime notification and asks for it in order at once sees it where the
+  order puts it, also just past the rows shown, where before the row was left out
+- A window a page closes when its form is saved fades out over the values that were saved: the
+  save's own render keeps them, with no error left on it, and the form starts over in a later
+  render, which LiveView holds until the fade ends. Before, the form was emptied in the save's
+  render and the window faded out over an empty form
+- A drawer, a sheet or a window focuses the first field of its body as it opens, so what the reader
+  types goes there at once; a body with no field takes the focus at its own top. Before, the close
+  button took the focus, so typing went nowhere. The close button is still reached by Shift+Tab
+  and Escape, and closing scrolls the body back to the top, so it opens at the top again and not
+  where the reader left it
+- A gervaz form with tabs or steps in a drawer, a sheet or a window puts the reader in the first
+  field of its current tab or step as the panel opens, and not on its tab or step buttons: the
+  current step is marked `data-panel-focus`, and the panel focuses the first field of an element so
+  marked in its body
+- The field a drawer, a sheet or a window focuses as it opens keeps the focus once the panel's
+  transition ends. Before, LiveView's focus wrap moved the focus to the panel itself at that moment,
+  since the panel had a `tabindex`, so typing went nowhere
+- A gervaz form in a drawer, a sheet or a window that its opener starts over with `reset` keeps the
+  reader in its first field: the form drawn anew focuses the field the panel focused as it opened,
+  the first field of its current tab or step or its own first one, and an edit takes the focus the
+  same way once its record has loaded. Before, the open focused the old form's field, the start
+  over drew a new `<form>` in its place and the focus fell to the page, so typing went nowhere
+- A form whose page refreshes its `defaults` while it is open keeps what was typed, its errors and
+  the tab or step it is on, and its notices and options read the new values. It starts over only
+  as a create form with no changes, when a field's own default is among what changed. Before, any
+  change to `defaults`, such as a product's name or a count the page passes for a notice, started
+  the form over on its first step and threw away what was set on the others
+- A form that reads the record it is on again, after an update save, a Discard or a start over,
+  keeps drawing its steps, the step it is on and the page's `:in_step` entries until the record
+  arrives, and the fresh form takes their place then. A live component in an entry, a table with a
+  stream say, keeps its rows. Before, the form drew its loading state in between, so every step
+  flickered and a live component in an entry came back empty. A save sent in between does nothing
+- A save, Next or answered question a form drops while it reads its record again is told to a page
+  mounted with `notify_busy={true}`, as `{:form_busy, id, :submit}` or `{:form_busy, id, :next_step}`,
+  so a page that keeps something for that save, the kind of save a button asked for, lets go of it
+  and a later save does not act on it. The press is dropped, never run once the record arrives: it
+  was made on the form as it was before, a second press of a save already made or a save of values
+  a Discard put back
+- Cancel on an edit with no `on_cancel` hook puts back the record's saved values and stays on the
+  record, on the step or tab it is on. Before, it threw the record away and returned the form to an
+  empty create form
+- An uploaded file is copied to a random name in the temp folder, never to one built from the
+  client's file name, and the action gets the client's name only as data, the part after its last
+  `/` or `\` with control characters taken out. Before, a client name such as `../../etc/passwd`,
+  `docs/readme.txt` or `<b>x</b>.txt` went into the temp path, so the copy failed and the save
+  crashed the LiveView
+- A save that fails keeps the files dropped on the form, so the next save hands them over, and a
+  file removed after it is not handed over again. Before, the failed save used the files up: the
+  next save handed the action a file that was gone, and removing or dropping it again left the
+  form unable to save. A save that goes through no longer crashes the LiveView as the form starts
+  over while it lets its files go
+- An upload says how many files it takes ("You can add up to 5 files") when more are dropped, and
+  names each empty file the browser left out ("This file is empty: notes.txt"), dropped or chosen
+  with the file picker; its errors are
+  translated. Each file's remove button carries an `aria-label` that names the file. Before, an
+  empty file vanished with no word and the remove buttons had no name a screen reader could read
+- A wizard or tabs form that moves to another step, by Next, Back, a tab or a `step` the page
+  passes, focuses the first field of the step it moved to. Before, the button pressed went away
+  with its step and the focus fell to the page
+- A `:tabs` form whose steps open in order keeps every tab open on a saved record, however it is
+  opened and wherever it moves, and never draws the tab shown as disabled: Back counts the step it
+  lands on as visited. Before, opening a saved record on its first step, or a step save that read
+  the record again, locked the later tabs, and Back after a jump forward could land on a tab drawn
+  shown and disabled at once
+- The tab strip of a `:tabs` form scrolls the current tab into view as the form moves, so on a
+  phone, where the strip scrolls sideways, the tab shown is never off the edge. It scrolls the
+  strip alone, never the page
+- A form changed back to where it started holds no changes: a typed change compares what the form
+  holds with what it held as the first change arrived, so text typed and put back, or a
+  multi-select ticked and unticked again, no longer asks "Discard your changes?" and tells a page
+  with `notify_dirty` it holds none. A file waiting on an upload still counts as a change. Values
+  compare the way a browser sends them: a required select with no empty choice holds the option it
+  shows first, and a field a page gave in `defaults` holds what is typed over it
+- A text or number input whose value a save refused keeps what was typed while the error stands
+  under it: "1e5" refused stays "1e5" rather than the "100000" it was read as
+- The open list of a `:search_multi` relation closes on Escape wherever the focus is, a clicked
+  option included, and the focus goes back to its search input
+
 # Changelog for MishkaGervaz 0.0.13
 
 ### Features:

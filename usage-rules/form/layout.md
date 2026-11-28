@@ -31,12 +31,16 @@ is typed on one tab is kept while another is open, and the save sends it all.
 | `navigation` | Tabs | Submit row |
 |---|---|---|
 | `:free` | any tab opens | Save on every tab, and Enter in a field saves; no Back or Next |
-| `:sequential` (default) | only the tabs already visited open | Back and Next, Save on the last tab only, as a wizard |
+| `:sequential` (default) | only the tabs already visited open, and the one shown; every tab on a saved record (`mode: :update`) | Back and Next, Save on the last tab only, as a wizard |
 
 A save runs the form's `before_save` and the action as any save does. One that fails on a field of
 another tab moves to the first tab holding an error, marks every tab holding one (the adapter
 draws a dot, `data-role="gervaz-step-error"`) and sends the page `{:put_flash, :error, message}`
 naming the tab; the mark goes once the tab's fields show no error.
+
+Each move to another step or tab (Next, Back, a tab, a `step` the page passes) focuses the first
+field of the step moved to, so the reader keeps typing there and the focus never falls to the
+page. The form as it first opens moves no focus.
 
 ```elixir
 layout do
@@ -54,6 +58,62 @@ layout do
   end
 end
 ```
+
+## The page's markup in a step
+
+A page adds its own markup to one step of a `:wizard` or `:tabs` form with an `:in_step` slot
+naming the step. Each entry is drawn in that step's panel after its groups, shows and hides with
+the step, and is given the form as the `:body` slot is:
+
+```heex
+<.live_component module={MishkaGervaz.Form.Web.Live} id="post-form" resource={MyApp.Post}
+  current_user={@current_user} record_id={@post_id}>
+  <:in_step :let={form} name={:content}>
+    <.attachments :if={form.state.mode == :update} post_id={@post_id} />
+  </:in_step>
+</.live_component>
+```
+
+- Several entries may name one step; they are drawn in their order.
+- It is inside the one `<form>`: no `<form>` of its own, no named input that is not the form's; its
+  events go to the page unless they name a `phx-target`.
+- A name the form has no step for raises. A `:standard` form ignores the slot (it has `:body`).
+- While the form reads the record it is on again (an update save, Discard, a start over) it keeps
+  drawing the steps and the entries, so a live component in an entry keeps its rows; the fresh
+  form takes their place once the record arrives.
+- A save, Next or answered question pressed in that time is dropped, never run later. A page that
+  keeps something for a save (the kind of save a button asked for) carries it in the save's params,
+  as the submit button's `name`/`value` its `before_save` hook reads, or mounts `notify_busy={true}`
+  and lets go of it on `{:form_busy, id, action}`.
+
+## What the page chooses
+
+The page that mounts a `:wizard` or `:tabs` form decides three things about its steps
+(`MishkaGervaz.Form.Web.Live`, "Steps the page chooses"):
+
+| Assign | Effect |
+|---|---|
+| `navigation` | `:sequential` or `:free` in place of the resource's; `:free` on a `:wizard`, or any other value, raises. A later render with another value switches the form over |
+| `step` | opens the form on that step (an atom, or its string from a URL); with `:sequential` the steps before it count as done. An unknown name leaves the first step. Applied when it changes from what the page passed before, or the form starts over |
+| `notify_step` | `true` sends the page `{:form_step, id, step}` each time the form moves to another step |
+
+One resource can then be a step-by-step `:tabs` form while a record is made and free tabs once it
+exists, with the step kept in the URL:
+
+```heex
+<.live_component module={MishkaGervaz.Form.Web.Live} id="post-form" resource={MyApp.Post}
+  current_user={@current_user} record_id={@post_id}
+  navigation={if @post_id, do: :free, else: :sequential}
+  step={@step} notify_step={true} />
+```
+
+```elixir
+def handle_info({:form_step, "post-form", step}, socket),
+  do: {:noreply, push_patch(socket, to: ~p"/posts/new?step=#{step}")}
+```
+
+Handing the step back as `step` leaves the form where it is; a render that passes the same value
+again does not move it.
 
 ## Steps
 
@@ -91,8 +151,38 @@ end
 |---|---|---|---|
 | `groups` | `[atom]` | — | **required** |
 | `summary` | bool | `false` | read-only review step |
+| `save` | bool | `false` | Next on this step saves — see "A step that saves" |
 | `action` | atom | — | ⚠ not wired — see below |
 | `on_enter` / `before_leave` / `after_leave` | `fn state -> state` | — | ⚠ not wired — see below |
+
+### A step that saves
+
+`save true` makes Next on the step save what the form holds, as the last step's submit does: the
+first such save creates the record, the later ones update it. A reader who leaves half way keeps a
+draft, and a step can show what only a saved record has (its files, its prices) through the
+`:in_step` slot.
+
+- The save runs once the step's own fields hold no error. A save the action refuses stays on the
+  step with its errors, or moves to the earlier step holding one.
+- A save that succeeds sends the page `{:form_saved, mode, record}` (`:create` first, `:update`
+  after) and opens the saved record for editing on the next step, in update mode.
+- A page that passes `record_id` sets it from `{:form_saved, :create, record}`, or its next render
+  takes the form back to create.
+- Only where Next exists: a wizard, or tabs with `navigation :sequential`. On free tabs every save
+  saves already; on the last step the flag is the save it makes anyway.
+- Any update save of a form mounted with `record_id` keeps the step or tab it was made on.
+
+```elixir
+step :basics do
+  groups [:basics]
+  save true
+end
+```
+
+```elixir
+def handle_info({:form_saved, :create, post}, socket),
+  do: {:noreply, assign(socket, :post_id, post.id)}
+```
 
 ### ⚠ Step callbacks are declared but not invoked
 

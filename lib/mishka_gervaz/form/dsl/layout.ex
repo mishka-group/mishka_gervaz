@@ -7,9 +7,10 @@ defmodule MishkaGervaz.Form.Dsl.Layout do
 
     * `:standard` — single page, all groups visible.
     * `:wizard` — step-by-step: every step is in the form, only the current one is shown. Next
-      checks the step's fields first, Enter in a field presses Next, and only the last step saves;
+      checks the step's fields first, Enter in a field presses Next, and only the last step saves,
+      unless a step says `save true`, whose Next saves and opens the saved record on the next step;
       a save that fails on an earlier step's field goes back to that step. See
-      `MishkaGervaz.Form.Web.Events.StepHandler`.
+      `MishkaGervaz.Form.Web.Events.StepHandler` and `MishkaGervaz.Form.Entities.Step`.
     * `:tabs` — every step rendered as a tab/accordion.
 
   `:wizard` and `:tabs` require one or more `step` entities. Step flow is

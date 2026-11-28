@@ -64,6 +64,27 @@ defmodule MishkaGervaz.Form.Web.DecimalBoundsLiveTest do
     assert render(view) =~ "Price must be 9999.99 or less"
   end
 
+  test "a refused number keeps what was typed in its input while its error stands under it" do
+    view = open()
+    save(view, "1e5")
+
+    assert render(view) =~ "Price must be 9999.99 or less"
+    assert has_element?(view, ~s|#{@form} input[name="form[price]"][value="1e5"]|)
+
+    save(view, "12.50")
+
+    assert [%{price: price}] = Ash.read!(PlanItem)
+    assert Decimal.equal?(price, Decimal.new("12.50"))
+  end
+
+  test "a number with no error shows its value as the form holds it" do
+    plan = Ash.create!(PlanItem, %{title: "Kit", price: Decimal.new("12.5")})
+    {:ok, view, _html} = live(build_conn(), "/plans?id=#{plan.id}")
+    render_async(view)
+
+    assert has_element?(view, ~s|#{@form} input[name="form[price]"][value="12.5"]|)
+  end
+
   test "a price under the minimum is refused on save" do
     view = open()
     save(view, "0.49")

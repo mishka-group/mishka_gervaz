@@ -2,8 +2,9 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
   @moduledoc """
   Tests for `MishkaGervaz.UIAdapters.Tailwind.select/1` — flat options stay flat
   `<option>`s; a `{group_label, [opts]}` entry becomes an `<optgroup>` — and for the row action
-  buttons, which dim while their click is pending, and for the copy button, which shows the
-  copied state from the `data-copied` attribute the host's hook sets.
+  buttons, which dim while their click is pending, for the copy button, which shows the copied
+  state from the `data-copied` attribute the host's hook sets, and for the tab strip of a `:tabs`
+  form, which scrolls the shown tab into view.
   """
   use ExUnit.Case, async: true
 
@@ -129,6 +130,29 @@ defmodule MishkaGervaz.UIAdapters.TailwindTest do
 
         assert html =~ "phx-click-loading:opacity-70", inspect(variant)
       end
+    end
+  end
+
+  describe "step_indicator/1 as tabs" do
+    test "the tab strip carries the hook that scrolls the shown tab into view" do
+      html =
+        render_component(&Tailwind.step_indicator/1, %{
+          tabs: true,
+          id: "plan",
+          steps: [%{name: :basics, label: "Basics", status: :active}],
+          current_step: :basics,
+          navigable: [:basics]
+        })
+
+      [strip] =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s|[role="tablist"]|)
+        |> Enum.to_list()
+
+      assert LazyHTML.attribute(strip, "id") == ["plan-tabs"]
+      assert [hook] = LazyHTML.attribute(strip, "phx-hook")
+      assert String.ends_with?(hook, ".ShownTab")
     end
   end
 

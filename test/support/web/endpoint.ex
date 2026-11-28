@@ -2,7 +2,8 @@ defmodule MishkaGervaz.Test.Web.Endpoint do
   @moduledoc """
   The endpoint `Phoenix.LiveViewTest` mounts the pages of `MishkaGervaz.Test.Web.Router` through.
 
-  Started by `test/test_helper.exs`; `config/config.exs` gives it its keys in the test env only.
+  Started by `test/test_helper.exs`, after the `MishkaGervaz.Test.PubSub` its upload channels
+  subscribe through; `config/config.exs` gives it its keys in the test env only.
   """
 
   use Phoenix.Endpoint, otp_app: :mishka_gervaz

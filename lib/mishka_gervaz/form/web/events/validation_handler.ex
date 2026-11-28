@@ -36,6 +36,10 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
 
       Called on phx-change events. Updates the AshPhoenix.Form with
       new params and extracts any validation errors.
+
+      The form holds changes (`dirty?`) while what it holds differs from what it held as its first
+      change arrived (`state.start_values`), or a file waits on one of its uploads, so a change
+      put back holds none.
       """
       @spec validate(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
@@ -96,10 +100,28 @@ defmodule MishkaGervaz.Form.Web.Events.ValidationHandler do
                   |> Map.merge(live_errors(state, validated, form_params))
               end
 
-            state = State.update(state, form: validated, errors: errors, dirty?: true)
-            Phoenix.Component.assign(socket, :form_state, state)
+            start = state.start_values || State.Helpers.held_values(state)
+            validated_state = State.update(state, form: validated, errors: errors)
+
+            dirty? =
+              uploads_pending?(state, socket) or
+                State.Helpers.held_values(validated_state) != start
+
+            new_state = State.update(validated_state, dirty?: dirty?, start_values: start)
+            Phoenix.Component.assign(socket, :form_state, new_state)
         end
       end
+
+      defp uploads_pending?(%{static: %{uploads: [_ | _] = uploads, id: id}}, socket) do
+        Enum.any?(uploads, fn upload_config ->
+          ns_name =
+            MishkaGervaz.Form.Web.UploadHelpers.namespaced_upload_name(upload_config.name, id)
+
+          match?(%{entries: [_ | _]}, (socket.assigns[:uploads] || %{})[ns_name])
+        end)
+      end
+
+      defp uploads_pending?(_state, _socket), do: false
 
       @doc """
       Extract errors from a validated form.

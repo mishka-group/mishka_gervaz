@@ -187,9 +187,12 @@ defmodule MishkaGervaz.Table.Web.Live do
   (`MishkaGervaz.Table.Web.DataLoader.rows_in_window/2`), with one row more after them for each
   moved one, and draws them in that order. A moved row that came among them from a later page is
   drawn in its place, and a row shown that now stands just past them stays below them, so the row
-  a person moved down past the last one stays in sight. A moved row past them that the view did not
-  show is not drawn, and a row shown further on, such as one drawn at the top as it arrived, leaves
-  until Load more reads its page. The footer counts the rows drawn.
+  a person moved down past the last one stays in sight. A row still arriving, handed to the table
+  as a realtime notification in the same burst, counts as shown: one whose place is just past them
+  is drawn there too, so a page that hands the table a new row and asks for it in order at once
+  sees it where the order puts it. A moved row past them that the view did not show is not drawn,
+  and a row shown further on, such as one drawn at the top as it arrived, leaves until Load more
+  reads its page. The footer counts the rows drawn.
 
   The calls of a burst, with the realtime notifications around them, are read together after it, in
   one read; the two rows of a swap heard in two bursts end in the same rows. A table whose read
@@ -585,15 +588,15 @@ defmodule MishkaGervaz.Table.Web.Live do
       moved = socket.assigns[:realtime_moved] || []
       moved_ids = MapSet.new(moved, & &1.id)
 
-      pending =
+      {arriving, pending} =
         (socket.assigns[:realtime_pending] || [])
-        |> Enum.reject(&MapSet.member?(moved_ids, &1.id))
         |> Enum.reverse()
+        |> Enum.split_with(&MapSet.member?(moved_ids, &1.id))
 
       socket
       |> assign(:realtime_pending, [])
       |> assign(:realtime_moved, [])
-      |> reorder_rows(moved)
+      |> reorder_rows(moved, MapSet.new(arriving, & &1.id))
       |> place_pending(pending)
       |> DataLoader.refresh_total()
     else
@@ -605,28 +608,35 @@ defmodule MishkaGervaz.Table.Web.Live do
   defp place_pending(socket, []), do: socket
   defp place_pending(socket, records), do: place_rows(socket, socket.assigns.table_state, records)
 
-  @spec reorder_rows(Phoenix.LiveView.Socket.t(), [map()]) :: Phoenix.LiveView.Socket.t()
-  defp reorder_rows(socket, []), do: socket
+  @spec reorder_rows(Phoenix.LiveView.Socket.t(), [map()], MapSet.t()) ::
+          Phoenix.LiveView.Socket.t()
+  defp reorder_rows(socket, moved, arriving \\ MapSet.new())
+
+  defp reorder_rows(socket, [], _arriving), do: socket
 
   defp reorder_rows(
          %{assigns: %{table_state: %State{loading: :loading, loading_type: :reset}}} = socket,
-         _moved
+         _moved,
+         _arriving
        ),
        do: socket
 
-  defp reorder_rows(socket, moved) do
+  defp reorder_rows(socket, moved, arriving) do
     state = socket.assigns.table_state
 
     case DataLoader.rows_in_window(state, length(moved)) do
-      {:ok, covered, next} -> draw_in_order(socket, state, covered ++ moved_out(state, next))
-      :error -> place_rows(socket, state, moved)
+      {:ok, covered, next} ->
+        draw_in_order(socket, state, covered ++ moved_out(state, next, arriving))
+
+      :error ->
+        place_rows(socket, state, moved)
     end
   end
 
-  @spec moved_out(State.t(), list()) :: list()
-  defp moved_out(state, next) do
-    shown = state.shown_ids || MapSet.new()
-    Enum.take_while(next, &MapSet.member?(shown, &1.id))
+  @spec moved_out(State.t(), list(), MapSet.t()) :: list()
+  defp moved_out(state, next, arriving) do
+    kept = MapSet.union(state.shown_ids || MapSet.new(), arriving)
+    Enum.take_while(next, &MapSet.member?(kept, &1.id))
   end
 
   @spec draw_in_order(Phoenix.LiveView.Socket.t(), State.t(), list()) ::

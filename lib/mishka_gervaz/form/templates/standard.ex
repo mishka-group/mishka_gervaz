@@ -55,7 +55,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   A `:tabs` form draws its steps as tabs (`render_step_indicator/1`) and each step's container as
   the tab's panel, `"<id>-step-<name>"`. With `navigation :free` any tab opens and the submit row
   holds the submit button on every tab, with no Back or Next; with `:sequential` the visited tabs
-  open and the submit row is a wizard's.
+  open, every tab once the record is saved, and the submit row is a wizard's.
 
   ## In a drawer, a sheet or a window
 
@@ -66,7 +66,15 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   only the fields scroll and the save button is always in reach, after a failed save too. Each
   sticks where it rests, inside the body's padding, so neither moves when the body scrolls, and a
   white band over that padding hides the fields that scroll past it. Outside a panel both stay in
-  the page's flow.
+  the page's flow. The current step's container is marked `data-panel-focus`, so the panel, as it
+  opens, focuses the step's first field and not its tab or step button.
+
+  A form that starts over draws a new `<form>` (see "Opening a form again" in
+  `MishkaGervaz.Form.Web.Live`), and the field the panel focused goes away with the old one: an
+  opener that pushes the form's `reset` focuses the old form's field before the new one arrives. So
+  the `<form>`, as it is drawn in a panel's body, focuses that field again, the current step's first
+  field or its own first one, and an edit drawn once its record has loaded takes the focus the same
+  way. In a hidden panel, and outside a panel, it focuses nothing.
 
   ## Placed groups
 
@@ -76,6 +84,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   no group holds are drawn after the slot. While the form loads, and when the reader may not use
   it, the slot is still drawn, outside the `<form>`, so the page around the groups never goes away.
   A `:wizard` or `:tabs` form ignores the slot.
+
+  ## The page's markup in a step
+
+  A `:wizard` or `:tabs` form mounted with an `:in_step` slot draws each entry in the panel of the
+  step it names, after the step's groups and their notices, given the form as the `:body` slot is
+  (see "The page's markup in a step" in `MishkaGervaz.Form.Web.Live`). An entry naming a step the
+  form has not raises an `ArgumentError`. A `:standard` form ignores the slot.
 
   ## Two-axis composition
 
@@ -144,6 +159,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   import MishkaGervaz.Form.Web.UploadHelpers, only: [has_uploads?: 1, namespaced_upload_name: 2]
 
   alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
+  alias MishkaGervaz.Form.Web.Events.StepHandler
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
 
@@ -175,7 +191,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <%= if @placed? do %>
             {render_slot(@body, placed_form(assigns))}
           <% end %>
-        <% @state.loading == :loaded and @state.form -> %>
+        <% @state.loading in [:loaded, :loading] and @state.form -> %>
           <%= if @state.static.layout_mode in [:wizard, :tabs] do %>
             {render_step_indicator(assigns)}
           <% end %>
@@ -183,6 +199,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           <.form
             for={@state.form}
             id={@static.id <> "-form"}
+            phx-mounted={panel_focus_js(@static.id <> "-form")}
             phx-change="validate"
             phx-submit="save"
             phx-target={@myself}
@@ -208,6 +225,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_uploads_section(assigns)}
             {render_notices_at(assigns, :before_submit)}
             {render_form_errors(assigns)}
+            {render_step_moved(assigns)}
             {render_failed_save(assigns)}
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
@@ -242,6 +260,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       myself: assigns[:myself],
       uploads: assigns[:uploads] || %{}
     }
+  end
+
+  # A form drawn in an open panel's body focuses the field the panel focuses as it opens: its current
+  # step's first field, or its own first one. Outside a panel, or in a hidden one, nothing is focused.
+  defp panel_focus_js(form_id) do
+    form = ~s|[data-role="gervaz-panel-body"] #| <> form_id
+
+    JS.focus_first(
+      to: form <> ":not(:has([data-panel-focus])), " <> form <> " [data-panel-focus]"
+    )
   end
 
   # The fields no group holds, drawn after a placed body as `render_groups/1` draws them after the
@@ -286,7 +314,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns =
       assigns
       |> assign(:form_field, assigns.state.form[field.name])
-      |> assign(:value, shown_value(:hidden, assigns.state.form, field.name))
+      |> assign(:value, form_shown_value(:hidden, assigns.state.form, field.name))
 
     ~H"""
     <input
@@ -410,8 +438,9 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   The steps of a wizard or tabs form, through the UI adapter's `step_indicator`.
 
   A `:tabs` form draws them as tabs (`tabs: true`): each a button sending `goto_step`, those the
-  reader may open listed in `navigable` (every step with `navigation :free`, the steps already
-  visited with `:sequential`), each naming the panel of its step, `"<id>-step-<name>"`.
+  reader may open listed in `navigable` (`MishkaGervaz.Form.Web.Events.StepHandler.open_steps/1`:
+  every step with `navigation :free` or on a saved record, the steps already visited while a
+  record is made with `:sequential`), each naming the panel of its step, `"<id>-step-<name>"`.
   """
   @impl true
   def render_step_indicator(assigns) do
@@ -432,7 +461,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:step_data, step_data)
       |> assign(:current_step, assigns.state.current_step)
       |> assign(:tabs?, assigns.static.layout_mode == :tabs)
-      |> assign(:navigable, navigable_steps(assigns.static, assigns.state))
+      |> assign(:navigable, StepHandler.open_steps(assigns.state))
       |> assign(:ui, assigns.static.ui_adapter)
 
     ~H"""
@@ -465,11 +494,6 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     </div>
     """
   end
-
-  defp navigable_steps(%{layout_navigation: :free, steps: steps}, _state),
-    do: Enum.map(steps, & &1.name)
-
-  defp navigable_steps(_static, state), do: state.wizard_history || []
 
   # Draws the groups in order, then the fields no group holds, with the `:before_fields` notices
   # ahead of those fields.
@@ -527,9 +551,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       for step <- assigns.static.steps,
           do: {step, State.Helpers.groups_for_step(groups, assigns.static.steps, step.name)}
 
-    assigns = assign(assigns, :steps, steps)
-
-    assigns = assign(assigns, :tabs?, assigns.static.layout_mode == :tabs)
+    assigns =
+      assigns
+      |> assign(:steps, steps)
+      |> assign(:tabs?, assigns.static.layout_mode == :tabs)
+      |> assign(:in_step, in_step_entries(assigns))
 
     ~H"""
     <div>
@@ -540,6 +566,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
         role={@tabs? && "tabpanel"}
         aria-labelledby={@tabs? && @static.id <> "-tab-" <> to_string(step.name)}
         hidden={step.name != @state.current_step}
+        data-panel-focus={step.name == @state.current_step}
       >
         <%= for group <- groups do %>
           <% ga = assign(assigns, :group, group) %>
@@ -547,10 +574,27 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           {render_group(ga)}
           {render_notices_at(assigns, {:after_group, group.name})}
         <% end %>
+        <%= for entry <- Map.get(@in_step, step.name, []) do %>
+          {render_slot(entry, placed_form(assigns))}
+        <% end %>
       </div>
     </div>
     """
   end
+
+  # The page's `:in_step` entries by the step they name, in their order.
+  defp in_step_entries(%{in_step: [_ | _] = entries, static: %{steps: steps, id: id}}) do
+    names = Enum.map(steps, & &1.name)
+
+    Enum.group_by(entries, fn %{name: name} ->
+      (name in names && name) ||
+        raise ArgumentError,
+              "the form #{inspect(id)} has no step #{inspect(name)} for its :in_step slot, it has " <>
+                inspect(names)
+    end)
+  end
+
+  defp in_step_entries(_assigns), do: %{}
 
   @doc false
   def render_form_header(assigns) do
@@ -671,6 +715,29 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   def render_form_errors(assigns), do: ~H""
+
+  @doc """
+  After a wizard or tabs form moved to another step (Next, Back, a tab, or a `step` the page
+  passed), a hidden mark named after `state.step_moves` whose `phx-mounted` focuses the first field
+  of the step moved to, its container `"<id>-step-<name>"`, so the focus never falls to the page.
+  The form as it first opens draws none. It is drawn before the mark of a refused save, so a save
+  refused on another step's field still moves the reader to that field.
+  """
+  def render_step_moved(%{state: %{step_moves: moves, current_step: step}} = assigns)
+      when is_integer(moves) and moves > 0 and not is_nil(step) do
+    assigns =
+      assign(
+        assigns,
+        :step_moved_js,
+        JS.focus_first(to: "#" <> assigns.static.id <> "-step-" <> to_string(step))
+      )
+
+    ~H"""
+    <span id={"#{@static.id}-step-moved-#{@state.step_moves}"} hidden phx-mounted={@step_moved_js} />
+    """
+  end
+
+  def render_step_moved(assigns), do: ~H""
 
   @doc """
   After a refused save, a hidden mark named after `state.failed_saves` whose `phx-mounted` moves the
@@ -991,6 +1058,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns =
       assigns
       |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:row_label, fn -> nil end)
       |> assign_new(:drawn, fn -> opened(assigns) end)
 
     ~H"""
@@ -998,9 +1066,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <div
         :for={{row, index} <- Enum.with_index(@rows)}
         class="rounded-[11px] border border-[#ecebe6] bg-[#fbfbf9] p-3"
+        role="group"
+        aria-labelledby={"#{@input_id}_#{index}_row_label"}
       >
         <div class="mb-2 flex items-center justify-between gap-3">
-          <span class="text-[10px] font-bold text-[#a8a5a0]">{index + 1}</span>
+          <span
+            id={"#{@input_id}_#{index}_row_label"}
+            class="min-w-0 truncate text-[10px] font-bold text-[#a8a5a0]"
+          >
+            {MishkaGervaz.Form.Types.Field.KeyList.row_label(@row_label, row, index)}
+          </span>
           <button
             :if={@editable?}
             type="button"
@@ -1125,12 +1200,10 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       label: nil
     }
 
-  defp key_map_control(%{type: :select} = key, _value),
-    do: %{
-      function: :select,
-      options: translate_options(key.options),
-      prompt: translate_text(key.placeholder || "")
-    }
+  defp key_map_control(%{type: :select} = key, _value) do
+    options = translate_options(key.options)
+    %{function: :select, options: options, prompt: key_select_prompt(key.placeholder, options)}
+  end
 
   defp key_map_control(%{type: :textarea} = key, _value),
     do: %{function: :textarea, rows: 2, placeholder: translate_text(key.placeholder)}
@@ -1159,6 +1232,40 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     do: %{function: :text_input, placeholder: translate_text(key.placeholder)}
 
   defp ticked?(value), do: value in [true, "true", "on"]
+
+  # A select key's empty choice reads its placeholder, or "Choose" when it sets none or one that
+  # names one of its own options, so a row that holds nothing never looks as if that option were
+  # chosen.
+  defp key_select_prompt(placeholder, options) do
+    choose = dgettext("mishka_gervaz", "Choose")
+
+    case placeholder |> option_label() |> String.trim() do
+      "" -> choose
+      text -> if option_text?(options, text), do: choose, else: text
+    end
+  end
+
+  defp option_text?(options, text) do
+    wanted = String.downcase(text)
+    options |> option_texts() |> Enum.any?(&(String.downcase(&1) == wanted))
+  end
+
+  defp option_texts(options) when is_list(options), do: Enum.flat_map(options, &option_text/1)
+  defp option_texts(_options), do: []
+
+  defp option_text({_group, [_ | _] = grouped}), do: option_texts(grouped)
+  defp option_text({label, value}), do: [option_label(label), option_label(value)]
+  defp option_text([{_key, _value} | _] = option), do: option |> Map.new() |> option_text()
+  defp option_text(%{} = option), do: Enum.map([option[:label], option[:value]], &option_label/1)
+  defp option_text(value), do: [option_label(value)]
+
+  defp option_label(text) when is_binary(text), do: translate_text(text)
+  defp option_label(text) when is_function(text, 0), do: option_label(text.())
+  defp option_label(nil), do: ""
+
+  defp option_label(value) do
+    if String.Chars.impl_for(value), do: to_string(value), else: ""
+  end
 
   # A field that spans N columns takes the whole row while the grid has fewer columns than N (one
   # on a phone), and N columns from the breakpoint where every grid of this template has them: a
@@ -1597,6 +1704,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   @grouped_controls [:string_list, :key_map, :key_list, :nested, :choice_cards, :segmented]
+  @typed_types ~w(text email url tel number textarea)a
   @one_value_types ~w(password text email url tel hidden number textarea select date datetime range search_select combobox)a
 
   # The id of the one element a field's label names: none for a control that is a group of
@@ -1687,7 +1795,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:name, form_field.name)
       |> assign(:id, form_field.id)
       |> assign(:table_id, assigns.static.id)
-      |> assign(:value, shown_value(type, assigns.state.form, field.name))
+      |> assign(:value, shown_value(type, assigns.state, field.name))
       |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
       |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]))
       |> assign(:disabled, is_readonly)
@@ -1940,11 +2048,25 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp scalar?(value), do: is_binary(value) or is_atom(value) or is_number(value)
 
-  # The value a field's input shows. A field that holds one value shows none when its params carry
-  # a map or a list instead, such as a page drawn by an older form that had keys under the field
-  # sends, so the input draws empty rather than crashing the form. A `Decimal` is shown as its
-  # plain digits, since HTML has no way to draw the struct.
-  defp shown_value(type, form, name) do
+  # The value a field's input shows. A field the person types into shows what they typed while an
+  # error refers to it, so "1e5" refused stays "1e5" rather than the "100000" it was cast to. A
+  # field that holds one value shows none when its params carry a map or a list instead, such as a
+  # page drawn by an older form that had keys under the field sends, so the input draws empty
+  # rather than crashing the form. A `Decimal` is shown as its plain digits, since HTML has no way
+  # to draw the struct.
+  defp shown_value(type, %{form: form} = state, name) when type in @typed_types do
+    with [_ | _] <- Map.get(state.errors || %{}, name, []),
+         %{params: %{} = params} <- form,
+         typed when is_binary(typed) <- Map.get(params, to_string(name)) do
+      typed
+    else
+      _no_error_or_typed -> form_shown_value(type, form, name)
+    end
+  end
+
+  defp shown_value(type, %{form: form}, name), do: form_shown_value(type, form, name)
+
+  defp form_shown_value(type, form, name) do
     case Phoenix.HTML.Form.input_value(form, name) do
       %Decimal{} = value -> Decimal.to_string(value, :normal)
       value when type in @one_value_types and is_list(value) -> nil
@@ -2060,6 +2182,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:editable?, not readonly?)
     |> assign(:add_label, resolve_nested_label(field, :add_label, nil))
     |> assign(:remove_label, resolve_nested_label(field, :remove_label, nil))
+    |> assign(:row_label, Map.get(field, :row_label))
     |> assign(:owner, %{kind: :top, field: to_string(field.name)})
     |> assign(:input_name, form_field.name)
     |> assign(:input_id, form_field.id)
@@ -2700,9 +2823,35 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns
       |> assign(:has_new_entries, has_new_entries)
       |> assign(:show_existing, show_existing)
+      |> assign(:empty_files, Map.get(assigns.state.empty_files, assigns.upload_config.name, []))
 
     ~H"""
-    <div class="space-y-3">
+    <div
+      id={"#{@ns_name}-upload"}
+      class="space-y-3"
+      phx-hook=".EmptyFiles"
+      phx-target={@myself}
+      data-upload={@upload_config.name}
+    >
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".EmptyFiles">
+        export default {
+          mounted() {
+            const report = (files) => {
+              const names = Array.from(files || [])
+                .filter((file) => file.size === 0)
+                .map((file) => file.name);
+
+              this.pushEventTo(this.el, "upload_empty", {upload: this.el.dataset.upload, names});
+            };
+
+            this.el.addEventListener("drop", (event) => report(event.dataTransfer?.files), true);
+
+            this.el.addEventListener("input", (event) => {
+              if (event.isTrusted && event.target.type === "file") report(event.target.files);
+            }, true);
+          }
+        }
+      </script>
       <%= if @show_existing do %>
         {render_existing_files(assigns)}
       <% end %>
@@ -2742,6 +2891,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <%= if @upload do %>
         {render_upload_errors(assigns)}
       <% end %>
+
+      <div
+        :for={name <- @empty_files}
+        class="flex items-center gap-1 text-[11.5px] font-medium text-[#c0392b]"
+      >
+        <span class="hero-exclamation-circle w-4 h-4 shrink-0"></span>
+        {dgettext("mishka_gervaz", "This file is empty: %{name}", name: name)}
+      </div>
     </div>
     """
   end
@@ -2798,6 +2955,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-target={@myself}
             class="grid size-[30px] flex-none place-items-center rounded-[9px] border border-[#ecebe6] bg-white text-[#8a877f] transition-colors hover:border-[#f3ddd9] hover:bg-[#fdf4f3] hover:text-[#c0392b]"
             title={dgettext("mishka_gervaz", "Cancel upload")}
+            aria-label={dgettext("mishka_gervaz", "Remove %{name}", name: entry.client_name)}
           >
             <span class="hero-x-mark size-[15px]"></span>
           </button>
@@ -2807,7 +2965,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           :for={err <- upload_errors(@upload, entry)}
           class="text-[11.5px] font-medium text-[#c0392b]"
         >
-          {UploadHelpers.upload_error_to_string(err)}
+          {UploadHelpers.upload_error_to_string(err, @upload_config)}
         </div>
       <% end %>
     </div>
@@ -2821,7 +2979,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       class="flex items-center gap-1 text-[11.5px] font-medium text-[#c0392b]"
     >
       <span class="hero-exclamation-circle w-4 h-4 shrink-0"></span>
-      {UploadHelpers.upload_error_to_string(err)}
+      {UploadHelpers.upload_error_to_string(err, @upload_config)}
     </div>
     """
   end

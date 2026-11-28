@@ -8,7 +8,8 @@ defmodule MishkaGervaz.Form.Web.Events do
   - Wizard step navigation
   - Upload events
   - Relation field search/select
-  - Cancel
+  - Cancel — runs the `on_cancel` hook and returns to an empty create form; without the hook an
+    edit puts back the record's saved values on the step it is on, and a create starts over empty
   - Reset — starts the form over as an empty create form, see `MishkaGervaz.Form.Web.Live.reset/2`
   - Discard — puts the form back to its starting values, see `MishkaGervaz.Form.Web.Live.discard/1`
   - Nested/array field management
@@ -77,6 +78,8 @@ defmodule MishkaGervaz.Form.Web.Events do
   alias MishkaGervaz.Form.Types.Field.DateTime, as: DateTimeField
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
+
+  @max_empty_files 20
 
   @type socket :: Phoenix.LiveView.Socket.t()
   @type state :: State.t()
@@ -237,19 +240,9 @@ defmodule MishkaGervaz.Form.Web.Events do
     do: {:noreply, Phoenix.Component.assign(socket, :question, nil)}
 
   def do_handle("cancel", _params, state, socket) do
-    cancel_button = state.static.submit[:cancel]
-
-    if submit_button_allowed?(cancel_button, state) do
-      state = run_hook(state, :on_cancel, [state]) || state
-
-      if has_hook?(state, :on_cancel) do
-        send(self(), {:form_cancelled, state.static.resource})
-      end
-
-      {:noreply, reset_to_create_mode(state, socket)}
-    else
-      {:noreply, socket}
-    end
+    if submit_button_allowed?(state.static.submit[:cancel], state),
+      do: {:noreply, cancel(state, socket)},
+      else: {:noreply, socket}
   end
 
   def do_handle("reset", _params, _state, socket),
@@ -403,6 +396,30 @@ defmodule MishkaGervaz.Form.Web.Events do
       key_atom = String.to_existing_atom(upload_key)
       socket = upload_handler(state).cancel_upload(state, key_atom, ref, socket)
       {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def do_handle("upload_empty", %{"upload" => upload_name, "names" => names}, state, socket)
+      when is_list(names) do
+    if MishkaGervaz.Helpers.known_name?(upload_name, state, :uploads) do
+      named =
+        names
+        |> Enum.filter(&is_binary/1)
+        |> Enum.take(@max_empty_files)
+        |> Enum.map(&UploadHelpers.safe_client_name/1)
+
+      empty_files = Map.put(state.empty_files, String.to_existing_atom(upload_name), named)
+
+      new_socket =
+        Phoenix.Component.assign(
+          socket,
+          :form_state,
+          State.update(state, empty_files: empty_files)
+        )
+
+      {:noreply, new_socket}
     else
       {:noreply, socket}
     end
@@ -897,11 +914,17 @@ defmodule MishkaGervaz.Form.Web.Events do
   defp halt_messages(_reason), do: [dgettext("mishka_gervaz", "The changes were not saved.")]
 
   # Next, pressed or the form's submit on a step before the last: what the form holds is validated,
-  # then the step handler moves on or shows the step's errors.
+  # then the step handler moves on or shows the step's errors. A step that says `save true` and
+  # holds no error on its fields is saved instead; the save opens the next step.
   defp next_step(params, state, socket) do
     {:noreply, socket} = do_handle("validate", params, state, socket)
     validated = socket.assigns.form_state
-    step_handler(validated).advance(validated, socket)
+    handler = step_handler(validated)
+
+    if StepHandler.step_saves?(validated) and
+         handler.can_advance?(validated, validated.current_step),
+       do: save(params, validated, socket),
+       else: handler.advance(validated, socket)
   end
 
   # A save on a step before the last moves a wizard on, and a tabs form whose steps open in order;
@@ -1077,6 +1100,24 @@ defmodule MishkaGervaz.Form.Web.Events do
 
   def maybe_decode_json(v), do: v
 
+  # Cancel with an `on_cancel` hook runs it, tells the page and returns to an empty create form.
+  # Without one, an edit throws its changes away and stays on the record and its step, and a create
+  # starts over empty.
+  defp cancel(state, socket) do
+    cond do
+      has_hook?(state, :on_cancel) ->
+        state = run_hook(state, :on_cancel, [state]) || state
+        send(self(), {:form_cancelled, state.static.resource})
+        reset_to_create_mode(state, socket)
+
+      state.mode == :update and not is_nil(socket.assigns[:record_id]) ->
+        MishkaGervaz.Form.Web.Live.reopen(socket, socket.assigns.record_id, state.current_step)
+
+      true ->
+        reset_to_create_mode(state, socket)
+    end
+  end
+
   @doc false
   def reset_to_create_mode(state, socket) do
     socket = cancel_pending_uploads(state, socket)
@@ -1096,7 +1137,9 @@ defmodule MishkaGervaz.Form.Web.Events do
 
       case acc.assigns[:uploads][ns_name] do
         %{entries: entries} when entries != [] ->
-          Enum.reduce(entries, acc, fn entry, inner_acc ->
+          entries
+          |> Enum.reject(& &1.cancelled?)
+          |> Enum.reduce(acc, fn entry, inner_acc ->
             Phoenix.LiveView.cancel_upload(inner_acc, ns_name, entry.ref)
           end)
 

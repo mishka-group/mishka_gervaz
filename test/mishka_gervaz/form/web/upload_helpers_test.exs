@@ -3,6 +3,17 @@ defmodule MishkaGervaz.Form.Web.UploadHelpersTest do
 
   alias MishkaGervaz.Form.Web.UploadHelpers
 
+  doctest UploadHelpers, only: [safe_client_name: 1], import: true
+
+  describe "temp_upload_path/0" do
+    test "gives a new path in the temp folder each time" do
+      first = UploadHelpers.temp_upload_path()
+
+      assert Path.dirname(first) == Path.expand(System.tmp_dir!())
+      refute first == UploadHelpers.temp_upload_path()
+    end
+  end
+
   describe "parse_accept/1" do
     test "returns :any for nil" do
       assert UploadHelpers.parse_accept(nil) == :any
@@ -85,6 +96,21 @@ defmodule MishkaGervaz.Form.Web.UploadHelpersTest do
     end
   end
 
+  describe "upload_error_to_string/2" do
+    test "says how many files the upload takes" do
+      assert UploadHelpers.upload_error_to_string(:too_many_files, %{max_entries: 5}) ==
+               "You can add up to 5 files"
+
+      assert UploadHelpers.upload_error_to_string(:too_many_files, %{max_entries: 1}) ==
+               "You can add one file"
+    end
+
+    test "reads every other error as upload_error_to_string/1 does" do
+      assert UploadHelpers.upload_error_to_string(:too_large, %{max_entries: 5}) ==
+               "File is too large"
+    end
+  end
+
   describe "upload_error_to_string/1" do
     test "too_large" do
       assert UploadHelpers.upload_error_to_string(:too_large) == "File is too large"
@@ -115,7 +141,12 @@ defmodule MishkaGervaz.Form.Web.UploadHelpersTest do
       assert Keyword.get(opts, :max_entries) == 1
       assert Keyword.get(opts, :max_file_size) == 8_000_000
       assert Keyword.get(opts, :auto_upload) == false
-      refute Keyword.has_key?(opts, :accept)
+      assert Keyword.fetch!(opts, :accept) == :any
+    end
+
+    test "takes any type when the upload's accept is nil" do
+      opts = UploadHelpers.build_allow_upload_opts(%{accept: nil}, "form-1")
+      assert Keyword.fetch!(opts, :accept) == :any
     end
 
     test "includes configured values" do

@@ -8,5 +8,6 @@ if config_env() == :test do
   config :mishka_gervaz, MishkaGervaz.Test.Web.Endpoint,
     secret_key_base: String.duplicate("mishka-gervaz-test-secret", 3),
     live_view: [signing_salt: "mishka-gervaz-test"],
+    pubsub_server: MishkaGervaz.Test.PubSub,
     server: false
 end

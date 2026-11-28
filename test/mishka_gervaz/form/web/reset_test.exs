@@ -290,7 +290,8 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       assert title(socket) == "Saved title"
     end
 
-    test "on the record it was closed on, reads it again", %{entry: entry} do
+    test "on the record it was closed on, reads it again and keeps drawing the form until then",
+         %{entry: entry} do
       socket = mount() |> open_edit(entry) |> type("title", "Unsaved change")
 
       assert title(socket) == "Unsaved change"
@@ -298,12 +299,49 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       socket = component_update(socket, %{record_id: entry.id, reset: true})
 
       assert socket.assigns.form_state.loading == :loading
-      assert socket.assigns.form_state.form == nil
+      assert socket.assigns.form_state.dirty? == false
+      assert render_form(socket) =~ ~s|id="picker-entry-form"|
+      refute render_form(socket) =~ "gervaz-form-loading"
+
+      params = %{"form" => %{"title" => "Saved while reading"}}
+      assert {:noreply, ^socket} = Live.handle_event("save", params, socket)
+      refute_received {:form_saved, _mode, _record}
 
       socket = finish_loading(socket, entry)
 
       assert socket.assigns.form_state.dirty? == false
       assert title(socket) == "Saved title"
+    end
+
+    test "a save, Next or answer sent while it reads the record again tells a page that asked",
+         %{entry: entry} do
+      socket = mount(%{notify_busy: true}) |> open_edit(entry)
+      socket = component_update(socket, %{record_id: entry.id, reset: true})
+      params = %{"form" => %{"title" => "Saved while reading"}}
+
+      assert {:noreply, ^socket} = Live.handle_event("save", params, socket)
+      assert_received {:form_busy, @id, :submit}
+
+      assert {:noreply, ^socket} = Live.handle_event("question_confirm", %{}, socket)
+      assert_received {:form_busy, @id, :submit}
+
+      assert {:noreply, ^socket} = Live.handle_event("next_step", %{}, socket)
+      assert_received {:form_busy, @id, :next_step}
+
+      refute_received {:form_saved, _mode, _record}
+
+      socket = finish_loading(socket, entry)
+      {:noreply, _socket} = Live.handle_event("validate", params, socket)
+      refute_received {:form_busy, _id, _action}
+    end
+
+    test "a page that did not ask is not told of a save sent while it reads the record again",
+         %{entry: entry} do
+      socket = mount() |> open_edit(entry)
+      socket = component_update(socket, %{record_id: entry.id, reset: true})
+
+      assert {:noreply, ^socket} = Live.handle_event("save", %{"form" => %{}}, socket)
+      refute_received {:form_busy, _id, _action}
     end
   end
 
@@ -322,7 +360,13 @@ defmodule MishkaGervaz.Form.Web.ResetTest do
       socket = open_create(socket)
       assert socket.assigns.form_state.opened == 3
 
-      socket = socket |> open_edit(entry) |> type("title", "Saved again") |> save()
+      socket =
+        socket
+        |> open_edit(entry)
+        |> type("title", "Saved again")
+        |> save()
+        |> deliver_send_updates()
+
       assert title(socket) in [nil, ""]
       assert socket.assigns.form_state.opened == 5
     end

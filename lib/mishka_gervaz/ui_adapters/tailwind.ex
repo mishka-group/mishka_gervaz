@@ -94,7 +94,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           type="text"
           id={@id}
           name={@name}
-          value={@value}
+          value={shown_value(@value)}
           placeholder={@placeholder}
           disabled={@disabled}
           readonly={@readonly}
@@ -146,7 +146,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="password"
         id={@id}
         name={@name}
-        value={@value}
+        value={shown_value(@value)}
         placeholder={@placeholder}
         disabled={@disabled}
         readonly={@readonly}
@@ -243,6 +243,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       true -> fallback
     end
   end
+
+  # The text an input draws for its value. A `Decimal`, such as an amount read back off a saved
+  # record, is its plain digits, never the exponent form, since HTML has no way to draw the struct;
+  # an integer or a float is its text, and any other value is drawn as it is.
+  defp shown_value(%Decimal{} = value), do: Decimal.to_string(value, :normal)
+  defp shown_value(value) when is_number(value), do: to_string(value)
+  defp shown_value(value), do: value
 
   # The `dir` an input gets: none when it has an icon at its start, so it keeps the page's direction
   # and its start padding stays on the icon's side. `[unicode-bidi:plaintext]` lets what is typed
@@ -881,7 +888,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   The input carries `aria-expanded`, `"true"` while the list is open, and its `:debounce` holds only
   while the list is shut, for the reason `search_select/1` gives. `:search_event` is the event a
   keyup sends, as `search_select/1` says. A click in the input, or Tab into it, opens the list
-  through the `.SearchSelect` hook, at once, as `search_select/1` says.
+  through the `.SearchSelect` hook, at once, as `search_select/1` says. Escape closes the open
+  list wherever the focus is, and puts the focus back in the input.
   """
   @impl true
   def multi_select(assigns) do
@@ -988,6 +996,8 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :if={@dropdown_open?}
         data-role="gervaz-relation-list"
         class="absolute z-50 mt-1 max-h-80 w-full overflow-x-hidden overflow-y-auto rounded-[11px] border border-[#ecebe6] bg-white shadow-[0_10px_30px_-12px_rgba(30,28,24,0.25)]"
+        phx-window-keydown={close_list(@myself, @filter_name, @id)}
+        phx-key="Escape"
       >
         <div :if={@display_options == []} class="px-3 py-2 text-[12.5px] font-medium text-[#a8a5a0]">
           {dgettext("mishka_gervaz", "No records found")}
@@ -1024,6 +1034,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       </div>
     </div>
     """
+  end
+
+  # The open list of a `multi_select/1` closes on Escape pressed anywhere on the page, a press the
+  # hook does not see when the focus left the box (a clicked option takes none in some browsers),
+  # and the focus goes back to the search input.
+  defp close_list(myself, filter_name, input_id) do
+    closed = JS.push("relation_close_dropdown", target: myself, value: %{filter: filter_name})
+    if input_id, do: JS.focus(closed, to: "##{input_id}"), else: closed
   end
 
   @doc """
@@ -1249,7 +1267,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           inputmode={@type == "text" && number_keyboard(@min)}
           id={@id}
           name={@name}
-          value={@value}
+          value={shown_value(@value)}
           placeholder={@placeholder}
           min={@type == "number" && @min}
           max={@type == "number" && @max}
@@ -2944,7 +2962,10 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     * `:target` - the form's LiveComponent, which `goto_step` is sent to
 
   The current tab is `aria-selected`; a tab whose step holds an error carries a dot in the error
-  colour.
+  colour. The strip, `<id>-tabs`, scrolls sideways when its tabs are wider than it, on a phone say,
+  and a small hook scrolls it as the form moves so the current tab is always in view
+  (`Phoenix.LiveView.JS` has no command that scrolls an element into view). It scrolls the strip
+  alone, never the page.
   """
   @impl true
   def step_indicator(%{tabs: true} = assigns) do
@@ -2959,7 +2980,33 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       end)
 
     ~H"""
-    <div role="tablist" data-role="gervaz-step-tabs" class={@class}>
+    <div
+      id={"#{@id}-tabs"}
+      role="tablist"
+      data-role="gervaz-step-tabs"
+      class={@class}
+      phx-hook=".ShownTab"
+    >
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".ShownTab">
+        export default {
+          mounted() {
+            this.show();
+          },
+          updated() {
+            this.show();
+          },
+          show() {
+            const tab = this.el.querySelector('[role="tab"][aria-selected="true"]');
+            if (!tab || this.el.scrollWidth <= this.el.clientWidth) return;
+
+            const strip = this.el.getBoundingClientRect();
+            const shown = tab.getBoundingClientRect();
+
+            if (shown.left < strip.left) this.el.scrollLeft -= strip.left - shown.left;
+            else if (shown.right > strip.right) this.el.scrollLeft += shown.right - strip.right;
+          }
+        }
+      </script>
       <button
         :for={step <- @steps}
         type="button"
@@ -3312,7 +3359,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="range"
         id={@id}
         name={@name}
-        value={@value}
+        value={shown_value(@value)}
         min={@min}
         max={@max}
         step={@step}
@@ -3323,7 +3370,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :if={@show_value}
         class="text-sm font-medium text-[#3a382f] tabular-nums min-w-[3ch] text-end"
       >
-        {@value}
+        {shown_value(@value)}
       </span>
     </div>
     """
@@ -3362,7 +3409,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       dir={@dir}
       class={[@class, (@disabled || @readonly) && disabled_class()]}
       phx-debounce={@phx_debounce}
-    >{@value}</textarea>
+    >{shown_value(@value)}</textarea>
     """
   end
 
@@ -3720,7 +3767,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         id={@id}
         dir={icon_dir(@icon, "auto")}
         name={@name}
-        value={@value}
+        value={shown_value(@value)}
         placeholder={@placeholder}
         disabled={@disabled}
         class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", @disabled && disabled_class()]}
@@ -4353,9 +4400,18 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   `show_drawer(id)` from a click. The close button and the backdrop run `hide_drawer/2` after
   `:on_close`; Escape closes it too, unless `:confirm_close` is given.
 
+  Opening it focuses the first field in its body, so what the reader types goes there at once; a
+  body with no field takes the focus at its own top (`<id>-body-start`). An element in the body
+  marked `data-panel-focus` takes the focus in place of the whole body, its first field focused:
+  a gervaz form with tabs or steps marks its current step so, and the reader lands in the step's
+  first field and not on its tabs. The panel itself takes no focus (it has no `tabindex`): LiveView's
+  focus wrap focuses its panel as the open's transition ends, which would take the focus from that
+  field. The close button comes before the body, so Shift+Tab reaches it, as does Escape. Closing it scrolls its body back to the
+  top, so it opens at the top again and not where the reader left it.
+
   ## Assigns
     * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`, its sub line `<id>-sub`,
-      its body `<id>-body` and its close button `<id>-close`
+      its body `<id>-body`, the body's top `<id>-body-start` and its close button `<id>-close`
     * `:show` - open it as it is drawn
     * `:title` - the heading at its top
     * `:icon` - a heroicon name drawn in a tile before the title, such as `"hero-receipt-percent"`
@@ -4461,11 +4517,17 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         {property <> " ease-out duration-200 motion-reduce:transition-none", away, shown}
     )
     |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "#" <> id <> "-panel")
+    |> JS.focus_first(to: panel_focus(id))
+  end
+
+  defp panel_focus(id) do
+    body = "#" <> id <> "-body"
+    body <> ":not(:has([data-panel-focus])), " <> body <> " [data-panel-focus]"
   end
 
   defp hide_panel(js, id, {property, away, shown}) do
     js
+    |> JS.focus(to: "#" <> id <> "-body-start")
     |> JS.hide(
       to: "#" <> id <> "-backdrop",
       time: 200,
@@ -4535,7 +4597,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         aria-modal="true"
         aria-labelledby={@title && @id <> "-title"}
         aria-describedby={@sub && @id <> "-sub"}
-        tabindex="-1"
         phx-window-keydown={is_nil(@confirm_close) && @close_js}
         phx-key="escape"
         class={[
@@ -4636,6 +4697,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           data-role="gervaz-panel-body"
           class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
         >
+          <span
+            id={@id <> "-body-start"}
+            data-role="gervaz-panel-body-start"
+            tabindex="-1"
+            class="-mt-5 mb-5 block h-0 outline-none"
+          />
           {render_slot(@inner_block)}
         </div>
         <div
@@ -4943,7 +5010,9 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
 
   @doc """
   One toast, a short dark note at the bottom of the screen (see `MishkaGervaz.Toast`): a dot in its
-  tone's colour, its sentence, an Undo button and a link when it has them, and a Close. Its buttons
+  tone's colour, its sentence, an Undo button and a link when it has them, and a Close. It is no
+  live region of its own: the toasts' container is the page's one polite live region, so a screen
+  reader reads each toast once as it arrives. Its buttons
   send `gervaz_toast_undo` and `gervaz_toast_close` with the toast's id to the page, whose
   `MishkaGervaz.Toast.attach/1` hook answers them.
 
@@ -4970,7 +5039,6 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
     ~H"""
     <div
       id={@id}
-      role="status"
       data-role="gervaz-toast"
       data-tone={@tone}
       class="pointer-events-auto flex max-w-[420px] items-center gap-2.5 rounded-[13px] bg-[#17161a] px-3.5 py-[11px] text-[12.5px] font-semibold leading-[1.45] text-white shadow-[0_14px_34px_rgba(23,22,26,0.3)] max-[640px]:max-w-none max-[640px]:w-full"

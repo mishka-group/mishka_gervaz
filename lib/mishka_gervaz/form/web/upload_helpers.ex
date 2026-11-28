@@ -15,6 +15,8 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   `upload_error_to_string/1`), and `MishkaGervaz.Form.Entities.Upload`.
   """
 
+  use MishkaGervaz.Messages
+
   @doc """
   Parse an accept string into a list of MIME types / extensions.
 
@@ -42,19 +44,25 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   @doc """
   Build keyword options for `Phoenix.LiveView.allow_upload/3` from a DSL upload config map.
 
+  `:accept` is always given, as `allow_upload/3` requires it: an upload that names no `accept`
+  takes a file of any type (`:any`).
+
   ## Examples
 
       iex> build_allow_upload_opts(%{accept: "image/*", max_entries: 3, max_file_size: 10_000_000, auto_upload: true}, "my-form")
       [accept: ~w(image/*), max_entries: 3, max_file_size: 10_000_000, auto_upload: true]
+
+      iex> build_allow_upload_opts(%{}, "my-form")
+      [accept: :any, max_entries: 1, max_file_size: 8_000_000, auto_upload: false]
   """
   @spec build_allow_upload_opts(map(), String.t()) :: keyword()
   def build_allow_upload_opts(upload_config, _component_id) do
     [
+      accept: parse_accept(upload_config[:accept]),
       max_entries: upload_config[:max_entries] || 1,
       max_file_size: upload_config[:max_file_size] || 8_000_000,
       auto_upload: upload_config[:auto_upload] || false
     ]
-    |> maybe_put_opt(:accept, upload_config[:accept], &parse_accept/1)
     |> maybe_put_opt(:chunk_size, upload_config[:chunk_size])
     |> maybe_put_opt(:chunk_timeout, upload_config[:chunk_timeout])
     |> maybe_put_opt(:external, upload_config[:external])
@@ -102,18 +110,89 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   def find_upload_for_field(_, _), do: nil
 
   @doc """
+  A new path in the system's temp folder for a copy of an uploaded file.
+
+  The name is random and never takes anything from the client, so a client name such as
+  `"../../etc/passwd"` can neither leave the temp folder nor make the copy fail.
+  """
+  @spec temp_upload_path() :: String.t()
+  def temp_upload_path do
+    token = Base.url_encode64(:crypto.strong_rand_bytes(18), padding: false)
+    Path.join(System.tmp_dir!(), "gervaz_upload_#{token}")
+  end
+
+  @doc """
+  The client's file name made safe to hand to an action as plain data.
+
+  Keeps only the part after the last `/` or `\\`, takes out control characters and the
+  characters that turn text direction around, and falls back to `"file"` when nothing is left.
+
+  ## Examples
+
+      iex> safe_client_name("../../etc/passwd")
+      "passwd"
+
+      iex> safe_client_name("docs\\\\readme.txt")
+      "readme.txt"
+
+      iex> safe_client_name("line\\nbreak.txt")
+      "linebreak.txt"
+
+      iex> safe_client_name("..")
+      "file"
+  """
+  @spec safe_client_name(String.t() | nil) :: String.t()
+  def safe_client_name(name) when is_binary(name) do
+    last_part =
+      name
+      |> String.replace_invalid()
+      |> String.split(["/", "\\"])
+      |> List.last()
+      |> String.replace(~r/[\p{Cc}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u, "")
+      |> String.trim()
+
+    named_file(last_part)
+  end
+
+  def safe_client_name(_name), do: "file"
+
+  defp named_file(name) when name in ["", ".", ".."], do: "file"
+  defp named_file(name), do: name
+
+  @doc """
   Convert an upload error atom to a human-readable string.
   """
   @spec upload_error_to_string(atom()) :: String.t()
-  def upload_error_to_string(:too_large), do: "File is too large"
-  def upload_error_to_string(:too_many_files), do: "Too many files"
-  def upload_error_to_string(:not_accepted), do: "File type not accepted"
-  def upload_error_to_string(:external_client_failure), do: "Upload failed"
-  def upload_error_to_string(error), do: "Upload error: #{inspect(error)}"
+  def upload_error_to_string(:too_large), do: dgettext("mishka_gervaz", "File is too large")
+  def upload_error_to_string(:too_many_files), do: dgettext("mishka_gervaz", "Too many files")
+
+  def upload_error_to_string(:not_accepted),
+    do: dgettext("mishka_gervaz", "File type not accepted")
+
+  def upload_error_to_string(:external_client_failure),
+    do: dgettext("mishka_gervaz", "Upload failed")
+
+  def upload_error_to_string(error),
+    do: dgettext("mishka_gervaz", "Upload error: %{error}", error: inspect(error))
+
+  @doc """
+  Convert an upload error atom to a human-readable string that names the upload's own limit.
+
+  `:too_many_files` says how many files the upload takes, from its `max_entries`; every other
+  error reads as `upload_error_to_string/1` puts it.
+  """
+  @spec upload_error_to_string(atom(), map()) :: String.t()
+  def upload_error_to_string(:too_many_files, upload_config) when is_map(upload_config) do
+    dngettext(
+      "mishka_gervaz",
+      "You can add one file",
+      "You can add up to %{count} files",
+      upload_config[:max_entries] || 1
+    )
+  end
+
+  def upload_error_to_string(error, _upload_config), do: upload_error_to_string(error)
 
   defp maybe_put_opt(opts, _key, nil), do: opts
   defp maybe_put_opt(opts, key, value), do: Keyword.put(opts, key, value)
-
-  defp maybe_put_opt(opts, _key, nil, _transform), do: opts
-  defp maybe_put_opt(opts, key, value, transform), do: Keyword.put(opts, key, transform.(value))
 end

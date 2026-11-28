@@ -1414,6 +1414,8 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
             [name: :url, type: :text, placeholder: "https://…"]
           ]
 
+          row_label :platform
+
           ui do
             label "Links"
             add_label "+ Add Link"
@@ -2801,5 +2803,66 @@ defmodule MishkaGervaz.Test.Resources.LiveCheckEntry do
 
   actions do
     defaults [:read, :destroy, create: [:title, :code], update: [:title, :code]]
+  end
+end
+
+defmodule MishkaGervaz.Test.Resources.ChangedBackEntry do
+  @moduledoc """
+  A form for a change put back: `:title`, a text field, `:plan`, a required select over an atom
+  that draws no empty choice, so a create form shows its first option, Basic, while it holds
+  nothing, and `:tags`, a `:multi_select` over `{:array, :atom}`.
+  """
+  use Ash.Resource,
+    domain: MishkaGervaz.Test.Domain,
+    extensions: [MishkaGervaz.Resource],
+    data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? false
+  end
+
+  mishka_gervaz do
+    form do
+      identity do
+        name :changed_back_entry
+        route "/admin/changed-back-entries"
+      end
+
+      source do
+        actions do
+          create :create
+          update :update
+          read :read
+        end
+      end
+
+      fields do
+        field :title, :text
+
+        field :plan, :select do
+          required true
+          options [{"Basic", :basic}, {"Pro", :pro}]
+        end
+
+        field :tags, :multi_select do
+          options [{"New", :new}, {"Sale", :sale}]
+        end
+      end
+    end
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :title, :string, public?: true
+    attribute :plan, :atom, public?: true, constraints: [one_of: [:basic, :pro]]
+
+    attribute :tags, {:array, :atom},
+      public?: true,
+      default: [],
+      constraints: [items: [one_of: [:new, :sale]]]
+  end
+
+  actions do
+    defaults [:read, :destroy, create: [:title, :plan, :tags], update: [:title, :plan, :tags]]
   end
 end

@@ -43,10 +43,10 @@ msgstr "Go to page %{page}"
 #: lib/mishka_gervaz/table/templates/table.ex:915
 #: lib/mishka_gervaz/table/templates/table.ex:950
 #: lib/mishka_gervaz/table/templates/table.ex:992
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2608
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2656
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4292
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4334
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2615
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2663
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4328
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4370
 #, elixir-autogen
 msgid "Loading..."
 msgstr "Loading..."
@@ -59,13 +59,13 @@ msgid "Clear filter"
 msgstr "Clear filter"
 
 #: lib/mishka_gervaz/table/templates/shared.ex:776
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:516
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:901
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:523
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:908
 #, elixir-autogen
 msgid "Search..."
 msgstr "Search..."
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1674
+#: lib/mishka_gervaz/form/templates/standard.ex:1781
 #: lib/mishka_gervaz/table/templates/shared.ex:744
 #, elixir-autogen
 msgid "Select %{field} first"
@@ -81,12 +81,12 @@ msgstr "to"
 
 #: lib/mishka_gervaz/form/types/field/select.ex:57
 #: lib/mishka_gervaz/table/templates/shared.ex:813
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:786
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:793
 #, elixir-autogen
 msgid "Select..."
 msgstr "Select..."
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:335
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:342
 #, elixir-autogen
 msgid "All"
 msgstr "All"
@@ -99,16 +99,16 @@ msgstr[1] "%{count} active"
 
 ## States
 #: lib/mishka_gervaz/table/templates/shared.ex:2296
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:600
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:835
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:993
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1482
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:607
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:842
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1000
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1489
 #, elixir-autogen
 msgid "No records found"
 msgstr "No records found"
 
 #: lib/mishka_gervaz/table/templates/shared.ex:2353
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1523
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1530
 #, elixir-autogen
 msgid "Error loading data"
 msgstr "Error loading data"
@@ -143,13 +143,13 @@ msgstr "Restore"
 msgid "Are you sure?"
 msgstr "Are you sure?"
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4719
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4775
 #, elixir-autogen
 msgid "Confirm"
 msgstr "Confirm"
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1230
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4720
+#: lib/mishka_gervaz/form/templates/standard.ex:1337
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4776
 #, elixir-autogen
 msgid "Cancel"
 msgstr "Cancel"
@@ -157,13 +157,13 @@ msgstr "Cancel"
 ## Bulk Actions
 #: lib/mishka_gervaz/table/templates/shared.ex:1090
 #: lib/mishka_gervaz/table/templates/shared.ex:1110
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2276
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2283
 #, elixir-autogen
 msgid "%{count} selected"
 msgstr "%{count} selected"
 
 #: lib/mishka_gervaz/table/templates/shared.ex:1051
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2278
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2285
 #, elixir-autogen
 msgid "Clear selection"
 msgstr "Clear selection"
@@ -258,11 +258,11 @@ msgstr ""
 msgid "%{unarchived}, %{skipped} — a record with the same name already exists."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1033
-#: lib/mishka_gervaz/form/templates/standard.ex:2023
-#: lib/mishka_gervaz/form/templates/standard.ex:2157
-#: lib/mishka_gervaz/form/templates/standard.ex:2206
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3462
+#: lib/mishka_gervaz/form/templates/standard.ex:1108
+#: lib/mishka_gervaz/form/templates/standard.ex:2130
+#: lib/mishka_gervaz/form/templates/standard.ex:2265
+#: lib/mishka_gervaz/form/templates/standard.ex:2314
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3498
 #, elixir-autogen, elixir-format
 msgid "+ Add"
 msgstr ""
@@ -273,13 +273,13 @@ msgid "Action"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/shared.ex:1107
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2273
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2280
 #, elixir-autogen, elixir-format
 msgid "All except %{count} selected"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/shared.ex:1100
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2271
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2278
 #, elixir-autogen, elixir-format
 msgid "All selected"
 msgstr ""
@@ -294,15 +294,15 @@ msgstr ""
 #: lib/mishka_gervaz/table/templates/shared.ex:511
 #: lib/mishka_gervaz/table/templates/shared.ex:548
 #: lib/mishka_gervaz/table/templates/shared.ex:588
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2208
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2215
 #, elixir-autogen, elixir-format
 msgid "Clear filters"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/table.ex:907
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4563
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4626
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:5017
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4613
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4676
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:5074
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -342,7 +342,7 @@ msgstr ""
 msgid "From"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1657
+#: lib/mishka_gervaz/form/templates/standard.ex:1764
 #, elixir-autogen, elixir-format
 msgid "Loading options..."
 msgstr ""
@@ -357,11 +357,11 @@ msgstr ""
 msgid "Record Details"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1011
-#: lib/mishka_gervaz/form/templates/standard.ex:2026
-#: lib/mishka_gervaz/form/templates/standard.ex:2161
-#: lib/mishka_gervaz/form/templates/standard.ex:2210
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3463
+#: lib/mishka_gervaz/form/templates/standard.ex:1086
+#: lib/mishka_gervaz/form/templates/standard.ex:2133
+#: lib/mishka_gervaz/form/templates/standard.ex:2269
+#: lib/mishka_gervaz/form/templates/standard.ex:2318
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3499
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
@@ -371,7 +371,7 @@ msgstr ""
 msgid "Restore this record?"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1183
+#: lib/mishka_gervaz/form/templates/standard.ex:1290
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr ""
@@ -401,8 +401,8 @@ msgstr ""
 msgid "Some operations failed; check logs."
 msgstr ""
 
-#: lib/mishka_gervaz/form/web/events.ex:897
-#: lib/mishka_gervaz/form/web/events/submit_handler.ex:102
+#: lib/mishka_gervaz/form/web/events.ex:914
+#: lib/mishka_gervaz/form/web/events/submit_handler.ex:103
 #, elixir-autogen, elixir-format
 msgid "The changes were not saved."
 msgstr ""
@@ -412,7 +412,7 @@ msgstr ""
 msgid "To"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1180
+#: lib/mishka_gervaz/form/templates/standard.ex:1287
 #, elixir-autogen, elixir-format
 msgid "Uploading…"
 msgstr ""
@@ -444,63 +444,63 @@ msgstr ""
 msgid "You are not allowed to do this."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:278
+#: lib/mishka_gervaz/form/templates/standard.ex:306
 #, elixir-autogen, elixir-format
 msgid "Loading…"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1951
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1958
 #, elixir-autogen, elixir-format
 msgid "- less"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4074
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4110
 #, elixir-autogen, elixir-format
 msgid "Accepted: %{types}"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2233
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2240
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3398
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3430
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3434
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3466
 #, elixir-autogen, elixir-format
 msgid "Add item"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2234
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2241
 #, elixir-autogen, elixir-format
 msgid "Archived"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3072
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3108
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:2800
+#: lib/mishka_gervaz/form/templates/standard.ex:2942
 #, elixir-autogen, elixir-format
 msgid "Cancel upload"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3161
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3197
 #, elixir-autogen, elixir-format
 msgid "Click to upload"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1366
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1373
 #, elixir-autogen, elixir-format
 msgid "Copy"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1367
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1374
 #, elixir-autogen, elixir-format
 msgid "Copied"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4896
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4952
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr ""
@@ -510,8 +510,8 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:2837
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4093
+#: lib/mishka_gervaz/form/templates/standard.ex:2980
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4129
 #, elixir-autogen, elixir-format
 msgid "File"
 msgstr ""
@@ -542,26 +542,26 @@ msgstr ""
 msgid "Load More"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:646
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:861
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1022
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:653
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:868
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:1029
 #, elixir-autogen, elixir-format
 msgid "Load more..."
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/shared.ex:1613
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3073
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3109
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1353
+#: lib/mishka_gervaz/form/templates/standard.ex:1460
 #, elixir-autogen, elixir-format
 msgid "Other ways to create this"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/shared.ex:1626
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2478
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:2485
 #, elixir-autogen, elixir-format
 msgid "Page {page} of {total}"
 msgstr ""
@@ -571,17 +571,17 @@ msgstr ""
 msgid "Previous"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3005
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3041
 #, elixir-autogen, elixir-format
 msgid "Progress"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:971
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:978
 #, elixir-autogen, elixir-format
 msgid "Remove %{label}"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4127
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4163
 #, elixir-autogen, elixir-format
 msgid "Remove file"
 msgstr ""
@@ -591,12 +591,12 @@ msgstr ""
 msgid "Search %{label}..."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:154
+#: lib/mishka_gervaz/form/templates/standard.ex:170
 #, elixir-autogen, elixir-format
 msgid "Standard Form"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1225
+#: lib/mishka_gervaz/form/templates/standard.ex:1332
 #, elixir-autogen, elixir-format
 msgid "Submit"
 msgstr ""
@@ -616,226 +616,226 @@ msgstr ""
 msgid "Untitled"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3168
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4077
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3204
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4113
 #, elixir-autogen, elixir-format
 msgid "Up to %{count} file"
 msgid_plural "Up to %{count} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3162
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3198
 #, elixir-autogen, elixir-format
 msgid "or drag and drop"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3999
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4035
 #, elixir-autogen, elixir-format
 msgid "Apr"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3986
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4022
 #, elixir-autogen, elixir-format
 msgid "April"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4003
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4039
 #, elixir-autogen, elixir-format
 msgid "Aug"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3990
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4026
 #, elixir-autogen, elixir-format
 msgid "August"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3936
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3972
 #, elixir-autogen, elixir-format
 msgid "Clear"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4007
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4043
 #, elixir-autogen, elixir-format
 msgid "Dec"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3994
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4030
 #, elixir-autogen, elixir-format
 msgid "December"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3943
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3979
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3997
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4033
 #, elixir-autogen, elixir-format
 msgid "Feb"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3984
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4020
 #, elixir-autogen, elixir-format
 msgid "February"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4015
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4051
 #, elixir-autogen, elixir-format
 msgid "Fr"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3909
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3945
 #, elixir-autogen, elixir-format
 msgid "Hour"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3996
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4032
 #, elixir-autogen, elixir-format
 msgid "Jan"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3983
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4019
 #, elixir-autogen, elixir-format
 msgid "January"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4002
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4038
 #, elixir-autogen, elixir-format
 msgid "Jul"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3989
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4025
 #, elixir-autogen, elixir-format
 msgid "July"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4001
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4037
 #, elixir-autogen, elixir-format
 msgid "Jun"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3988
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4024
 #, elixir-autogen, elixir-format
 msgid "June"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3998
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4034
 #, elixir-autogen, elixir-format
 msgid "Mar"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3985
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4021
 #, elixir-autogen, elixir-format
 msgid "March"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3987
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4000
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4023
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4036
 #, elixir-autogen, elixir-format
 msgid "May"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3910
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3946
 #, elixir-autogen, elixir-format
 msgid "Minute"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4011
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4047
 #, elixir-autogen, elixir-format
 msgid "Mo"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3855
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3891
 #, elixir-autogen, elixir-format
 msgid "Next month"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3856
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3892
 #, elixir-autogen, elixir-format
 msgid "Next year"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4006
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4042
 #, elixir-autogen, elixir-format
 msgid "Nov"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3993
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4029
 #, elixir-autogen, elixir-format
 msgid "November"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4005
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4041
 #, elixir-autogen, elixir-format
 msgid "Oct"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3992
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4028
 #, elixir-autogen, elixir-format
 msgid "October"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3976
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4012
 #, elixir-autogen, elixir-format
 msgid "Pick a date"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3977
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4013
 #, elixir-autogen, elixir-format
 msgid "Pick a date and time"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3832
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3868
 #, elixir-autogen, elixir-format
 msgid "Previous month"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3831
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3867
 #, elixir-autogen, elixir-format
 msgid "Previous year"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4016
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4052
 #, elixir-autogen, elixir-format
 msgid "Sa"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4004
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4040
 #, elixir-autogen, elixir-format
 msgid "Sep"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3991
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4027
 #, elixir-autogen, elixir-format
 msgid "September"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4017
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4053
 #, elixir-autogen, elixir-format
 msgid "Su"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4014
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4050
 #, elixir-autogen, elixir-format
 msgid "Th"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3905
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:3941
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4012
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4048
 #, elixir-autogen, elixir-format
 msgid "Tu"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4013
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4049
 #, elixir-autogen, elixir-format
 msgid "We"
 msgstr ""
 
-#: lib/mishka_gervaz/form/web/events/step_handler.ex:181
+#: lib/mishka_gervaz/form/web/events/step_handler.ex:250
 #, elixir-autogen, elixir-format
 msgid "%{message} Check it on step %{number}, %{step}."
 msgstr ""
@@ -876,19 +876,19 @@ msgstr ""
 msgid "All %{count} selected"
 msgstr "All %{count} selected"
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1250
+#: lib/mishka_gervaz/form/templates/standard.ex:1357
 #, elixir-autogen, elixir-format
 msgid "Discard"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/table.ex:695
 #: lib/mishka_gervaz/table/templates/table.ex:699
-#: lib/mishka_gervaz/toast.ex:162
+#: lib/mishka_gervaz/toast.ex:163
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4821
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4877
 #, elixir-autogen, elixir-format
 msgid "Type %{answer} to confirm"
 msgstr ""
@@ -898,7 +898,59 @@ msgstr ""
 msgid "Type “%{answer}” exactly as it is written."
 msgstr ""
 
-#: lib/mishka_gervaz/toast.ex:158
+#: lib/mishka_gervaz/toast.ex:159
 #, elixir-autogen, elixir-format
 msgid "Undo"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:166
+#, elixir-autogen, elixir-format
+msgid "File is too large"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:170
+#, elixir-autogen, elixir-format
+msgid "File type not accepted"
+msgstr ""
+
+#: lib/mishka_gervaz/form/templates/standard.ex:2943
+#, elixir-autogen, elixir-format
+msgid "Remove %{name}"
+msgstr ""
+
+#: lib/mishka_gervaz/form/templates/standard.ex:2885
+#, elixir-autogen, elixir-format
+msgid "This file is empty: %{name}"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:167
+#, elixir-autogen, elixir-format
+msgid "Too many files"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:176
+#, elixir-autogen, elixir-format
+msgid "Upload error: %{error}"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:173
+#, elixir-autogen, elixir-format
+msgid "Upload failed"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:186
+#, elixir-autogen, elixir-format
+msgid "You can add one file"
+msgid_plural "You can add up to %{count} files"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mishka_gervaz/form/templates/standard.ex:1240
+#, elixir-autogen, elixir-format
+msgid "Choose"
+msgstr ""
+
+#: lib/mishka_gervaz/form/types/field/key_list.ex:201
+#, elixir-autogen, elixir-format
+msgid "New"
 msgstr ""

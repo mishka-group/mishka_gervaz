@@ -47,6 +47,13 @@ end
 
 All predicates are arity **1** (`state`).
 
+## Cancel
+
+`cancel` with an `on_cancel` hook runs the hook, sends the page `{:form_cancelled, resource}` and
+returns the form to an empty create form. Without the hook it is safe to press on an edit: the form
+puts back the record's saved values and stays on the record, on the step or tab it is on; a create
+starts over empty. Nothing is saved.
+
 ## Discard
 
 `discard` draws a button beside Save while the form holds changes (`state.dirty?`). It puts the
@@ -54,6 +61,12 @@ form back to its starting values: an edit reads its record again, a create start
 its `defaults`, the pending uploads are cancelled, and a `:tabs` form stays on its tab. Nothing is
 saved. Without a `discard` block there is no such button; a page can do the same with
 `MishkaGervaz.Form.Web.Live.discard/1`.
+
+A typed change holds changes only while what the form holds differs from what it held as the
+first change arrived: text typed and put back, or a box ticked and unticked again, holds none, so
+Discard goes away and Cancel and Discard ask nothing. A file waiting on an upload always counts.
+Values compare the way a browser sends them, so a required select that draws no empty choice holds
+the option it shows first, and a field given in `defaults` holds what is typed over it.
 
 ```elixir
 submit do

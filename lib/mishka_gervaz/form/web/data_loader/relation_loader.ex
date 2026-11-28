@@ -29,7 +29,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
   Top-level helpers (`load_all_options/4`, `load_paginated_options/6`,
   `build_options/4`, `prepend_nil_option/2`, `resolve_display_field/2`,
   `resolve_load_action/3`, `get_tenant/1`, `maybe_apply_search/2`,
-  `maybe_apply_custom_load/3`, `resolve_selected_fallback/7`) are public
+  `maybe_apply_custom_load/3`, `read_selected/4`, `read_left_out/5`,
+  `resolve_selected_fallback/7`) are public
   so user overrides can reuse them — they live outside the `__using__`
   macro to avoid per-consumer compile cost.
 
@@ -259,6 +260,68 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
   def maybe_apply_custom_load(query, _load_fn, _state), do: query
 
   @doc false
+  @spec read_selected(map(), State.t(), list(String.t()), function() | nil) ::
+          {:ok, list({String.t(), String.t()})} | {:error, term()}
+  def read_selected(field, state, selected_ids, load_fn) do
+    resource = Map.get(field, :resource)
+    display_field = resolve_display_field(field, resource)
+    vf = Map.get(field, :value_field)
+    action = resolve_load_action(field, state, resource)
+    tenant = get_tenant(state)
+
+    query =
+      resource
+      |> Ash.Query.new()
+      |> Ash.Query.filter_input(%{(vf || :id) => %{in: selected_ids}})
+      |> maybe_apply_custom_load(load_fn, state)
+
+    opts = [action: action, actor: state.current_user, authorize?: false, page: false]
+    opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
+
+    case Ash.read(query, opts) do
+      {:ok, records} ->
+        {:ok, build_options(records, display_field, false, vf, state)}
+
+      {:error, %Ash.Error.Invalid{errors: errors} = error} ->
+        if Enum.any?(errors, &match?(%Ash.Error.Invalid.PaginationRequired{}, &1)),
+          do:
+            resolve_selected_fallback(
+              selected_ids,
+              resource,
+              action,
+              tenant,
+              state,
+              display_field,
+              vf
+            ),
+          else: {:error, error}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc false
+  @spec read_left_out(
+          map(),
+          State.t(),
+          list(String.t()),
+          list({String.t(), String.t()}),
+          function() | nil
+        ) :: {:ok, list({String.t(), String.t()})} | {:error, term()}
+  def read_left_out(_field, _state, _selected_ids, matched, nil), do: {:ok, matched}
+
+  def read_left_out(field, state, selected_ids, matched, _load_fn) do
+    case selected_ids -- Enum.map(matched, &elem(&1, 1)) do
+      [] ->
+        {:ok, matched}
+
+      left_out ->
+        with {:ok, more} <- read_selected(field, state, left_out, nil), do: {:ok, matched ++ more}
+    end
+  end
+
+  @doc false
   def resolve_selected_fallback(
         selected_ids,
         resource,
@@ -373,6 +436,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
           get_display_value: 3,
           get_record_value: 2,
           resolve_selected_fallback: 7,
+          read_selected: 4,
+          read_left_out: 5,
           field_options: 2,
           prepend_nil_option: 2,
           matching_options: 2,
@@ -432,17 +497,21 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
         end
       end
 
+      @doc """
+      The `{label, value}` of each picked record, read by id (or `value_field`) for the field's
+      chips and selected options.
+
+      The field's `load` scopes the read, so what it loads for a label is there. A picked record
+      it leaves out of the options is read again without it, so it still shows by its label: one
+      more query, only when the `load` leaves one out.
+      """
       @spec resolve_selected(map(), State.t(), list(String.t())) ::
               {:ok, list({String.t(), String.t()})} | {:error, term()}
       def resolve_selected(_field, _state, []), do: {:ok, []}
       def resolve_selected(_field, _state, nil), do: {:ok, []}
 
       def resolve_selected(field, state, selected_ids) when is_list(selected_ids) do
-        resource = Map.get(field, :resource)
-        display_field = resolve_display_field(field, resource)
-        vf = Map.get(field, :value_field)
-
-        case resource do
+        case Map.get(field, :resource) do
           nil ->
             matched =
               field
@@ -453,47 +522,10 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RelationLoader do
             {:ok, matched}
 
           resource when is_atom(resource) ->
-            action = resolve_load_action(field, state, resource)
-            tenant = get_tenant(state)
-            filter_field = vf || :id
             load_fn = Map.get(field, :load)
 
-            query =
-              resource
-              |> Ash.Query.new()
-              |> Ash.Query.filter_input(%{filter_field => %{in: selected_ids}})
-              |> maybe_apply_custom_load(load_fn, state)
-
-            opts = [action: action, actor: state.current_user, authorize?: false, page: false]
-            opts = if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts
-
-            case Ash.read(query, opts) do
-              {:ok, records} ->
-                matched =
-                  Enum.map(records, fn record ->
-                    {get_display_value(record, display_field, state),
-                     get_record_value(record, vf)}
-                  end)
-
-                {:ok, matched}
-
-              {:error, %Ash.Error.Invalid{errors: errors}} ->
-                if Enum.any?(errors, &match?(%Ash.Error.Invalid.PaginationRequired{}, &1)) do
-                  resolve_selected_fallback(
-                    selected_ids,
-                    resource,
-                    action,
-                    tenant,
-                    state,
-                    display_field,
-                    vf
-                  )
-                else
-                  {:error, %Ash.Error.Invalid{errors: errors}}
-                end
-
-              {:error, reason} ->
-                {:error, reason}
+            with {:ok, matched} <- read_selected(field, state, selected_ids, load_fn) do
+              read_left_out(field, state, selected_ids, matched, load_fn)
             end
         end
       end

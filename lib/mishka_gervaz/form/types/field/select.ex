@@ -58,6 +58,42 @@ defmodule MishkaGervaz.Form.Types.Field.Select do
     end
   end
 
+  @doc """
+  The value a select that draws no empty choice (`prompt/1` is `nil`) shows while its form holds
+  nothing for it, and so the value a browser sends for it: its first option's, the first of the
+  first group when the options are grouped. A select that draws an empty choice, or has no
+  options, gives `nil`.
+
+  Options are the field's `options`, a list or a function of the form state.
+  """
+  @spec first_value(map(), map()) :: term()
+  def first_value(field, state) do
+    case prompt(field) do
+      nil -> field |> Map.get(:options) |> options(state) |> first_option_value()
+      _prompt -> nil
+    end
+  end
+
+  defp options(options, state) when is_function(options, 1), do: options.(state)
+  defp options(options, _state) when is_list(options), do: options
+  defp options(_options, _state), do: []
+
+  defp first_option_value([{_group, [first | _]} | _rest]) when is_tuple(first) or is_list(first),
+    do: first_option_value([first])
+
+  defp first_option_value([{_label, value} | _rest]), do: value
+
+  defp first_option_value([option | _rest]) when is_list(option) and option != [] do
+    case Keyword.keyword?(option) do
+      true -> option[:value] || option[:label]
+      false -> to_string(option)
+    end
+  end
+
+  defp first_option_value([%{value: value} | _rest]), do: value
+  defp first_option_value([value | _rest]), do: value
+  defp first_option_value(_none), do: nil
+
   defp placeholder(%{ui: %{placeholder: placeholder}}) when not is_nil(placeholder),
     do: resolve_label(placeholder)
 

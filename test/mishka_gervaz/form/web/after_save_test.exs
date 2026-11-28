@@ -2,9 +2,15 @@ defmodule MishkaGervaz.Form.Web.AfterSaveTest do
   @moduledoc """
   Where the form is after a save.
 
-  A form mounted with a `record_id` follows it: an update save leaves it on the saved record. A form
-  opened for editing with `send_update/2` returns to an empty create form, and so does every create
-  save. A record that finishes loading after the form has returned to create is ignored.
+  The save's own render keeps what was saved, so a window the page closes on the save fades out over
+  it, and the form starts over in a later render (the `send_update/3` it sends itself, run here by
+  `started_over/1`). A form mounted with a `record_id` follows it: an update save leaves it on the
+  saved record. A form opened for editing with `send_update/2` returns to an empty create form, and
+  so does every create save. A record that finishes loading after the form has returned to create is
+  ignored.
+
+  It does NOT prove the fade itself: LiveView's client holds the later render while the window's
+  transition runs.
   """
   use ExUnit.Case, async: false
 
@@ -43,11 +49,27 @@ defmodule MishkaGervaz.Form.Web.AfterSaveTest do
     socket
   end
 
+  # The updates the form sent itself after the save, run as the page's connected process runs them.
+  defp started_over(socket) do
+    receive do
+      {:phoenix, :send_update, {{Live, "picker-entry"}, update}} ->
+        {:ok, socket} = Live.update(Map.new(update), %{socket | transport_pid: self()})
+        started_over(socket)
+    after
+      0 -> socket
+    end
+  end
+
+  defp title(socket), do: Phoenix.HTML.Form.input_value(socket.assigns.form_state.form, :title)
+
   describe "an update save" do
     test "on a form mounted with a record_id, stays on the saved record", %{entry: entry} do
       socket = entry |> editing(%{record_id_given?: true}) |> save(%{"title" => "Renamed"})
 
       assert_received {:form_saved, :update, %{title: "Renamed"}}
+      assert socket.assigns.form_state.loading == :loaded
+
+      socket = started_over(socket)
       assert socket.assigns.record_id == entry.id
       assert socket.assigns.form_state.mode == :update
       assert socket.assigns.form_state.loading == :loading
@@ -66,6 +88,9 @@ defmodule MishkaGervaz.Form.Web.AfterSaveTest do
       socket = entry |> editing(%{}) |> save(%{"title" => "Renamed"})
 
       assert_received {:form_saved, :update, _record}
+      assert socket.assigns.form_state.mode == :update
+
+      socket = started_over(socket)
       assert socket.assigns.record_id == nil
       assert socket.assigns.form_state.mode == :create
       assert socket.assigns.form_state.form.source.type == :create
@@ -80,10 +105,34 @@ defmodule MishkaGervaz.Form.Web.AfterSaveTest do
       |> build_socket(assigns: %{record_id: nil, record_id_given?: true})
       |> DataLoader.new_record(state)
       |> save(%{"title" => "New", "version_id" => Ash.UUID.generate()})
+      |> started_over()
 
     assert_received {:form_saved, :create, _record}
     assert socket.assigns.form_state.mode == :create
     assert socket.assigns.form_state.form.source.type == :create
+  end
+
+  test "the save's own render keeps what was saved, with no error on it, and starts over after" do
+    state = State.init("picker-entry", PickerEntry, @user)
+    socket = DataLoader.new_record(build_socket(state), state)
+
+    refused = save(socket, %{"title" => "Kept"})
+    assert refused.assigns.form_state.failed_saves == 1
+
+    assert {refused.assigns.form_state.errors, refused.assigns.form_state.form_errors} !=
+             {%{}, []}
+
+    {:noreply, typed} =
+      Events.handle("validate", %{"form" => %{"title" => "Kept"}}, refused)
+
+    saved = save(typed, %{"title" => "Kept", "version_id" => Ash.UUID.generate()})
+
+    assert_received {:form_saved, :create, %{title: "Kept"}}
+    assert title(saved) == "Kept"
+    assert saved.assigns.form_state.errors == %{}
+    assert saved.assigns.form_state.form_errors == []
+
+    assert title(started_over(saved)) in [nil, ""]
   end
 
   test "a record that finishes loading after the form returned to create is ignored", %{

@@ -77,6 +77,11 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       @doc """
       Load a record by ID and build an AshPhoenix.Form for editing.
 
+      The form starts with each virtual field's `derive_value` of the record as its params, so its
+      input draws it: a number and a unit derived from one stored value show what the record
+      holds. A relation field's derived value is its selection, kept in `state.field_values` (see
+      `MishkaGervaz.Form.Web.DataLoader.Helpers.extract_dependency_values/2`).
+
       ## Options
 
       - `:tenant` - Tenant value for multi-tenant resources
@@ -110,7 +115,8 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
             build_form(state, record, :update,
               action: update_action,
               actor: actor,
-              tenant: effective_tenant
+              tenant: effective_tenant,
+              params: derived_values(state, record)
             )
 
           {:error, reason} ->
@@ -152,6 +158,26 @@ defmodule MishkaGervaz.Form.Web.DataLoader.RecordLoader do
       end
 
       defp field_defaults(_state), do: nil
+
+      defp derived_values(%{static: %{fields: fields}}, record) when is_list(fields) do
+        params =
+          fields
+          |> Enum.filter(&derived_virtual?/1)
+          |> Enum.map(&{to_string(&1.name), &1.derive_value.(record)})
+          |> Enum.reject(fn {_name, value} -> is_nil(value) end)
+          |> Map.new()
+
+        if params == %{}, do: nil, else: params
+      end
+
+      defp derived_values(_state, _record), do: nil
+
+      defp derived_virtual?(%{type: :relation}), do: false
+
+      defp derived_virtual?(%{virtual: true, derive_value: derive}) when is_function(derive, 1),
+        do: true
+
+      defp derived_virtual?(_field), do: false
 
       defp mount_default(given, name, field_default) do
         case given do

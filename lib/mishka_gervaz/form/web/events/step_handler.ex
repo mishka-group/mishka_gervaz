@@ -10,14 +10,20 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
     * on any step but the last, it validates what the form holds and calls `advance/2`, which
       moves to the next step when `can_advance?/2` allows it. A step it refuses is marked `:error`
       and shows the errors of its own fields (`step_errors/2`), never another step's, and they
-      follow what is typed until the step moves on. Nothing is saved.
+      follow what is typed until the step moves on. Nothing is saved, unless the step says
+      `save true` (`step_saves?/1`): then a step `can_advance?/2` allows is saved as the last step
+      is, and a save that succeeds opens the saved record for editing on the next step (see
+      `MishkaGervaz.Form.Entities.Step`, "A step that saves").
     * on the last step, it saves. A save that fails on a field of another step calls
       `goto_errors/2`, which moves the form to the first step holding an error, marks every step
       holding one `:error`, and sends the parent LiveView `{:put_flash, :error, message}`, the
       message naming the step to check.
 
-  Back (`prev_step`) moves to the previous step. Every step stays in the form, so nothing typed on
-  either is lost.
+  Back (`prev_step`) moves to the previous step and counts it as visited. Every step stays in the
+  form, so nothing typed on either is lost.
+
+  A tab opens the steps `open_steps/1` names: every step on free tabs and on a saved record, the
+  visited ones while a record is made.
 
   ## Overridable Functions
 
@@ -133,6 +139,69 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
       wizard_history: Enum.uniq([to | state.wizard_history])
     )
   end
+
+  @doc """
+  Whether Next on the form's current step saves: the step says `save true`, it is not the last
+  step, and the form moves step by step (a wizard, or tabs whose steps open in order).
+  """
+  @spec step_saves?(map()) :: boolean()
+  def step_saves?(%{static: %{steps: [_ | _] = steps} = static, current_step: current}) do
+    stepwise?(static) and List.last(steps).name != current and
+      Enum.any?(steps, &(&1.name == current and Map.get(&1, :save) == true))
+  end
+
+  def step_saves?(_state), do: false
+
+  @doc """
+  The name of the form's step that `step` names, an atom or its string, as a page may take it from
+  a URL; `nil` when the form has no such step.
+  """
+  @spec step_name(map(), atom() | String.t() | nil) :: atom() | nil
+  def step_name(%{static: %{steps: steps}}, step) when is_atom(step) and not is_nil(step),
+    do: Enum.find_value(steps, &(&1.name == step && step))
+
+  def step_name(%{static: %{steps: steps}}, step) when is_binary(step),
+    do: Enum.find_value(steps, &(Atom.to_string(&1.name) == step && &1.name))
+
+  def step_name(_state, _step), do: nil
+
+  @doc """
+  The form put on step `step` without checking a step on the way: the step `:active`. A wizard,
+  and a tabs form whose steps open in order, count the steps before it as done, `:completed` and
+  visited, so Back and their tabs reach them; on free tabs every other step is `:pending`.
+  """
+  @spec opened(map(), atom()) :: map()
+  def opened(%{static: %{steps: steps} = static} = state, step) do
+    names = Enum.map(steps, & &1.name)
+    done = if stepwise?(static), do: Enum.take_while(names, &(&1 != step)), else: []
+
+    State.update(state,
+      current_step: step,
+      step_states: Map.new(names, &{&1, opened_status(&1, step, done)}),
+      wizard_history: Enum.uniq([step | Enum.reverse(done)] ++ (state.wizard_history || []))
+    )
+  end
+
+  @doc """
+  The names of the steps the reader may open from a tab: every step on free tabs and on a saved
+  record (`mode: :update`); otherwise the steps already visited, with the step shown always among
+  them, so a step is never drawn shown and closed at once.
+  """
+  @spec open_steps(map()) :: [atom()]
+  def open_steps(%{static: %{layout_navigation: :free, steps: steps}}),
+    do: Enum.map(steps, & &1.name)
+
+  def open_steps(%{mode: :update, static: %{steps: steps}}), do: Enum.map(steps, & &1.name)
+
+  def open_steps(%{current_step: current, wizard_history: history}),
+    do: Enum.uniq(List.wrap(current) ++ (history || []))
+
+  defp opened_status(step, step, _done), do: :active
+  defp opened_status(name, _step, done), do: (name in done && :completed) || :pending
+
+  defp stepwise?(%{layout_mode: :wizard}), do: true
+  defp stepwise?(%{layout_mode: :tabs, layout_navigation: navigation}), do: navigation != :free
+  defp stepwise?(_static), do: false
 
   @doc false
   @spec refused(map(), atom()) :: map()
@@ -256,7 +325,8 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
             state =
               State.update(state,
                 current_step: prev_step,
-                step_states: step_states
+                step_states: step_states,
+                wizard_history: Enum.uniq([prev_step | state.wizard_history || []])
               )
 
             Phoenix.Component.assign(socket, :form_state, state)
@@ -266,15 +336,13 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
       @doc """
       Jump to a specific step (for tabs/free navigation mode).
 
-      Only allowed when layout_navigation is :free, or the target step
-      has been visited before.
+      Only allowed to a step `MishkaGervaz.Form.Web.Events.StepHandler.open_steps/1` names: any
+      step on free tabs or a saved record, otherwise a step visited before.
       """
       @spec goto_step(State.t(), atom(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
       def goto_step(state, target_step, socket) do
-        can_jump? =
-          state.static.layout_navigation == :free or
-            target_step in state.wizard_history
+        can_jump? = target_step in StepHandler.open_steps(state)
 
         if can_jump? and step_exists?(state, target_step) do
           step_states =

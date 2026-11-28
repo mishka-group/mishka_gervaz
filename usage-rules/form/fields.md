@@ -109,11 +109,12 @@ second lines are translated. The UI adapter draws them with `choice_cards/1` and
 | `load` | `fn query, state -> query` | — | scopes the option list |
 | `position` | int \| `:first` \| `:last` \| `{:before, f}` \| `{:after, f}` | — | |
 | `include_nil` | bool \| string \| `fn -> string` | `false` | adds a nil option; the string is its label |
-| `min` / `max` | int \| float \| `Decimal` \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` \| `fn state -> value` | — | `:number` / `:range`, compared as `Decimal`s, so `min Decimal.new("0.50")` bounds a price exactly and a save of `0.49` reads "Price must be 0.50 or more" (a `:number` input is a text input, so a typed `3-1` reaches the form and reads "must be a number"; a `:range` input carries `min`/`max`); on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now). `fn state ->` gets the form state as `visible` does, so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record; `nil` is no bound |
+| `min` / `max` | int \| float \| `Decimal` \| `Date` \| `DateTime` \| `NaiveDateTime` \| `fn -> value` \| `fn state -> value` | — | `:number` / `:range`, compared as `Decimal`s, so `min Decimal.new("0.50")` bounds a price exactly and a save of `0.49` reads "Price must be 0.50 or more" (a `:number` input is a text input, so a typed `3-1` reaches the form and reads "must be a number", and an input whose value is refused keeps what was typed, "1e5" rather than "100000", while its error stands; a `:range` input carries `min`/`max`); on `:date` / `:datetime` the picker greys out days outside them and the save refuses them (`min fn -> DateTime.utc_now() end` is always now). `fn state ->` gets the form state as `visible` does, so `fn %{mode: :create} -> DateTime.utc_now(); _state -> nil end` bounds only a new record; `nil` is no bound |
 | `min_chars` | int | — | before search fires |
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |
 | `add_label` / `remove_label` | string \| `fn -> string` | — | repeater buttons |
+| `row_label` | atom \| `fn row ->` \| `fn row, index ->` | — | what each `:key_list` row's head reads in place of its number: a key whose value names the row, or a function of the row (string keys, index from 0); `nil` or blank reads "New" |
 
 ## `ui do … end`
 
@@ -233,7 +234,9 @@ those keys row by row over `{:array, :map}`. A key is `[name:, type:, label:, pl
 options:, required:]`, where `type` is `:text` `:textarea` `:toggle` `:checkbox` `:number`
 `:select` `:json` or `:password`, and `required: true` marks its label. A `:password` key is drawn
 through the adapter's `password_input` with `autocomplete="off"` and never shows what it holds; left
-empty it is dropped, so an edit asks for it again.
+empty it is dropped, so an edit asks for it again. A `:select` key draws an empty choice that reads
+its `placeholder`, or "Choose" when it sets none or one that names one of its own options, so a row
+that holds nothing never looks as if a value were chosen.
 
 One form can draw different keys for different openings with `options fn state -> keys end`, read
 each time the field is drawn and its params are read. The page opens it with what decides the keys:
@@ -252,6 +255,27 @@ send_update(MishkaGervaz.Form.Web.Live,
 
 What is typed under a key the function does not name is not saved. See
 `MishkaGervaz.Form.Types.Field.KeyMap`.
+
+Each `:key_list` row's head reads its number. `row_label` names a row by what it holds instead, so
+a list of amounts reads "USD" and "EUR" rather than "1" and "2":
+
+```elixir
+field :amounts, :key_list do
+  options [
+    [name: :currency, type: :select, options: ~w(USD EUR GBP)],
+    [name: :amount, type: :number]
+  ]
+
+  row_label :currency
+end
+```
+
+A key's name reads that key's value; `fn row -> label end` or `fn row, index -> label end` builds
+the label, given the row with string keys whether it was posted or read off a saved record, and the
+index from 0. A row whose label is `nil` or blank, a row just added say, reads "New" until its key
+is chosen. The
+label also names the row's group for a screen reader. It is an option of a field of its own; a
+`:key_list` sub-field of a `:nested` row numbers its rows.
 
 ## Read-only fields
 

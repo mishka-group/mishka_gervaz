@@ -11,6 +11,8 @@ defmodule MishkaGervaz.Form.Types.KeyListTest do
   alias MishkaGervaz.Form.Types.Field.KeyList
   alias MishkaGervaz.Form.Types.Field.Nested
 
+  doctest KeyList, only: [row_label: 3]
+
   defp declared do
     [
       [name: :name, type: :text],

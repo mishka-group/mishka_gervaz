@@ -131,6 +131,166 @@ defmodule MishkaGervaz.Form.Templates.StandardKeyFieldRenderTest do
     end
   end
 
+  # A saved price list holds its amounts as `Decimal`s, and HTML has no way to draw the struct, so
+  # opening such a record for edit crashed the form rather than showing the amounts.
+  describe "a key list whose number key holds a Decimal" do
+    test "opens a saved record with the amount drawn as its digits" do
+      field = %{
+        FormInfo.field(ConstrainedMapForm, :links)
+        | options: [[name: :platform], [name: :amount, type: :number]]
+      }
+
+      html =
+        render_form(
+          field,
+          with_record(%{links: [%{platform: "usd", amount: Decimal.new("9.90")}]})
+        )
+
+      assert html =~ ~s|name="form[links][0][amount]"|
+      assert html =~ ~s|value="9.90"|
+    end
+  end
+
+  # A list of amounts, one per currency, reads "1", "2"… when its rows are numbered, so the reader
+  # has to open each row to find the one they want. `row_label` names each row by what it holds.
+  describe "a key list row's label" do
+    setup do
+      %{field: FormInfo.field(ConstrainedMapForm, :links)}
+    end
+
+    test "is the value of the key `row_label` names", %{field: field} do
+      assert field.row_label == :platform
+
+      html =
+        render_form(
+          field,
+          with_params(%{
+            "links" => %{"0" => %{"platform" => "github"}, "1" => %{"platform" => "gitlab"}}
+          })
+        )
+
+      assert row_labels(html) == ["github", "gitlab"]
+    end
+
+    test "reads the key off a saved record too", %{field: field} do
+      html = render_form(field, with_record(%{links: [%{platform: "github", url: "https://gh"}]}))
+
+      assert row_labels(html) == ["github"]
+    end
+
+    test "names the row's group for a screen reader", %{field: field} do
+      html = render_form(field, with_params(%{"links" => %{"0" => %{"platform" => "github"}}}))
+
+      assert [label_id] =
+               html
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query(~s|[role="group"][aria-labelledby$="_row_label"]|)
+               |> LazyHTML.attribute("aria-labelledby")
+
+      assert html =~ ~s|id="#{label_id}"|
+    end
+
+    test "reads New while the key is empty, as a row just added holds nothing", %{field: field} do
+      html =
+        render_form(
+          field,
+          with_params(%{
+            "links" => %{
+              "0" => %{"platform" => " ", "url" => "https://a"},
+              "1" => %{"platform" => "x"}
+            }
+          })
+        )
+
+      assert row_labels(html) == ["New", "x"]
+    end
+
+    test "may be fn row, index -> label end", %{field: field} do
+      field = %{field | row_label: fn row, index -> "#{row["platform"]} (#{index})" end}
+
+      html = render_form(field, with_record(%{links: [%{platform: "github"}]}))
+
+      assert row_labels(html) == ["github (0)"], "the row arrives with string keys"
+    end
+
+    test "may be fn row -> label end, and a nil from it reads New", %{field: field} do
+      field = %{field | row_label: fn row -> row["url"] end}
+
+      html =
+        render_form(
+          field,
+          with_params(%{
+            "links" => %{"0" => %{"url" => "https://a"}, "1" => %{"platform" => "b"}}
+          })
+        )
+
+      assert row_labels(html) == ["https://a", "New"]
+    end
+
+    test "a new row added to an empty list reads New, not a number", %{field: field} do
+      html = render_form(field, with_params(%{"links" => %{"0" => %{"platform" => ""}}}))
+
+      assert row_labels(html) == ["New"]
+    end
+
+    test "is the row's number on a list that sets none", %{field: field} do
+      field = %{field | row_label: nil}
+
+      html =
+        render_form(
+          field,
+          with_params(%{"links" => %{"0" => %{"platform" => "a"}, "1" => %{"platform" => "b"}}})
+        )
+
+      assert row_labels(html) == ["1", "2"]
+    end
+  end
+
+  describe "a key list's select key" do
+    setup do
+      field = FormInfo.field(ConstrainedMapForm, :links)
+
+      %{
+        field: field,
+        params: with_params(%{"links" => %{"0" => %{"platform" => ""}}})
+      }
+    end
+
+    defp empty_choice(field, key, params) do
+      field = %{field | options: [Keyword.merge([name: :platform, type: :select], key)]}
+
+      render_form(field, params)
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query(~s|select[name="form[links][0][platform]"] option[value=""]|)
+      |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+    end
+
+    test "offers an empty choice that reads Choose", %{field: field, params: params} do
+      assert empty_choice(field, [options: ~w(github gitlab)], params) == ["Choose"]
+    end
+
+    test "never reads its placeholder when the placeholder names one of its options",
+         %{field: field, params: params} do
+      key = [options: [{"GitHub", "github"}, {"GitLab", "gitlab"}], placeholder: "github"]
+      assert empty_choice(field, key, params) == ["Choose"]
+
+      key = [options: ~w(USD EUR), placeholder: "EUR"]
+      assert empty_choice(field, key, params) == ["Choose"]
+    end
+
+    test "reads a placeholder that names no option", %{field: field, params: params} do
+      key = [options: ~w(github gitlab), placeholder: "Pick a platform"]
+      assert empty_choice(field, key, params) == ["Pick a platform"]
+    end
+  end
+
+  defp row_labels(html) do
+    html
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query(~s|[id^="form_links_"][id$="_row_label"]|)
+    |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+  end
+
   defp token_boxes(html) do
     html
     |> LazyHTML.from_fragment()

@@ -4,7 +4,8 @@ defmodule MishkaGervaz.Form.Web.DirtySignalLiveTest do
   (`MishkaGervaz.Test.Web.PlanItem` on `MishkaGervaz.Test.Web.PlanPageLive`).
 
   The form tells its page `{:form_dirty, id, dirty?}` when it comes to hold changes and when it holds
-  none any more: after a save or a Discard. Its wrapper carries `data-dirty`. Its Cancel and Discard,
+  none any more: after a save or a Discard, or once what it holds is back to where it started. Its
+  wrapper carries `data-dirty`. Its Cancel and Discard,
   declared with `confirm`, carry the question in `data-confirm` while it holds changes, and only
   then.
   """
@@ -74,6 +75,120 @@ defmodule MishkaGervaz.Form.Web.DirtySignalLiveTest do
            )
 
     refute has_element?(view, ~s|#{@form} button[type="submit"][data-confirm]|)
+  end
+
+  describe "a form changed back to where it started" do
+    test "a create whose multi-select is ticked and unticked again holds no changes" do
+      view = open()
+
+      change(view, %{"channels" => ["", "store"]})
+      assert has_element?(view, "#dirty", "true")
+
+      change(view, %{"channels" => [""]})
+
+      assert has_element?(view, "#dirty", "false")
+      refute has_element?(view, ~s|#{@form} [data-confirm="#{@question}"]|)
+    end
+
+    test "an edit whose multi-select and title go back to the saved values holds no changes" do
+      plan = Ash.create!(PlanItem, %{title: "Kit", channels: [:email]})
+      view = open("/plans?id=#{plan.id}")
+
+      change(view, %{"title" => "Kit", "channels" => ["", "email", "store"]})
+      assert has_element?(view, "#dirty", "true")
+
+      change(view, %{"title" => "Kit", "channels" => ["", "email"]})
+      assert has_element?(view, "#dirty", "false")
+
+      change(view, %{"title" => "Kits"})
+      assert has_element?(view, "#dirty", "true")
+
+      change(view, %{"title" => "Kit"})
+      assert has_element?(view, "#dirty", "false")
+    end
+  end
+
+  describe "a form changed back, with the params a browser sends" do
+    alias MishkaGervaz.Test.Resources.{ChangedBackEntry, DefaultedEntry}
+
+    defp opened(resource, assigns \\ %{}) do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, flash: %{}},
+        transport_pid: self()
+      }
+
+      base = %{
+        id: "back",
+        resource: resource,
+        current_user: %{id: "m", site_id: nil, role: :admin}
+      }
+
+      {:ok, socket} = MishkaGervaz.Form.Web.Live.update(Map.merge(base, assigns), socket)
+      socket
+    end
+
+    defp sent(socket, field, values) do
+      params = %{"_target" => ["form", field], "form" => values}
+
+      {:noreply, socket} =
+        MishkaGervaz.Form.Web.Live.handle_event("validate", params, socket)
+
+      socket
+    end
+
+    defp dirty?(socket), do: socket.assigns.form_state.dirty?
+
+    @drawn %{"title" => "", "_unused_title" => "", "plan" => "basic", "tags" => [""]}
+
+    test "a box ticked and unticked again beside a select showing its first option holds no changes" do
+      socket = opened(ChangedBackEntry) |> sent("tags", %{@drawn | "tags" => ["", "sale"]})
+      assert dirty?(socket)
+
+      refute socket |> sent("tags", @drawn) |> dirty?()
+    end
+
+    test "a select changed and changed back to the option it showed holds no changes" do
+      socket = opened(ChangedBackEntry) |> sent("plan", %{@drawn | "plan" => "pro"})
+      assert dirty?(socket)
+
+      refute socket |> sent("plan", @drawn) |> dirty?()
+    end
+
+    test "an edit whose select starts on an atom and is chosen back holds no changes" do
+      entry = Ash.create!(ChangedBackEntry, %{title: "Kit", plan: :pro, tags: [:new]})
+      socket = opened(ChangedBackEntry, %{record_id: entry.id})
+
+      {:ok, form} =
+        MishkaGervaz.Form.Web.DataLoader.RecordLoader.Default.load_for_edit(
+          socket.assigns.form_state,
+          entry.id,
+          actor: socket.assigns.form_state.current_user
+        )
+
+      socket =
+        MishkaGervaz.Form.Web.DataLoader.Default.handle_async_result(
+          :load_record,
+          {:ok, {:ok, form}},
+          socket
+        )
+
+      edit = %{"title" => "Kit", "plan" => "pro", "tags" => ["", "new"]}
+
+      socket = sent(socket, "plan", %{edit | "plan" => "basic"})
+      assert dirty?(socket)
+
+      refute socket |> sent("plan", edit) |> dirty?()
+    end
+
+    test "a create with defaults holds a change typed into a defaulted field until it is typed back" do
+      socket = opened(DefaultedEntry, %{defaults: %{title: "Given"}})
+      drawn = %{"title" => "Given", "status" => "published"}
+
+      socket = sent(socket, "title", %{drawn | "title" => "Other"})
+      assert dirty?(socket)
+
+      refute socket |> sent("title", drawn) |> dirty?()
+    end
   end
 
   describe "the message" do

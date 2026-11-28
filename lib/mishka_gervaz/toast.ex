@@ -109,7 +109,8 @@ defmodule MishkaGervaz.Toast do
 
   @doc """
   Draws the page's toasts in a polite live region at the bottom of the screen, at its end side
-  (above the bottom edge on a phone), each with the UI adapter's `toast/1`.
+  (above the bottom edge on a phone), each with the UI adapter's `toast/1`. The container is the
+  one live region: a toast inside it is not a region of its own, so a screen reader reads it once.
 
   ## Attributes
     * `:toasts` - the toasts, the page's `@gervaz_toasts`

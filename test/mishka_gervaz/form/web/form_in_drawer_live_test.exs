@@ -5,7 +5,8 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
 
   The drawer's close button and backdrop ask "Discard your changes?" only while the form holds
   changes, and Escape closes it only while it holds none. Its close runs the page's `close_drawer`,
-  which takes it away. Its tabs and its submit row stay in view while its fields scroll.
+  which takes it away. Its tabs and its submit row stay in view while its fields scroll. A form that
+  starts over in it draws a new `<form>`, which takes the focus the drawer's open gave the old one.
   """
   use ExUnit.Case, async: false
 
@@ -26,6 +27,33 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
     {:ok, view, _html} = live(build_conn(), "/plans/drawer")
     render_async(view)
     view
+  end
+
+  # The elements the drawer's open runs `focus_first` on, found in the page as the browser finds them.
+  defp focused_on_open(view) do
+    doc = view |> render() |> LazyHTML.from_fragment()
+    [mounted] = doc |> LazyHTML.query("#plan-drawer") |> LazyHTML.attribute("phx-mounted")
+
+    [selector] =
+      for ["focus_first", %{"to" => to}] <- Jason.decode!(mounted), do: to
+
+    doc |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+  end
+
+  # The elements the form's `<form>` runs `focus_first` on as it is drawn.
+  defp focused_on_draw(view) do
+    doc = view |> render() |> LazyHTML.from_fragment()
+    [mounted] = doc |> LazyHTML.query("form#plan-form") |> LazyHTML.attribute("phx-mounted")
+
+    [selector] =
+      for ["focus_first", %{"to" => to}] <- Jason.decode!(mounted), do: to
+
+    doc |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+  end
+
+  defp push_reset(view) do
+    view |> with_target("#plan-form-wrapper") |> render_hook("reset", %{})
+    render(view)
   end
 
   test "the form stands in the drawer's panel" do
@@ -50,6 +78,38 @@ defmodule MishkaGervaz.Form.Web.FormInDrawerLiveTest do
       assert class =~ "in-data-[role=gervaz-panel-body]:sticky"
       assert class =~ "in-data-[role=gervaz-panel-body]:#{edge} "
     end
+  end
+
+  test "opening it focuses the first field of the current tab, not the tab buttons above it" do
+    view = open()
+
+    assert focused_on_open(view) == ["plan-step-basics"]
+    assert has_element?(view, "#plan-step-basics input")
+
+    view |> element(~s|#plan-tab-publishing|) |> render_click()
+
+    assert focused_on_open(view) == ["plan-step-publishing"]
+  end
+
+  test "a reset an opener pushes draws a new form that focuses what the drawer's open focused" do
+    view = open()
+    view |> form("#plan-form", %{"form" => %{"title" => "Half typed"}}) |> render_change()
+    view |> element(~s|#plan-tab-publishing|) |> render_click()
+
+    push_reset(view)
+
+    assert has_element?(view, "form#plan-form")
+    refute has_element?(view, ~s|#plan-form input[value="Half typed"]|)
+    assert focused_on_draw(view) == ["plan-step-basics"]
+    assert focused_on_draw(view) == focused_on_open(view)
+  end
+
+  test "outside a panel the drawn form focuses nothing" do
+    {:ok, view, _html} = live(build_conn(), "/plans")
+    render_async(view)
+
+    assert has_element?(view, "form#plan-form")
+    assert focused_on_draw(view) == []
   end
 
   test "asks before it closes only while the form holds changes" do
