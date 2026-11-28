@@ -131,6 +131,26 @@ defmodule MishkaGervaz.Form.Templates.StandardKeyFieldRenderTest do
     end
   end
 
+  # A saved price list holds its amounts as `Decimal`s, and HTML has no way to draw the struct, so
+  # opening such a record for edit crashed the form rather than showing the amounts.
+  describe "a key list whose number key holds a Decimal" do
+    test "opens a saved record with the amount drawn as its digits" do
+      field = %{
+        FormInfo.field(ConstrainedMapForm, :links)
+        | options: [[name: :platform], [name: :amount, type: :number]]
+      }
+
+      html =
+        render_form(
+          field,
+          with_record(%{links: [%{platform: "usd", amount: Decimal.new("9.90")}]})
+        )
+
+      assert html =~ ~s|name="form[links][0][amount]"|
+      assert html =~ ~s|value="9.90"|
+    end
+  end
+
   # A list of amounts, one per currency, reads "1", "2"… when its rows are numbered, so the reader
   # has to open each row to find the one they want. `row_label` names each row by what it holds.
   describe "a key list row's label" do

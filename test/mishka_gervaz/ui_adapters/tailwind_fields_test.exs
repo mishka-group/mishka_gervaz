@@ -706,4 +706,26 @@ defmodule MishkaGervaz.UIAdapters.TailwindFieldsTest do
       refute list(["https://a.test"], true) =~ ~s(data-role="gervaz-list-add")
     end
   end
+
+  # A key list row keeps what the record holds, so a price row opened for edit hands its amount to
+  # the input as a `Decimal`, which HTML cannot draw.
+  describe "a value that is a number" do
+    test "a Decimal is drawn as its plain digits in every input that takes a value" do
+      for fun <- [:text_input, :password_input, :number_input, :range_input, :textarea] do
+        html = render(fun, %{value: Decimal.new("12.50")})
+
+        assert html =~ "12.50", "#{fun} does not draw the Decimal"
+      end
+    end
+
+    test "a Decimal is never drawn in exponent form" do
+      assert render(:number_input, %{value: Decimal.new("1E+3")}) =~ ~s(value="1000")
+      assert render(:number_input, %{value: Decimal.new("0.0000001")}) =~ ~s(value="0.0000001")
+    end
+
+    test "an integer and a float are drawn as their text" do
+      assert render(:number_input, %{value: 7}) =~ ~s(value="7")
+      assert render(:number_input, %{value: 2.5}) =~ ~s(value="2.5")
+    end
+  end
 end

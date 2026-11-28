@@ -94,7 +94,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           type="text"
           id={@id}
           name={@name}
-          value={@value}
+          value={shown_value(@value)}
           placeholder={@placeholder}
           disabled={@disabled}
           readonly={@readonly}
@@ -146,7 +146,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="password"
         id={@id}
         name={@name}
-        value={@value}
+        value={shown_value(@value)}
         placeholder={@placeholder}
         disabled={@disabled}
         readonly={@readonly}
@@ -243,6 +243,13 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       true -> fallback
     end
   end
+
+  # The text an input draws for its value. A `Decimal`, such as an amount read back off a saved
+  # record, is its plain digits, never the exponent form, since HTML has no way to draw the struct;
+  # an integer or a float is its text, and any other value is drawn as it is.
+  defp shown_value(%Decimal{} = value), do: Decimal.to_string(value, :normal)
+  defp shown_value(value) when is_number(value), do: to_string(value)
+  defp shown_value(value), do: value
 
   # The `dir` an input gets: none when it has an icon at its start, so it keeps the page's direction
   # and its start padding stays on the icon's side. `[unicode-bidi:plaintext]` lets what is typed
@@ -1249,7 +1256,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           inputmode={@type == "text" && number_keyboard(@min)}
           id={@id}
           name={@name}
-          value={@value}
+          value={shown_value(@value)}
           placeholder={@placeholder}
           min={@type == "number" && @min}
           max={@type == "number" && @max}
@@ -3341,7 +3348,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         type="range"
         id={@id}
         name={@name}
-        value={@value}
+        value={shown_value(@value)}
         min={@min}
         max={@max}
         step={@step}
@@ -3352,7 +3359,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         :if={@show_value}
         class="text-sm font-medium text-[#3a382f] tabular-nums min-w-[3ch] text-end"
       >
-        {@value}
+        {shown_value(@value)}
       </span>
     </div>
     """
@@ -3391,7 +3398,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
       dir={@dir}
       class={[@class, (@disabled || @readonly) && disabled_class()]}
       phx-debounce={@phx_debounce}
-    >{@value}</textarea>
+    >{shown_value(@value)}</textarea>
     """
   end
 
@@ -3749,7 +3756,7 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         id={@id}
         dir={icon_dir(@icon, "auto")}
         name={@name}
-        value={@value}
+        value={shown_value(@value)}
         placeholder={@placeholder}
         disabled={@disabled}
         class={[@class, @icon && "ps-9 [unicode-bidi:plaintext]", @disabled && disabled_class()]}
