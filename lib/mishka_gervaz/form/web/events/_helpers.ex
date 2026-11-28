@@ -178,10 +178,11 @@ defmodule MishkaGervaz.Form.Web.Events.Helpers do
           map(),
           list(map())
         ) :: {Phoenix.LiveView.Socket.t(), map()}
-  def merge_uploaded_files(socket, params, _upload_config, []), do: {socket, params}
+  def merge_uploaded_files(socket, params, upload_config, []),
+    do: {socket, Map.delete(params, upload_param_key(upload_config))}
 
-  def merge_uploaded_files(socket, params, upload_config, uploaded_files) do
-    param_key = to_string(upload_config[:field] || upload_config.name)
-    {socket, Map.put(params, param_key, uploaded_files)}
-  end
+  def merge_uploaded_files(socket, params, upload_config, uploaded_files),
+    do: {socket, Map.put(params, upload_param_key(upload_config), uploaded_files)}
+
+  defp upload_param_key(upload_config), do: to_string(upload_config[:field] || upload_config.name)
 end

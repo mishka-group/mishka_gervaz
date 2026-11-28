@@ -36,6 +36,53 @@ defmodule MishkaGervaz.Form.Web.UploadSubmitLiveTest do
   defp save(view, values),
     do: view |> form(@form, %{"form" => values}) |> render_submit()
 
+  defp remove_file(view) do
+    view
+    |> element(~s|#crate-form button[phx-click="cancel_upload"]|)
+    |> render_click()
+
+    view
+  end
+
+  describe "a save that fails" do
+    test "keeps the dropped file, so the next save hands it over" do
+      view = open() |> drop("manifest.txt", "first contents")
+
+      save(view, %{"title" => ""})
+      assert Ash.read!(CrateItem) == []
+      assert has_element?(view, ~s|#crate-form button[phx-click="cancel_upload"]|)
+
+      save(view, %{"title" => "Spare parts"})
+
+      assert [crate] = Ash.read!(CrateItem)
+      assert crate.manifest_name == "manifest.txt"
+      assert crate.manifest_body == "first contents"
+      refute has_element?(view, ~s|#crate-form button[phx-click="cancel_upload"]|)
+    end
+
+    test "then a removed file is not handed over and the save goes through" do
+      view = open() |> drop("manifest.txt", "first contents")
+
+      save(view, %{"title" => ""})
+      view |> remove_file() |> save(%{"title" => "Spare parts"})
+
+      assert [crate] = Ash.read!(CrateItem)
+      assert crate.manifest_name == nil
+    end
+
+    test "then a file dropped in place of the first is the one handed over" do
+      view = open() |> drop("manifest.txt", "first contents")
+
+      save(view, %{"title" => ""})
+      view |> remove_file() |> drop("second.txt", "second contents")
+      save(view, %{"title" => "Spare parts"})
+
+      assert [crate] = Ash.read!(CrateItem)
+      assert crate.manifest_name == "second.txt"
+      assert crate.manifest_body == "second contents"
+    end
+  end
+
   describe "a client name that is not a plain file name" do
     for {name, safe} <- [
           {"../../etc/passwd", "passwd"},

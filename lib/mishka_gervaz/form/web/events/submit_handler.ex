@@ -376,7 +376,8 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
 
             case result do
               {:ok, record} ->
-                after_save(state, record, socket)
+                saved_socket = MishkaGervaz.Form.Web.Events.cancel_pending_uploads(state, socket)
+                after_save(state, record, saved_socket)
 
               {:error, updated_form} ->
                 field_names = MapSet.new(state.static.fields, & &1.name)
@@ -471,6 +472,10 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       `path` is a copy at a random name in the temp folder (removed once the save returns) and
       never carries the client's name; `client_name` is the client's name made safe as data by
       `MishkaGervaz.Form.Web.UploadHelpers.safe_client_name/1`.
+
+      The entries stay on the upload until the save goes through, when they are let go, so a save
+      that fails keeps the dropped files for the next one. An upload with no file left takes its
+      field out of the params, so a file removed after a failed save is not handed over again.
       """
       @spec consume_and_merge_uploads(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               {Phoenix.LiveView.Socket.t(), map()}
@@ -495,7 +500,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
                 dest = UploadHelpers.temp_upload_path()
                 File.cp!(path, dest)
 
-                {:ok,
+                {:postpone,
                  %{
                    path: dest,
                    client_name: UploadHelpers.safe_client_name(entry.client_name),

@@ -60,6 +60,11 @@
   `/` or `\` with control characters taken out. Before, a client name such as `../../etc/passwd`,
   `docs/readme.txt` or `<b>x</b>.txt` went into the temp path, so the copy failed and the save
   crashed the LiveView
+- A save that fails keeps the files dropped on the form, so the next save hands them over, and a
+  file removed after it is not handed over again. Before, the failed save used the files up: the
+  next save handed the action a file that was gone, and removing or dropping it again left the
+  form unable to save. A save that goes through no longer crashes the LiveView as the form starts
+  over while it lets its files go
 
 # Changelog for MishkaGervaz 0.0.13
 

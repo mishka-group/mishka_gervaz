@@ -83,6 +83,9 @@ The client's name never goes into a path: `client_name` is only data, the part a
 or `\` with control characters taken out (`"../../etc/passwd"` arrives as `"passwd"`). Build the
 stored path from your own id, not from `client_name`.
 
+A save that fails keeps the dropped files on the form, so the next save hands them over again; a
+file removed before it is not handed over. Once a save goes through, the form lets its files go.
+
 ## Rules the compiler enforces
 
 - `field` names a field declared in this form.

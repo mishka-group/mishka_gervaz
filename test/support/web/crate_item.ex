@@ -118,15 +118,22 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
     end
   end
 
-  @doc "Keeps the client name, path and contents of the manifest file the form hands over."
+  @doc """
+  Keeps the client name, path and contents of the manifest file the form hands over, and refuses a
+  manifest whose file is gone.
+  """
   def put_manifest(changeset, _context) do
-    case Ash.Changeset.get_argument(changeset, :manifest) do
-      [%{path: path, client_name: name} | _] ->
-        Ash.Changeset.change_attributes(changeset,
-          manifest_name: name,
-          manifest_path: path,
-          manifest_body: File.read!(path)
-        )
+    with [%{path: path, client_name: name} | _] <-
+           Ash.Changeset.get_argument(changeset, :manifest),
+         {:ok, body} <- File.read(path) do
+      Ash.Changeset.change_attributes(changeset,
+        manifest_name: name,
+        manifest_path: path,
+        manifest_body: body
+      )
+    else
+      {:error, _reason} ->
+        Ash.Changeset.add_error(changeset, field: :manifest, message: "could not be read")
 
       _none ->
         changeset

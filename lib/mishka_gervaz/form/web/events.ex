@@ -1111,7 +1111,9 @@ defmodule MishkaGervaz.Form.Web.Events do
 
       case acc.assigns[:uploads][ns_name] do
         %{entries: entries} when entries != [] ->
-          Enum.reduce(entries, acc, fn entry, inner_acc ->
+          entries
+          |> Enum.reject(& &1.cancelled?)
+          |> Enum.reduce(acc, fn entry, inner_acc ->
             Phoenix.LiveView.cancel_upload(inner_acc, ns_name, entry.ref)
           end)
 
