@@ -3,7 +3,9 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
   The resource of `MishkaGervaz.Test.Web.CratePageLive`'s form: a crate a person files.
 
     * `:title` — a required text field;
-    * `:manifest` — an upload that names no `accept`, so it takes a file of any type.
+    * `:manifest` — an upload that names no `accept`, so it takes a file of any type;
+    * `:weight` and `:weight_unit` — a virtual number and a virtual select of `g` or `kg`, both
+      derived on edit from the one stored `:weight_grams`, which the actions work out from them.
   """
 
   use Ash.Resource,
@@ -29,6 +31,17 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
       fields do
         field :title, :text, required: true
         field :manifest, :upload
+
+        field :weight, :number do
+          virtual true
+          derive_value &MishkaGervaz.Test.Web.CrateItem.weight/1
+        end
+
+        field :weight_unit, :select do
+          virtual true
+          options [{"g", "g"}, {"kg", "kg"}]
+          derive_value &MishkaGervaz.Test.Web.CrateItem.weight_unit/1
+        end
       end
 
       uploads do
@@ -40,11 +53,49 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
   end
 
   actions do
-    defaults [:read, :destroy, create: :*, update: :*]
+    defaults [:read, :destroy]
+
+    create :create do
+      primary? true
+      accept [:title, :weight_grams]
+      argument :weight, :integer
+      argument :weight_unit, :string
+      change &MishkaGervaz.Test.Web.CrateItem.put_weight_grams/2
+    end
+
+    update :update do
+      primary? true
+      accept [:title]
+      require_atomic? false
+      argument :weight, :integer
+      argument :weight_unit, :string
+      change &MishkaGervaz.Test.Web.CrateItem.put_weight_grams/2
+    end
   end
 
   attributes do
     uuid_primary_key :id
     attribute :title, :string, allow_nil?: false, public?: true
+    attribute :weight_grams, :integer, public?: true
+  end
+
+  @doc "The weight the form shows: in kg when the stored grams are whole kilograms."
+  def weight(%{weight_grams: nil}), do: nil
+  def weight(%{weight_grams: grams}) when rem(grams, 1000) == 0, do: div(grams, 1000)
+  def weight(%{weight_grams: grams}), do: grams
+
+  @doc "The unit `weight/1` is in."
+  def weight_unit(%{weight_grams: nil}), do: nil
+  def weight_unit(%{weight_grams: grams}) when rem(grams, 1000) == 0, do: "kg"
+  def weight_unit(_crate), do: "g"
+
+  @doc "Stores the weight and unit the form sends as grams."
+  def put_weight_grams(changeset, _context) do
+    case {Ash.Changeset.get_argument(changeset, :weight),
+          Ash.Changeset.get_argument(changeset, :weight_unit)} do
+      {nil, _unit} -> changeset
+      {weight, "kg"} -> Ash.Changeset.change_attribute(changeset, :weight_grams, weight * 1000)
+      {weight, _grams} -> Ash.Changeset.change_attribute(changeset, :weight_grams, weight)
+    end
   end
 end

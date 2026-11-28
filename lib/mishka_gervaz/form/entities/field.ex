@@ -219,7 +219,8 @@ defmodule MishkaGervaz.Form.Entities.Field do
                 ],
                 derive_value: [
                   type: {:fun, 1},
-                  doc: "Derive value from record on edit. `fn record -> value end`"
+                  doc:
+                    "Derives the field's value from the record on edit: `fn record -> value end`. A virtual field's input starts with it, so a number and a unit derived from one stored value draw what the record holds; a `:relation` field takes it as its selection when the record leaves the field `nil`."
                 ],
                 options: [
                   type: {:or, [{:list, :any}, {:fun, 0}, {:fun, 1}]},
