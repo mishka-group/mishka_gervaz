@@ -108,6 +108,89 @@ defmodule MishkaGervaz.Form.Web.DirtySignalLiveTest do
     end
   end
 
+  describe "a form changed back, with the params a browser sends" do
+    alias MishkaGervaz.Test.Resources.{ChangedBackEntry, DefaultedEntry}
+
+    defp opened(resource, assigns \\ %{}) do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, flash: %{}},
+        transport_pid: self()
+      }
+
+      base = %{
+        id: "back",
+        resource: resource,
+        current_user: %{id: "m", site_id: nil, role: :admin}
+      }
+
+      {:ok, socket} = MishkaGervaz.Form.Web.Live.update(Map.merge(base, assigns), socket)
+      socket
+    end
+
+    defp sent(socket, field, values) do
+      params = %{"_target" => ["form", field], "form" => values}
+
+      {:noreply, socket} =
+        MishkaGervaz.Form.Web.Live.handle_event("validate", params, socket)
+
+      socket
+    end
+
+    defp dirty?(socket), do: socket.assigns.form_state.dirty?
+
+    @drawn %{"title" => "", "_unused_title" => "", "plan" => "basic", "tags" => [""]}
+
+    test "a box ticked and unticked again beside a select showing its first option holds no changes" do
+      socket = opened(ChangedBackEntry) |> sent("tags", %{@drawn | "tags" => ["", "sale"]})
+      assert dirty?(socket)
+
+      refute socket |> sent("tags", @drawn) |> dirty?()
+    end
+
+    test "a select changed and changed back to the option it showed holds no changes" do
+      socket = opened(ChangedBackEntry) |> sent("plan", %{@drawn | "plan" => "pro"})
+      assert dirty?(socket)
+
+      refute socket |> sent("plan", @drawn) |> dirty?()
+    end
+
+    test "an edit whose select starts on an atom and is chosen back holds no changes" do
+      entry = Ash.create!(ChangedBackEntry, %{title: "Kit", plan: :pro, tags: [:new]})
+      socket = opened(ChangedBackEntry, %{record_id: entry.id})
+
+      {:ok, form} =
+        MishkaGervaz.Form.Web.DataLoader.RecordLoader.Default.load_for_edit(
+          socket.assigns.form_state,
+          entry.id,
+          actor: socket.assigns.form_state.current_user
+        )
+
+      socket =
+        MishkaGervaz.Form.Web.DataLoader.Default.handle_async_result(
+          :load_record,
+          {:ok, {:ok, form}},
+          socket
+        )
+
+      edit = %{"title" => "Kit", "plan" => "pro", "tags" => ["", "new"]}
+
+      socket = sent(socket, "plan", %{edit | "plan" => "basic"})
+      assert dirty?(socket)
+
+      refute socket |> sent("plan", edit) |> dirty?()
+    end
+
+    test "a create with defaults holds a change typed into a defaulted field until it is typed back" do
+      socket = opened(DefaultedEntry, %{defaults: %{title: "Given"}})
+      drawn = %{"title" => "Given", "status" => "published"}
+
+      socket = sent(socket, "title", %{drawn | "title" => "Other"})
+      assert dirty?(socket)
+
+      refute socket |> sent("title", drawn) |> dirty?()
+    end
+  end
+
   describe "the message" do
     defp mounted(assigns) do
       socket = %Phoenix.LiveView.Socket{

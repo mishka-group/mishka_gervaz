@@ -65,6 +65,8 @@ saved. Without a `discard` block there is no such button; a page can do the same
 A typed change holds changes only while what the form holds differs from what it held as the
 first change arrived: text typed and put back, or a box ticked and unticked again, holds none, so
 Discard goes away and Cancel and Discard ask nothing. A file waiting on an upload always counts.
+Values compare the way a browser sends them, so a required select that draws no empty choice holds
+the option it shows first, and a field given in `defaults` holds what is typed over it.
 
 ```elixir
 submit do

@@ -533,12 +533,19 @@ defmodule MishkaGervaz.Form.Web.State do
 
     @doc """
     What the form holds, in a shape two moments of the same form compare by: each field's value,
-    a relation's picks from `state.field_values` before the form's own, and the existing files of
-    each upload.
+    and the existing files of each upload.
+
+    A field's value is the form's own, but for the fields whose value gervaz keeps in
+    `state.field_values` (a relation's picks and a date or datetime calendar's pick, the ones
+    `MishkaGervaz.Helpers.merge_picked_values/2` puts into every change), which are read from
+    there. A value a page gave in `defaults` is read from the form, so a change typed over it
+    counts.
 
     A value is read the way a browser sends it, so the start and a change that puts it back compare
-    equal: `nil`, `""` and an empty list are all empty, a list drops its empty entries, and atoms,
-    numbers and decimals read as their text.
+    equal: `nil`, `""` and an empty list are all empty, a list drops its empty entries, atoms,
+    numbers and decimals read as their text, and a select that draws no empty choice holds the
+    option it shows first while the form holds nothing for it
+    (`MishkaGervaz.Form.Types.Field.Select.first_value/2`).
     """
     @spec held_values(map()) :: map()
     def held_values(%{form: %Phoenix.HTML.Form{} = form, static: %{fields: fields}} = state)
@@ -546,14 +553,17 @@ defmodule MishkaGervaz.Form.Web.State do
       picks = state.field_values || %{}
 
       values =
-        Map.new(fields, fn %{name: name} ->
+        Map.new(fields, fn %{name: name} = field ->
           value =
-            case picks do
-              %{^name => picked} -> picked
-              _not_picked -> Phoenix.HTML.Form.input_value(form, name)
+            case {field, picks} do
+              {%{type: type}, %{^name => picked}} when type in [:relation, :date, :datetime] ->
+                picked
+
+              _form_own ->
+                Phoenix.HTML.Form.input_value(form, name)
             end
 
-          {name, held(value)}
+          {name, shown(field, held(value), state)}
         end)
 
       %{values: values, existing_files: state.existing_files || %{}}
@@ -561,7 +571,12 @@ defmodule MishkaGervaz.Form.Web.State do
 
     def held_values(_state), do: nil
 
-    defp held(value) when value in [nil, "", []], do: nil
+    defp shown(%{type: :select} = field, nil, state),
+      do: held(MishkaGervaz.Form.Types.Field.Select.first_value(field, state))
+
+    defp shown(_field, value, _state), do: value
+
+    defp held(value) when value in [nil, "", [], "__nil__"], do: nil
 
     defp held(values) when is_list(values) do
       case values |> Enum.map(&held/1) |> Enum.reject(&is_nil/1) do

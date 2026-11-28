@@ -88,7 +88,9 @@
 - A form changed back to where it started holds no changes: a typed change compares what the form
   holds with what it held as the first change arrived, so text typed and put back, or a
   multi-select ticked and unticked again, no longer asks "Discard your changes?" and tells a page
-  with `notify_dirty` it holds none. A file waiting on an upload still counts as a change
+  with `notify_dirty` it holds none. A file waiting on an upload still counts as a change. Values
+  compare the way a browser sends them: a required select with no empty choice holds the option it
+  shows first, and a field a page gave in `defaults` holds what is typed over it
 
 # Changelog for MishkaGervaz 0.0.13
 
