@@ -91,7 +91,7 @@ file removed before it is not handed over. Once a save goes through, the form le
 Each upload draws its own errors under it: a file too large or of a type it does not take, and
 "You can add up to N files" (from `max_entries`) when more are dropped. A browser leaves an empty
 file out before it is uploaded, so the upload names each one it left out ("This file is empty:
-name"). Each file's remove button is labelled "Remove <name>" for a screen reader.
+name"), whether it was dropped or chosen with the file picker. Each file's remove button is labelled "Remove <name>" for a screen reader.
 
 ## Rules the compiler enforces
 

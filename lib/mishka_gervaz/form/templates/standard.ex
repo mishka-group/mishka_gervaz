@@ -2799,8 +2799,8 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
             this.el.addEventListener("drop", (event) => report(event.dataTransfer?.files), true);
 
-            this.el.addEventListener("change", (event) => {
-              if (event.target.type === "file") report(event.target.files);
+            this.el.addEventListener("input", (event) => {
+              if (event.isTrusted && event.target.type === "file") report(event.target.files);
             }, true);
           }
         }

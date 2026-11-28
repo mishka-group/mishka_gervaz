@@ -121,6 +121,22 @@ defmodule MishkaGervaz.Form.Web.UploadSubmitLiveTest do
       refute has_element?(view, "#crate-field-photos", "This file is empty")
     end
 
+    test "the hook reads a picked file from the picker's own input event, as a drop is read" do
+      [js] =
+        [Mix.Project.build_path(), "phoenix-colocated/mishka_gervaz/**/*.js"]
+        |> Path.join()
+        |> Path.wildcard()
+        |> Enum.map(&File.read!/1)
+        |> Enum.filter(&(&1 =~ "upload_empty"))
+
+      assert js =~ ~s|addEventListener("drop"|
+      assert js =~ ~s|addEventListener("input"|
+      assert js =~ "isTrusted"
+
+      refute js =~ ~s|addEventListener("change"|,
+             "LiveView empties a multiple file input on its input event, so a change listener reads no files"
+    end
+
     test "each file's remove button names the file" do
       view = open() |> drop_photos([{"a.txt", "a"}])
 

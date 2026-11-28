@@ -33,7 +33,7 @@ defmodule MishkaGervaz.Form.Web.State do
   `start_values` is `nil` until that first change and again once the form starts over.
 
   `empty_files` holds, per upload, the names of the empty files the browser left out of its last
-  drop, which the template names under the upload.
+  drop or file picker choice, which the template names under the upload.
 
   ## Performance split
 

@@ -71,7 +71,8 @@
   form unable to save. A save that goes through no longer crashes the LiveView as the form starts
   over while it lets its files go
 - An upload says how many files it takes ("You can add up to 5 files") when more are dropped, and
-  names each empty file the browser left out ("This file is empty: notes.txt"); its errors are
+  names each empty file the browser left out ("This file is empty: notes.txt"), dropped or chosen
+  with the file picker; its errors are
   translated. Each file's remove button carries an `aria-label` that names the file. Before, an
   empty file vanished with no word and the remove buttons had no name a screen reader could read
 - A wizard or tabs form that moves to another step, by Next, Back, a tab or a `step` the page
