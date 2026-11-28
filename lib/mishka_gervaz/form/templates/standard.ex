@@ -85,6 +85,13 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   it, the slot is still drawn, outside the `<form>`, so the page around the groups never goes away.
   A `:wizard` or `:tabs` form ignores the slot.
 
+  ## The page's markup in a step
+
+  A `:wizard` or `:tabs` form mounted with an `:in_step` slot draws each entry in the panel of the
+  step it names, after the step's groups and their notices, given the form as the `:body` slot is
+  (see "The page's markup in a step" in `MishkaGervaz.Form.Web.Live`). An entry naming a step the
+  form has not raises an `ArgumentError`. A `:standard` form ignores the slot.
+
   ## Two-axis composition
 
     * **Template** (this module) — *where* things go: groups, steps,
@@ -546,9 +553,11 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       for step <- assigns.static.steps,
           do: {step, State.Helpers.groups_for_step(groups, assigns.static.steps, step.name)}
 
-    assigns = assign(assigns, :steps, steps)
-
-    assigns = assign(assigns, :tabs?, assigns.static.layout_mode == :tabs)
+    assigns =
+      assigns
+      |> assign(:steps, steps)
+      |> assign(:tabs?, assigns.static.layout_mode == :tabs)
+      |> assign(:in_step, in_step_entries(assigns))
 
     ~H"""
     <div>
@@ -567,10 +576,27 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           {render_group(ga)}
           {render_notices_at(assigns, {:after_group, group.name})}
         <% end %>
+        <%= for entry <- Map.get(@in_step, step.name, []) do %>
+          {render_slot(entry, placed_form(assigns))}
+        <% end %>
       </div>
     </div>
     """
   end
+
+  # The page's `:in_step` entries by the step they name, in their order.
+  defp in_step_entries(%{in_step: [_ | _] = entries, static: %{steps: steps, id: id}}) do
+    names = Enum.map(steps, & &1.name)
+
+    Enum.group_by(entries, fn %{name: name} ->
+      (name in names && name) ||
+        raise ArgumentError,
+              "the form #{inspect(id)} has no step #{inspect(name)} for its :in_step slot, it has " <>
+                inspect(names)
+    end)
+  end
+
+  defp in_step_entries(_assigns), do: %{}
 
   @doc false
   def render_form_header(assigns) do

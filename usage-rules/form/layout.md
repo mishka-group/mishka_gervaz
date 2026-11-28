@@ -55,6 +55,26 @@ layout do
 end
 ```
 
+## The page's markup in a step
+
+A page adds its own markup to one step of a `:wizard` or `:tabs` form with an `:in_step` slot
+naming the step. Each entry is drawn in that step's panel after its groups, shows and hides with
+the step, and is given the form as the `:body` slot is:
+
+```heex
+<.live_component module={MishkaGervaz.Form.Web.Live} id="post-form" resource={MyApp.Post}
+  current_user={@current_user} record_id={@post_id}>
+  <:in_step :let={form} name={:content}>
+    <.attachments :if={form.state.mode == :update} post_id={@post_id} />
+  </:in_step>
+</.live_component>
+```
+
+- Several entries may name one step; they are drawn in their order.
+- It is inside the one `<form>`: no `<form>` of its own, no named input that is not the form's; its
+  events go to the page unless they name a `phx-target`.
+- A name the form has no step for raises. A `:standard` form ignores the slot (it has `:body`).
+
 ## What the page chooses
 
 The page that mounts a `:wizard` or `:tabs` form decides three things about its steps

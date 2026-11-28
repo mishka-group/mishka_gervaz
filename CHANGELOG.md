@@ -6,6 +6,9 @@
   made and as free tabs once it exists; `step`, the step the form opens on, from a URL say, with the
   steps before it counted as done; and `notify_step={true}`, which sends the page
   `{:form_step, id, step}` each time the form moves to another step
+- A page adds its own markup to one step of a wizard or tabs form with an `:in_step` slot naming the
+  step: it is drawn in the step's panel after its groups, inside the one form, and given the form
+  as the `:body` slot is
 
 ### Bug fixes:
 - A toast is read once by a screen reader: the toasts' container is the page's one polite live

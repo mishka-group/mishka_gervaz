@@ -94,6 +94,7 @@ this row instead ([table/pagination.md](table/pagination.md)).
 | `notify_dirty` | — | `true` sends the page `{:form_dirty, id, dirty?}` — see "Unsaved changes" |
 | `notify_failed` | — | `true` sends the page `{:form_failed, id, failure}` on each refused save — see "After a refused save" |
 | `:body` slot | — | the page places the groups in its own markup — see "Placing the groups in the page" |
+| `:in_step` slot | — | the page's own markup in one step of a wizard or tabs form — see [form/layout.md](form/layout.md) "The page's markup in a step" |
 | `navigation` | — | `:sequential` or `:free` in place of the resource's — see [form/layout.md](form/layout.md) "What the page chooses" |
 | `step` | — | the step a wizard or tabs form opens on — see [form/layout.md](form/layout.md) |
 | `notify_step` | — | `true` sends the page `{:form_step, id, step}` each time the form moves to another step |

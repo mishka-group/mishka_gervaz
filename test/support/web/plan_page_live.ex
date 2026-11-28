@@ -10,7 +10,8 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
   default "From the page", as a page refreshing its data while the form is open.
   Opened with `?navigation=sequential` or `?navigation=free` the form takes that navigation over
   its own, and with `?step=<name>` it opens on that tab. The tab the form tells the page it moved
-  to shows in `#step`.
+  to shows in `#step`. The page adds `#pricing-extra`, reading the form's mode, to the Pricing tab
+  through the form's `:in_step` slot.
 
   On `/plans/drawer` the form sits in the Tailwind adapter's drawer, `#plan-drawer`, open as the
   page opens. While the form holds changes the drawer asks "Discard your changes?" before it
@@ -123,7 +124,11 @@ defmodule MishkaGervaz.Test.Web.PlanPageLive do
       step={@step}
       notify_dirty={true}
       notify_step={true}
-    />
+    >
+      <:in_step :let={form} name={:pricing}>
+        <p id="pricing-extra">Priced as {form.state.mode}</p>
+      </:in_step>
+    </.live_component>
     """
   end
 end

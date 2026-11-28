@@ -51,6 +51,8 @@ defmodule MishkaGervaz.Form.Web.Live do
     open, or `nil` while the form is already on create. See "Opening a form again".
   - `body` - a slot that places the form's groups in the page's own markup. See "Placing the
     groups in the page".
+  - `in_step` - a slot, one entry per step, that adds the page's own markup to a step of a wizard
+    or tabs form. See "The page's markup in a step".
   - `notify_dirty` - `true` sends the page `{:form_dirty, id, dirty?}` each time the form comes to
     hold changes the reader has not saved, and each time it holds none any more: after a save, a
     Discard, a Cancel or a start over. See "Unsaved changes".
@@ -96,6 +98,30 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   The slot is used by a `:standard` form (`MishkaGervaz.Form.Templates.Standard`, "Placed groups").
   A group the page does not place is not drawn; a field in no group is drawn after the slot.
+
+  ## The page's markup in a step
+
+  A page that adds its own markup to a step of a `:wizard` or `:tabs` form, a list of the record's
+  files say, passes an `:in_step` slot naming the step. The entry is drawn in that step's panel
+  after the step's groups, so it shows with its step and hides with it, and is given the form as
+  the `:body` slot is:
+
+      <.live_component
+        module={MishkaGervaz.Form.Web.Live}
+        id="post-form"
+        resource={MyApp.Post}
+        current_user={@current_user}
+        record_id={@post_id}
+      >
+        <:in_step :let={form} name={:content}>
+          <.attachments :if={form.state.mode == :update} post_id={@post_id} />
+        </:in_step>
+      </.live_component>
+
+  Several entries may name one step; they are drawn in their order. It stays one form: the markup
+  is inside the one `<form>`, so it holds no `<form>` of its own and no input with a `name` that is
+  not the form's, and its events go to the page unless they name a `phx-target`. A step the form
+  has no step for raises an `ArgumentError`; a `:standard` form ignores the slot.
 
   ## Steps the page chooses
 
@@ -303,10 +329,16 @@ defmodule MishkaGervaz.Form.Web.Live do
     {:ok, new_socket}
   end
 
-  # The page's `:body` slot comes with every render of the page; a `send_update/2` without it keeps
-  # the one the form has.
-  defp keep_body(socket, %{body: body}), do: assign(socket, :body, body)
-  defp keep_body(socket, _assigns), do: assign_new(socket, :body, fn -> [] end)
+  # The page's `:body` and `:in_step` slots come with every render of the page; a `send_update/2`
+  # without them keeps the ones the form has.
+  defp keep_body(socket, assigns) do
+    Enum.reduce([:body, :in_step], socket, fn slot, acc ->
+      case assigns do
+        %{^slot => entries} -> assign(acc, slot, entries)
+        _no_slot -> assign_new(acc, slot, fn -> [] end)
+      end
+    end)
+  end
 
   attr :form, :map,
     required: true,
