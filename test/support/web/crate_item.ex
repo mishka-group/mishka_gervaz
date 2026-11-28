@@ -6,6 +6,7 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
     * `:manifest` — an upload that names no `accept`, so it takes a file of any type; the create
       action keeps the handed-over file's client name, path and contents in `:manifest_name`,
       `:manifest_path` and `:manifest_body`;
+    * `:photos` — an upload of up to two files, uploaded as they are dropped;
     * `:weight` and `:weight_unit` — a virtual number and a virtual select of `g` or `kg`, both
       derived on edit from the one stored `:weight_grams`, which the actions work out from them;
     * `:tag_ids` — a `:search_multi` relation over `MishkaGervaz.Test.Web.CrateTag`, whose `load`
@@ -37,6 +38,7 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
       fields do
         field :title, :text, required: true
         field :manifest, :upload
+        field :photos, :upload
 
         field :weight, :number do
           virtual true
@@ -60,6 +62,11 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
       uploads do
         upload :manifest do
           max_entries 1
+        end
+
+        upload :photos do
+          max_entries 2
+          auto_upload true
         end
       end
     end

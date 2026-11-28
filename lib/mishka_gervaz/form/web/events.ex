@@ -79,6 +79,8 @@ defmodule MishkaGervaz.Form.Web.Events do
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Resource.Info.Form, as: Info
 
+  @max_empty_files 20
+
   @type socket :: Phoenix.LiveView.Socket.t()
   @type state :: State.t()
 
@@ -394,6 +396,30 @@ defmodule MishkaGervaz.Form.Web.Events do
       key_atom = String.to_existing_atom(upload_key)
       socket = upload_handler(state).cancel_upload(state, key_atom, ref, socket)
       {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def do_handle("upload_empty", %{"upload" => upload_name, "names" => names}, state, socket)
+      when is_list(names) do
+    if MishkaGervaz.Helpers.known_name?(upload_name, state, :uploads) do
+      named =
+        names
+        |> Enum.filter(&is_binary/1)
+        |> Enum.take(@max_empty_files)
+        |> Enum.map(&UploadHelpers.safe_client_name/1)
+
+      empty_files = Map.put(state.empty_files, String.to_existing_atom(upload_name), named)
+
+      new_socket =
+        Phoenix.Component.assign(
+          socket,
+          :form_state,
+          State.update(state, empty_files: empty_files)
+        )
+
+      {:noreply, new_socket}
     else
       {:noreply, socket}
     end

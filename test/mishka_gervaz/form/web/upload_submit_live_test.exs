@@ -83,6 +83,51 @@ defmodule MishkaGervaz.Form.Web.UploadSubmitLiveTest do
     end
   end
 
+  describe "files dropped on an upload of up to two" do
+    defp drop_photos(view, files) do
+      photos =
+        file_input(
+          view,
+          @form,
+          :photos_crate,
+          Enum.map(files, fn {name, content} ->
+            %{name: name, content: content, type: "text/plain"}
+          end)
+        )
+
+      render_upload(photos, files |> hd() |> elem(0))
+      view
+    end
+
+    test "three files say how many the upload takes" do
+      view = open() |> drop_photos([{"a.txt", "a"}, {"b.txt", "b"}, {"c.txt", "c"}])
+
+      assert has_element?(view, "#crate-field-photos", "You can add up to 2 files")
+    end
+
+    test "an empty file the browser leaves out is named as empty" do
+      view = open()
+
+      view
+      |> element(~s|#crate-form [data-upload="photos"][phx-hook$=".EmptyFiles"]|)
+      |> render_hook("upload_empty", %{"upload" => "photos", "names" => ["../empty.txt"]})
+
+      assert has_element?(view, "#crate-field-photos", "This file is empty: empty.txt")
+
+      view
+      |> element(~s|#crate-form [data-upload="photos"][phx-hook$=".EmptyFiles"]|)
+      |> render_hook("upload_empty", %{"upload" => "photos", "names" => []})
+
+      refute has_element?(view, "#crate-field-photos", "This file is empty")
+    end
+
+    test "each file's remove button names the file" do
+      view = open() |> drop_photos([{"a.txt", "a"}])
+
+      assert has_element?(view, ~s|#crate-field-photos button[aria-label="Remove a.txt"]|)
+    end
+  end
+
   describe "a client name that is not a plain file name" do
     for {name, safe} <- [
           {"../../etc/passwd", "passwd"},

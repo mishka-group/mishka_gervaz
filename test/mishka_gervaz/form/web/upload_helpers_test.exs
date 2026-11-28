@@ -96,6 +96,21 @@ defmodule MishkaGervaz.Form.Web.UploadHelpersTest do
     end
   end
 
+  describe "upload_error_to_string/2" do
+    test "says how many files the upload takes" do
+      assert UploadHelpers.upload_error_to_string(:too_many_files, %{max_entries: 5}) ==
+               "You can add up to 5 files"
+
+      assert UploadHelpers.upload_error_to_string(:too_many_files, %{max_entries: 1}) ==
+               "You can add one file"
+    end
+
+    test "reads every other error as upload_error_to_string/1 does" do
+      assert UploadHelpers.upload_error_to_string(:too_large, %{max_entries: 5}) ==
+               "File is too large"
+    end
+  end
+
   describe "upload_error_to_string/1" do
     test "too_large" do
       assert UploadHelpers.upload_error_to_string(:too_large) == "File is too large"

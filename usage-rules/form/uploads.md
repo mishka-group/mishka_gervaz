@@ -86,6 +86,13 @@ stored path from your own id, not from `client_name`.
 A save that fails keeps the dropped files on the form, so the next save hands them over again; a
 file removed before it is not handed over. Once a save goes through, the form lets its files go.
 
+## What the reader is told
+
+Each upload draws its own errors under it: a file too large or of a type it does not take, and
+"You can add up to N files" (from `max_entries`) when more are dropped. A browser leaves an empty
+file out before it is uploaded, so the upload names each one it left out ("This file is empty:
+name"). Each file's remove button is labelled "Remove <name>" for a screen reader.
+
 ## Rules the compiler enforces
 
 - `field` names a field declared in this form.

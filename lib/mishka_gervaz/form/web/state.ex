@@ -195,6 +195,7 @@ defmodule MishkaGervaz.Form.Web.State do
     :dismissed_notices,
     :pickers,
     :opened,
+    empty_files: %{},
     failed_saves: 0
   ]
 
@@ -224,6 +225,7 @@ defmodule MishkaGervaz.Form.Web.State do
           dismissed_notices: MapSet.t(),
           pickers: %{atom() => Date.t()},
           opened: non_neg_integer(),
+          empty_files: %{atom() => list(String.t())},
           failed_saves: non_neg_integer()
         }
 
@@ -707,6 +709,7 @@ defmodule MishkaGervaz.Form.Web.State do
           dismissed_notices: MapSet.new(),
           pickers: %{},
           opened: 0,
+          empty_files: %{},
           failed_saves: 0
         }
       end

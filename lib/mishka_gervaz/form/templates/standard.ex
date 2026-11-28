@@ -2746,9 +2746,35 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       assigns
       |> assign(:has_new_entries, has_new_entries)
       |> assign(:show_existing, show_existing)
+      |> assign(:empty_files, Map.get(assigns.state.empty_files, assigns.upload_config.name, []))
 
     ~H"""
-    <div class="space-y-3">
+    <div
+      id={"#{@ns_name}-upload"}
+      class="space-y-3"
+      phx-hook=".EmptyFiles"
+      phx-target={@myself}
+      data-upload={@upload_config.name}
+    >
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".EmptyFiles">
+        export default {
+          mounted() {
+            const report = (files) => {
+              const names = Array.from(files || [])
+                .filter((file) => file.size === 0)
+                .map((file) => file.name);
+
+              this.pushEventTo(this.el, "upload_empty", {upload: this.el.dataset.upload, names});
+            };
+
+            this.el.addEventListener("drop", (event) => report(event.dataTransfer?.files), true);
+
+            this.el.addEventListener("change", (event) => {
+              if (event.target.type === "file") report(event.target.files);
+            }, true);
+          }
+        }
+      </script>
       <%= if @show_existing do %>
         {render_existing_files(assigns)}
       <% end %>
@@ -2788,6 +2814,14 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <%= if @upload do %>
         {render_upload_errors(assigns)}
       <% end %>
+
+      <div
+        :for={name <- @empty_files}
+        class="flex items-center gap-1 text-[11.5px] font-medium text-[#c0392b]"
+      >
+        <span class="hero-exclamation-circle w-4 h-4 shrink-0"></span>
+        {dgettext("mishka_gervaz", "This file is empty: %{name}", name: name)}
+      </div>
     </div>
     """
   end
@@ -2844,6 +2878,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             phx-target={@myself}
             class="grid size-[30px] flex-none place-items-center rounded-[9px] border border-[#ecebe6] bg-white text-[#8a877f] transition-colors hover:border-[#f3ddd9] hover:bg-[#fdf4f3] hover:text-[#c0392b]"
             title={dgettext("mishka_gervaz", "Cancel upload")}
+            aria-label={dgettext("mishka_gervaz", "Remove %{name}", name: entry.client_name)}
           >
             <span class="hero-x-mark size-[15px]"></span>
           </button>
@@ -2853,7 +2888,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
           :for={err <- upload_errors(@upload, entry)}
           class="text-[11.5px] font-medium text-[#c0392b]"
         >
-          {UploadHelpers.upload_error_to_string(err)}
+          {UploadHelpers.upload_error_to_string(err, @upload_config)}
         </div>
       <% end %>
     </div>
@@ -2867,7 +2902,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       class="flex items-center gap-1 text-[11.5px] font-medium text-[#c0392b]"
     >
       <span class="hero-exclamation-circle w-4 h-4 shrink-0"></span>
-      {UploadHelpers.upload_error_to_string(err)}
+      {UploadHelpers.upload_error_to_string(err, @upload_config)}
     </div>
     """
   end

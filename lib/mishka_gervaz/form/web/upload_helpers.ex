@@ -15,6 +15,8 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   `upload_error_to_string/1`), and `MishkaGervaz.Form.Entities.Upload`.
   """
 
+  use MishkaGervaz.Messages
+
   @doc """
   Parse an accept string into a list of MIME types / extensions.
 
@@ -161,11 +163,35 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   Convert an upload error atom to a human-readable string.
   """
   @spec upload_error_to_string(atom()) :: String.t()
-  def upload_error_to_string(:too_large), do: "File is too large"
-  def upload_error_to_string(:too_many_files), do: "Too many files"
-  def upload_error_to_string(:not_accepted), do: "File type not accepted"
-  def upload_error_to_string(:external_client_failure), do: "Upload failed"
-  def upload_error_to_string(error), do: "Upload error: #{inspect(error)}"
+  def upload_error_to_string(:too_large), do: dgettext("mishka_gervaz", "File is too large")
+  def upload_error_to_string(:too_many_files), do: dgettext("mishka_gervaz", "Too many files")
+
+  def upload_error_to_string(:not_accepted),
+    do: dgettext("mishka_gervaz", "File type not accepted")
+
+  def upload_error_to_string(:external_client_failure),
+    do: dgettext("mishka_gervaz", "Upload failed")
+
+  def upload_error_to_string(error),
+    do: dgettext("mishka_gervaz", "Upload error: %{error}", error: inspect(error))
+
+  @doc """
+  Convert an upload error atom to a human-readable string that names the upload's own limit.
+
+  `:too_many_files` says how many files the upload takes, from its `max_entries`; every other
+  error reads as `upload_error_to_string/1` puts it.
+  """
+  @spec upload_error_to_string(atom(), map()) :: String.t()
+  def upload_error_to_string(:too_many_files, upload_config) when is_map(upload_config) do
+    dngettext(
+      "mishka_gervaz",
+      "You can add one file",
+      "You can add up to %{count} files",
+      upload_config[:max_entries] || 1
+    )
+  end
+
+  def upload_error_to_string(error, _upload_config), do: upload_error_to_string(error)
 
   defp maybe_put_opt(opts, _key, nil), do: opts
   defp maybe_put_opt(opts, key, value), do: Keyword.put(opts, key, value)

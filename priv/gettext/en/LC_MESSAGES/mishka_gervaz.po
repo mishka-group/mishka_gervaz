@@ -65,7 +65,7 @@ msgstr "Clear filter"
 msgid "Search..."
 msgstr "Search..."
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1674
+#: lib/mishka_gervaz/form/templates/standard.ex:1720
 #: lib/mishka_gervaz/table/templates/shared.ex:744
 #, elixir-autogen
 msgid "Select %{field} first"
@@ -143,13 +143,13 @@ msgstr "Restore"
 msgid "Are you sure?"
 msgstr "Are you sure?"
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4719
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4739
 #, elixir-autogen
 msgid "Confirm"
 msgstr "Confirm"
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1230
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4720
+#: lib/mishka_gervaz/form/templates/standard.ex:1276
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4740
 #, elixir-autogen
 msgid "Cancel"
 msgstr "Cancel"
@@ -258,10 +258,10 @@ msgstr ""
 msgid "%{unarchived}, %{skipped} — a record with the same name already exists."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1033
-#: lib/mishka_gervaz/form/templates/standard.ex:2023
-#: lib/mishka_gervaz/form/templates/standard.ex:2157
-#: lib/mishka_gervaz/form/templates/standard.ex:2206
+#: lib/mishka_gervaz/form/templates/standard.ex:1079
+#: lib/mishka_gervaz/form/templates/standard.ex:2069
+#: lib/mishka_gervaz/form/templates/standard.ex:2203
+#: lib/mishka_gervaz/form/templates/standard.ex:2252
 #: lib/mishka_gervaz/ui_adapters/tailwind.ex:3462
 #, elixir-autogen, elixir-format
 msgid "+ Add"
@@ -300,9 +300,9 @@ msgid "Clear filters"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/table.ex:907
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4563
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4626
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:5017
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4577
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4640
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:5038
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -342,7 +342,7 @@ msgstr ""
 msgid "From"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1657
+#: lib/mishka_gervaz/form/templates/standard.ex:1703
 #, elixir-autogen, elixir-format
 msgid "Loading options..."
 msgstr ""
@@ -357,10 +357,10 @@ msgstr ""
 msgid "Record Details"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1011
-#: lib/mishka_gervaz/form/templates/standard.ex:2026
-#: lib/mishka_gervaz/form/templates/standard.ex:2161
-#: lib/mishka_gervaz/form/templates/standard.ex:2210
+#: lib/mishka_gervaz/form/templates/standard.ex:1057
+#: lib/mishka_gervaz/form/templates/standard.ex:2072
+#: lib/mishka_gervaz/form/templates/standard.ex:2207
+#: lib/mishka_gervaz/form/templates/standard.ex:2256
 #: lib/mishka_gervaz/ui_adapters/tailwind.ex:3463
 #, elixir-autogen, elixir-format
 msgid "Remove"
@@ -371,7 +371,7 @@ msgstr ""
 msgid "Restore this record?"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1183
+#: lib/mishka_gervaz/form/templates/standard.ex:1229
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr ""
@@ -401,8 +401,8 @@ msgstr ""
 msgid "Some operations failed; check logs."
 msgstr ""
 
-#: lib/mishka_gervaz/form/web/events.ex:897
-#: lib/mishka_gervaz/form/web/events/submit_handler.ex:102
+#: lib/mishka_gervaz/form/web/events.ex:914
+#: lib/mishka_gervaz/form/web/events/submit_handler.ex:103
 #, elixir-autogen, elixir-format
 msgid "The changes were not saved."
 msgstr ""
@@ -412,7 +412,7 @@ msgstr ""
 msgid "To"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1180
+#: lib/mishka_gervaz/form/templates/standard.ex:1226
 #, elixir-autogen, elixir-format
 msgid "Uploading…"
 msgstr ""
@@ -444,7 +444,7 @@ msgstr ""
 msgid "You are not allowed to do this."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:278
+#: lib/mishka_gervaz/form/templates/standard.ex:304
 #, elixir-autogen, elixir-format
 msgid "Loading…"
 msgstr ""
@@ -480,7 +480,7 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:2800
+#: lib/mishka_gervaz/form/templates/standard.ex:2880
 #, elixir-autogen, elixir-format
 msgid "Cancel upload"
 msgstr ""
@@ -500,7 +500,7 @@ msgstr ""
 msgid "Copied"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4896
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4916
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr ""
@@ -510,7 +510,7 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:2837
+#: lib/mishka_gervaz/form/templates/standard.ex:2918
 #: lib/mishka_gervaz/ui_adapters/tailwind.ex:4093
 #, elixir-autogen, elixir-format
 msgid "File"
@@ -555,7 +555,7 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1353
+#: lib/mishka_gervaz/form/templates/standard.ex:1399
 #, elixir-autogen, elixir-format
 msgid "Other ways to create this"
 msgstr ""
@@ -591,12 +591,12 @@ msgstr ""
 msgid "Search %{label}..."
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:154
+#: lib/mishka_gervaz/form/templates/standard.ex:169
 #, elixir-autogen, elixir-format
 msgid "Standard Form"
 msgstr ""
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1225
+#: lib/mishka_gervaz/form/templates/standard.ex:1271
 #, elixir-autogen, elixir-format
 msgid "Submit"
 msgstr ""
@@ -835,7 +835,7 @@ msgstr ""
 msgid "We"
 msgstr ""
 
-#: lib/mishka_gervaz/form/web/events/step_handler.ex:181
+#: lib/mishka_gervaz/form/web/events/step_handler.ex:233
 #, elixir-autogen, elixir-format
 msgid "%{message} Check it on step %{number}, %{step}."
 msgstr ""
@@ -876,19 +876,19 @@ msgstr ""
 msgid "All %{count} selected"
 msgstr "All %{count} selected"
 
-#: lib/mishka_gervaz/form/templates/standard.ex:1250
+#: lib/mishka_gervaz/form/templates/standard.ex:1296
 #, elixir-autogen, elixir-format
 msgid "Discard"
 msgstr ""
 
 #: lib/mishka_gervaz/table/templates/table.ex:695
 #: lib/mishka_gervaz/table/templates/table.ex:699
-#: lib/mishka_gervaz/toast.ex:162
+#: lib/mishka_gervaz/toast.ex:163
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
 
-#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4821
+#: lib/mishka_gervaz/ui_adapters/tailwind.ex:4841
 #, elixir-autogen, elixir-format
 msgid "Type %{answer} to confirm"
 msgstr ""
@@ -898,7 +898,49 @@ msgstr ""
 msgid "Type “%{answer}” exactly as it is written."
 msgstr ""
 
-#: lib/mishka_gervaz/toast.ex:158
+#: lib/mishka_gervaz/toast.ex:159
 #, elixir-autogen, elixir-format
 msgid "Undo"
 msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:166
+#, elixir-autogen, elixir-format
+msgid "File is too large"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:170
+#, elixir-autogen, elixir-format
+msgid "File type not accepted"
+msgstr ""
+
+#: lib/mishka_gervaz/form/templates/standard.ex:2881
+#, elixir-autogen, elixir-format
+msgid "Remove %{name}"
+msgstr ""
+
+#: lib/mishka_gervaz/form/templates/standard.ex:2823
+#, elixir-autogen, elixir-format
+msgid "This file is empty: %{name}"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:167
+#, elixir-autogen, elixir-format
+msgid "Too many files"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:176
+#, elixir-autogen, elixir-format
+msgid "Upload error: %{error}"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:173
+#, elixir-autogen, elixir-format
+msgid "Upload failed"
+msgstr ""
+
+#: lib/mishka_gervaz/form/web/upload_helpers.ex:186
+#, elixir-autogen, elixir-format
+msgid "You can add one file"
+msgid_plural "You can add up to %{count} files"
+msgstr[0] ""
+msgstr[1] ""

@@ -609,6 +609,7 @@ defmodule MishkaGervaz.Form.Web.Live do
         field_values: %{},
         relation_options: static_relation_options(state),
         upload_state: %{},
+        empty_files: %{},
         pickers: %{},
         opened: (state.opened || 0) + 1
       ] ++ first_step(state)
