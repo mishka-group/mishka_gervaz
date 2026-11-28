@@ -50,7 +50,13 @@ defmodule MishkaGervaz.Form.Web.Events.UploadHandler do
 
         uploaded_files =
           Phoenix.LiveView.consume_uploaded_entries(socket, ns_name, fn %{path: path}, entry ->
-            {:ok, %{path: path, client_name: entry.client_name, client_type: entry.client_type}}
+            {:ok,
+             %{
+               path: path,
+               client_name:
+                 MishkaGervaz.Form.Web.UploadHelpers.safe_client_name(entry.client_name),
+               client_type: entry.client_type
+             }}
           end)
 
         upload_state = Map.put(state.upload_state, upload_key, uploaded_files)

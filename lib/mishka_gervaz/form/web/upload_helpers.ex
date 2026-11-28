@@ -108,6 +108,56 @@ defmodule MishkaGervaz.Form.Web.UploadHelpers do
   def find_upload_for_field(_, _), do: nil
 
   @doc """
+  A new path in the system's temp folder for a copy of an uploaded file.
+
+  The name is random and never takes anything from the client, so a client name such as
+  `"../../etc/passwd"` can neither leave the temp folder nor make the copy fail.
+  """
+  @spec temp_upload_path() :: String.t()
+  def temp_upload_path do
+    token = Base.url_encode64(:crypto.strong_rand_bytes(18), padding: false)
+    Path.join(System.tmp_dir!(), "gervaz_upload_#{token}")
+  end
+
+  @doc """
+  The client's file name made safe to hand to an action as plain data.
+
+  Keeps only the part after the last `/` or `\\`, takes out control characters and the
+  characters that turn text direction around, and falls back to `"file"` when nothing is left.
+
+  ## Examples
+
+      iex> safe_client_name("../../etc/passwd")
+      "passwd"
+
+      iex> safe_client_name("docs\\\\readme.txt")
+      "readme.txt"
+
+      iex> safe_client_name("line\\nbreak.txt")
+      "linebreak.txt"
+
+      iex> safe_client_name("..")
+      "file"
+  """
+  @spec safe_client_name(String.t() | nil) :: String.t()
+  def safe_client_name(name) when is_binary(name) do
+    last_part =
+      name
+      |> String.replace_invalid()
+      |> String.split(["/", "\\"])
+      |> List.last()
+      |> String.replace(~r/[\p{Cc}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u, "")
+      |> String.trim()
+
+    named_file(last_part)
+  end
+
+  def safe_client_name(_name), do: "file"
+
+  defp named_file(name) when name in ["", ".", ".."], do: "file"
+  defp named_file(name), do: name
+
+  @doc """
   Convert an upload error atom to a human-readable string.
   """
   @spec upload_error_to_string(atom()) :: String.t()

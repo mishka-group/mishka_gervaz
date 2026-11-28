@@ -3,6 +3,17 @@ defmodule MishkaGervaz.Form.Web.UploadHelpersTest do
 
   alias MishkaGervaz.Form.Web.UploadHelpers
 
+  doctest UploadHelpers, only: [safe_client_name: 1], import: true
+
+  describe "temp_upload_path/0" do
+    test "gives a new path in the temp folder each time" do
+      first = UploadHelpers.temp_upload_path()
+
+      assert Path.dirname(first) == Path.expand(System.tmp_dir!())
+      refute first == UploadHelpers.temp_upload_path()
+    end
+  end
+
   describe "parse_accept/1" do
     test "returns :any for nil" do
       assert UploadHelpers.parse_accept(nil) == :any

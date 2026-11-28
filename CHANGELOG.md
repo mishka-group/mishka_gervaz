@@ -55,6 +55,11 @@
 - Cancel on an edit with no `on_cancel` hook puts back the record's saved values and stays on the
   record, on the step or tab it is on. Before, it threw the record away and returned the form to an
   empty create form
+- An uploaded file is copied to a random name in the temp folder, never to one built from the
+  client's file name, and the action gets the client's name only as data, the part after its last
+  `/` or `\` with control characters taken out. Before, a client name such as `../../etc/passwd`,
+  `docs/readme.txt` or `<b>x</b>.txt` went into the temp path, so the copy failed and the save
+  crashed the LiveView
 
 # Changelog for MishkaGervaz 0.0.13
 

@@ -3,7 +3,9 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
   The resource of `MishkaGervaz.Test.Web.CratePageLive`'s form: a crate a person files.
 
     * `:title` — a required text field;
-    * `:manifest` — an upload that names no `accept`, so it takes a file of any type;
+    * `:manifest` — an upload that names no `accept`, so it takes a file of any type; the create
+      action keeps the handed-over file's client name, path and contents in `:manifest_name`,
+      `:manifest_path` and `:manifest_body`;
     * `:weight` and `:weight_unit` — a virtual number and a virtual select of `g` or `kg`, both
       derived on edit from the one stored `:weight_grams`, which the actions work out from them;
     * `:tag_ids` — a `:search_multi` relation over `MishkaGervaz.Test.Web.CrateTag`, whose `load`
@@ -71,7 +73,9 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
       accept [:title, :weight_grams, :tag_ids]
       argument :weight, :integer
       argument :weight_unit, :string
+      argument :manifest, {:array, :map}
       change &MishkaGervaz.Test.Web.CrateItem.put_weight_grams/2
+      change &MishkaGervaz.Test.Web.CrateItem.put_manifest/2
     end
 
     update :update do
@@ -89,6 +93,9 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
     attribute :title, :string, allow_nil?: false, public?: true
     attribute :weight_grams, :integer, public?: true
     attribute :tag_ids, {:array, :uuid}, default: [], public?: true
+    attribute :manifest_name, :string, public?: true
+    attribute :manifest_path, :string, public?: true
+    attribute :manifest_body, :string, public?: true
   end
 
   @doc "The weight the form shows: in kg when the stored grams are whole kilograms."
@@ -108,6 +115,21 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
       {nil, _unit} -> changeset
       {weight, "kg"} -> Ash.Changeset.change_attribute(changeset, :weight_grams, weight * 1000)
       {weight, _grams} -> Ash.Changeset.change_attribute(changeset, :weight_grams, weight)
+    end
+  end
+
+  @doc "Keeps the client name, path and contents of the manifest file the form hands over."
+  def put_manifest(changeset, _context) do
+    case Ash.Changeset.get_argument(changeset, :manifest) do
+      [%{path: path, client_name: name} | _] ->
+        Ash.Changeset.change_attributes(changeset,
+          manifest_name: name,
+          manifest_path: path,
+          manifest_body: File.read!(path)
+        )
+
+      _none ->
+        changeset
     end
   end
 end

@@ -464,6 +464,14 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         |> push_js_hook(state, :after_save, record_id)
       end
 
+      @doc """
+      Consume the form's uploads and put them in the params under each upload's field.
+
+      Each file reaches the action as `%{path:, client_name:, client_type:, client_size:}`. The
+      `path` is a copy at a random name in the temp folder (removed once the save returns) and
+      never carries the client's name; `client_name` is the client's name made safe as data by
+      `MishkaGervaz.Form.Web.UploadHelpers.safe_client_name/1`.
+      """
       @spec consume_and_merge_uploads(State.t(), map(), Phoenix.LiveView.Socket.t()) ::
               {Phoenix.LiveView.Socket.t(), map()}
       def consume_and_merge_uploads(%{static: %{uploads: uploads}} = state, form_params, socket)
@@ -484,18 +492,13 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
             uploaded_files =
               Phoenix.LiveView.consume_uploaded_entries(socket, ns_name, fn %{path: path},
                                                                             entry ->
-                dest =
-                  Path.join(
-                    System.tmp_dir!(),
-                    "gervaz_#{System.unique_integer([:positive])}_#{entry.client_name}"
-                  )
-
+                dest = UploadHelpers.temp_upload_path()
                 File.cp!(path, dest)
 
                 {:ok,
                  %{
                    path: dest,
-                   client_name: entry.client_name,
+                   client_name: UploadHelpers.safe_client_name(entry.client_name),
                    client_type: entry.client_type,
                    client_size: entry.client_size
                  }}

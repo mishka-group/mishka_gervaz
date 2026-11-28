@@ -74,6 +74,15 @@ At `allow_upload` time the name becomes `<upload_name>` scoped by the component 
 forms on one page never collide**. Do not hand-write the namespaced name; use the plain one in the
 DSL and let the library scope it.
 
+## What the action gets
+
+On save, each file reaches the action under its field as
+`%{path:, client_name:, client_type:, client_size:}`. `path` is a copy at a random name in the
+temp folder, removed once the save returns, so the action copies or reads it before it returns.
+The client's name never goes into a path: `client_name` is only data, the part after the last `/`
+or `\` with control characters taken out (`"../../etc/passwd"` arrives as `"passwd"`). Build the
+stored path from your own id, not from `client_name`.
+
 ## Rules the compiler enforces
 
 - `field` names a field declared in this form.
