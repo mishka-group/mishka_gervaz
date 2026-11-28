@@ -5,13 +5,17 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
     * `:title` — a required text field;
     * `:manifest` — an upload that names no `accept`, so it takes a file of any type;
     * `:weight` and `:weight_unit` — a virtual number and a virtual select of `g` or `kg`, both
-      derived on edit from the one stored `:weight_grams`, which the actions work out from them.
+      derived on edit from the one stored `:weight_grams`, which the actions work out from them;
+    * `:tag_ids` — a `:search_multi` relation over `MishkaGervaz.Test.Web.CrateTag`, whose `load`
+      offers only active tags.
   """
 
   use Ash.Resource,
     domain: MishkaGervaz.Test.Domain,
     extensions: [MishkaGervaz.Resource],
     data_layer: Ash.DataLayer.Ets
+
+  require Ash.Query
 
   mishka_gervaz do
     form do
@@ -42,6 +46,13 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
           options [{"g", "g"}, {"kg", "kg"}]
           derive_value &MishkaGervaz.Test.Web.CrateItem.weight_unit/1
         end
+
+        field :tag_ids, :relation do
+          resource MishkaGervaz.Test.Web.CrateTag
+          display_field :name
+          mode :search_multi
+          load fn query, _state -> Ash.Query.filter(query, active == true) end
+        end
       end
 
       uploads do
@@ -57,7 +68,7 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
 
     create :create do
       primary? true
-      accept [:title, :weight_grams]
+      accept [:title, :weight_grams, :tag_ids]
       argument :weight, :integer
       argument :weight_unit, :string
       change &MishkaGervaz.Test.Web.CrateItem.put_weight_grams/2
@@ -65,7 +76,7 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
 
     update :update do
       primary? true
-      accept [:title]
+      accept [:title, :tag_ids]
       require_atomic? false
       argument :weight, :integer
       argument :weight_unit, :string
@@ -77,6 +88,7 @@ defmodule MishkaGervaz.Test.Web.CrateItem do
     uuid_primary_key :id
     attribute :title, :string, allow_nil?: false, public?: true
     attribute :weight_grams, :integer, public?: true
+    attribute :tag_ids, {:array, :uuid}, default: [], public?: true
   end
 
   @doc "The weight the form shows: in kg when the stored grams are whole kilograms."
