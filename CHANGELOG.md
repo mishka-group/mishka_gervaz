@@ -93,6 +93,8 @@
   with `notify_dirty` it holds none. A file waiting on an upload still counts as a change. Values
   compare the way a browser sends them: a required select with no empty choice holds the option it
   shows first, and a field a page gave in `defaults` holds what is typed over it
+- A text or number input whose value a save refused keeps what was typed while the error stands
+  under it: "1e5" refused stays "1e5" rather than the "100000" it was read as
 
 # Changelog for MishkaGervaz 0.0.13
 

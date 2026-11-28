@@ -314,7 +314,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns =
       assigns
       |> assign(:form_field, assigns.state.form[field.name])
-      |> assign(:value, shown_value(:hidden, assigns.state.form, field.name))
+      |> assign(:value, form_shown_value(:hidden, assigns.state.form, field.name))
 
     ~H"""
     <input
@@ -1704,6 +1704,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   @grouped_controls [:string_list, :key_map, :key_list, :nested, :choice_cards, :segmented]
+  @typed_types ~w(text email url tel number textarea)a
   @one_value_types ~w(password text email url tel hidden number textarea select date datetime range search_select combobox)a
 
   # The id of the one element a field's label names: none for a control that is a group of
@@ -1794,7 +1795,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       |> assign(:name, form_field.name)
       |> assign(:id, form_field.id)
       |> assign(:table_id, assigns.static.id)
-      |> assign(:value, shown_value(type, assigns.state.form, field.name))
+      |> assign(:value, shown_value(type, assigns.state, field.name))
       |> assign(:placeholder, resolve_label(get_in_map(field, [:ui, :placeholder])))
       |> assign(:autocomplete, get_in_map(field, [:ui, :autocomplete]))
       |> assign(:disabled, is_readonly)
@@ -2047,11 +2048,25 @@ defmodule MishkaGervaz.Form.Templates.Standard do
 
   defp scalar?(value), do: is_binary(value) or is_atom(value) or is_number(value)
 
-  # The value a field's input shows. A field that holds one value shows none when its params carry
-  # a map or a list instead, such as a page drawn by an older form that had keys under the field
-  # sends, so the input draws empty rather than crashing the form. A `Decimal` is shown as its
-  # plain digits, since HTML has no way to draw the struct.
-  defp shown_value(type, form, name) do
+  # The value a field's input shows. A field the person types into shows what they typed while an
+  # error refers to it, so "1e5" refused stays "1e5" rather than the "100000" it was cast to. A
+  # field that holds one value shows none when its params carry a map or a list instead, such as a
+  # page drawn by an older form that had keys under the field sends, so the input draws empty
+  # rather than crashing the form. A `Decimal` is shown as its plain digits, since HTML has no way
+  # to draw the struct.
+  defp shown_value(type, %{form: form} = state, name) when type in @typed_types do
+    with [_ | _] <- Map.get(state.errors || %{}, name, []),
+         %{params: %{} = params} <- form,
+         typed when is_binary(typed) <- Map.get(params, to_string(name)) do
+      typed
+    else
+      _no_error_or_typed -> form_shown_value(type, form, name)
+    end
+  end
+
+  defp shown_value(type, %{form: form}, name), do: form_shown_value(type, form, name)
+
+  defp form_shown_value(type, form, name) do
     case Phoenix.HTML.Form.input_value(form, name) do
       %Decimal{} = value -> Decimal.to_string(value, :normal)
       value when type in @one_value_types and is_list(value) -> nil
