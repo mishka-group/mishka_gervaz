@@ -114,6 +114,7 @@ second lines are translated. The UI adapter draws them with `choice_cards/1` and
 | `auto_fields` | bool | `false` | on `:nested`, auto-detect the sub-fields you did not declare |
 | `nested_fields` | list | `[]` | filled by the `nested_field` entities |
 | `add_label` / `remove_label` | string \| `fn -> string` | — | repeater buttons |
+| `row_label` | atom \| `fn row ->` \| `fn row, index ->` | — | what each `:key_list` row's head reads in place of its number: a key whose value names the row, or a function of the row (string keys, index from 0); `nil` or blank reads the number |
 
 ## `ui do … end`
 
@@ -252,6 +253,26 @@ send_update(MishkaGervaz.Form.Web.Live,
 
 What is typed under a key the function does not name is not saved. See
 `MishkaGervaz.Form.Types.Field.KeyMap`.
+
+Each `:key_list` row's head reads its number. `row_label` names a row by what it holds instead, so
+a list of amounts reads "USD" and "EUR" rather than "1" and "2":
+
+```elixir
+field :amounts, :key_list do
+  options [
+    [name: :currency, type: :select, options: ~w(USD EUR GBP)],
+    [name: :amount, type: :number]
+  ]
+
+  row_label :currency
+end
+```
+
+A key's name reads that key's value; `fn row -> label end` or `fn row, index -> label end` builds
+the label, given the row with string keys whether it was posted or read off a saved record, and the
+index from 0. A row whose label is `nil` or blank, a row just added say, still reads its number. The
+label also names the row's group for a screen reader. It is an option of a field of its own; a
+`:key_list` sub-field of a `:nested` row numbers its rows.
 
 ## Read-only fields
 

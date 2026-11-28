@@ -1058,6 +1058,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     assigns =
       assigns
       |> assign_new(:label_id, fn -> nil end)
+      |> assign_new(:row_label, fn -> nil end)
       |> assign_new(:drawn, fn -> opened(assigns) end)
 
     ~H"""
@@ -1065,9 +1066,16 @@ defmodule MishkaGervaz.Form.Templates.Standard do
       <div
         :for={{row, index} <- Enum.with_index(@rows)}
         class="rounded-[11px] border border-[#ecebe6] bg-[#fbfbf9] p-3"
+        role="group"
+        aria-labelledby={"#{@input_id}_#{index}_row_label"}
       >
         <div class="mb-2 flex items-center justify-between gap-3">
-          <span class="text-[10px] font-bold text-[#a8a5a0]">{index + 1}</span>
+          <span
+            id={"#{@input_id}_#{index}_row_label"}
+            class="min-w-0 truncate text-[10px] font-bold text-[#a8a5a0]"
+          >
+            {MishkaGervaz.Form.Types.Field.KeyList.row_label(@row_label, row, index)}
+          </span>
           <button
             :if={@editable?}
             type="button"
@@ -2127,6 +2135,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
     |> assign(:editable?, not readonly?)
     |> assign(:add_label, resolve_nested_label(field, :add_label, nil))
     |> assign(:remove_label, resolve_nested_label(field, :remove_label, nil))
+    |> assign(:row_label, Map.get(field, :row_label))
     |> assign(:owner, %{kind: :top, field: to_string(field.name)})
     |> assign(:input_name, form_field.name)
     |> assign(:input_id, form_field.id)

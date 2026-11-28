@@ -14,6 +14,11 @@
 - A page adds its own markup to one step of a wizard or tabs form with an `:in_step` slot naming the
   step: it is drawn in the step's panel after its groups, inside the one form, and given the form
   as the `:body` slot is
+- A `:key_list` field names each row by what it holds with `row_label`: a key, `row_label :currency`,
+  whose value the row's head reads, so a list of amounts reads "USD" and "EUR" rather than "1" and
+  "2", or `fn row -> label end` / `fn row, index -> label end`. A row whose label is empty still
+  reads its number, as every row does without the option, and the label names the row's group for
+  a screen reader
 
 ### Bug fixes:
 - A toast is read once by a screen reader: the toasts' container is the page's one polite live

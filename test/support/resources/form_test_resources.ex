@@ -1414,6 +1414,8 @@ defmodule MishkaGervaz.Test.Resources.ConstrainedMapForm do
             [name: :url, type: :text, placeholder: "https://…"]
           ]
 
+          row_label :platform
+
           ui do
             label "Links"
             add_label "+ Add Link"

@@ -255,6 +255,7 @@ spark_locals_without_parens = [
   retry_label: 1,
   route: 1,
   row_class: 1,
+  row_label: 1,
   rows: 1,
   sanitization: 1,
   save: 1,

@@ -219,6 +219,7 @@ defmodule MishkaGervaz.Form.Transformers.BuildRuntimeConfig do
       nested_fields: field.nested_fields,
       add_label: field.add_label,
       remove_label: field.remove_label,
+      row_label: Map.get(field, :row_label),
       type_module: field.type_module,
       id_type: relation_id_type(field, module),
       ui: maybe_ui(field.ui),

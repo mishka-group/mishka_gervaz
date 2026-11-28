@@ -43,6 +43,24 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
   docs for the options each key takes. `add_label` and `remove_label` name the two buttons; they
   default to `+ Add` and `Remove`.
 
+  ## Row labels
+
+  Each row's head reads its number, from 1. A field of its own may name its rows by what they hold
+  with `row_label`: a key's name, whose value the head reads, or a function of the row:
+
+      field :amounts, :key_list do
+        options [
+          [name: :currency, type: :select, options: ~w(USD EUR GBP)],
+          [name: :amount, type: :number]
+        ]
+
+        row_label :currency
+      end
+
+  `row_label fn row, index -> "\#{row["currency"]} (\#{index + 1})" end` builds the label itself.
+  A row whose label comes out `nil` or blank, a new row say, still reads its number. See
+  `row_label/3`.
+
   ## Where it works
 
   Both positions carry the same controls; only the events behind the two buttons differ, because
@@ -125,6 +143,57 @@ defmodule MishkaGervaz.Form.Types.Field.KeyList do
   end
 
   def rows(_value), do: []
+
+  @doc """
+  What the head of row `index` (from 0) reads: the value of the key `row_label` names, or what
+  `fn row -> label end` or `fn row, index -> label end` returns, given the row with string keys.
+
+  The row's number, `index + 1`, is the label when `row_label` is `nil`, and when the label comes
+  out `nil` or blank. An atom or a number is drawn as its text.
+
+      iex> MishkaGervaz.Form.Types.Field.KeyList.row_label(:currency, %{currency: "USD"}, 0)
+      "USD"
+
+      iex> MishkaGervaz.Form.Types.Field.KeyList.row_label(:currency, %{"currency" => ""}, 1)
+      "2"
+
+      iex> MishkaGervaz.Form.Types.Field.KeyList.row_label(&String.upcase(&1["code"]), %{code: "eur"}, 0)
+      "EUR"
+  """
+  @spec row_label(
+          atom() | (map() -> term()) | (map(), non_neg_integer() -> term()) | nil,
+          map(),
+          non_neg_integer()
+        ) :: String.t()
+  def row_label(row_label, row, index) do
+    row_label
+    |> label_of(row, index)
+    |> label_text(index)
+  end
+
+  defp label_of(nil, _row, _index), do: nil
+
+  defp label_of(key, row, _index) when is_atom(key),
+    do: Map.get(row, to_string(key), Map.get(row, key))
+
+  defp label_of(fun, row, _index) when is_function(fun, 1), do: fun.(string_keys(row))
+  defp label_of(fun, row, index) when is_function(fun, 2), do: fun.(string_keys(row), index)
+
+  defp label_text(label, index) when is_binary(label) do
+    case String.trim(label) do
+      "" -> Integer.to_string(index + 1)
+      _text -> label
+    end
+  end
+
+  defp label_text(label, _index) when is_number(label), do: to_string(label)
+
+  defp label_text(label, _index) when is_atom(label) and label not in [nil, true, false],
+    do: Atom.to_string(label)
+
+  defp label_text(_label, index), do: Integer.to_string(index + 1)
+
+  defp string_keys(row), do: Map.new(row, fn {key, value} -> {to_string(key), value} end)
 
   defp plain_map?(row), do: is_map(row) and not is_struct(row)
 end
