@@ -224,6 +224,7 @@ defmodule MishkaGervaz.Form.Templates.Standard do
             {render_uploads_section(assigns)}
             {render_notices_at(assigns, :before_submit)}
             {render_form_errors(assigns)}
+            {render_step_moved(assigns)}
             {render_failed_save(assigns)}
             {render_submit(assigns)}
             {render_notices_at(assigns, :form_bottom)}
@@ -717,6 +718,29 @@ defmodule MishkaGervaz.Form.Templates.Standard do
   end
 
   def render_form_errors(assigns), do: ~H""
+
+  @doc """
+  After a wizard or tabs form moved to another step (Next, Back, a tab, or a `step` the page
+  passed), a hidden mark named after `state.step_moves` whose `phx-mounted` focuses the first field
+  of the step moved to, its container `"<id>-step-<name>"`, so the focus never falls to the page.
+  The form as it first opens draws none. It is drawn before the mark of a refused save, so a save
+  refused on another step's field still moves the reader to that field.
+  """
+  def render_step_moved(%{state: %{step_moves: moves, current_step: step}} = assigns)
+      when is_integer(moves) and moves > 0 and not is_nil(step) do
+    assigns =
+      assign(
+        assigns,
+        :step_moved_js,
+        JS.focus_first(to: "#" <> assigns.static.id <> "-step-" <> to_string(step))
+      )
+
+    ~H"""
+    <span id={"#{@static.id}-step-moved-#{@state.step_moves}"} hidden phx-mounted={@step_moved_js} />
+    """
+  end
+
+  def render_step_moved(assigns), do: ~H""
 
   @doc """
   After a refused save, a hidden mark named after `state.failed_saves` whose `phx-mounted` moves the

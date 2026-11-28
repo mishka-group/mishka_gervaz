@@ -19,6 +19,15 @@ defmodule MishkaGervaz.Form.Web.State do
   the reader to the first field with an error, and a form mounted with `notify_failed` tells its
   page (`MishkaGervaz.Form.Web.Live`, "After a refused save").
 
+  ## Step moves
+
+  `step_moves` counts the times a wizard or tabs form moved to another step after it was mounted:
+  Next, Back, a tab, or a `step` the page passed. The template draws a mark named after the count,
+  so each move focuses the first field of the step moved to.
+
+  `empty_files` holds, per upload, the names of the empty files the browser left out of its last
+  drop, which the template names under the upload.
+
   ## Performance split
 
   State is partitioned into two halves:
@@ -196,7 +205,8 @@ defmodule MishkaGervaz.Form.Web.State do
     :pickers,
     :opened,
     empty_files: %{},
-    failed_saves: 0
+    failed_saves: 0,
+    step_moves: 0
   ]
 
   @type loading_status :: :initial | :loading | :loaded | :error | :denied
@@ -226,7 +236,8 @@ defmodule MishkaGervaz.Form.Web.State do
           pickers: %{atom() => Date.t()},
           opened: non_neg_integer(),
           empty_files: %{atom() => list(String.t())},
-          failed_saves: non_neg_integer()
+          failed_saves: non_neg_integer(),
+          step_moves: non_neg_integer()
         }
 
   @spec init(String.t(), module(), map() | nil) :: t()
@@ -710,7 +721,8 @@ defmodule MishkaGervaz.Form.Web.State do
           pickers: %{},
           opened: 0,
           empty_files: %{},
-          failed_saves: 0
+          failed_saves: 0,
+          step_moves: 0
         }
       end
 

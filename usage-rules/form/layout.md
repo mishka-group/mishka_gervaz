@@ -38,6 +38,10 @@ another tab moves to the first tab holding an error, marks every tab holding one
 draws a dot, `data-role="gervaz-step-error"`) and sends the page `{:put_flash, :error, message}`
 naming the tab; the mark goes once the tab's fields show no error.
 
+Each move to another step or tab (Next, Back, a tab, a `step` the page passes) focuses the first
+field of the step moved to, so the reader keeps typing there and the focus never falls to the
+page. The form as it first opens moves no focus.
+
 ```elixir
 layout do
   mode :tabs

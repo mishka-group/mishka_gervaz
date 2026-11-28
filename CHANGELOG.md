@@ -69,6 +69,9 @@
   names each empty file the browser left out ("This file is empty: notes.txt"); its errors are
   translated. Each file's remove button carries an `aria-label` that names the file. Before, an
   empty file vanished with no word and the remove buttons had no name a screen reader could read
+- A wizard or tabs form that moves to another step, by Next, Back, a tab or a `step` the page
+  passes, focuses the first field of the step it moved to. Before, the button pressed went away
+  with its step and the focus fell to the page
 
 # Changelog for MishkaGervaz 0.0.13
 

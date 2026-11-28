@@ -340,6 +340,7 @@ defmodule MishkaGervaz.Form.Web.Live do
       updated_socket
       |> announce_dirty(was_dirty?)
       |> announce_step(was_step)
+      |> count_step_move(was_step)
 
     {:ok, new_socket}
   end
@@ -655,6 +656,7 @@ defmodule MishkaGervaz.Form.Web.Live do
       |> announce_dirty(dirty?(socket))
       |> announce_failed(failed_saves(socket))
       |> announce_step(current_step(socket))
+      |> count_step_move(current_step(socket))
 
     {:noreply, new_socket}
   end
@@ -676,6 +678,7 @@ defmodule MishkaGervaz.Form.Web.Live do
       new_socket
       |> announce_dirty(dirty?(socket))
       |> announce_step(current_step(socket))
+      |> count_step_move(current_step(socket))
 
     {:noreply, announced_socket}
   end
@@ -747,6 +750,23 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   defp current_step(%{assigns: %{form_state: %State{current_step: step}}}), do: step
   defp current_step(_socket), do: :unmounted
+
+  # Each move to another step after the form is mounted is counted, so the template draws a new
+  # mark that focuses the first field of the step moved to.
+  defp count_step_move(socket, :unmounted), do: socket
+
+  defp count_step_move(socket, was) do
+    case socket.assigns.form_state do
+      %State{current_step: ^was} ->
+        socket
+
+      %State{current_step: nil} ->
+        socket
+
+      %State{step_moves: moves} = state ->
+        assign(socket, :form_state, State.update(state, step_moves: moves + 1))
+    end
+  end
 
   # A form mounted with `notify_step` tells its page each step it moves to; the step it is mounted
   # on the page already knows.
