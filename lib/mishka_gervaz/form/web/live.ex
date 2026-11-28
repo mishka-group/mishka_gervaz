@@ -581,15 +581,17 @@ defmodule MishkaGervaz.Form.Web.Live do
   def discard(socket) do
     state = socket.assigns.form_state
     record_id = if state.mode == :update, do: socket.assigns[:record_id]
-    socket = start_over(socket, record_id)
+    step = if state.static.layout_mode == :tabs, do: state.current_step
+    reopen(socket, record_id, step)
+  end
 
-    case state do
-      %{static: %{layout_mode: :tabs}, current_step: step} when not is_nil(step) ->
-        Phoenix.Component.update(socket, :form_state, &StepHandler.opened(&1, step))
-
-      _state ->
-        socket
-    end
+  @doc false
+  @spec reopen(Phoenix.LiveView.Socket.t(), String.t() | nil, atom() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def reopen(socket, record_id, step) do
+    socket
+    |> start_over(record_id)
+    |> open_step(step)
   end
 
   @doc false

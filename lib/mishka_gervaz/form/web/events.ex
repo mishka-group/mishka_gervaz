@@ -8,7 +8,8 @@ defmodule MishkaGervaz.Form.Web.Events do
   - Wizard step navigation
   - Upload events
   - Relation field search/select
-  - Cancel
+  - Cancel — runs the `on_cancel` hook and returns to an empty create form; without the hook an
+    edit puts back the record's saved values on the step it is on, and a create starts over empty
   - Reset — starts the form over as an empty create form, see `MishkaGervaz.Form.Web.Live.reset/2`
   - Discard — puts the form back to its starting values, see `MishkaGervaz.Form.Web.Live.discard/1`
   - Nested/array field management
@@ -237,19 +238,9 @@ defmodule MishkaGervaz.Form.Web.Events do
     do: {:noreply, Phoenix.Component.assign(socket, :question, nil)}
 
   def do_handle("cancel", _params, state, socket) do
-    cancel_button = state.static.submit[:cancel]
-
-    if submit_button_allowed?(cancel_button, state) do
-      state = run_hook(state, :on_cancel, [state]) || state
-
-      if has_hook?(state, :on_cancel) do
-        send(self(), {:form_cancelled, state.static.resource})
-      end
-
-      {:noreply, reset_to_create_mode(state, socket)}
-    else
-      {:noreply, socket}
-    end
+    if submit_button_allowed?(state.static.submit[:cancel], state),
+      do: {:noreply, cancel(state, socket)},
+      else: {:noreply, socket}
   end
 
   def do_handle("reset", _params, _state, socket),
@@ -1082,6 +1073,24 @@ defmodule MishkaGervaz.Form.Web.Events do
   end
 
   def maybe_decode_json(v), do: v
+
+  # Cancel with an `on_cancel` hook runs it, tells the page and returns to an empty create form.
+  # Without one, an edit throws its changes away and stays on the record and its step, and a create
+  # starts over empty.
+  defp cancel(state, socket) do
+    cond do
+      has_hook?(state, :on_cancel) ->
+        state = run_hook(state, :on_cancel, [state]) || state
+        send(self(), {:form_cancelled, state.static.resource})
+        reset_to_create_mode(state, socket)
+
+      state.mode == :update and not is_nil(socket.assigns[:record_id]) ->
+        MishkaGervaz.Form.Web.Live.reopen(socket, socket.assigns.record_id, state.current_step)
+
+      true ->
+        reset_to_create_mode(state, socket)
+    end
+  end
 
   @doc false
   def reset_to_create_mode(state, socket) do

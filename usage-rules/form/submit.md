@@ -47,6 +47,13 @@ end
 
 All predicates are arity **1** (`state`).
 
+## Cancel
+
+`cancel` with an `on_cancel` hook runs the hook, sends the page `{:form_cancelled, resource}` and
+returns the form to an empty create form. Without the hook it is safe to press on an edit: the form
+puts back the record's saved values and stays on the record, on the step or tab it is on; a create
+starts over empty. Nothing is saved.
+
 ## Discard
 
 `discard` draws a button beside Save while the form holds changes (`state.dirty?`). It puts the

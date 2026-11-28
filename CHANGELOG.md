@@ -52,6 +52,9 @@
   arrives, and the fresh form takes their place then. A live component in an entry, a table with a
   stream say, keeps its rows. Before, the form drew its loading state in between, so every step
   flickered and a live component in an entry came back empty. A save sent in between does nothing
+- Cancel on an edit with no `on_cancel` hook puts back the record's saved values and stays on the
+  record, on the step or tab it is on. Before, it threw the record away and returned the form to an
+  empty create form
 
 # Changelog for MishkaGervaz 0.0.13
 
