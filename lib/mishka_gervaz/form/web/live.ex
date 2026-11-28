@@ -222,13 +222,21 @@ defmodule MishkaGervaz.Form.Web.Live do
 
   ## After a save
 
-  A create save always returns the form to an empty create form. An update save depends on how the
-  form was mounted:
+  A create save returns the form to an empty create form, on its first step. An update save depends
+  on how the form was mounted:
 
   - mounted with a `record_id` assign (even `nil`) — the form stays on the saved record, reloaded
-    for editing. Pass a different `record_id`, or `nil`, to move it.
+    for editing, on the step or tab it is on. Pass a different `record_id`, or `nil`, to move it.
   - mounted without one, and opened for editing with `send_update/2` — the form returns to an
     empty create form.
+
+  Next on a wizard step that says `save true` (`MishkaGervaz.Form.Entities.Step`, "A step that
+  saves") saves too, a create first and an update after, and the form stays on the saved record,
+  reloaded for editing, on the next step. A page that passes `record_id` keeps the record's id from
+  the `{:form_saved, :create, record}` it is sent, so its next render passes the same record:
+
+      def handle_info({:form_saved, :create, post}, socket),
+        do: {:noreply, assign(socket, :post_id, post.id)}
 
   ## After a refused save
 
@@ -438,6 +446,7 @@ defmodule MishkaGervaz.Form.Web.Live do
             socket
             |> assign(:form_state, State.update(existing_state, defaults: defaults))
             |> start_over(record_id)
+            |> open_step(Map.get(assigns, :open_step))
 
           record_id != socket.assigns[:record_id] or
               follows_defaults?(existing_state, defaults) ->
@@ -464,6 +473,13 @@ defmodule MishkaGervaz.Form.Web.Live do
 
     {:ok, new_socket}
   end
+
+  # The step a save that kept its record open starts over on, see
+  # `MishkaGervaz.Form.Web.Events.SubmitHandler.reopening/3`.
+  defp open_step(socket, nil), do: socket
+
+  defp open_step(socket, step),
+    do: Phoenix.Component.update(socket, :form_state, &StepHandler.opened(&1, step))
 
   defp put_navigation(%{assigns: %{form_state: state}} = socket, %{navigation: navigation})
        when not is_nil(navigation) and navigation != state.static.layout_navigation,

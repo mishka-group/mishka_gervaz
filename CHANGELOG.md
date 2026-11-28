@@ -6,6 +6,11 @@
   made and as free tabs once it exists; `step`, the step the form opens on, from a URL say, with the
   steps before it counted as done; and `notify_step={true}`, which sends the page
   `{:form_step, id, step}` each time the form moves to another step
+- A wizard step says `save true` to have its Next save what the form holds, a create first and an
+  update after: the page is sent `{:form_saved, mode, record}` and the form opens the saved record
+  for editing on the next step, so a reader who leaves half way keeps a draft. An update save of a
+  form mounted with a `record_id` keeps the step or tab it was made on, where before the form went
+  back to its first step
 - A page adds its own markup to one step of a wizard or tabs form with an `:in_step` slot naming the
   step: it is drawn in the step's panel after its groups, inside the one form, and given the form
   as the `:body` slot is

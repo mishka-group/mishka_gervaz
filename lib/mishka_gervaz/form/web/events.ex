@@ -897,11 +897,17 @@ defmodule MishkaGervaz.Form.Web.Events do
   defp halt_messages(_reason), do: [dgettext("mishka_gervaz", "The changes were not saved.")]
 
   # Next, pressed or the form's submit on a step before the last: what the form holds is validated,
-  # then the step handler moves on or shows the step's errors.
+  # then the step handler moves on or shows the step's errors. A step that says `save true` and
+  # holds no error on its fields is saved instead; the save opens the next step.
   defp next_step(params, state, socket) do
     {:noreply, socket} = do_handle("validate", params, state, socket)
     validated = socket.assigns.form_state
-    step_handler(validated).advance(validated, socket)
+    handler = step_handler(validated)
+
+    if StepHandler.step_saves?(validated) and
+         handler.can_advance?(validated, validated.current_step),
+       do: save(params, validated, socket),
+       else: handler.advance(validated, socket)
   end
 
   # A save on a step before the last moves a wizard on, and a tabs form whose steps open in order;

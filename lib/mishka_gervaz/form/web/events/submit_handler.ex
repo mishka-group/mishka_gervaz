@@ -19,7 +19,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       end
 
   Top-level helpers (`format_form_errors/1`, `extract_form_level_errors/2`,
-  `save_errors/2`, `add_field_type_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`,
+  `save_errors/2`, `add_field_type_errors/2`, `cleanup_temp_uploads/1`, `push_js_hook/4`, `reopening/3`,
   `merge_defaults/3`, `drop_protected_fields/2`, `field_protected?/2`, `field_restricted?/2`,
   `field_readonly?/2`)
   are public so user overrides can reuse them — they live outside the
@@ -35,6 +35,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   use MishkaGervaz.Messages
 
   alias MishkaGervaz.Errors
+  alias MishkaGervaz.Form.Web.Events.StepHandler
   alias MishkaGervaz.Form.Web.State
   alias MishkaGervaz.Form.Web.UploadHelpers
   alias MishkaGervaz.Form.Web.DataLoader.Helpers, as: DataLoaderHelpers
@@ -202,6 +203,30 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
   end
 
   @doc """
+  Where the form opens again after it saved the record with the id `record_id`, as
+  `{record_id | nil, step | nil}`:
+
+    * a save Next made on a step that says `save true` (`StepHandler.step_saves?/1`) keeps the
+      saved record open, on the next step;
+    * an update save on a form mounted with a `record_id` assign keeps the record open, on the step
+      the form is on;
+    * any other save returns to an empty create form, `{nil, nil}`, on its first step.
+  """
+  @spec reopening(map(), Phoenix.LiveView.Socket.t(), term()) :: {term() | nil, atom() | nil}
+  def reopening(state, socket, record_id) do
+    cond do
+      StepHandler.step_saves?(state) ->
+        {record_id, StepHandler.find_next_step(state.static.steps, state.current_step)}
+
+      state.mode == :update and socket.assigns[:record_id_given?] == true ->
+        {record_id, state.current_step}
+
+      true ->
+        {nil, nil}
+    end
+  end
+
+  @doc """
   Fills each param a create form left `nil` or `""` from `state.defaults`.
 
   `posted` are the params the save itself sent, the form's drawn inputs, without the fields the
@@ -293,6 +318,7 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
           save_errors: 2,
           cleanup_temp_uploads: 1,
           push_js_hook: 4,
+          reopening: 3,
           merge_defaults: 2,
           merge_defaults: 3,
           drop_protected_fields: 2
@@ -403,9 +429,12 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
       over in a later render (`send_update/3` with `reset: true`, which the process runs after the
       `{:form_saved, ...}` it sent first). A page that closes a window when it hears the save starts
       the window's fade before the form starts over, and LiveView holds every later render until
-      the fade ends, so the window fades out over the saved values instead of an empty form. An
-      update save on a form mounted with a `record_id` assign then reads the saved record again
-      for editing; every other save returns the form to an empty create form.
+      the fade ends, so the window fades out over the saved values instead of an empty form.
+      `reopening/3` says where it starts over: a save Next made on a step that says `save true`
+      reads the saved record for editing on the next step, an update save on a form mounted with a
+      `record_id` assign reads it again on the step it is on, and every other save returns the form
+      to an empty create form. A record kept open is the form's `record_id` at once, so a render of
+      the page that passes the saved record's id leaves the form as it is.
       """
       @spec after_save(State.t(), struct(), Phoenix.LiveView.Socket.t()) ::
               Phoenix.LiveView.Socket.t()
@@ -414,19 +443,23 @@ defmodule MishkaGervaz.Form.Web.Events.SubmitHandler do
         MishkaGervaz.Form.Web.Events.run_hook(state, :after_save, [result, state])
         send(self(), {:form_saved, state.mode, result})
 
-        again =
-          if state.mode == :update and socket.assigns[:record_id_given?] == true,
-            do: record_id
+        {again, step} = reopening(state, socket, record_id)
 
         Phoenix.LiveView.send_update(MishkaGervaz.Form.Web.Live,
           id: state.static.id,
           record_id: again,
-          reset: true
+          reset: true,
+          open_step: step
         )
 
         saved_state = State.update(state, errors: %{}, form_errors: [], dirty?: false)
 
-        socket
+        kept_socket =
+          if again,
+            do: Phoenix.Component.assign(socket, :record_id, again),
+            else: socket
+
+        kept_socket
         |> Phoenix.Component.assign(:form_state, saved_state)
         |> push_js_hook(state, :after_save, record_id)
       end

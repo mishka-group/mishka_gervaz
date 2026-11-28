@@ -10,7 +10,10 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
     * on any step but the last, it validates what the form holds and calls `advance/2`, which
       moves to the next step when `can_advance?/2` allows it. A step it refuses is marked `:error`
       and shows the errors of its own fields (`step_errors/2`), never another step's, and they
-      follow what is typed until the step moves on. Nothing is saved.
+      follow what is typed until the step moves on. Nothing is saved, unless the step says
+      `save true` (`step_saves?/1`): then a step `can_advance?/2` allows is saved as the last step
+      is, and a save that succeeds opens the saved record for editing on the next step (see
+      `MishkaGervaz.Form.Entities.Step`, "A step that saves").
     * on the last step, it saves. A save that fails on a field of another step calls
       `goto_errors/2`, which moves the form to the first step holding an error, marks every step
       holding one `:error`, and sends the parent LiveView `{:put_flash, :error, message}`, the
@@ -133,6 +136,18 @@ defmodule MishkaGervaz.Form.Web.Events.StepHandler do
       wizard_history: Enum.uniq([to | state.wizard_history])
     )
   end
+
+  @doc """
+  Whether Next on the form's current step saves: the step says `save true`, it is not the last
+  step, and the form moves step by step (a wizard, or tabs whose steps open in order).
+  """
+  @spec step_saves?(map()) :: boolean()
+  def step_saves?(%{static: %{steps: [_ | _] = steps} = static, current_step: current}) do
+    stepwise?(static) and List.last(steps).name != current and
+      Enum.any?(steps, &(&1.name == current and Map.get(&1, :save) == true))
+  end
+
+  def step_saves?(_state), do: false
 
   @doc """
   The name of the form's step that `step` names, an atom or its string, as a page may take it from

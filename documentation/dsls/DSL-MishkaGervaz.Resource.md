@@ -2978,6 +2978,7 @@ Define a wizard/tab step.
 | [`groups`](#mishka_gervaz-form-layout-step-groups){: #mishka_gervaz-form-layout-step-groups .spark-required} | `list(atom)` |  | Group names belonging to this step. |
 | [`action`](#mishka_gervaz-form-layout-step-action){: #mishka_gervaz-form-layout-step-action } | `atom` |  | Validation action to run when leaving this step. |
 | [`summary`](#mishka_gervaz-form-layout-step-summary){: #mishka_gervaz-form-layout-step-summary } | `boolean` | `false` | Whether this step is a summary/review step. |
+| [`save`](#mishka_gervaz-form-layout-step-save){: #mishka_gervaz-form-layout-step-save } | `boolean` | `false` | Whether Next on this step saves what the form holds, a create first and an update after, then opens the saved record on the next step. |
 | [`on_enter`](#mishka_gervaz-form-layout-step-on_enter){: #mishka_gervaz-form-layout-step-on_enter } | `(any -> any)` |  | Callback invoked when entering the step. Receives state, returns state. |
 | [`before_leave`](#mishka_gervaz-form-layout-step-before_leave){: #mishka_gervaz-form-layout-step-before_leave } | `(any -> any)` |  | Callback invoked before leaving the step. Return {:halt, state} to block navigation. |
 | [`after_leave`](#mishka_gervaz-form-layout-step-after_leave){: #mishka_gervaz-form-layout-step-after_leave } | `(any -> any)` |  | Callback invoked after leaving the step. Receives state, returns state. |

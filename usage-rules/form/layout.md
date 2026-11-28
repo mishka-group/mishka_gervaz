@@ -140,8 +140,38 @@ end
 |---|---|---|---|
 | `groups` | `[atom]` | — | **required** |
 | `summary` | bool | `false` | read-only review step |
+| `save` | bool | `false` | Next on this step saves — see "A step that saves" |
 | `action` | atom | — | ⚠ not wired — see below |
 | `on_enter` / `before_leave` / `after_leave` | `fn state -> state` | — | ⚠ not wired — see below |
+
+### A step that saves
+
+`save true` makes Next on the step save what the form holds, as the last step's submit does: the
+first such save creates the record, the later ones update it. A reader who leaves half way keeps a
+draft, and a step can show what only a saved record has (its files, its prices) through the
+`:in_step` slot.
+
+- The save runs once the step's own fields hold no error. A save the action refuses stays on the
+  step with its errors, or moves to the earlier step holding one.
+- A save that succeeds sends the page `{:form_saved, mode, record}` (`:create` first, `:update`
+  after) and opens the saved record for editing on the next step, in update mode.
+- A page that passes `record_id` sets it from `{:form_saved, :create, record}`, or its next render
+  takes the form back to create.
+- Only where Next exists: a wizard, or tabs with `navigation :sequential`. On free tabs every save
+  saves already; on the last step the flag is the save it makes anyway.
+- Any update save of a form mounted with `record_id` keeps the step or tab it was made on.
+
+```elixir
+step :basics do
+  groups [:basics]
+  save true
+end
+```
+
+```elixir
+def handle_info({:form_saved, :create, post}, socket),
+  do: {:noreply, assign(socket, :post_id, post.id)}
+```
 
 ### ⚠ Step callbacks are declared but not invoked
 

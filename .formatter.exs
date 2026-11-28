@@ -257,6 +257,7 @@ spark_locals_without_parens = [
   row_class: 1,
   rows: 1,
   sanitization: 1,
+  save: 1,
   search_field: 1,
   searchable: 1,
   select_prompt: 1,

@@ -8,8 +8,21 @@ defmodule MishkaGervaz.Form.Entities.Step do
   layout block when `mode: :wizard` or `mode: :tabs`. They support
   `on_enter` / `before_leave` / `after_leave` lifecycle callbacks (where
   `before_leave` can return `{:halt, state}` to block navigation), an
-  optional `action` for inline validation, and a `summary` flag for
-  read-only review steps.
+  optional `action` for inline validation, a `summary` flag for
+  read-only review steps, and a `save` flag for a step whose Next saves.
+
+  ## A step that saves
+
+  `save true` makes Next on the step save what the form holds, as the last step's submit does:
+  the first such save creates the record, the later ones update it. Once the step's own fields
+  hold no error the save runs; a save the action refuses stays on the step with its errors, or
+  moves to the earlier step holding one. A save that succeeds sends the page
+  `{:form_saved, mode, record}` and opens the saved record for editing on the next step, so a
+  reader who leaves the form half way keeps a draft. A page that passes `record_id` sets it to the
+  saved record's id when it hears `{:form_saved, :create, record}`, or a later render of the page
+  takes the form back to create. On free tabs every save saves already and the flag changes
+  nothing; on the last step it is the save the step makes anyway. A `confirm` question on the
+  submit block's `create` or `update` button is asked by the last step's save only.
 
   ## Example
 
@@ -21,6 +34,7 @@ defmodule MishkaGervaz.Form.Entities.Step do
         step :details do
           groups [:basic, :meta]
           action :validate_details
+          save true
 
           on_enter fn state -> state end
           before_leave fn state -> state end
@@ -46,6 +60,7 @@ defmodule MishkaGervaz.Form.Entities.Step do
           groups: [atom()],
           action: atom() | nil,
           summary: boolean(),
+          save: boolean(),
           on_enter: (map() -> map()) | nil,
           before_leave: (map() -> map()) | nil,
           after_leave: (map() -> map()) | nil,
@@ -63,6 +78,7 @@ defmodule MishkaGervaz.Form.Entities.Step do
     :after_leave,
     groups: [],
     summary: false,
+    save: false,
     ui: nil,
     __spark_metadata__: nil
   ]
@@ -86,6 +102,12 @@ defmodule MishkaGervaz.Form.Entities.Step do
       type: :boolean,
       default: false,
       doc: "Whether this step is a summary/review step."
+    ],
+    save: [
+      type: :boolean,
+      default: false,
+      doc:
+        "Whether Next on this step saves what the form holds, a create first and an update after, then opens the saved record on the next step."
     ],
     on_enter: [
       type: {:fun, 1},

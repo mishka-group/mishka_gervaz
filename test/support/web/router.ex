@@ -26,6 +26,8 @@ defmodule MishkaGervaz.Test.Web.Router do
     * `/plans` — `MishkaGervaz.Test.Web.PlanPageLive`, a page with the form of
       `MishkaGervaz.Test.Web.PlanItem`.
     * `/plans/drawer` — the same page with the form in a drawer.
+    * `/steps` — `MishkaGervaz.Test.Web.StepPageLive`, a page with the wizard of
+      `MishkaGervaz.Test.Web.StepItem`, whose steps save.
     * `/toasts` — `MishkaGervaz.Test.Web.ToastPageLive`, a page that pushes toasts.
     * `/placed` — `MishkaGervaz.Test.Web.PlacedPageLive`, a page that places the groups of
       `MishkaGervaz.Test.Web.PlacedItem`'s form in its own cards.
@@ -58,6 +60,7 @@ defmodule MishkaGervaz.Test.Web.Router do
     live "/wizard", MishkaGervaz.Test.Web.FormPageLive
     live "/plans", MishkaGervaz.Test.Web.PlanPageLive, :page
     live "/plans/drawer", MishkaGervaz.Test.Web.PlanPageLive, :drawer
+    live "/steps", MishkaGervaz.Test.Web.StepPageLive
     live "/toasts", MishkaGervaz.Test.Web.ToastPageLive
     live "/placed", MishkaGervaz.Test.Web.PlacedPageLive
     live "/rules", MishkaGervaz.Test.Web.RulePageLive
