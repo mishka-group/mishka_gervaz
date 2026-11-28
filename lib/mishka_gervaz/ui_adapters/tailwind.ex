@@ -4353,9 +4353,14 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
   `show_drawer(id)` from a click. The close button and the backdrop run `hide_drawer/2` after
   `:on_close`; Escape closes it too, unless `:confirm_close` is given.
 
+  Opening it focuses the first field in its body, so what the reader types goes there at once; a
+  body with no field takes the focus at its own top (`<id>-body-start`). The close button comes
+  before the body, so Shift+Tab reaches it, as does Escape. Closing it scrolls its body back to the
+  top, so it opens at the top again and not where the reader left it.
+
   ## Assigns
     * `:id` - required; the panel is `<id>-panel`, its title `<id>-title`, its sub line `<id>-sub`,
-      its body `<id>-body` and its close button `<id>-close`
+      its body `<id>-body`, the body's top `<id>-body-start` and its close button `<id>-close`
     * `:show` - open it as it is drawn
     * `:title` - the heading at its top
     * `:icon` - a heroicon name drawn in a tile before the title, such as `"hero-receipt-percent"`
@@ -4461,11 +4466,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
         {property <> " ease-out duration-200 motion-reduce:transition-none", away, shown}
     )
     |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "#" <> id <> "-panel")
+    |> JS.focus_first(to: "#" <> id <> "-body")
   end
 
   defp hide_panel(js, id, {property, away, shown}) do
     js
+    |> JS.focus(to: "#" <> id <> "-body-start")
     |> JS.hide(
       to: "#" <> id <> "-backdrop",
       time: 200,
@@ -4636,6 +4642,12 @@ defmodule MishkaGervaz.UIAdapters.Tailwind do
           data-role="gervaz-panel-body"
           class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
         >
+          <span
+            id={@id <> "-body-start"}
+            data-role="gervaz-panel-body-start"
+            tabindex="-1"
+            class="-mt-5 mb-5 block h-0 outline-none"
+          />
           {render_slot(@inner_block)}
         </div>
         <div

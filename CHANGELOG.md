@@ -10,6 +10,11 @@
   save's own render keeps them, with no error left on it, and the form starts over in a later
   render, which LiveView holds until the fade ends. Before, the form was emptied in the save's
   render and the window faded out over an empty form
+- A drawer, a sheet or a window focuses the first field of its body as it opens, so what the reader
+  types goes there at once; a body with no field takes the focus at its own top. Before, the close
+  button took the focus, so typing went nowhere. The close button is still reached by Shift+Tab
+  and Escape, and closing scrolls the body back to the top, so it opens at the top again and not
+  where the reader left it
 
 # Changelog for MishkaGervaz 0.0.13
 
